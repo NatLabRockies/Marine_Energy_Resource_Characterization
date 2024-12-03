@@ -121,7 +121,7 @@ The following variables are included in each dataset:
 
 ## Python Examples
 
-Example scripts to extract wind resource data using python are provided below:
+Example scripts to extract tidal data are.
 
 The easiest way to access and extract data from the Resource eXtraction tool
 [`rex`](https://github.com/nrel/rex)
