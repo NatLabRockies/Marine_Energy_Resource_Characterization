@@ -12,3 +12,4 @@ dependencies:
   - numpy=2.1
   - pyproj=3.6
   - xarray=2024.10
+  - netCDF4==1.7
