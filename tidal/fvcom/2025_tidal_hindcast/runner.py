@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print(f"Standardizing {location} tidal dataset for output type {output_type}....")
 
     print("Finding nc files...")
-    nc_files = get_specified_nc_files(location)
+    nc_files = get_specified_nc_files(config, location)
     print(f"Found {len(nc_files)} files!")
 
     print("Step 1: Verifying Dataset Integrity...")
