@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-import time_manager
-import coord_manager
+from . import time_manager
+from . import coord_manager
 
 
 class TimeVerifier:
