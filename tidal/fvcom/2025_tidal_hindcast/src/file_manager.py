@@ -11,6 +11,6 @@ def get_specified_nc_files(config, location):
     paths = location["files"]
     for path in paths:
         nc_files = sorted(list(search_dir.rglob(path)))
-        result.append(nc_files)
+        result.extend(nc_files)
 
     return result
