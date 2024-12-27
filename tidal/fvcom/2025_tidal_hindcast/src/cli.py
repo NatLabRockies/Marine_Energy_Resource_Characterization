@@ -22,8 +22,8 @@ def validate_location(config):
     """Create a validation function closure with access to config."""
 
     def _validate_location(location):
-        if location not in config["location"]:
-            valid_locations = list(config["location"].keys())
+        if location not in config["location_specification"]:
+            valid_locations = list(config["location_specification"].keys())
             raise argparse.ArgumentTypeError(
                 f"Invalid location: {location}. Must be one of: {', '.join(valid_locations)}"
             )
