@@ -3,7 +3,7 @@ config = {
     "dir": {
         # Input Data Directories
         "input": {
-            "original": "/projects/hindcastra/Tidal/raw",
+            "original": "/projects/hindcastra/Tidal",
         },
         # Output Data Directories
         "output": {
