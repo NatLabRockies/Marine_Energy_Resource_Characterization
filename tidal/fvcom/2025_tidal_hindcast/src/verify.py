@@ -99,7 +99,7 @@ class CoordinateSystemVerifier:
             self.lon_centers = coords["lon_centers"]
             self.lat_corners = coords["lat_corners"]
             self.lon_corners = coords["lon_corners"]
-            self.reference_dataset = location["name"]
+            self.reference_dataset = location["output_name"]
             return True
 
         # Verify arrays match reference dataset
@@ -112,7 +112,7 @@ class CoordinateSystemVerifier:
 
         if not matches:
             raise ValueError(
-                f"Coordinates in dataset {location['name']} do not match reference dataset {self.reference_dataset}"
+                f"Coordinates in dataset {location['output_name']} do not match reference dataset {self.reference_dataset}"
             )
 
         return matches
@@ -128,12 +128,12 @@ class GlobalAttributeEqualityVerifier:
     def verify_individual_dataset(self, ds, location):
         if self.reference_attrs is None:
             self.reference_attrs = dict(ds.attrs)
-            self.reference_dataset = location["name"]
+            self.reference_dataset = location["output_name"]
             return True
 
         if dict(ds.attrs) != self.reference_attrs:
             raise ValueError(
-                f"Global attributes in {location['name']} do not match reference dataset {self.reference_dataset}"
+                f"Global attributes in {location['output_name']} do not match reference dataset {self.reference_dataset}"
             )
         return True
 
@@ -161,19 +161,19 @@ class DatasetStructureEqualityVerifier:
 
         if self.reference_components is None:
             self.reference_components = current
-            self.reference_dataset = location["name"]
+            self.reference_dataset = location["output_name"]
             return True
 
         if current != self.reference_components:
             for ref, cur in zip(self.reference_components, current):
                 if ref != cur:
                     raise ValueError(
-                        f"Mismatch in {location['name']} for {ref[1]} {ref[0]}: "
+                        f"Mismatch in {location['output_name']} for {ref[1]} {ref[0]}: "
                         f"Expected {ref}, got {cur}"
                     )
             # If lists are different lengths
             raise ValueError(
-                f"Structure mismatch between {location['name']} and reference dataset {self.reference_dataset}"
+                f"Structure mismatch between {location['output_name']} and reference dataset {self.reference_dataset}"
             )
         return True
 
