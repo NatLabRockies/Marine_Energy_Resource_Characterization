@@ -25,10 +25,9 @@ def does_time_have_duplicates(time_array):
     return this_series.duplicated().any()
 
 
-def calculate_time_delta_seconds(timestamps: pd.DatetimeIndex):
-    deltas = timestamps.diff().dropna()
-    delta_seconds = deltas.dt.total_seconds()
-
+def calculate_time_delta_seconds(timestamps):
+    deltas = pd.Series(timestamps).diff()
+    delta_seconds = deltas.seconds
     return {
         "mean_dt": delta_seconds.mean(),
         "min_dt": delta_seconds.min(),
