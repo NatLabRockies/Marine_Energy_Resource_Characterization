@@ -31,8 +31,7 @@ def create_transformer(coord_system: str, coord_projection: str, utm_zone: int =
     # CoordinateSystem	Cartesian
     # CoordinateProjection	proj=tmerc +datum=NAD83 +lon_0=-70d10 lat_0=42d50 k=.9999666666666667 x_0=900000 y_0=0
     if coord_system == "Cartesian" and coord_projection.startswith("proj="):
-        proj_str = coord_projection.replace("d", "")
-        source_crs = pyproj.CRS.from_proj4(proj_str)
+        source_crs = pyproj.CRS.from_proj4(coord_projection)
 
     # For UTM with no projection string, puget_sound
     # puget_sound
