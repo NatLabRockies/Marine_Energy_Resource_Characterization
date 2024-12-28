@@ -77,7 +77,8 @@ config = {
                 "12312015/*.nc",
             ],
             "start_date": "2015-01-01 00:00:00",
-            "end_date": "2015-12-31 23:30:00",
+            # This dataset is missing one day!
+            "end_date": "2015-12-30 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 10},
         },
