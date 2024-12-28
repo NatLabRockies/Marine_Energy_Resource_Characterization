@@ -45,29 +45,30 @@ class TimeVerifier:
 
     def verify_complete_dataset(self, location):
         """Verifies time series integrity for entire dataset"""
-        # Convert to pandas timestamps for easier manipulation
-        timestamps = pd.to_datetime(set(self.pandas_time))  # Remove duplicates
-        timestamps = sorted(timestamps)  # Sort chronologically
+        # Convert to pandas timestamps and remove duplicates while preserving order
+        timestamps = pd.to_datetime(pd.Series(self.pandas_time)).drop_duplicates(
+            keep="first"
+        )
+        timestamps = timestamps.sort_values()
 
-        # Check if original order matches sorted order
         if not all(
             pd.to_datetime(self.pandas_time) == pd.to_datetime(sorted(self.pandas_time))
         ):
             raise ValueError("Original timestamps were not in chronological order")
 
-        # Verify time range
         start_date = pd.to_datetime(location["start_date"])
         end_date = pd.to_datetime(location["end_date"])
 
-        if timestamps[0] > start_date:
+        if timestamps.iloc[0] > start_date:
             raise ValueError(
-                f"Dataset starts at {timestamps[0]}, expected {start_date}"
+                f"Dataset starts at {timestamps.iloc[0]}, expected {start_date}"
             )
-        if timestamps[-1] < end_date:
-            raise ValueError(f"Dataset ends at {timestamps[-1]}, expected {end_date}")
+        if timestamps.iloc[-1] < end_date:
+            raise ValueError(
+                f"Dataset ends at {timestamps.iloc[-1]}, expected {end_date}"
+            )
 
-        # Verify delta t
-        time_deltas = np.diff(timestamps)
+        time_deltas = timestamps.diff()[1:]  # Skip first NaN delta
         expected_delta = pd.Timedelta(seconds=location["expected_delta_t_seconds"])
 
         if not all(delta == expected_delta for delta in time_deltas):
