@@ -77,6 +77,9 @@ class TimeVerifier:
                 for t1, t2, delta in zip(timestamps[:-1], timestamps[1:], time_deltas)
                 if delta != expected_delta
             ]
+            print(self.pandas_time)
+            print(time_deltas)
+            print(expected_delta)
             raise ValueError(f"Inconsistent time steps found: {incorrect_deltas}")
 
 
