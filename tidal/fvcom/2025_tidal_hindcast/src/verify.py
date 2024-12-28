@@ -242,7 +242,10 @@ def model_specification_verifier(config, ds, filepath):
 def verify_dataset(config, location, nc_files):
     time_verifier = TimeVerifier()
     coord_system_verifier = CoordinateSystemVerifier()
-    global_attr_equal_verifier = GlobalAttributeEqualityVerifier()
+    # Ignore changes in the `history` key
+    global_attr_equal_verifier = GlobalAttributeEqualityVerifier(
+        exclude_keys=["history"]
+    )
     dataset_structure_equal_verifier = DatasetStructureEqualityVerifier()
 
     for nc_file in nc_files:
