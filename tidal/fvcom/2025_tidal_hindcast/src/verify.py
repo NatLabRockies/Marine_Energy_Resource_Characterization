@@ -56,8 +56,8 @@ class TimeVerifier:
         ):
             raise ValueError("Original timestamps were not in chronological order")
 
-        start_date = pd.to_datetime(location["start_date"])
-        end_date = pd.to_datetime(location["end_date"])
+        start_date = pd.to_datetime(location["start_date"], utc=True)
+        end_date = pd.to_datetime(location["end_date"], utc=True)
 
         if timestamps.iloc[0] > start_date:
             raise ValueError(
