@@ -31,6 +31,9 @@ config = {
             "files": ["*.nc"],
             "start_date": "2010-06-03 00:00:00",
             "end_date": "2011-06-02 23:00:00",
+            # DatetimeIndex(['2011-06-07 00:00:00+00:00'], dtype='datetime64[ns, UTC]', freq=None)
+            # 0   NaT
+            "files_to_exclude": ["MD_AIS_west_hrBathy_0370.nc"],
             "expected_delta_t_seconds": 3600,  # 60 min
             "coordinates": {"system": "latitude/longitude"},
         },
