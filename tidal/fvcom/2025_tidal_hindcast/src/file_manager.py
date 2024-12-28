@@ -13,4 +13,7 @@ def get_specified_nc_files(config, location):
         nc_files = sorted(list(search_dir.rglob(path)))
         result.extend(nc_files)
 
+    if "files_to_exclude" in location:
+        result = [f for f in result if f.name not in location["files_to_exclude"]]
+
     return result

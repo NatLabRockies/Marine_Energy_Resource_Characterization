@@ -38,6 +38,10 @@ config = {
             "output_name": "AK_cook_inlet",
             "base_dir": "Cook_Inlet_PNNL",
             "files": ["*.nc"],
+            # Verifying cki_0366.nc...
+            # DatetimeIndex(['2006-01-01 00:00:00+00:00'], dtype='datetime64[ns, UTC]', freq=None)
+            # 0   NaT
+            "files_to_exclude": ["cki_0366.nc"],
             "start_date": "2005-01-01 00:00:00",
             "end_date": "2005-12-31 23:59:59",
             "expected_delta_t_seconds": 3600,  # 60 min
