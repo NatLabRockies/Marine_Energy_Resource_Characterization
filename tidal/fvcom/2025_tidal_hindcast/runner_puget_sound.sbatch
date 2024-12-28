@@ -11,6 +11,7 @@
 # Load necessary modules (if any)
 module load anaconda3/2023.07-2
 
+conda init
 conda activate tidal_fvcom
 
 # Change to the directory containing the script
