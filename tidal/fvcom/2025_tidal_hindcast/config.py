@@ -30,7 +30,7 @@ config = {
             "base_dir": "Aleutian_Islands_year",
             "files": ["*.nc"],
             "start_date": "2010-06-03 00:00:00",
-            "end_date": "2011-06-02 23:59:59",
+            "end_date": "2011-06-02 23:00:00",
             "expected_delta_t_seconds": 3600,  # 60 min
             "coordinates": {"system": "latitude/longitude"},
         },
@@ -43,7 +43,7 @@ config = {
             # 0   NaT
             "files_to_exclude": ["cki_0366.nc"],
             "start_date": "2005-01-01 00:00:00",
-            "end_date": "2005-12-31 23:59:59",
+            "end_date": "2005-12-31 23:00:00",
             "expected_delta_t_seconds": 3600,  # 60 min
             "coordinates": {"system": "latitude/longitude"},
         },
@@ -52,7 +52,7 @@ config = {
             "base_dir": "PIR_full_year",
             "files": ["*.nc"],
             "start_date": "2007-01-01 00:00:00",
-            "end_date": "2007-12-31 23:59:59",
+            "end_date": "2007-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 19},
         },
@@ -74,7 +74,7 @@ config = {
                 "12312015/*.nc",
             ],
             "start_date": "2015-01-01 00:00:00",
-            "end_date": "2015-12-31 23:59:59",
+            "end_date": "2015-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 10},
         },
@@ -88,7 +88,7 @@ config = {
                 "04_Oct_Dec/*.nc",
             ],
             "start_date": "2017-01-01 00:00:00",
-            "end_date": "2017-12-31 23:59:59",
+            "end_date": "2017-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 10},
         },
