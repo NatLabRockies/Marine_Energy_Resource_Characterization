@@ -125,21 +125,34 @@ class CoordinateSystemVerifier:
 
 
 class GlobalAttributeEqualityVerifier:
-    """Verifies all dataset global attributes match the first dataset"""
+    """Verifies dataset global attributes match the first dataset, with exclusions"""
 
-    def __init__(self):
+    def __init__(self, exclude_keys=None):
         self.reference_attrs = None
         self.reference_dataset = None
+        self.exclude_keys = set(exclude_keys or [])
+
+    def get_filtered_attrs(self, ds):
+        return {k: v for k, v in ds.attrs.items() if k not in self.exclude_keys}
 
     def verify_individual_dataset(self, ds, location):
+        filtered_attrs = self.get_filtered_attrs(ds)
+
         if self.reference_attrs is None:
-            self.reference_attrs = dict(ds.attrs)
+            self.reference_attrs = filtered_attrs
             self.reference_dataset = location["output_name"]
             return True
 
-        if dict(ds.attrs) != self.reference_attrs:
+        if filtered_attrs != self.reference_attrs:
+            mismatched = {
+                k: (self.reference_attrs.get(k), filtered_attrs.get(k))
+                for k in set(self.reference_attrs) | set(filtered_attrs)
+                if k not in self.exclude_keys
+                and self.reference_attrs.get(k) != filtered_attrs.get(k)
+            }
             raise ValueError(
-                f"Global attributes in {location['output_name']} do not match reference dataset {self.reference_dataset}"
+                f"Global attributes mismatch in {location['output_name']} vs {self.reference_dataset}:\n"
+                f"Different values: {mismatched}"
             )
         return True
 
