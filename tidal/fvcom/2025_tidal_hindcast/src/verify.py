@@ -82,6 +82,8 @@ class TimeVerifier:
             print(expected_delta)
             raise ValueError(f"Inconsistent time steps found: {incorrect_deltas}")
 
+        return True
+
 
 class CoordinateSystemVerifier:
     def __init__(self):
