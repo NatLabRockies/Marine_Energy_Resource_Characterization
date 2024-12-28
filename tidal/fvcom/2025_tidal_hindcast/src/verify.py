@@ -26,6 +26,8 @@ class TimeVerifier:
             self.verify_frequency(this_times["Timestamp"], expected_delta_t_seconds)
             is False
         ):
+            print(this_times["Timestamp"])
+            print(pd.Series(this_times["Timestamp"]).diff())
             raise ValueError(
                 f"Time verification failure in {filepath}. Delta t is different than {expected_delta_t_seconds} seconds. Check timestamps below\n{str(this_times['Timestamp'])}"
             )
