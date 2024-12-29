@@ -108,8 +108,11 @@ config = {
     },
     "metadata": {
         "code_url": "https://github.com/nrel/marine_energy_resource_characterization/tidal/fvcom",
-        "description": "",
+        "cf_conventions": "1.0",
         "conventions": "ME Data Pipeline Standards v1.0",
+        "data_generation_organization": "Pacific Northwest National Laboratory (PNNL)",
+        "data_processing_organization": "National Renewable Energy Laboratory (NREL)",
+        "funding_organization": "United States Department of Energy Water Power Technologies Office",
     },
     "derived_vap": {""},
 }

@@ -1,7 +1,16 @@
 # Create one giant dataset using the valid_timestamps
+import os
+
+from pathlib import Path
+
+
+import pandas as pd
 import xarray as xr
 
+from . import file_manager
 from . import time_manager
+
+from . import version
 
 
 def remove_non_user_centric_variables(ds, config):
@@ -42,6 +51,85 @@ def standardize_time(ds, pandas_utc_timestamps):
 
 
 def standardize_coords(ds):
+    return ds
+
+
+def standardize_global_metadata(ds, config, source_files):
+    # Store original metadata with prefix
+    existing_metadata = {f"original_{key}": value for key, value in ds.attrs.items()}
+
+    # Get common metadata from config
+    new_common_metadata = config["metadata"]
+
+    # Get software version
+    software_version = version.version
+
+    # Get processing timestamp and user info
+    processing_time = pd.Timestamp.now(tz="UTC").isoformat()
+    processing_user = os.getenv("USER", "unknown")
+
+    # Format source files information
+    source_files_metadata = {
+        "source_files": ", ".join(source_files),
+        "source_file_count": len(source_files),
+    }
+
+    def get_conda_info():
+        """Get Conda environment information including packages and version."""
+        try:
+            import subprocess
+            import json
+
+            # Get conda environment name
+            env_name = os.getenv("CONDA_DEFAULT_ENV", "unknown")
+
+            # Get conda version
+            conda_version = subprocess.run(
+                ["conda", "--version"], capture_output=True, text=True
+            ).stdout.strip()
+
+            # Get list of installed packages
+            conda_list = subprocess.run(
+                ["conda", "list", "--json"], capture_output=True, text=True
+            )
+            packages = json.loads(conda_list.stdout)
+
+            # Format package list as a more concise string
+            package_str = ", ".join(
+                f"{pkg['name']}={pkg['version']}" for pkg in packages
+            )
+
+            return {
+                "conda_environment": env_name,
+                "conda_version": conda_version,
+                "conda_packages": package_str,
+            }
+        except Exception as e:
+            return {
+                "conda_environment": "error_getting_conda_info",
+                "conda_version": "error_getting_conda_info",
+                "conda_packages": f"error_getting_conda_info: {str(e)}",
+            }
+
+    # Create complete new metadata dictionary
+    new_metadata = {
+        # Processing information
+        "processing_timestamp": processing_time,
+        "processing_user": processing_user,
+        "software_version": software_version,
+        # Source files information
+        **source_files_metadata,
+        # Conda information
+        **get_conda_info(),
+        # Add common metadata from config
+        **new_common_metadata,
+        # Add prefixed original metadata
+        **existing_metadata,
+    }
+
+    # Completely replace dataset attributes
+    ds.attrs = new_metadata
+
     return ds
 
 
