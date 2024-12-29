@@ -52,12 +52,38 @@ def standardize_dataset(config, location, nc_files, valid_timestamps_df):
         "drop_duplicate_timestamps_keep_strategy"
     ]
     time_df = valid_timestamps_df.drop_duplicates(keep=drop_duplicates_keep_strategy)
-
     time_manager.does_time_match_specification(
         time_df["Timestamp"], location["expected_delta_t_seconds"]
     )
 
-    for _, this_df in time_df.group_by(["source_file"]):
-        print(len(this_df))
-        print(this_df["Timestamp"].iloc[0])
-        print(this_df["Timestamp"].iloc[-1])
+    output_ds = None
+    for source_file, this_df in time_df.groupby("source_file"):
+        print(f"Processing file: {source_file}")
+        print(f"Number of timestamps: {len(this_df)}")
+        print(f"Start time: {this_df['Timestamp'].iloc[0]}")
+        print(f"End time: {this_df['Timestamp'].iloc[-1]}")
+
+        # Open dataset with times not decoded
+        this_ds = xr.open_dataset(source_file, decode_times=False)
+
+        # Select only the timestamps we want using the 'original' values from time_df
+        this_ds = this_ds.sel(time=this_df["original"].values)
+
+        # Standardize the time coordinate using the Timestamp values
+        this_ds = standardize_time(this_ds, this_df["Timestamp"].values)
+
+        # Remove non-user-centric variables
+        this_ds = remove_non_user_centric_variables(this_ds, config)
+
+        # Combine with existing output dataset if it exists
+        if output_ds is None:
+            output_ds = this_ds
+        else:
+            output_ds = xr.concat([output_ds, this_ds], dim="time")
+
+        print(output_ds.info())
+
+    # Sort the final dataset by time
+    output_ds = output_ds.sortby("time")
+
+    return output_ds
