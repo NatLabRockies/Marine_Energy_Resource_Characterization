@@ -60,8 +60,8 @@ def standardize_dataset(config, location, nc_files, valid_timestamps_df):
     for source_file, this_df in time_df.groupby("source_file"):
         print(f"Processing file: {source_file}")
         print(f"Number of timestamps: {len(this_df)}")
-        print(f"Start time: {this_df['Timestamp'].iloc[0]}")
-        print(f"End time: {this_df['Timestamp'].iloc[-1]}")
+        print(f"Start time: {this_df['timestamp'].iloc[0]}")
+        print(f"End time: {this_df['timestamp'].iloc[-1]}")
 
         # Open dataset with times not decoded
         this_ds = xr.open_dataset(source_file, decode_times=False)
@@ -70,7 +70,7 @@ def standardize_dataset(config, location, nc_files, valid_timestamps_df):
         this_ds = this_ds.sel(time=this_df["original"].values)
 
         # Standardize the time coordinate using the Timestamp values
-        this_ds = standardize_time(this_ds, this_df["Timestamp"].values)
+        this_ds = standardize_time(this_ds, this_df["timestamp"].values)
 
         # Remove non-user-centric variables
         this_ds = remove_non_user_centric_variables(this_ds, config)
