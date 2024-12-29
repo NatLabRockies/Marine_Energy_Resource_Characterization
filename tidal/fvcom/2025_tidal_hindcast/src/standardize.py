@@ -170,7 +170,7 @@ def standardize_dataset(config, location, nc_files, valid_timestamps_df):
             output_ds = xr.concat([output_ds, this_ds], dim="time")
 
         output_ds = standardize_global_metadata(
-            output_ds, config, [str(f) for f in time_df["source_files"].to_list()]
+            output_ds, config, [str(f) for f in time_df["source_file"].to_list()]
         )
 
         print(output_ds.info())
