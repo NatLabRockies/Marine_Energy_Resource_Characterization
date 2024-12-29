@@ -24,6 +24,10 @@ config = {
             "siglay_center": "ocean_sigma/general_coordinate",
         },
     },
+    "time_specification": {
+        # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop_duplicates.html
+        "drop_duplicate_timestamps_keep_strategy": "first",
+    },
     "location_specification": {
         "aleutian_islands": {
             "output_name": "AK_aleutian_islands",
