@@ -11,6 +11,7 @@ class TimeVerifier:
         self.original_time = []
         self.pandas_time = []
         self.unix_ns_time = []
+        self.source_file = []
 
     def verify_individual_dataset(self, ds, expected_delta_t_seconds, filepath):
         this_times = time_manager.standardize_fvcom_time(ds)
@@ -32,9 +33,11 @@ class TimeVerifier:
                 f"Time verification failure in {filepath}. Delta t is different than {expected_delta_t_seconds} seconds. Check timestamps below\n{str(this_times['Timestamp'])}"
             )
 
+        num_timestamps = len(this_times["Timestamp"])
         self.original_time.extend(this_times["original"])
         self.pandas_time.extend(this_times["Timestamp"])
         self.unix_ns_time.extend(this_times["datetime64[ns]"])
+        self.source_file.extend([filepath] * num_timestamps)
 
     def does_time_always_increase(self, time_array):
         return time_manager.does_time_always_increase(time_array)
@@ -44,6 +47,16 @@ class TimeVerifier:
             pandas_timestamp_series
         )
         return time_delta_stats["mean_dt"] == expected_delta_t_seconds
+
+    def create_valid_timestamps_df(self):
+        return pd.DataFrame(
+            {
+                "original": self.original_time,
+                "timestamp": self.pandas_time,
+                "time_ns": self.pandas_time,
+                "source_file": self.source_file,
+            }
+        )
 
     def verify_complete_dataset(self, location):
         """Verifies time series integrity for entire dataset"""
@@ -263,3 +276,5 @@ def verify_dataset(config, location, nc_files):
         dataset_structure_equal_verifier.verify_individual_dataset(ds, location)
 
     time_verifier.verify_complete_dataset(location)
+
+    return time_verifier.create_valid_timestamps_df()
