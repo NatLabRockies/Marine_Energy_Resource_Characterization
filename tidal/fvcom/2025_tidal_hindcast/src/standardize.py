@@ -53,7 +53,7 @@ def standardize_dataset(config, location, nc_files, valid_timestamps_df):
     ]
     time_df = valid_timestamps_df.drop_duplicates(keep=drop_duplicates_keep_strategy)
     time_manager.does_time_match_specification(
-        time_df["Timestamp"], location["expected_delta_t_seconds"]
+        time_df["timestamp"], location["expected_delta_t_seconds"]
     )
 
     output_ds = None
