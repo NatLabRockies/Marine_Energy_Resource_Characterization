@@ -169,9 +169,14 @@ def standardize_dataset(config, location, nc_files, valid_timestamps_df):
         else:
             output_ds = xr.concat([output_ds, this_ds], dim="time")
 
-        print(output_ds.info())
+        output_ds = standardize_global_metadata(
+            output_ds, config, [str(f) for f in time_df["source_files"].to_list()]
+        )
 
-    # Sort the final dataset by time
-    output_ds = output_ds.sortby("time")
+        print(output_ds.info())
+        exit()
+
+    std_output_dir = file_manager.get_standardized_output_dir(config)
+    output_ds.to_netcdf(Path(std_output_dir, f"{location['output_name']}_std.nc"))
 
     return output_ds
