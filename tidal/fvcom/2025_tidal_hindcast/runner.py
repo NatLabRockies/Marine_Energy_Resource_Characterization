@@ -1,7 +1,9 @@
 from config import config
 from src.cli import parse_args
 from src.file_manager import get_specified_nc_files
+
 from src.verify import verify_dataset
+from src.standardize import standardize_dataset
 
 
 if __name__ == "__main__":
@@ -18,4 +20,7 @@ if __name__ == "__main__":
     print(f"Found {len(nc_files)} files!")
 
     print("Step 1: Verifying Dataset Integrity...")
-    verify_dataset(config, location, nc_files)
+    valid_timestamps_df = verify_dataset(config, location, nc_files)
+
+    print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
+    standardize_dataset(config, location, nc_files, valid_timestamps_df)
