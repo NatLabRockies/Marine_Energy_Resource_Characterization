@@ -40,6 +40,7 @@ config = {
             "files_to_exclude": ["MD_AIS_west_hrBathy_0370.nc"],
             "expected_delta_t_seconds": 3600,  # 60 min
             "coordinates": {"system": "latitude/longitude"},
+            "description": "",
         },
         "cook_inlet": {
             "output_name": "AK_cook_inlet",
@@ -53,6 +54,7 @@ config = {
             "end_date": "2005-12-31 23:00:00",
             "expected_delta_t_seconds": 3600,  # 60 min
             "coordinates": {"system": "latitude/longitude"},
+            "description": "",
         },
         "piscataqua_river": {
             "output_name": "NH_piscataqua_river",
@@ -62,6 +64,7 @@ config = {
             "end_date": "2007-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 19},
+            "description": "",
         },
         "puget_sound": {
             "output_name": "WA_puget_sound",
@@ -85,6 +88,7 @@ config = {
             "end_date": "2015-12-30 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 10},
+            "description": "",
         },
         "western_passage": {
             "output_name": "ME_western_passage",
@@ -99,6 +103,7 @@ config = {
             "end_date": "2017-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 10},
+            "description": "",
         },
     },
     "metadata": {
