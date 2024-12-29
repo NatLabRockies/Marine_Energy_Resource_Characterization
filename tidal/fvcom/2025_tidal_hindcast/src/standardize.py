@@ -7,7 +7,7 @@ def standardize_dataset(config, location, nc_files, valid_timestamps_df):
     # At this step the timestamps can have duplicates. This step uses the strategy defined
     # in the config to remove duplicate timestamps
     drop_duplicates_keep_strategy = config["time_specification"][
-        "drop_duplicates_keep_strategy"
+        "drop_duplicate_timestamps_keep_strategy"
     ]
     time_df = valid_timestamps_df.drop_duplicates(keep=drop_duplicates_keep_strategy)
 
