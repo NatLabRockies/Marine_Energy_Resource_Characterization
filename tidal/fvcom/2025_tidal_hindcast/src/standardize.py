@@ -345,9 +345,10 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             file_manager.get_standardized_output_dir(config),
             f"{standardizer.location['output_name']}_{Path(source_file).name}_std.nc",
         )
-        std_files.append(output_path)
+        std_files.extend([output_path] * len(this_df))
         output_ds.to_netcdf(output_path)
 
         print(f"Saving standardized dataframe to {output_path}...")
 
-    return output_ds
+    time_df["std_files"] = [str(f) for f in std_files]
+    return time_df
