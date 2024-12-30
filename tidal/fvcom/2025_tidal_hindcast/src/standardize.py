@@ -143,11 +143,23 @@ class DatasetStandardizer:
             print(orig_ds[var_name])
             print(ds.info())
             if var_name == "u" or var_name == "v":
-                coords = ["time", "sigma", "cell"]
+                coords = {
+                    "time": ds.time,
+                    "sigma": ds.sigma,
+                    "cell": ds.cell,
+                }
+                dims = ["time", "sigma", "cell"]
             elif var_name == "zeta":
-                coords = ["time", "cell"]
+                coords = {
+                    "time": ds.time,
+                    "cell": ds.cell,
+                }
+                dims = ["time", "cell"]
             elif var_name == "h_center":
-                coords = ["cell"]
+                coords = {
+                    "cell": ds.cell,
+                }
+                dims = ["cell"]
             elif var_name == "siglay_center":
                 # Skip sigma, it already exists
                 continue
@@ -158,7 +170,7 @@ class DatasetStandardizer:
             ds[var_name] = xr.DataArray(
                 data=orig_ds[var_name].values,
                 coords=coords,
-                dims=coords,
+                dims=dims,
                 attrs={
                     **orig_ds[var_name].attrs,
                     "coverage_content_type": "modelResult",
