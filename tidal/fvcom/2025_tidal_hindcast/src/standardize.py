@@ -152,6 +152,7 @@ class DatasetStandardizer:
 
     def _add_variables(self, ds, orig_ds):
         for var_name, var_specs in self.variable_mapping.items():
+            print(f"Adding {var_name}...")
             if var_name == "u" or var_name == "v":
                 coords = {
                     "time": ds.time,
@@ -215,12 +216,16 @@ class DatasetStandardizer:
         return reference_column
 
     def standardize_single_file(self, source_file, time_df):
+        print(f"Opening source file: {source_file}...")
         ds = xr.open_dataset(source_file, decode_times=False)
         utm_zone = None
         if self.location["coordinates"]["system"] == "utm":
             utm_zone = self.location["coordinates"]["zone"]
+        print("Standardizing coords...")
         coords = coord_manager.standardize_fvcom_coords(ds, utm_zone)
+        print("Extracting sigma_layer...")
         sigma_layers = self._extract_sigma_layer(ds)
+        print("Creating new ds...")
         new_ds = self._create_base_coords(
             {
                 **coords,
@@ -228,9 +233,13 @@ class DatasetStandardizer:
                 "sigma_levels": sigma_layers,
             }
         )
+        print("Creating cf_compliant")
         new_ds = self._create_cf_compliant_coords(new_ds, coords)
+        print("Setup vert coords...")
         new_ds = self._setup_vertical_coordinates(new_ds, sigma_layers)
+        print("Adding mesh topology...")
         new_ds = self._add_mesh_topology(new_ds)
+        print("Adding variables ...")
         new_ds = self._add_variables(new_ds, ds.sel(time=time_df["original"].values))
         return new_ds
 
@@ -357,7 +366,10 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         print(f"Number of timestamps: {len(this_df)}")
         print(f"Start time: {this_df['timestamp'].iloc[0]}")
         print(f"End time: {this_df['timestamp'].iloc[-1]}")
+        print("Beginning standardization...")
         output_ds = standardizer.standardize_single_file(source_file, this_df)
+        print("Finished Standardization!...")
+        print("Adding Global Attributes")
         output_ds = DatasetFinalizer.add_global_attributes(
             ds=output_ds,
             config=config,
