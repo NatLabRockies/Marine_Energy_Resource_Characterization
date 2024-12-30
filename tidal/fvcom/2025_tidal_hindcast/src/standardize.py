@@ -1,3 +1,4 @@
+import json
 import os
 import socket
 import platform
@@ -289,7 +290,7 @@ class DatasetFinalizer:
         new_metadata = {
             **existing_metadata,
             **config["metadata"],
-            **location,
+            "processing_location_specification": json.dumps(location),
             "processing_timestamp": pd.Timestamp.now(tz="UTC").isoformat(),
             "processing_user": os.getenv("USER", "unknown"),
             "processing_software_version": version,
