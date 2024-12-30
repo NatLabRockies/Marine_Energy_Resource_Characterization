@@ -256,7 +256,7 @@ def model_specification_verifier(config, ds, filepath):
 
 
 def verify_dataset(config, location, nc_files):
-    verification_folder = file_manager.get_verification_output_dir()
+    verification_folder = file_manager.get_verification_output_dir(config)
     verification_path = Path(
         verification_folder, f"{location['output_name']}_verification.parquet"
     )

@@ -28,8 +28,10 @@ def get_output_dirs(config):
         "summary_vap": Path(output_dirs["summary_vap"]),
     }
 
+
 def get_verification_output_dir(config):
-    return get_output_dirs(config)["vap"]
+    return get_output_dirs(config)["verification"]
+
 
 def get_standardized_output_dir(config):
     return get_output_dirs(config)["standardized"]
