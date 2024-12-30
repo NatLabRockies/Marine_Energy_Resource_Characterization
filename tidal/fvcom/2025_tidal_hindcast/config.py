@@ -24,6 +24,7 @@ config = {
             "siglay_center": "ocean_sigma/general_coordinate",
         },
     },
+    "derived_vap_specification": {""},
     "time_specification": {
         # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop_duplicates.html
         "drop_duplicate_timestamps_keep_strategy": "first",
@@ -114,5 +115,4 @@ config = {
         "data_processing_organization": "National Renewable Energy Laboratory (NREL)",
         "funding_organization": "United States Department of Energy Water Power Technologies Office",
     },
-    "derived_vap": {""},
 }
