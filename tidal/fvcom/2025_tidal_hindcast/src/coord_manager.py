@@ -51,6 +51,12 @@ def create_transformer(coord_system: str, coord_projection: str, utm_zone: int =
     return pyproj.Transformer.from_crs(source_crs, output_crs, always_xy=True)
 
 
+def get_node_to_cell_mapping(ds):
+    """Get mapping from nodes to cells using nv connectivity array"""
+    # nv indices are 1-based, subtract 1
+    return ds["nv"].values.T - 1  # Shape: (nele, 3)
+
+
 def standardize_fvcom_coords(ds, utm_zone: int = None):
     coord_system = ds.attrs.get("CoordinateSystem")
     coord_projection = ds.attrs.get("CoordinateProjection", "none")
@@ -87,8 +93,7 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
         lon_corners = original_lon_corners
 
     # Reorganize corners to match centers using nv mapping
-    # nv indices are 1-based, so subtract 1
-    corner_indices = ds["nv"].values - 1  # Shape: (3, nele)
+    corner_indices = get_node_to_cell_mapping(ds)  # Shape: (3, nele)
 
     # Reorder corners to match centers
     lat_corners_mapped = lat_corners[corner_indices.T]  # Shape: (nele, 3)
