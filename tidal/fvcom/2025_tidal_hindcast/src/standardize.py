@@ -216,7 +216,10 @@ class DatasetStandardizer:
 
     def standardize_single_file(self, source_file, time_df):
         ds = xr.open_dataset(source_file, decode_times=False)
-        coords = coord_manager.standardize_fvcom_coords(ds)
+        utm_zone = None
+        if self.location["coordinates"]["system"] == "utm":
+            utm_zone = self.location["coordinates"]["zone"]
+        coords = coord_manager.standardize_fvcom_coords(ds, utm_zone)
         sigma_layers = self._extract_sigma_layer(ds)
         new_ds = self._create_base_coords(
             {
