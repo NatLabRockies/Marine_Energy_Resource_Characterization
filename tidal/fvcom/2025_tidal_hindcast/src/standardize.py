@@ -313,6 +313,18 @@ class DatasetFinalizer:
 def standardize_dataset(config, location_key, valid_timestamps_df):
     standardizer = DatasetStandardizer(config, location_key)
 
+    # Check for existing standardization file
+    tracking_folder = file_manager.get_tracking_output_dir(config)
+    tracking_path = Path(
+        tracking_folder,
+        f"{config[location_key]['output_name']}_standardize_step_tracking.parquet",
+    )
+
+    # Check if tracking file exists
+    if tracking_path.exists():
+        print(f"\tDataset already verified: {config[location_key]['output_name']}")
+        return pd.read_parquet(tracking_path)
+
     drop_strategy = config["time_specification"][
         "drop_duplicate_timestamps_keep_strategy"
     ]
@@ -329,7 +341,6 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
     time_manager.does_time_match_specification(
         time_df["timestamp"], standardizer.location["expected_delta_t_seconds"]
     )
-
     std_files = []
 
     # One to one go through the source files and standardize them
@@ -338,9 +349,7 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         print(f"Number of timestamps: {len(this_df)}")
         print(f"Start time: {this_df['timestamp'].iloc[0]}")
         print(f"End time: {this_df['timestamp'].iloc[-1]}")
-
         output_ds = standardizer.standardize_single_file(source_file, this_df)
-
         output_ds = DatasetFinalizer.add_global_attributes(
             ds=output_ds,
             config=config,
@@ -348,15 +357,17 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             source_files=[str(f) for f in [source_file]],
             version=version.version,
         )
-
         output_path = Path(
             file_manager.get_standardized_output_dir(config),
             f"{standardizer.location['output_name']}_{Path(source_file).name.replace('.nc', '')}_std.nc",
         )
         std_files.extend([output_path] * len(this_df))
         output_ds.to_netcdf(output_path)
-
         print(f"Saving standardized dataframe to {output_path}...")
 
     time_df["std_files"] = [str(f) for f in std_files]
+
+    # Save standardization results to parquet
+    time_df.to_parquet(tracking_path)
+
     return time_df
