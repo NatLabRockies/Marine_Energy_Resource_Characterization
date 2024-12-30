@@ -54,7 +54,6 @@ def create_transformer(coord_system: str, coord_projection: str, utm_zone: int =
 def standardize_fvcom_coords(ds, utm_zone: int = None):
     coord_system = ds.attrs.get("CoordinateSystem")
     coord_projection = ds.attrs.get("CoordinateProjection", "none")
-
     if not coord_system:
         raise ValueError("NetCDF file missing CoordinateSystem attribute")
 
@@ -71,7 +70,6 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
         original_utm_y_centers = ds["yc"].values
         original_utm_x_corners = ds["x"].values
         original_utm_y_corners = ds["y"].values
-
         transformer = create_transformer(coord_system, coord_projection, utm_zone)
         if transformer:
             lon_centers, lat_centers = transformer.transform(
@@ -80,19 +78,49 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
             lon_corners, lat_corners = transformer.transform(
                 original_utm_x_corners, original_utm_y_corners
             )
-            return {
-                "lat_centers": lat_centers,
-                "lon_centers": lon_centers,
-                "lat_corners": lat_corners,
-                "lon_corners": lon_corners,
-            }
-        raise ValueError("Zero coordinates but no transformation defined")
+        else:
+            raise ValueError("Zero coordinates but no transformation defined")
+    else:
+        lat_centers = original_lat_centers
+        lon_centers = original_lon_centers
+        lat_corners = original_lat_corners
+        lon_corners = original_lon_corners
+
+    # Reorganize corners to match centers using nv mapping
+    # nv indices are 1-based, so subtract 1
+    corner_indices = ds["nv"].values - 1  # Shape: (3, nele)
+
+    # Reorder corners to match centers
+    lat_corners_mapped = lat_corners[corner_indices.T]  # Shape: (nele, 3)
+    lon_corners_mapped = lon_corners[corner_indices.T]  # Shape: (nele, 3)
+
+    if lat_corners_mapped.shape[1] != 3:
+        raise ValueError(
+            f"Expected exactly 3 lat corners per cell, got {lat_corners_mapped.shape[1]}"
+        )
+
+    if lon_corners_mapped.shape[1] != 3:
+        raise ValueError(
+            f"Expected exactly 3 lon corners per cell, got {lon_corners_mapped.shape[1]}"
+        )
+
+    # Verify centers are within corners
+    def verify_centers_in_corners(centers, corners):
+        # Simple bounding box check for each element
+        min_bounds = np.min(corners, axis=1)  # Shape: (nele,)
+        max_bounds = np.max(corners, axis=1)  # Shape: (nele,)
+        within_bounds = (centers >= min_bounds) & (centers <= max_bounds)
+        return np.all(within_bounds)
+
+    centers_valid = verify_centers_in_corners(lat_centers, lat_corners_mapped)
+    if not centers_valid:
+        print("Warning: Some center points lie outside their corner bounds")
 
     return {
-        "lat_centers": original_lat_centers,
-        "lon_centers": original_lon_centers,
-        "lat_corners": original_lat_corners,
-        "lon_corners": original_lon_corners,
+        "lat_centers": lat_centers,
+        "lon_centers": lon_centers,
+        "lat_corners": lat_corners_mapped,
+        "lon_corners": lon_corners_mapped,
     }
 
 
