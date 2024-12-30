@@ -138,6 +138,17 @@ class DatasetStandardizer:
         )
         return ds
 
+    def _interpolate_zeta_to_cell_centers(self, ds):
+        """Interpolate zeta from nodes to cell centers"""
+        node_to_cell_map = coord_manager.get_node_to_cell_mapping(ds)
+        cell_values = np.zeros((ds.zeta.shape[0], len(node_to_cell_map)))
+
+        for t in range(ds.zeta.shape[0]):
+            node_values = ds.zeta[t].values
+            cell_values[t] = np.mean(node_values[node_to_cell_map], axis=1)
+
+        return cell_values
+
     def _add_variables(self, ds, orig_ds):
         for var_name, var_specs in self.variable_mapping.items():
             print(orig_ds[var_name])
@@ -149,17 +160,23 @@ class DatasetStandardizer:
                     "cell": ds.cell,
                 }
                 dims = ["time", "sigma", "cell"]
+                data = orig_ds[var_name].values
+                new_var_name = var_name
             elif var_name == "zeta":
                 coords = {
                     "time": ds.time,
                     "cell": ds.cell,
                 }
                 dims = ["time", "cell"]
+                data = self._interpolate_zeta_to_cell_centers
+                new_var_name = "zeta_center"
             elif var_name == "h_center":
                 coords = {
                     "cell": ds.cell,
                 }
                 dims = ["cell"]
+                data = orig_ds[var_name].values
+                new_var_name = var_name
             elif var_name == "siglay_center":
                 # Skip sigma, it already exists
                 continue
@@ -167,8 +184,8 @@ class DatasetStandardizer:
             else:
                 raise ValueError(f"Coordinates not defined for var: {var_name}")
 
-            ds[var_name] = xr.DataArray(
-                data=orig_ds[var_name].values,
+            ds[new_var_name] = xr.DataArray(
+                data=data,
                 coords=coords,
                 dims=dims,
                 attrs={
