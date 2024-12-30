@@ -348,6 +348,6 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         std_files.append(output_path)
         output_ds.to_netcdf(output_path)
 
-        exit()
+        print(f"Saving standardized dataframe to {output_path}...")
 
     return output_ds
