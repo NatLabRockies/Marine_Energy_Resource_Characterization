@@ -7,6 +7,7 @@ config = {
         },
         # Output Data Directories
         "output": {
+            "verification": "/scratch/asimms/Tidal/99_verification",
             # Standardized data with qc
             "standardized": "/scratch/asimms/Tidal/a1_std",
             "vap": "/scratch/asimms/Tidal/b1_vap",

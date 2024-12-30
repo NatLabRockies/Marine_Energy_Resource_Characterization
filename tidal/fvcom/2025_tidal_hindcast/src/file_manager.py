@@ -22,11 +22,14 @@ def get_specified_nc_files(config, location):
 def get_output_dirs(config):
     output_dirs = config["dir"]["output"]
     return {
+        "verification": Path(output_dirs["verification"]),
         "standardized": Path(output_dirs["standardized"]),
         "vap": Path(output_dirs["vap"]),
         "summary_vap": Path(output_dirs["summary_vap"]),
     }
 
+def get_verification_output_dir(config):
+    return get_output_dirs(config)["vap"]
 
 def get_standardized_output_dir(config):
     return get_output_dirs(config)["standardized"]
