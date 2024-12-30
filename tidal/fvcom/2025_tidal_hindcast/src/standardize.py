@@ -277,32 +277,32 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         time_df["timestamp"], standardizer.location["expected_delta_t_seconds"]
     )
 
-    output_ds = None
+    std_files = []
+
+    # One to one go through the source files and standardize them
     for source_file, this_df in time_df.groupby("source_file"):
         print(f"Processing file: {source_file}")
         print(f"Number of timestamps: {len(this_df)}")
         print(f"Start time: {this_df['timestamp'].iloc[0]}")
         print(f"End time: {this_df['timestamp'].iloc[-1]}")
 
-        this_ds = standardizer.standardize_single_file(source_file, this_df)
-        output_ds = (
-            this_ds
-            if output_ds is None
-            else xr.concat([output_ds, this_ds], dim="time")
+        output_ds = standardizer.standardize_single_file(source_file, this_df)
+
+        output_ds = DatasetFinalizer.add_global_attributes(
+            ds=output_ds,
+            config=config,
+            location=standardizer.location,
+            source_files=[str(f) for f in [source_file]],
+            version=version.version,
         )
 
-    output_ds = DatasetFinalizer.add_global_attributes(
-        ds=output_ds,
-        config=config,
-        location=standardizer.location,
-        source_files=[str(f) for f in time_df["source_file"].to_list()],
-        version=version.version,
-    )
+        output_path = Path(
+            file_manager.get_standardized_output_dir(config),
+            f"{standardizer.location['output_name']}_{Path(source_file).name}_std.nc",
+        )
+        std_files.append(output_path)
+        output_ds.to_netcdf(output_path)
 
-    output_path = Path(
-        file_manager.get_standardized_output_dir(config),
-        f"{standardizer.location['output_name']}_std.nc",
-    )
-    output_ds.to_netcdf(output_path)
+        exit()
 
     return output_ds
