@@ -174,7 +174,8 @@ class DatasetStandardizer:
             {
                 **coords,
                 "time": time_df["timestamp"].values,
-                "sigma_levels": ds["siglay_center"].values,
+                # Get the first column
+                "sigma_levels": ds["siglay_center"].values[:, 0],
             }
         )
 
