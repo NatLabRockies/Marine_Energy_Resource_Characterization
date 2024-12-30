@@ -4,6 +4,7 @@ from src.file_manager import get_specified_nc_files
 
 from src.verify import verify_dataset
 from src.standardize import standardize_dataset
+from src.partition_by_time import partition_by_time
 
 
 if __name__ == "__main__":
@@ -23,6 +24,7 @@ if __name__ == "__main__":
     valid_timestamps_df = verify_dataset(config, location, nc_files)
 
     print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
-    standardize_dataset(config, args.location, valid_timestamps_df)
+    valid_std_files_df = standardize_dataset(config, args.location, valid_timestamps_df)
 
     print("Step 3: Partitioning Standardized Dataset by Time...")
+    partition_by_time(config, args.location, valid_std_files_df)
