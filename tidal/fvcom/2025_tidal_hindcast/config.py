@@ -10,6 +10,7 @@ config = {
             "tracking": "/scratch/asimms/Tidal/z99_tracking",
             # Standardized data with qc
             "standardized": "/scratch/asimms/Tidal/a1_std",
+            "standardized_partition": "/scratch/asimms/Tidal/a2_std_partition",
             "vap": "/scratch/asimms/Tidal/b1_vap",
             "summary_vap": "/scratch/asimms/Tidal/b2_summary_vap",
         },

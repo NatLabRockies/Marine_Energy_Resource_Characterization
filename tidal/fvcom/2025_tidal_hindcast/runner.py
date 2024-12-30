@@ -24,3 +24,5 @@ if __name__ == "__main__":
 
     print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
     standardize_dataset(config, args.location, valid_timestamps_df)
+
+    print("Step 3: Partitioning Standardized Dataset by Time...")
