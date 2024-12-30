@@ -141,6 +141,7 @@ class DatasetStandardizer:
     def _add_variables(self, ds, orig_ds):
         for var_name, var_specs in self.variable_mapping.items():
             print(orig_ds[var_name])
+            print(ds.info())
             if var_name == "u" or var_name == "v":
                 coords = ["time", "sigma", "cell"]
             elif var_name == "zeta":
