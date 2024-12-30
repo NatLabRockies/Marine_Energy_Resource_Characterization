@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -29,16 +30,24 @@ def partition_by_time(config, location_key, time_df, freq="M"):
         # Read each source file and select relevant timestamps
         for std_file in unique_std_files:
             ds = xr.open_dataset(std_file)
+
             # Add source filenames from this dataset's attributes
             if "source_files" in ds.attrs:
                 # Extract just the filenames from the full paths
                 filenames = [Path(f).name for f in ds.attrs["source_files"]]
                 source_filenames.update(filenames)
 
-            # Select timestamps for this period
-            file_timestamps = period_df[period_df["std_files"] == std_file]["timestamp"]
-            ds_subset = ds.sel(time=file_timestamps)
-            datasets.append(ds_subset)
+            # Convert timestamps to numpy array for selection
+            file_timestamps = period_df[period_df["std_files"] == std_file][
+                "timestamp"
+            ].values
+
+            # Select timestamps for this period using isel with where condition
+            time_indices = np.isin(ds.time.values, file_timestamps)
+            ds_subset = ds.isel(time=time_indices)
+
+            if not ds_subset.time.size == 0:  # Only append if we have data
+                datasets.append(ds_subset)
 
         # Concatenate all datasets for this period
         if datasets:
