@@ -55,7 +55,7 @@ class TimeVerifier:
                 "original": self.original_time,
                 "timestamp": self.pandas_time,
                 "time_ns": self.pandas_time,
-                "source_file": self.source_file,
+                "source_file": [str(f) for f in self.source_file],
             }
         )
 
