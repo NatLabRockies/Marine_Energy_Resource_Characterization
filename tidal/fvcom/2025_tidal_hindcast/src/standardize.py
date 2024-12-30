@@ -165,25 +165,39 @@ class DatasetStandardizer:
             )
         return ds
 
+    def _extract_sigma_layer(self, ds):
+        # Get the first column as reference
+        reference_column = ds["siglay_center"].values[:, 0]
+
+        # Broadcast and compare all columns against the first column at once
+        # This creates a bool array of shape (n_layers, n_elements-1)
+        columns_match = np.allclose(
+            ds["siglay_center"].values[:, 1:],
+            reference_column[:, np.newaxis],
+            rtol=1e-10,
+            atol=1e-10,
+        )
+
+        if not columns_match:
+            raise ValueError("Not all columns in siglay_center are identical")
+
+        return reference_column
+
     def standardize_single_file(self, source_file, time_df):
         ds = xr.open_dataset(source_file, decode_times=False)
-
         coords = coord_manager.standardize_fvcom_coords(ds)
-
+        sigma_layers = self._extract_sigma_layer(ds)
         new_ds = self._create_base_coords(
             {
                 **coords,
                 "time": time_df["timestamp"].values,
-                # Get the first column
-                "sigma_levels": ds["siglay_center"].values[:, 0],
+                "sigma_levels": sigma_layers,
             }
         )
-
         new_ds = self._create_cf_compliant_coords(new_ds, coords)
-        new_ds = self._setup_vertical_coordinates(new_ds, ds["siglay_center"].values)
+        new_ds = self._setup_vertical_coordinates(new_ds, sigma_layers)
         new_ds = self._add_mesh_topology(new_ds)
         new_ds = self._add_variables(new_ds, ds.sel(time=time_df["original"].values))
-
         return new_ds
 
 
