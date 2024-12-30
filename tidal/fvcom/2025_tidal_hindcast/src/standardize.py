@@ -171,7 +171,7 @@ class DatasetStandardizer:
                     "cell": ds.cell,
                 }
                 dims = ["time", "cell"]
-                data = self._interpolate_zeta_to_cell_centers
+                data = self._interpolate_zeta_to_cell_centers(ds)
                 new_var_name = "zeta_center"
             elif var_name == "h_center":
                 coords = {
