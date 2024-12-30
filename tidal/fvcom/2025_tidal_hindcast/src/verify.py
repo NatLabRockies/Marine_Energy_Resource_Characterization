@@ -262,7 +262,7 @@ def verify_dataset(config, location, nc_files):
     )
 
     # Check if verification file exists
-    if verification_path.exists(verification_path):
+    if verification_path.exists():
         print(f"\tDataset already verified: {location['output_name']}")
         return pd.read_parquet(verification_path)
 
