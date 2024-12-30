@@ -330,10 +330,10 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         "drop_duplicate_timestamps_keep_strategy"
     ]
     time_df = valid_timestamps_df.drop_duplicates(keep=drop_strategy)
-    spec_start_date = pd.Timestamp(
+    spec_start_date = pd.to_datetime(
         config["location_specification"][location_key]["start_date"], utc=True
     )
-    spec_end_date = pd.Timestamp(
+    spec_end_date = pd.to_datetime(
         config["location_specification"][location_key]["end_date"], utc=True
     )
 
