@@ -256,15 +256,15 @@ def model_specification_verifier(config, ds, filepath):
 
 
 def verify_dataset(config, location, nc_files):
-    verification_folder = file_manager.get_verification_output_dir(config)
-    verification_path = Path(
-        verification_folder, f"{location['output_name']}_verification.parquet"
+    tracking_folder = file_manager.get_tracking_output_dir(config)
+    tracking_path = Path(
+        tracking_folder, f"{location['output_name']}_verify_step_tracking.parquet"
     )
 
-    # Check if verification file exists
-    if verification_path.exists():
+    # Check if tracking file exists
+    if tracking_path.exists():
         print(f"\tDataset already verified: {location['output_name']}")
-        return pd.read_parquet(verification_path)
+        return pd.read_parquet(tracking_path)
 
     time_verifier = TimeVerifier()
     coord_system_verifier = CoordinateSystemVerifier()
@@ -288,6 +288,6 @@ def verify_dataset(config, location, nc_files):
     time_verifier.verify_complete_dataset(location)
 
     timestamps_df = time_verifier.create_valid_timestamps_df()
-    timestamps_df.to_parquet(verification_path)
+    timestamps_df.to_parquet(tracking_path)
 
     return timestamps_df

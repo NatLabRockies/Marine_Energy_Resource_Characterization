@@ -22,7 +22,7 @@ def get_specified_nc_files(config, location):
 def get_output_dirs(config):
     output_dirs = config["dir"]["output"]
     paths = {
-        "verification": Path(output_dirs["verification"]),
+        "tracking": Path(output_dirs["tracking"]),
         "standardized": Path(output_dirs["standardized"]),
         "vap": Path(output_dirs["vap"]),
         "summary_vap": Path(output_dirs["summary_vap"]),
@@ -33,8 +33,8 @@ def get_output_dirs(config):
     return paths
 
 
-def get_verification_output_dir(config):
-    return get_output_dirs(config)["verification"]
+def get_tracking_output_dir(config):
+    return get_output_dirs(config)["tracking"]
 
 
 def get_standardized_output_dir(config):
