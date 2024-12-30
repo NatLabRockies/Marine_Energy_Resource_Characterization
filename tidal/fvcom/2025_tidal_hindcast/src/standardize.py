@@ -290,7 +290,6 @@ class DatasetFinalizer:
             **existing_metadata,
             **config["metadata"],
             **location,
-            **config["model_specification"]["model_metadata"],
             "processing_timestamp": pd.Timestamp.now(tz="UTC").isoformat(),
             "processing_user": os.getenv("USER", "unknown"),
             "processing_software_version": version,
