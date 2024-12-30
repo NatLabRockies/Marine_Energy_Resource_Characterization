@@ -315,14 +315,15 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
 
     # Check for existing standardization file
     tracking_folder = file_manager.get_tracking_output_dir(config)
+    output_name = config["location_specification"][location_key]["output_name"]
     tracking_path = Path(
         tracking_folder,
-        f"{config[location_key]['output_name']}_standardize_step_tracking.parquet",
+        f"{output_name}_standardize_step_tracking.parquet",
     )
 
     # Check if tracking file exists
     if tracking_path.exists():
-        print(f"\tDataset already verified: {config[location_key]['output_name']}")
+        print(f"\tDataset already verified: {output_name}")
         return pd.read_parquet(tracking_path)
 
     drop_strategy = config["time_specification"][
