@@ -148,6 +148,8 @@ class DatasetStandardizer:
             node_values = ds.zeta[t].values
             cell_values[t] = np.mean(node_values[node_to_cell_map], axis=1)
 
+        print(cell_values.shape)
+        print(cell_values[:5])
         return cell_values
 
     def _add_variables(self, ds, orig_ds):
