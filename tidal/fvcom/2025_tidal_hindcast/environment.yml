@@ -13,3 +13,4 @@ dependencies:
   - pyproj=3.6
   - xarray=2024.10
   - netcdf4=1.7
+  - pyarrow=18.1
