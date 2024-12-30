@@ -140,29 +140,30 @@ class DatasetStandardizer:
 
     def _add_variables(self, ds, orig_ds):
         for var_name, var_specs in self.variable_mapping.items():
-            coords = {}
-            for orig_coord, new_coord in var_specs["coordinate_mapping"].items():
-                if orig_coord in orig_ds.coords:
-                    coords[new_coord] = orig_ds[orig_coord]
-
-            attrs = {
-                "standard_name": var_specs["standard_name"],
-                "long_name": var_specs["long_name"],
-                "units": "m s-1" if "velocity" in var_specs["standard_name"] else "m",
-                "coordinates": " ".join(var_specs["dimensions"]),
-                "coverage_content_type": var_specs["coverage_content_type"],
-                "grid_mapping": var_specs["grid_mapping"],
-            }
-
-            if "cell_methods" in var_specs:
-                attrs["cell_methods"] = var_specs["cell_methods"]
+            if var_name == "u" or var_name == "v":
+                coords = ["time", "sigma", "cell"]
+            elif var_name == "zeta":
+                coords = ["time", "cell"]
+            elif var_name == "h_center":
+                coords = ["cell"]
+            elif var_name == "siglay_center":
+                # Skip sigma, it already exists
+                continue
+                # coords = ["sigma"]
+            else:
+                raise ValueError(f"Coordinates not defined for var: {var_name}")
 
             ds[var_name] = xr.DataArray(
                 data=orig_ds[var_name].values,
-                dims=var_specs["dimensions"],
                 coords=coords,
-                attrs=attrs,
+                dims=coords,
+                attrs={
+                    **orig_ds[var_name].attrs,
+                    "coverage_content_type": "modelResult",
+                    "grid_mapping": "mesh",
+                },
             )
+
         return ds
 
     def _extract_sigma_layer(self, ds):
