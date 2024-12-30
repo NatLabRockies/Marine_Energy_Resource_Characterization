@@ -317,6 +317,14 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         "drop_duplicate_timestamps_keep_strategy"
     ]
     time_df = valid_timestamps_df.drop_duplicates(keep=drop_strategy)
+    spec_start_date = pd.Timestamp(config[location_key]["start_date"], utc=True)
+    spec_end_date = pd.Timestamp(config[location_key]["end_date"], utc=True)
+
+    # Filtering timestamps between specified start and end dates (inclusive)
+    time_df = time_df[
+        (time_df["timestamp"] >= spec_start_date)
+        & (time_df["timestamp"] <= spec_end_date)
+    ]
 
     time_manager.does_time_match_specification(
         time_df["timestamp"], standardizer.location["expected_delta_t_seconds"]
