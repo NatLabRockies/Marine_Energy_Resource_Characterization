@@ -343,7 +343,7 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
 
         output_path = Path(
             file_manager.get_standardized_output_dir(config),
-            f"{standardizer.location['output_name']}_{Path(source_file).name}_std.nc",
+            f"{standardizer.location['output_name']}_{Path(source_file).name.replace('.nc', '')}_std.nc",
         )
         std_files.extend([output_path] * len(this_df))
         output_ds.to_netcdf(output_path)
