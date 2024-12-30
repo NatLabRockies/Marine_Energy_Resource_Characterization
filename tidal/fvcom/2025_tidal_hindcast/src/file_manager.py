@@ -21,12 +21,16 @@ def get_specified_nc_files(config, location):
 
 def get_output_dirs(config):
     output_dirs = config["dir"]["output"]
-    return {
+    paths = {
         "verification": Path(output_dirs["verification"]),
         "standardized": Path(output_dirs["standardized"]),
         "vap": Path(output_dirs["vap"]),
         "summary_vap": Path(output_dirs["summary_vap"]),
     }
+    for path in paths.values():
+        path.mkdir(parents=True, exist_ok=True)
+
+    return paths
 
 
 def get_verification_output_dir(config):
