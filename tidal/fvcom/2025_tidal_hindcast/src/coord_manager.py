@@ -93,11 +93,11 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
         lon_corners = original_lon_corners
 
     # Reorganize corners to match centers using nv mapping
-    corner_indices = get_node_to_cell_mapping(ds)  # Shape: (3, nele)
+    corner_indices = get_node_to_cell_mapping(ds)
 
     # Reorder corners to match centers
-    lat_corners_mapped = lat_corners[corner_indices.T]  # Shape: (nele, 3)
-    lon_corners_mapped = lon_corners[corner_indices.T]  # Shape: (nele, 3)
+    lat_corners_mapped = lat_corners[corner_indices]  # Shape: (nele, 3)
+    lon_corners_mapped = lon_corners[corner_indices]  # Shape: (nele, 3)
 
     if lat_corners_mapped.shape[1] != 3:
         raise ValueError(
