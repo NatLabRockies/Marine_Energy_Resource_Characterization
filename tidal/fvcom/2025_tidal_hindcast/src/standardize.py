@@ -197,23 +197,31 @@ class DatasetStandardizer:
 
         return ds
 
+    def calculate_siglay_center(self, siglev_center):
+        # Take the average of consecutive points
+        siglay_center = (siglev_center[:-1] + siglev_center[1:]) / 2
+        return siglay_center
+
     def _extract_sigma_layer(self, ds):
-        # Get the first column as reference
-        reference_column = ds["siglay_center"].values[:, 0]
+        if "siglay_center" in ds:
+            # Get the first column as reference
+            reference_column = ds["siglay_center"].values[:, 0]
 
-        # Broadcast and compare all columns against the first column at once
-        # This creates a bool array of shape (n_layers, n_elements-1)
-        columns_match = np.allclose(
-            ds["siglay_center"].values[:, 1:],
-            reference_column[:, np.newaxis],
-            rtol=1e-10,
-            atol=1e-10,
-        )
+            # Broadcast and compare all columns against the first column at once
+            # This creates a bool array of shape (n_layers, n_elements-1)
+            columns_match = np.allclose(
+                ds["siglay_center"].values[:, 1:],
+                reference_column[:, np.newaxis],
+                rtol=1e-10,
+                atol=1e-10,
+            )
 
-        if not columns_match:
-            raise ValueError("Not all columns in siglay_center are identical")
+            if not columns_match:
+                raise ValueError("Not all columns in siglay_center are identical")
 
-        return reference_column
+            return reference_column
+
+        return self.calculate_siglay_center(ds["siglev_center"].values[:0])
 
     def standardize_single_file(self, source_file, time_df):
         print(f"Opening source file: {source_file}...")
