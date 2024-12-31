@@ -369,9 +369,11 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
     )
     std_files = []
 
+    count = 1
+
     # One to one go through the source files and standardize them
     for source_file, this_df in time_df.groupby("source_file"):
-        print(f"Processing file: {source_file}")
+        print(f"Processing file {count}: {source_file}")
         print(f"Number of timestamps: {len(this_df)}")
         print(f"Start time: {this_df['timestamp'].iloc[0]}")
         print(f"End time: {this_df['timestamp'].iloc[-1]}")
@@ -388,11 +390,12 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         )
         output_path = Path(
             file_manager.get_standardized_output_dir(config, location),
-            f"{standardizer.location['output_name']}_{Path(source_file).name.replace('.nc', '')}_std.nc",
+            f"{count:03d}_{standardizer.location['output_name']}_{Path(source_file).parent.name}_{Path(source_file).name.replace('.nc', '')}_std.nc",
         )
         std_files.extend([output_path] * len(this_df))
         output_ds.to_netcdf(output_path)
         print(f"Saving standardized dataframe to {output_path}...")
+        count += 1
 
     time_df["std_files"] = [str(f) for f in std_files]
 
