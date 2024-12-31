@@ -29,6 +29,7 @@ def partition_by_time(config, location_key, time_df, freq="M"):
 
         # Read each source file and select relevant timestamps
         for std_file in unique_std_files:
+            print(f"Adding {std_file} to {period} output dataset")
             ds = xr.open_dataset(std_file)
 
             # Add source filenames from this dataset's attributes
