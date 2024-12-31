@@ -256,7 +256,7 @@ def model_specification_verifier(config, ds, filepath):
 
 
 def verify_dataset(config, location, nc_files):
-    tracking_folder = file_manager.get_tracking_output_dir(config)
+    tracking_folder = file_manager.get_tracking_output_dir(config, location)
     tracking_path = Path(
         tracking_folder, f"{location['output_name']}_verify_step_tracking.parquet"
     )

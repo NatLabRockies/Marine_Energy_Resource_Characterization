@@ -5,10 +5,13 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from . import file_manager
+
 
 # Chunk size corresponds to time, so chunk size of 4 means process 4 timestamps
 def partition_by_time(config, location_key, time_df, freq="M", chunk_size=4):
-    output_dir = Path(config["dir"]["output"]["standardized_partition"])
+    location = config["location_specification"][location_key]
+    output_dir = file_manager.get_standardized_partition_output_dir(config, location)
     output_dir.mkdir(parents=True, exist_ok=True)
     partition_files = []
     location_name = config["location_specification"][location_key]["output_name"]

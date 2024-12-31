@@ -334,7 +334,8 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
     standardizer = DatasetStandardizer(config, location_key)
 
     # Check for existing standardization file
-    tracking_folder = file_manager.get_tracking_output_dir(config)
+    location = config["location_specification"][location_key]
+    tracking_folder = file_manager.get_tracking_output_dir(config, location)
     output_name = config["location_specification"][location_key]["output_name"]
     tracking_path = Path(
         tracking_folder,
@@ -386,7 +387,7 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             version=version.version,
         )
         output_path = Path(
-            file_manager.get_standardized_output_dir(config),
+            file_manager.get_standardized_output_dir(config, location),
             f"{standardizer.location['output_name']}_{Path(source_file).name.replace('.nc', '')}_std.nc",
         )
         std_files.extend([output_path] * len(this_df))

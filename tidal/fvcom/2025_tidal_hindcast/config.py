@@ -7,12 +7,12 @@ config = {
         },
         # Output Data Directories
         "output": {
-            "tracking": "/scratch/asimms/Tidal/z99_tracking",
+            "tracking": "/scratch/asimms/Tidal/<location>/z99_tracking",
             # Standardized data with qc
-            "standardized": "/scratch/asimms/Tidal/a1_std",
-            "standardized_partition": "/scratch/asimms/Tidal/a2_std_partition",
-            "vap": "/scratch/asimms/Tidal/b1_vap",
-            "summary_vap": "/scratch/asimms/Tidal/b2_summary_vap",
+            "standardized": "/scratch/asimms/Tidal/<location>/a1_std",
+            "standardized_partition": "/scratch/asimms/Tidal/<location>/a2_std_partition",
+            "vap": "/scratch/asimms/Tidal/<location>/b1_vap",
+            "summary_vap": "/scratch/asimms/Tidal/<location>/b2_summary_vap",
         },
     },
     "model_specification": {

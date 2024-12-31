@@ -19,13 +19,25 @@ def get_specified_nc_files(config, location):
     return result
 
 
-def get_output_dirs(config):
+def get_output_dirs(config, location):
+    output_location_name = location["output_name"]
     output_dirs = config["dir"]["output"]
     paths = {
-        "tracking": Path(output_dirs["tracking"]),
-        "standardized": Path(output_dirs["standardized"]),
-        "vap": Path(output_dirs["vap"]),
-        "summary_vap": Path(output_dirs["summary_vap"]),
+        "tracking": Path(
+            output_dirs["tracking"].replace("<location>", output_location_name)
+        ),
+        "standardized": Path(
+            output_dirs["standardized"].replace("<location>", output_location_name)
+        ),
+        "standardized_partition": Path(
+            output_dirs["standardized_partition"].replace(
+                "<location>", output_location_name
+            )
+        ),
+        "vap": Path(output_dirs["vap"].replace("<location>", output_location_name)),
+        "summary_vap": Path(
+            output_dirs["summary_vap"].replace("<location>", output_location_name)
+        ),
     }
     for path in paths.values():
         path.mkdir(parents=True, exist_ok=True)
@@ -33,17 +45,21 @@ def get_output_dirs(config):
     return paths
 
 
-def get_tracking_output_dir(config):
-    return get_output_dirs(config)["tracking"]
+def get_tracking_output_dir(config, location):
+    return get_output_dirs(config, location)["tracking"]
 
 
-def get_standardized_output_dir(config):
-    return get_output_dirs(config)["standardized"]
+def get_standardized_output_dir(config, location):
+    return get_output_dirs(config, location)["standardized"]
 
 
-def get_vap_output_dir(config):
-    return get_output_dirs(config)["vap"]
+def get_standardized_partition_output_dir(config, location):
+    return get_output_dirs(config, location)["standardized_partition"]
 
 
-def get_summary_vap_output_dir(config):
-    return get_output_dirs(config)["summary_vap"]
+def get_vap_output_dir(config, location):
+    return get_output_dirs(config, location)["vap"]
+
+
+def get_summary_vap_output_dir(config, location):
+    return get_output_dirs(config, location)["summary_vap"]
