@@ -1,27 +1,34 @@
 from pathlib import Path
 import gc
-
 import numpy as np
 import pandas as pd
 import xarray as xr
-
 from . import file_manager
 
 
-# Chunk size corresponds to time, so chunk size of 4 means process 4 timestamps
-def partition_by_time(config, location_key, time_df, freq="M", chunk_size=4):
+def partition_by_time(config, location_key, time_df, chunk_size=4):
     location = config["location_specification"][location_key]
     output_dir = file_manager.get_standardized_partition_output_dir(config, location)
     output_dir.mkdir(parents=True, exist_ok=True)
     partition_files = []
     location_name = config["location_specification"][location_key]["output_name"]
 
-    # Group by time frequency
-    time_df["period"] = pd.to_datetime(time_df["timestamp"]).dt.to_period(freq)
+    # use Pandas frequency string for grouping periods
+    # See: https://pandas.pydata.org/docs/user_guide/timeseries.html#period-aliases
+    # Common options: 'H' (hourly), '12H', 'D' (daily), 'W' (weekly), 'M' (monthly), 'Y' (yearly)
+    freq = location["partition_frequency"]
 
-    # Process each time period
-    for period, period_df in time_df.groupby("period"):
-        print(f"Processing period: {period}")
+    # Convert timestamps
+    time_df["timestamp"] = pd.to_datetime(time_df["timestamp"])
+
+    # Group by time frequency using Grouper
+    for count, (period_start, period_df) in enumerate(
+        time_df.groupby(pd.Grouper(key="timestamp", freq=freq)), 1
+    ):
+        if period_df.empty:
+            continue
+
+        print(f"Processing period: {period_start} with frequency string {freq}")
 
         # Get unique source files for this period
         unique_std_files = period_df["std_files"].unique()
@@ -30,7 +37,8 @@ def partition_by_time(config, location_key, time_df, freq="M", chunk_size=4):
 
         # Process each source file
         for std_file in unique_std_files:
-            print(f"Adding {std_file} to {period} output dataset")
+            print(f"Adding {std_file} to {period_start} output dataset")
+
             # Open dataset with chunking
             ds = xr.open_dataset(std_file, chunks={"time": chunk_size})
 
@@ -49,11 +57,9 @@ def partition_by_time(config, location_key, time_df, freq="M", chunk_size=4):
             ds_subset = ds.isel(time=time_indices)
 
             if ds_subset.time.size > 0:
-                # Load data into memory for this subset only
                 ds_subset = ds_subset.compute()
                 datasets.append(ds_subset)
 
-            # Cleanup after processing each file
             ds.close()
             gc.collect()
 
@@ -62,15 +68,13 @@ def partition_by_time(config, location_key, time_df, freq="M", chunk_size=4):
             combined_ds = xr.concat(datasets, dim="time")
             combined_ds.attrs["source_files"] = list(source_filenames)
 
-            # Create output filename
-            if freq == "M":
-                period_str = period.strftime("%Y%m")
-            elif freq == "Y":
-                period_str = period.strftime("%Y")
-            else:
-                period_str = str(period)
-
-            output_path = output_dir / f"{location_name}_{period_str}_partition.nc"
+            # Create output filename using period start time and count
+            start_date = period_start.strftime("%Y%m%d")
+            num_timestamps = len(combined_ds.time)
+            output_path = (
+                output_dir
+                / f"{count:02d}.{location_name}.start_{start_date}.n_timestamps_{num_timestamps:04d}.nc"
+            )
 
             # Save to disk
             combined_ds.to_netcdf(output_path)
@@ -84,8 +88,7 @@ def partition_by_time(config, location_key, time_df, freq="M", chunk_size=4):
             datasets.clear()
             gc.collect()
 
-            # Additional cleanup after each period
-            datasets = []
-            gc.collect()
+        datasets = []
+        gc.collect()
 
     return partition_files

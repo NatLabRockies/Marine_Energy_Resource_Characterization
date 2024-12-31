@@ -44,6 +44,7 @@ config = {
             "expected_delta_t_seconds": 3600,  # 60 min
             "coordinates": {"system": "latitude/longitude"},
             "description": "",
+            "partition_frequency": "M",  # Monthly, Roughly 73GB per file
         },
         "cook_inlet": {
             "output_name": "AK_cook_inlet",
@@ -58,6 +59,7 @@ config = {
             "expected_delta_t_seconds": 3600,  # 60 min
             "coordinates": {"system": "latitude/longitude"},
             "description": "",
+            "partition_frequency": "M",  # Monthly, Roughly 35GB per file
         },
         "piscataqua_river": {
             "output_name": "NH_piscataqua_river",
@@ -71,6 +73,7 @@ config = {
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 19},
             "description": "",
+            "partition_frequency": "M",  # Monthly, Roughly 67GB per file
         },
         "puget_sound": {
             "output_name": "WA_puget_sound",
@@ -95,6 +98,7 @@ config = {
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 10},
             "description": "",
+            "partition_frequency": "W",  # Weekly
         },
         "western_passage": {
             "output_name": "ME_western_passage",
@@ -110,6 +114,7 @@ config = {
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 10},
             "description": "",
+            "partition_frequency": "M",  # Monthly, Roughly 50GB per file
         },
     },
     "metadata": {
