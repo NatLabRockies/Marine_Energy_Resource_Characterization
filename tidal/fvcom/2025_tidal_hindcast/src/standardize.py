@@ -221,7 +221,7 @@ class DatasetStandardizer:
 
             return reference_column
 
-        return self.calculate_siglay_center(ds["siglev_center"].values[:0])
+        return self.calculate_siglay_center(ds["siglev_center"].values[:, 0])
 
     def standardize_single_file(self, source_file, time_df):
         print(f"Opening source file: {source_file}...")
