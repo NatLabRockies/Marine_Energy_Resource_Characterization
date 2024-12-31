@@ -98,7 +98,7 @@ config = {
             "expected_delta_t_seconds": 1800,  # 30 min
             "coordinates": {"system": "utm", "zone": 10},
             "description": "",
-            "partition_frequency": "W",  # Weekly
+            "partition_frequency": "D",  # Weekly
         },
         "western_passage": {
             "output_name": "ME_western_passage",
