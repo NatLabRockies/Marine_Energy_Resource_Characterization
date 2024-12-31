@@ -6,7 +6,7 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=06:00:00
+#SBATCH --time=12:00:00
 
 # Load necessary modules (if any)
 module load anaconda3/2023.07-2
