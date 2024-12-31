@@ -6,7 +6,7 @@ import xarray as xr
 from . import file_manager
 
 
-def partition_by_time(config, location_key, time_df, chunk_size=4):
+def partition_by_time(config, location_key, time_df):
     location = config["location_specification"][location_key]
     output_dir = file_manager.get_standardized_partition_output_dir(config, location)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -40,7 +40,7 @@ def partition_by_time(config, location_key, time_df, chunk_size=4):
             print(f"Adding {std_file} to {period_start} output dataset")
 
             # Open dataset with chunking
-            ds = xr.open_dataset(std_file, chunks={"time": chunk_size})
+            ds = xr.open_dataset(std_file)
 
             # Add source filenames
             if "source_files" in ds.attrs:
