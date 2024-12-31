@@ -63,6 +63,9 @@ config = {
             "output_name": "NH_piscataqua_river",
             "base_dir": "PIR_full_year",
             "files": ["*.nc"],
+            # ValueError: Time verification failure in /kfs2/projects/hindcastra/Tidal/PIR_full_year/PIR_0368.nc. Delta t is different than 1800 seconds. Check timestamps below
+            # DatetimeIndex(['2008-01-01 00:00:00+00:00'], dtype='datetime64[ns, UTC]', freq=None)
+            "files_to_exclude": ["PIR_0368.nc"],
             "start_date": "2007-01-01 00:00:00",
             "end_date": "2007-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
