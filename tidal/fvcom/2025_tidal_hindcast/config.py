@@ -23,7 +23,7 @@ config = {
             "v": "Northward_sea_water_velocity",  # The capital N is in the original data
             "zeta": "sea_surface_height_above_geoid",
             "h_center": "sea_floor_depth_below_geoid",
-            "siglay_center": "ocean_sigma/general_coordinate",
+            "siglev_center": "ocean_sigma/general_coordinate",
         },
     },
     "derived_vap_specification": {""},
