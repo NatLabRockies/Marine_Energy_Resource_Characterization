@@ -40,6 +40,7 @@ def partition_by_time(config, location_key, time_df):
             print(f"Adding {std_file} to {period_start} output dataset")
 
             # Open dataset with chunking
+            print("Opening dataset...")
             ds = xr.open_dataset(std_file)
 
             # Add source filenames
@@ -51,13 +52,15 @@ def partition_by_time(config, location_key, time_df):
             file_timestamps = period_df[period_df["std_files"] == std_file][
                 "timestamp"
             ].values
+            print("file_timestamps:", file_timestamps)
 
             # Process data in chunks
             time_indices = np.isin(ds.time.values, file_timestamps)
+            print("Subsetting dataset by time_indicies...")
             ds_subset = ds.isel(time=time_indices)
 
             if ds_subset.time.size > 0:
-                ds_subset = ds_subset.compute()
+                print("Appending dataset...")
                 datasets.append(ds_subset)
 
             ds.close()
@@ -65,6 +68,7 @@ def partition_by_time(config, location_key, time_df):
 
         if len(datasets) > 0:
             # Concatenate datasets
+            print(f"Concatenating {len(datasets)} datasets...")
             combined_ds = xr.concat(datasets, dim="time")
             combined_ds.attrs["source_files"] = list(source_filenames)
 
@@ -77,9 +81,10 @@ def partition_by_time(config, location_key, time_df):
             )
 
             # Save to disk
+            print(f"Saving partition file: {output_path}...")
             combined_ds.to_netcdf(output_path)
             partition_files.append(output_path)
-            print(f"Saved partition file: {output_path}")
+            print(f"Saved partition file: {output_path}!")
 
             # Cleanup
             combined_ds.close()
