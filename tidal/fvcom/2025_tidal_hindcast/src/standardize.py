@@ -177,7 +177,7 @@ class DatasetStandardizer:
                 dims = ["cell"]
                 data = orig_ds[var_name].values
                 new_var_name = var_name
-            elif var_name == "siglay_center":
+            elif var_name == "siglev_center":
                 # Skip sigma, it already exists
                 continue
                 # coords = ["sigma"]
