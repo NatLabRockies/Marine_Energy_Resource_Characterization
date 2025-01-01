@@ -1,19 +1,13 @@
 from datetime import datetime
 
+import pandas as pd
 import xarray as xr
 
 
 def _format_datetime(ds):
     """Extract and format date and time strings from dataset."""
-    time_var = ds.time.values[0]
-    if isinstance(time_var, (int, float)):
-        dt = datetime.fromtimestamp(time_var)
-    else:
-        dt = time_var.astype(datetime)
-
-    date_str = dt.strftime("%Y%m%d")
-    time_str = dt.strftime("%H%M%S")
-    return date_str, time_str
+    dt = pd.Timestamp(ds.time.values[0])
+    return dt.strftime("%Y%m%d"), dt.strftime("%H%M%S")
 
 
 def generate_filename_for_data_level(
