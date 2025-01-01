@@ -9,7 +9,13 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 
-from . import coord_manager, file_manager, time_manager, version
+from . import (
+    coord_manager,
+    file_name_convention_manager,
+    file_manager,
+    time_manager,
+    version,
+)
 
 
 class DatasetStandardizer:
@@ -221,7 +227,7 @@ class DatasetStandardizer:
 
             return reference_column
 
-        return self.calculate_siglay_center(ds["siglev_center"].values[:, 0])
+        return self.calculate_siglay_center(ds["siglev_center"].values[:0])
 
     def standardize_single_file(self, source_file, time_df):
         print(f"Opening source file: {source_file}...")
@@ -388,9 +394,30 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             source_files=[str(f) for f in [source_file]],
             version=version.version,
         )
+
+        expected_delta_t_seconds = location["expected_delta_t_seconds"]
+        if expected_delta_t_seconds == 3600:
+            temporal_string = "1h"
+        elif expected_delta_t_seconds == 1800:
+            temporal_string = "30m"
+        else:
+            raise ValueError(
+                f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
+            )
+
+        data_level_file_name = (
+            file_name_convention_manager.generate_filename_for_data_level(
+                output_ds,
+                output_name,
+                config["dataset_name"],
+                "a1",
+                temporal=temporal_string,
+            )
+        )
+
         output_path = Path(
             file_manager.get_standardized_output_dir(config, location),
-            f"{count:03d}_{standardizer.location['output_name']}_{Path(source_file).parent.name}_{Path(source_file).name.replace('.nc', '')}_std.nc",
+            f"{count:03d}.{data_level_file_name}",
         )
         std_files.extend([output_path] * len(this_df))
         output_ds.to_netcdf(output_path)

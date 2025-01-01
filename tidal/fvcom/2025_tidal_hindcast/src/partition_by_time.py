@@ -3,7 +3,7 @@ import gc
 import numpy as np
 import pandas as pd
 import xarray as xr
-from . import file_manager
+from . import file_manager, file_name_convention_manager
 
 
 def partition_by_time(config, location_key, time_df):
@@ -72,15 +72,31 @@ def partition_by_time(config, location_key, time_df):
             combined_ds = xr.concat(datasets, dim="time")
             combined_ds.attrs["source_files"] = list(source_filenames)
 
-            # Create output filename using period start time and count
-            start_date = period_start.strftime("%Y%m%d")
-            num_timestamps = len(combined_ds.time)
-            output_path = (
-                output_dir
-                / f"{count:02d}.{location_name}.start_{start_date}.n_timestamps_{num_timestamps:04d}.nc"
+            expected_delta_t_seconds = location["expected_delta_t_seconds"]
+            if expected_delta_t_seconds == 3600:
+                temporal_string = "1h"
+            elif expected_delta_t_seconds == 1800:
+                temporal_string = "30m"
+            else:
+                raise ValueError(
+                    f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
+                )
+
+            data_level_file_name = (
+                file_name_convention_manager.generate_filename_for_data_level(
+                    combined_ds,
+                    location["output_name"],
+                    config["dataset_name"],
+                    "a2",
+                    temporal=temporal_string,
+                )
             )
 
-            # Save to disk
+            output_path = Path(
+                file_manager.get_standardized_output_dir(config, location),
+                f"{count:03d}.{data_level_file_name}",
+            )
+
             print(f"Saving partition file: {output_path}...")
             combined_ds.to_netcdf(output_path)
             partition_files.append(output_path)

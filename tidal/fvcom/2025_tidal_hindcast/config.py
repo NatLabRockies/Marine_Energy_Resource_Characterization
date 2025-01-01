@@ -1,4 +1,5 @@
 config = {
+    "dataset_name": "tidal_hindcast_fvcom",
     # Input and Output Directories
     "dir": {
         # Input Data Directories
