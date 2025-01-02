@@ -93,7 +93,7 @@ def partition_by_time(config, location_key, time_df):
             )
 
             output_path = Path(
-                file_manager.get_standardized_output_dir(config, location),
+                file_manager.get_standardized_partition_output_dir(config, location),
                 f"{count:03d}.{data_level_file_name}",
             )
 
