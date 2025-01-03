@@ -31,4 +31,4 @@ if __name__ == "__main__":
     partition_by_time(config, args.location, valid_std_files_df)
 
     print("Step 4: Calculating Derived Value Added Products...")
-    partition_by_time(config, args.location)
+    derive_vap(config, args.location)
