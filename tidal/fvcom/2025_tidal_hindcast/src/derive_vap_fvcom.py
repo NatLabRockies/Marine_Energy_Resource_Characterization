@@ -174,7 +174,7 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
 
     # Set directions to NaN where speed is below threshold
     meteorological_from_direction_degrees = xr.where(
-        ds.sea_water_speed > direction_undefined_speed_threshold_ms,
+        ds.speed > direction_undefined_speed_threshold_ms,
         meteorological_from_direction_degrees,
         np.nan,
     )
@@ -256,16 +256,16 @@ def calculate_sea_water_power_density(ds, rho: float = 1025.0):
     # Calculate power density using Equation 1 from
     # Haas, Kevin A., et al. "Assessment of Energy Production Potential from
     # Tidal Streams in the United States." , Jun. 2011. https://doi.org/10.2172/1219367
-    ds["power_density"] = 0.5 * rho * ds.sea_water_speed**3
+    ds["power_density"] = 0.5 * rho * ds.speed**3
 
     # Add CF-compliant metadata
     ds.power_density.attrs = {
         "long_name": "Sea Water Power Density",
         "units": "W m-2",
-        "grid": ds.sea_water_speed.attrs.get("grid"),
+        "grid": ds.u.attrs.get("grid"),
         "type": "data",
-        "mesh": ds.sea_water_speed.attrs.get("mesh"),
-        "location": ds.sea_water_speed.attrs.get("location"),
+        "mesh": ds.u.attrs.get("mesh"),
+        "location": ds.u.attrs.get("location"),
         "methodology": (
             "Computed using the fluid power density equation P = ½ρv³ with seawater "
             f"density ρ = {rho} kg/m³. The calculation uses sea water speed derived "
