@@ -75,7 +75,7 @@ def calculate_sea_water_speed(ds):
     ds["speed"] = np.sqrt(ds.u**2 + ds.v**2)
 
     # Add CF-compliant metadata
-    ds.sea_water_speed.attrs = {
+    ds.speed.attrs = {
         "long_name": "Sea Water Speed",
         "standard_name": "sea_water_speed",
         "units": ds.u.attrs.get("units", "m s-1"),
@@ -182,7 +182,7 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
     ds["from_direction"] = meteorological_from_direction_degrees
 
     # Add CF-compliant metadata
-    ds.sea_water_velocity_from_direction.attrs = {
+    ds.from_direction.attrs = {
         "long_name": "Sea Water Velocity From Direction",
         "standard_name": "sea_water_velocity_from_direction",
         "units": "degree",
@@ -259,7 +259,7 @@ def calculate_sea_water_power_density(ds, rho: float = 1025.0):
     ds["power_density"] = 0.5 * rho * ds.sea_water_speed**3
 
     # Add CF-compliant metadata
-    ds.sea_water_power_density.attrs = {
+    ds.power_density.attrs = {
         "long_name": "Sea Water Power Density",
         "units": "W m-2",
         "grid": ds.sea_water_speed.attrs.get("grid"),
