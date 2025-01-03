@@ -461,7 +461,7 @@ def calculate_sea_floor_depth(ds):
 
 
 def derive_vap(config, location_key):
-    location = config[location_key]
+    location = config["location_specification"][location_key]
 
     std_partition_path = file_manager.get_standardized_partition_output_dir(
         config, location
