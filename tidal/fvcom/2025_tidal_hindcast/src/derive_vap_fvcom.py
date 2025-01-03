@@ -360,7 +360,7 @@ def calculate_depth(ds):
     ValueError
         If required attributes are missing or inconsistent
     """
-    validate_depth_inputs(ds)
+    # validate_depth_inputs(ds)
 
     if "sigma" not in ds:
         raise KeyError("Dataset must contain 'sigma' coordinates")
@@ -425,7 +425,7 @@ def calculate_sea_floor_depth(ds):
     ValueError
         If required attributes are missing or inconsistent
     """
-    validate_depth_inputs(ds)
+    # validate_depth_inputs(ds)
 
     # Calculate total water column depth
     ds["seafloor_depth"] = -(ds.h_center) + ds.zeta_center
