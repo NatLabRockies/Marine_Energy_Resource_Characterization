@@ -79,10 +79,6 @@ def calculate_sea_water_speed(ds):
         "long_name": "Sea Water Speed",
         "standard_name": "sea_water_speed",
         "units": ds.u.attrs.get("units", "m s-1"),
-        "grid": ds.u.attrs.get("grid"),
-        "type": "data",
-        "mesh": ds.u.attrs.get("mesh"),
-        "location": ds.u.attrs.get("location"),
         "description": "Speed is the magnitude of velocity.",
         "methodology": (
             "Speed is calculated using the vector magnitude equation: speed = √(u² + v²), "
@@ -188,10 +184,6 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
         "units": "degree",
         "valid_min": "0.0",  # Convert to string for consistency
         "valid_max": "360.0",  # Convert to string for consistency
-        "grid": ds.u.attrs.get("grid"),
-        "type": "data",
-        "mesh": ds.u.attrs.get("mesh"),
-        "location": ds.u.attrs.get("location"),
         # From CF Standard Name
         "description": (
             "A velocity is a vector quantity. ",
@@ -262,10 +254,6 @@ def calculate_sea_water_power_density(ds, rho: float = 1025.0):
     ds.power_density.attrs = {
         "long_name": "Sea Water Power Density",
         "units": "W m-2",
-        "grid": ds.u.attrs.get("grid"),
-        "type": "data",
-        "mesh": ds.u.attrs.get("mesh"),
-        "location": ds.u.attrs.get("location"),
         "methodology": (
             "Computed using the fluid power density equation P = ½ρv³ with seawater "
             f"density ρ = {rho} kg/m³. The calculation uses sea water speed derived "
@@ -374,9 +362,6 @@ def calculate_depth(ds):
         "standard_name": "depth",
         "units": ds.h_center.attrs["units"],
         "positive": "down",
-        "grid": ds.h_center.attrs.get("grid"),
-        "grid_location": "center",
-        "mesh": ds.h_center.attrs.get("mesh"),
         "coordinates": "time cell sigma",
         "description": (
             "Depth represents the vertical distance below the sea surface at each sigma "
@@ -436,10 +421,6 @@ def calculate_sea_floor_depth(ds):
         "standard_name": "sea_floor_depth_below_sea_surface",
         "units": ds.h_center.attrs["units"],
         "positive": "down",
-        "grid": ds.h_center.attrs.get("grid"),
-        "grid_location": "center",
-        "mesh": ds.h_center.attrs.get("mesh"),
-        "coordinates": "time cell",
         "description": (
             "The vertical distance between the sea surface and the seabed as measured "
             "at a given point in space including the variance caused by tides."
