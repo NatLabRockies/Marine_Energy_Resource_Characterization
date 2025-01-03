@@ -134,9 +134,9 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
     """
     validate_u_and_v(ds)
 
-    if "sea_water_speed" not in ds.variables:
+    if "speed" not in ds.variables:
         raise KeyError(
-            "Dataset must contain 'sea_water_speed'. "
+            "Dataset must contain 'speed'. "
             "Please run calculate_sea_water_speed() first."
         )
 
@@ -247,9 +247,9 @@ def calculate_sea_water_power_density(ds, rho: float = 1025.0):
         If 'sea_water_speed' is not present in dataset
     """
 
-    if "sea_water_speed" not in ds:
+    if "speed" not in ds:
         raise KeyError(
-            "Dataset must contain 'sea_water_speed'. "
+            "Dataset must contain 'speed'. "
             "Please run calculate_sea_water_speed() first."
         )
 
