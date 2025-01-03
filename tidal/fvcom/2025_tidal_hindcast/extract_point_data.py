@@ -117,15 +117,20 @@ def process_all_files(directory, this_point_index, this_output_file):
 if __name__ == "__main__":
     args = cli.parse_args(config)
 
-    location_id = args.location
+    location = config["location_specification"][args.location]
+    location_output_name = location["output_name"]
 
-    input_dir = file_manager.get_vap_output_dir(config, location_id)
+    input_dir = file_manager.get_vap_output_dir(config, location)
 
     directory = input_dir
     point_index = 100000  # Example point index
-    output_dir = Path(f"/scratch/asimms/Tidal/{location_id}/b3_vap_by_point/").resolve()
+    output_dir = Path(
+        f"/scratch/asimms/Tidal/{location_output_name}/b3_vap_by_point/"
+    ).resolve()
     output_dir.mkdir(exist_ok=True)
-    output_path = Path(output_dir, f"fvcom_{location_id}_point_{point_index}.parquet")
+    output_path = Path(
+        output_dir, f"fvcom_{location_output_name}_point_{point_index}.parquet"
+    )
 
     # Process all files
     df = process_all_files(directory, point_index, output_path)
