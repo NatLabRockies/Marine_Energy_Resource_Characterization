@@ -469,12 +469,18 @@ def derive_vap(config, location_key):
     std_partition_nc_files = sorted(list(std_partition_path.rglob("*.nc")))
 
     for count, nc_file in enumerate(std_partition_nc_files, start=1):
+        print(f"Calculating vap for {nc_file}")
         this_ds = xr.open_dataset(nc_file)
 
+        print("\tCalculating speed...")
         this_ds = calculate_sea_water_speed(this_ds)
+        print("\tCalculating direction...")
         this_ds = calculate_sea_water_direction(this_ds)
+        print("\tCalculating power density...")
         this_ds = calculate_sea_water_power_density(this_ds)
+        print("\tCalculating depth...")
         this_ds = calculate_depth(this_ds)
+        print("\tCalculating sea_floor_depth...")
         this_ds = calculate_sea_floor_depth(this_ds)
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
@@ -502,6 +508,7 @@ def derive_vap(config, location_key):
             f"{count:03d}.{data_level_file_name}",
         )
 
+        print(f"\tSaving to {output_path}...")
         this_ds.to_netcdf(output_path)
 
         this_ds.close()
