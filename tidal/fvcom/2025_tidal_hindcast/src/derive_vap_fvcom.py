@@ -99,10 +99,8 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
     Calculate sea water velocity direction in meteorological convention.
 
     This function computes the direction water is coming FROM (like wind direction),
-    measured clockwise from true north. The calculation involves:
-    1. Converting velocity components to mathematical angle (counterclockwise from east)
-    2. Converting to meteorological convention (clockwise from north)
-    3. Converting to 'from' direction (adding 180° to get source direction)
+    measured clockwise from true north. The calculation converts the u,v velocity
+    components to a meteorological direction using arctan2 and a +270° transformation.
 
     Parameters
     ----------
@@ -110,7 +108,7 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
         Dataset containing:
         - 'u': eastward sea water velocity component
         - 'v': northward sea water velocity component
-        - 'sea_water_speed': magnitude of velocity (must be pre-computed)
+        - 'speed': magnitude of velocity (must be pre-computed)
     direction_undefined_speed_threshold_ms : float, optional
         Speed threshold below which direction is set to NaN since direction
         becomes meaningless for near-zero velocities. Default is 0.0 m/s.
@@ -127,6 +125,18 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
     - 90° : water flowing from east to west
     - 180° : water flowing from south to north
     - 270° : water flowing from west to east
+
+    The +270° transformation works because:
+    1. arctan2(v,u) gives the mathematical angle counterclockwise from east:
+       - u=1,v=0 (eastward flow) → 0°
+       - u=0,v=1 (northward flow) → 90°
+       - u=-1,v=0 (westward flow) → 180°
+       - u=0,v=-1 (southward flow) → -90°
+
+    2. Adding 270° accomplishes two things:
+       - Shifts the reference from east to north (+90°)
+       - Converts 'to' direction to 'from' direction (+180°)
+       The combined +270° gives us the meteorological 'from' direction
     """
     validate_u_and_v(ds)
 
@@ -137,72 +147,82 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
         )
 
     # Calculate mathematical direction (counterclockwise from east)
+    # arctan2 radian angle is measured counterclockwise from the positive x-axis
     mathematical_direction_degrees = np.rad2deg(np.arctan2(ds.v, ds.u))
 
     # Validate direction ranges
-    mathematical_direction_degrees_expected_max = 360.0
-    mathematical_direction_degrees_expected_min = 0
+    mathematical_direction_degrees_expected_max = 180.0  # arctan2 range is [-180, 180]
+    mathematical_direction_degrees_expected_min = -180.0
 
     mathematical_direction_degrees_max = np.max(mathematical_direction_degrees)
     mathematical_direction_degrees_min = np.min(mathematical_direction_degrees)
 
     if mathematical_direction_degrees_max > mathematical_direction_degrees_expected_max:
         raise ValueError(
-            f"Maximum direction value {mathematical_direction_degrees_max}° "
+            f"Maximum mathematical direction value {mathematical_direction_degrees_max}° "
             f"exceeds expected maximum of {mathematical_direction_degrees_expected_max}°"
         )
 
-    if mathematical_direction_degrees_min > mathematical_direction_degrees_expected_min:
+    if mathematical_direction_degrees_min < mathematical_direction_degrees_expected_min:
         raise ValueError(
-            f"Minimum direction value {mathematical_direction_degrees_min}° "
-            f"exceeds expected minimum of {mathematical_direction_degrees_expected_min}°"
+            f"Minimum mathematical direction value {mathematical_direction_degrees_min}° "
+            f"is below expected minimum of {mathematical_direction_degrees_expected_min}°"
         )
 
-    # Convert to meteorological convention (clockwise from north)
-    meterological_to_direction_degrees = np.mod(
-        mathematical_direction_degrees - 90.0, 360.0
-    )
+    # Convert to meteorological 'from' direction with single +270° transformation
+    met_from_direction_degrees = np.mod(mathematical_direction_degrees + 270, 360)
 
-    # Convert to 'from' direction (direction water comes from)
-    meteorological_from_direction_degrees = np.mod(
-        meterological_to_direction_degrees - 180.0, 360.0
-    )
+    met_direction_degrees_expected_max = 360
+    met_direction_degrees_expected_min = 0
+
+    met_direction_degrees_max = np.max(met_from_direction_degrees)
+    met_direction_degrees_min = np.min(met_from_direction_degrees)
+
+    if met_direction_degrees_max > met_direction_degrees_expected_max:
+        raise ValueError(
+            f"Maximum meterological direction value {met_direction_degrees_max}° "
+            f"exceeds expected maximum of {met_direction_degrees_expected_max}°"
+        )
+
+    if met_direction_degrees_min < met_direction_degrees_expected_min:
+        raise ValueError(
+            f"Minimum meterological direction value {met_direction_degrees_min}° "
+            f"is below expected minimum of {met_direction_degrees_expected_min}°"
+        )
 
     # Set directions to NaN where speed is below threshold
-    meteorological_from_direction_degrees = xr.where(
+    met_from_direction_degrees = xr.where(
         ds.speed > direction_undefined_speed_threshold_ms,
-        meteorological_from_direction_degrees,
+        met_from_direction_degrees,
         np.nan,
     )
 
-    ds["from_direction"] = meteorological_from_direction_degrees
+    ds["from_direction"] = met_from_direction_degrees
 
     # Add CF-compliant metadata
     ds.from_direction.attrs = {
         "long_name": "Sea Water Velocity From Direction",
         "standard_name": "sea_water_velocity_from_direction",
         "units": "degree",
-        "valid_min": "0.0",  # Convert to string for consistency
-        "valid_max": "360.0",  # Convert to string for consistency
+        "valid_min": "0.0",
+        "valid_max": "360.0",
         # From CF Standard Name
         "description": (
-            "A velocity is a vector quantity. ",
-            'The phrase "from_direction" is used in the construction X_from_direction '
-            "and indicates the direction from which the velocity vector of X is coming. "
-            "The direction is a bearing in the usual geographical sense, "
-            "measured positive clockwise from due north.",
+            "A velocity is a vector quantity. "
+            'The phrase "from_direction" indicates the direction from which the '
+            "velocity vector is coming. The direction is a bearing in the usual "
+            "geographical sense, measured positive clockwise from due north."
         ),
         "methodology": (
-            "Direction is calculated in three steps: 1. Calculate mathematical direction "
-            "using arctan2(v,u), 2. Convert to meteorological convention by subtracting "
-            "from 90°, 3. Convert to 'from' direction by subtracting 180°"
-            "Directions are set to NaN for "
-            f"speeds below {direction_undefined_speed_threshold_ms} m/s."
+            "Direction is calculated using arctan2(v,u) to get the mathematical angle, "
+            "then converting to meteorological 'from' direction by adding 270° "
+            "and taking modulo 360. This single transformation combines both the "
+            "conversion to meteorological convention and the conversion to 'from' direction. "
+            f"Directions are set to NaN for speeds below {direction_undefined_speed_threshold_ms} m/s."
         ),
         "computation": (
             "mathematical_direction_degrees = np.rad2deg(np.arctan2(ds.v, ds.u))\n"
-            "meterological_to_direction_degrees = np.mod(mathematical_direction_degrees - 90.0, 360.0)\n"
-            "meteorological_from_direction_degrees = np.mod(meterological_to_direction_degrees - 180.0, 360.0)"
+            "meteorological_from_direction_degrees = np.mod(mathematical_direction_degrees + 270, 360)"
         ),
         "input_variables": (
             "u: eastward_sea_water_velocity (m/s), "
