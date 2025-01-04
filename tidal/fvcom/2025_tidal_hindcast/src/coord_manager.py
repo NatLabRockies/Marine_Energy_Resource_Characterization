@@ -57,6 +57,65 @@ def get_node_to_cell_mapping(ds):
     return ds["nv"].values.T - 1  # Shape: (nele, 3)
 
 
+def normalize_longitude(lon):
+    """
+    Normalize longitude values to the range [-180, 180].
+
+    Args:
+        lon: Longitude values in degrees
+
+    Returns:
+        Normalized longitude values
+    """
+    return np.where(lon > 180, lon - 360, lon)
+
+
+def verify_latitude_range(lat, variable_name="latitude"):
+    """
+    Verify that latitude values are within the valid range [-90, 90].
+
+    Args:
+        lat: Array of latitude values
+        variable_name: Name of the variable for error messages
+
+    Raises:
+        ValueError: If any latitude values are outside [-90, 90] range
+    """
+    lat = np.asarray(lat)
+    if not np.all(np.isfinite(lat)):
+        raise ValueError(f"Found non-finite {variable_name} values")
+
+    min_lat, max_lat = np.min(lat), np.max(lat)
+    if min_lat < -90 or max_lat > 90:
+        raise ValueError(
+            f"{variable_name} values must be in range [-90, 90], "
+            f"found range [{min_lat:.2f}, {max_lat:.2f}]"
+        )
+
+
+def verify_longitude_range(lon, variable_name="longitude"):
+    """
+    Verify that longitude values are within the valid range [-180, 180].
+
+    Args:
+        lon: Array of longitude values
+        variable_name: Name of the variable for error messages
+
+    Raises:
+        ValueError: If any longitude values are outside [-180, 180] range
+    """
+    lon = np.asarray(lon)
+    if not np.all(np.isfinite(lon)):
+        raise ValueError(f"Found non-finite {variable_name} values")
+
+    min_lon, max_lon = np.min(lon), np.max(lon)
+    if min_lon < -180 or max_lon > 180:
+        raise ValueError(
+            f"{variable_name} values must be in range [-180, 180], "
+            f"found range [{min_lon:.2f}, {max_lon:.2f}]"
+        )
+
+
 def standardize_fvcom_coords(ds, utm_zone: int = None):
     coord_system = ds.attrs.get("CoordinateSystem")
     coord_projection = ds.attrs.get("CoordinateProjection", "none")
@@ -91,6 +150,14 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
         lon_centers = original_lon_centers
         lat_corners = original_lat_corners
         lon_corners = original_lon_corners
+
+    lon_centers = normalize_longitude(lon_centers)
+    lon_corners = normalize_longitude(lon_corners)
+
+    verify_latitude_range(lat_centers)
+    verify_longitude_range(lon_centers)
+    verify_latitude_range(lat_corners)
+    verify_longitude_range(lon_corners)
 
     # Reorganize corners to match centers using nv mapping
     corner_indices = get_node_to_cell_mapping(ds)
