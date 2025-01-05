@@ -123,7 +123,8 @@ if __name__ == "__main__":
     input_dir = file_manager.get_vap_output_dir(config, location)
 
     directory = input_dir
-    point_index = 100000  # Example point index
+    # Cook Inlet East Forelands
+    point_index = 125908
     output_dir = Path(
         f"/scratch/asimms/Tidal/{location_output_name}/b3_vap_by_point/"
     ).resolve()
