@@ -242,17 +242,18 @@ def model_specification_verifier(config, ds, filepath):
         if var_name not in ds.variables:
             raise ValueError(f"Required variable {var_name} missing in {filepath}")
 
-        var = ds[var_name]
-        if "standard_name" not in var.attrs:
-            raise ValueError(
-                f"Variable {var_name} missing standard_name attribute in {filepath}"
-            )
+        if expected_standard_name is not None:
+            var = ds[var_name]
+            if "standard_name" not in var.attrs:
+                raise ValueError(
+                    f"Variable {var_name} missing standard_name attribute in {filepath}"
+                )
 
-        if var.attrs["standard_name"] != expected_standard_name:
-            raise ValueError(
-                f"Variable {var_name} has standard_name {var.attrs['standard_name']}, "
-                f"expected {expected_standard_name} in {filepath}"
-            )
+            if var.attrs["standard_name"] != expected_standard_name:
+                raise ValueError(
+                    f"Variable {var_name} has standard_name {var.attrs['standard_name']}, "
+                    f"expected {expected_standard_name} in {filepath}"
+                )
 
 
 def verify_dataset(config, location, nc_files):

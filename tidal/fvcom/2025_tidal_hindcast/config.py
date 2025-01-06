@@ -20,11 +20,19 @@ config = {
         "model_version": "FVCOM_4.3.1",
         "conventions": "CF-1.0",
         "required_original_variables": {
+            # Node
+            "lat": "latitude",
+            "lon": "longitude",
+            "latc": "latitude",
+            "lonc": "longitude",
+            "Times": None,
             "u": "eastward_sea_water_velocity",
             "v": "Northward_sea_water_velocity",  # The capital N is in the original data
             "zeta": "sea_surface_height_above_geoid",
             "h_center": "sea_floor_depth_below_geoid",
             "siglev_center": "ocean_sigma/general_coordinate",
+            "nv": None,
+            "three": None,
         },
     },
     "derived_vap_specification": {""},
