@@ -186,7 +186,7 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
 
     centers_valid = verify_centers_in_corners(lat_centers, lat_corners_mapped)
     if not centers_valid:
-        print("Warning: Some center points lie outside their corner bounds")
+        raise ValueError("Warning: Some center points lie outside their corner bounds")
 
     return {
         "lat_centers": lat_centers,
