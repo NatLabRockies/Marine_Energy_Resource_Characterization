@@ -295,7 +295,21 @@ class FVCOMStandardizer:
 
         return ds
 
-    def standardize(self, ds_path, config, location):
+    def standardize_time(self, ds, corrected_timestamps):
+        print("Correcting `time`")
+        ds["time"] = corrected_timestamps
+        ds["time"].attrs = {
+            "standard_name": "time",
+            "long_name": "time",
+            "axis": "T",
+            "calendar": "proleptic_gregorian",
+            "units": "nanoseconds since 1970-01-01T00:00:00Z",  # Explicit nanosecond units
+            "precision": "nanosecond",
+        }
+
+        return ds
+
+    def standardize(self, ds_path, config, location, corrected_timestamps):
         """
         Standardize an FVCOM dataset by verifying required variables and adding UGRID conventions.
 
@@ -312,6 +326,8 @@ class FVCOMStandardizer:
             Dataset with standardized names and UGRID attributes
         """
         ds = xr.open_dataset(ds_path, decode_times=False)
+
+        ds = self.standardize_time(ds, corrected_timestamps)
 
         required_vars = config["standardized_variable_specification"]
 
@@ -633,18 +649,20 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         print(f"End time: {this_df['timestamp'].iloc[-1]}")
         print("Performing standardization...")
 
-        output_ds = standardizer.standardize(source_file, config, location)
+        output_ds = standardizer.standardize(
+            source_file, config, location, this_df["timestamp"].values
+        )
 
-        print("Correcting `time`")
-        output_ds["time"] = this_df["timestamp"].values
-        output_ds["time"].attrs = {
-            "standard_name": "time",
-            "long_name": "time",
-            "axis": "T",
-            "calendar": "proleptic_gregorian",
-            "units": "nanoseconds since 1970-01-01T00:00:00Z",  # Explicit nanosecond units
-            "precision": "nanosecond",
-        }
+        # print("Correcting `time`")
+        # output_ds["time"] = this_df["timestamp"].values
+        # output_ds["time"].attrs = {
+        #     "standard_name": "time",
+        #     "long_name": "time",
+        #     "axis": "T",
+        #     "calendar": "proleptic_gregorian",
+        #     "units": "nanoseconds since 1970-01-01T00:00:00Z",  # Explicit nanosecond units
+        #     "precision": "nanosecond",
+        # }
 
         print("Finished Standardization!...")
         print("Adding Global Attributes...")
