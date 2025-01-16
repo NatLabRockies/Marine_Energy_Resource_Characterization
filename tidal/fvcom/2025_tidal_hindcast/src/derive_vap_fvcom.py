@@ -41,7 +41,7 @@ def validate_u_and_v(ds):
         raise ValueError(f"Units mismatch: u: {u_units}, v: {v_units}")
 
 
-def calculate_sea_water_speed(ds):
+def calculate_sea_water_speed(ds, config):
     """
     Calculate sea water speed from velocity components using vector magnitude.
 
@@ -71,16 +71,19 @@ def calculate_sea_water_speed(ds):
     """
     validate_u_and_v(ds)
 
+    output_variable_name = "speed"
+
     # Calculate speed maintaining original dimensions
-    ds["speed"] = np.sqrt(ds.u**2 + ds.v**2)
+    ds[output_variable_name] = np.sqrt(ds.u**2 + ds.v**2)
+
+    specified_attrs = config["derived_vap_specification"][output_variable_name][
+        "attributes"
+    ]
 
     # Add CF-compliant metadata
-    ds.speed.attrs = {
-        "long_name": "Sea Water Speed",
-        "standard_name": "sea_water_speed",
-        "units": ds.u.attrs.get("units", "m s-1"),
-        "description": "Speed is the magnitude of velocity.",
-        "methodology": (
+    ds[output_variable_name].attrs = {
+        **specified_attrs,
+        "additional_processing": (
             "Speed is calculated using the vector magnitude equation: speed = √(u² + v²), "
             "where u is eastward velocity and v is northward velocity."
         ),
@@ -233,7 +236,7 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
     return ds
 
 
-def calculate_sea_water_power_density(ds, rho: float = 1025.0):
+def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
     """
     Calculate sea water power density from velocity components.
 
@@ -265,22 +268,27 @@ def calculate_sea_water_power_density(ds, rho: float = 1025.0):
             "Please run calculate_sea_water_speed() first."
         )
 
+    output_variable_name = "power_density"
+
     # Calculate power density using Equation 1 from
     # Haas, Kevin A., et al. "Assessment of Energy Production Potential from
     # Tidal Streams in the United States." , Jun. 2011. https://doi.org/10.2172/1219367
-    ds["power_density"] = 0.5 * rho * ds.speed**3
+    ds[output_variable_name] = 0.5 * rho * ds.speed**3
+
+    specified_attrs = config["derived_vap_specification"][output_variable_name][
+        "attributes"
+    ]
 
     # Add CF-compliant metadata
     ds.power_density.attrs = {
-        "long_name": "Sea Water Power Density",
-        "units": "W m-2",
-        "methodology": (
+        **specified_attrs,
+        "additional_processing": (
             "Computed using the fluid power density equation P = ½ρv³ with seawater "
             f"density ρ = {rho} kg/m³. The calculation uses sea water speed derived "
             "from FVCOM u,v velocity components written to the sea_water_speed variable."
         ),
         "computation": "sea_water_power_density = 0.5 * rho * sea_water_speed**3",
-        "input_variables": ("sea_water_speed (m/s), rho (kg/m³)"),
+        "input_variables": (f"sea_water_speed (m/s), rho=`{rho}` (kg/m³)"),
         "citation": (
             "Haas, Kevin A., et al. 'Assessment of Energy Production Potential "
             "from Tidal Streams in the United States.' Georgia Tech Research "
