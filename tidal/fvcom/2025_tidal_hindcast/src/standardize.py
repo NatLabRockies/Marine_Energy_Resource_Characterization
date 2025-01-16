@@ -10,6 +10,7 @@ import xarray as xr
 import numpy as np
 
 from . import (
+    attrs_manager,
     coord_manager,
     file_name_convention_manager,
     file_manager,
@@ -386,13 +387,15 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         print("Beginning standardization...")
         output_ds = standardizer.standardize_single_file(source_file, this_df)
         print("Finished Standardization!...")
-        print("Adding Global Attributes")
-        output_ds = DatasetFinalizer.add_global_attributes(
-            ds=output_ds,
-            config=config,
-            location=standardizer.location,
-            source_files=[str(f) for f in [source_file]],
-            version=version.version,
+        print("Adding Global Attributes...")
+        output_ds = attrs_manager.standardize_dataset_global_attrs(
+            output_ds,
+            config,
+            standardizer.location,
+            "a1",
+            [str(f) for f in [source_file]],
+            input_ds_is_original_model_output=True,
+            coordinate_reference_system_string=coord_manager.OUTPUT_COORDINATE_REFERENCE_SYSTEM,
         )
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
