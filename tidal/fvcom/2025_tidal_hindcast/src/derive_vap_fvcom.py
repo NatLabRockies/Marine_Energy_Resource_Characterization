@@ -430,6 +430,21 @@ def calculate_depth(ds):
     return ds
 
 
+def calculate_zeta_center(ds):
+    """Interpolate zeta from nodes to face centers"""
+
+    ## Get mapping from nodes to faces using nv connectivity array"""
+    # nv indices are 1-based, subtract 1
+    node_to_cell_map = ds["nv"].values.T - 1  # Shape: (nele, 3)
+    cell_values = np.zeros((ds.zeta.shape[0], len(node_to_cell_map)))
+
+    for t in range(ds.zeta.shape[0]):
+        node_values = ds.zeta[t].values
+        cell_values[t] = np.mean(node_values[node_to_cell_map], axis=1)
+
+    return cell_values
+
+
 def calculate_sea_floor_depth(ds):
     """
     Calculate sea floor depth below sea surface from FVCOM output.
