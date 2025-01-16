@@ -178,11 +178,27 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
 
     # Verify centers are within corners
     def verify_centers_in_corners(centers, corners):
-        # Simple bounding box check for each element
-        min_bounds = np.min(corners, axis=1)  # Shape: (nele,)
-        max_bounds = np.max(corners, axis=1)  # Shape: (nele,)
-        within_bounds = (centers >= min_bounds) & (centers <= max_bounds)
-        return np.all(within_bounds)
+        def point_in_triangle(point, triangle):
+            # Implementation using barycentric coordinates
+            x, y = point
+            x1, y1 = triangle[0]
+            x2, y2 = triangle[1]
+            x3, y3 = triangle[2]
+
+            # Calculate barycentric coordinates
+            denom = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3)
+            a = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / denom
+            b = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) / denom
+            c = 1 - a - b
+
+            # Check if point is inside triangle
+            return (0 <= a <= 1) and (0 <= b <= 1) and (0 <= c <= 1)
+
+        # Check each center against its corresponding triangle
+        for center, triangle in zip(centers, corners):
+            if not point_in_triangle(center, triangle):
+                return False
+        return True
 
     centers_valid = verify_centers_in_corners(lat_centers, lat_corners_mapped)
     if not centers_valid:
