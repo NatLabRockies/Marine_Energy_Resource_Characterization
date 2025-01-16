@@ -318,6 +318,71 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
     return ds
 
 
+def calculate_zeta_center(ds):
+    """
+    Interpolate surface elevation (zeta) from nodes to face centers.
+
+    This function computes the surface elevation at cell centers by averaging
+    the nodal values that make up each triangular cell using the node-to-cell
+    connectivity array (nv).
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing:
+        - 'zeta': surface elevation at nodes
+        - 'nv': node-to-cell connectivity array (1-based indices)
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'zeta_center' variable and CF-compliant metadata
+
+    Raises
+    ------
+    KeyError
+        If required variables 'zeta' or 'nv' are missing
+    """
+    if not all(var in ds for var in ["zeta", "nv"]):
+        raise KeyError("Dataset must contain both 'zeta' and 'nv' variables")
+
+    # Get mapping from nodes to faces using nv connectivity array
+    # nv indices are 1-based, subtract 1 to convert to 0-based
+    node_to_cell_map = ds["nv"].values.T - 1  # Shape: (nele, 3)
+
+    # Initialize output array for cell-centered values
+    cell_values = np.zeros((ds.zeta.shape[0], len(node_to_cell_map)))
+
+    # For each timestep, compute mean of nodal values for each cell
+    for t in range(ds.zeta.shape[0]):
+        node_values = ds.zeta[t].values
+        cell_values[t] = np.mean(node_values[node_to_cell_map], axis=1)
+
+    # Add interpolated values to dataset
+    ds["zeta_center"] = xr.DataArray(
+        cell_values,
+        dims=["time", "cell"],
+        coords={"time": ds.zeta.time, "cell": np.arange(len(node_to_cell_map))},
+    )
+
+    # Copy and modify attributes from original zeta variable
+    ds.zeta_center.attrs = {
+        **ds.zeta.attrs,
+        "long_name": "Sea Surface Height at Cell Centers",
+        "coordinates": "time cell",
+        "mesh": "cell_centered",
+        "interpolation": (
+            "Computed by averaging the surface elevation values from the three "
+            "nodes that define each triangular cell using the node-to-cell "
+            "connectivity array (nv)."
+        ),
+        "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
+        "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
+    }
+
+    return ds
+
+
 def validate_depth_inputs(ds):
     """
     Validate required variables for depth calculations in an xarray Dataset.
@@ -428,21 +493,6 @@ def calculate_depth(ds):
     }
 
     return ds
-
-
-def calculate_zeta_center(ds):
-    """Interpolate zeta from nodes to face centers"""
-
-    ## Get mapping from nodes to faces using nv connectivity array"""
-    # nv indices are 1-based, subtract 1
-    node_to_cell_map = ds["nv"].values.T - 1  # Shape: (nele, 3)
-    cell_values = np.zeros((ds.zeta.shape[0], len(node_to_cell_map)))
-
-    for t in range(ds.zeta.shape[0]):
-        node_values = ds.zeta[t].values
-        cell_values[t] = np.mean(node_values[node_to_cell_map], axis=1)
-
-    return cell_values
 
 
 def calculate_sea_floor_depth(ds):
@@ -562,6 +612,9 @@ def derive_vap(config, location_key):
         this_ds = calculate_sea_water_direction(this_ds, config)
         print("\tCalculating power density...")
         this_ds = calculate_sea_water_power_density(this_ds, config)
+        print("\tCalculating zeta_center...")
+        this_ds = calculate_zeta_center(this_ds)
+
         print("\tCalculating depth...")
         this_ds = calculate_depth(this_ds)
         print("\tCalculating sea_floor_depth...")
