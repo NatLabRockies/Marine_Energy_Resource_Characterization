@@ -331,12 +331,12 @@ class FVCOMStandardizer:
 
         required_vars = config["standardized_variable_specification"]
 
-        # First verify all required variables exist
-        self.verify_required_variables(ds, required_vars)
-
         # Then clean and standardize variables
         ds = self.clean_variables(ds, required_vars)
         ds = self.standardize_variables(ds, required_vars)
+
+        # Verify all required variables exist
+        self.verify_required_variables(ds, required_vars)
 
         # Then rename dimensions and coordinates
         ds = self._rename_dimensions(ds)
