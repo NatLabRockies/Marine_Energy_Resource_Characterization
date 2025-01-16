@@ -97,13 +97,23 @@ def calculate_sea_water_speed(ds, config):
     return ds
 
 
-def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0):
+def calculate_sea_water_direction(
+    ds, config, direction_undefined_speed_threshold_ms=0.0
+):
     """
     Calculate sea water velocity direction in meteorological convention.
 
     This function computes the direction water is coming FROM (like wind direction),
-    measured clockwise from true north. The calculation converts the u,v velocity
-    components to a meteorological direction using arctan2 and a +270° transformation.
+    measured clockwise from true north.
+
+    The conversion from cartesian to meteorological 'from' direction works in two steps:
+    1. Convert cartesian angle to compass 'to' direction:
+       - Subtract cartesian angle from 90° to change reference from east to north
+       - Use modulo 360 to normalize to [0, 360) range
+
+    2. Convert compass 'to' direction to 'from' direction:
+       - Add 180° to get the opposite direction
+       - Use modulo 360 to normalize to [0, 360) range
 
     Parameters
     ----------
@@ -129,17 +139,6 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
     - 180° : water flowing from south to north
     - 270° : water flowing from west to east
 
-    The +270° transformation works because:
-    1. arctan2(v,u) gives the mathematical angle counterclockwise from east:
-       - u=1,v=0 (eastward flow) → 0°
-       - u=0,v=1 (northward flow) → 90°
-       - u=-1,v=0 (westward flow) → 180°
-       - u=0,v=-1 (southward flow) → -90°
-
-    2. Adding 270° accomplishes two things:
-       - Shifts the reference from east to north (+90°)
-       - Converts 'to' direction to 'from' direction (+180°)
-       The combined +270° gives us the meteorological 'from' direction
     """
     validate_u_and_v(ds)
 
@@ -149,83 +148,103 @@ def calculate_sea_water_direction(ds, direction_undefined_speed_threshold_ms=0.0
             "Please run calculate_sea_water_speed() first."
         )
 
-    # Calculate mathematical direction (counterclockwise from east)
+    # Calculate cartesian angle using arctan2 (counterclockwise from east)
     # arctan2 radian angle is measured counterclockwise from the positive x-axis
-    mathematical_direction_degrees = np.rad2deg(np.arctan2(ds.v, ds.u))
+    # numpy outputs from 0 to 180 on the positive y and from 0 to -180 on the negative y
+    # Compass 270 degrees is 180 in numpy
+    cartesian_angle_degrees = np.rad2deg(np.arctan2(ds.v, ds.u))
 
     # Validate direction ranges
-    mathematical_direction_degrees_expected_max = 180.0  # arctan2 range is [-180, 180]
-    mathematical_direction_degrees_expected_min = -180.0
+    cartesian_angle_degrees_expected_max = 180.0  # arctan2 range is [-180, 180]
+    cartesian_angle_degrees_expected_min = -180.0
 
-    mathematical_direction_degrees_max = np.max(mathematical_direction_degrees)
-    mathematical_direction_degrees_min = np.min(mathematical_direction_degrees)
+    cartesian_angle_degrees_max = np.max(cartesian_angle_degrees)
+    cartesian_angle_degrees_min = np.min(cartesian_angle_degrees)
 
-    if mathematical_direction_degrees_max > mathematical_direction_degrees_expected_max:
+    if cartesian_angle_degrees_max > cartesian_angle_degrees_expected_max:
         raise ValueError(
-            f"Maximum mathematical direction value {mathematical_direction_degrees_max}° "
-            f"exceeds expected maximum of {mathematical_direction_degrees_expected_max}°"
+            f"Maximum mathematical direction value {cartesian_angle_degrees_max}° "
+            f"exceeds expected maximum of {cartesian_angle_degrees_expected_max}°"
         )
 
-    if mathematical_direction_degrees_min < mathematical_direction_degrees_expected_min:
+    if cartesian_angle_degrees_min < cartesian_angle_degrees_expected_min:
         raise ValueError(
-            f"Minimum mathematical direction value {mathematical_direction_degrees_min}° "
-            f"is below expected minimum of {mathematical_direction_degrees_expected_min}°"
+            f"Minimum mathematical direction value {cartesian_angle_degrees_min}° "
+            f"is below expected minimum of {cartesian_angle_degrees_expected_min}°"
         )
 
-    # Convert to meteorological 'from' direction with single +270° transformation
-    met_from_direction_degrees = np.mod(mathematical_direction_degrees + 270, 360)
+    # Convert to compass to direction:
+    # | u, v  | Cartesian Angle | 90 - Cartesian Angle | Modulo 360 (to_direction) | Compass To | (to + 180) % 360 (from_direction) | Compass From
+    # | 1, 0  | 0               | 90 - 0 = 90          | 90 % 360 = 90             | E          | (90 + 180) % 360 = 270            | W
+    # | 1, 1  | 45              | 90 - 45 = 45         | 45 % 360 = 45             | NE         | (45 + 180) % 360 = 225            | SW
+    # | 0, 1  | 90              | 90 - 90 = 0          | 0 % 360 = 0               | N          | (0 + 180) % 360 = 180             | S
+    # | -1, 1 | 135             | 90 - 135 = -45       | -45 % 360 = 315           | NW         | (315 + 180) % 360 = 135           | SE
+    # | -1, 0 | 180             | 90 - 180 = -90       | -90 % 360 = 270           | W          | (270 + 180) % 360 = 90            | E
+    # | -1,-1 | -135            | 90 - -135 = 225      | 225 % 360 = 225           | SW         | (225 + 180) % 360 = 45            | NE
+    # | 0, -1 | -90             | 90 - -90 = 180       | 180 % 360 = 180           | S          | (180 + 180) % 360 = 0             | N
+    # | 1, -1 | -45             | 90 - -45 = 135       | 135 % 360 = 135           | SE         | (135 + 180) % 360 = 315           | NW
+    compass_to_direction_degrees = np.mod(90 - cartesian_angle_degrees, 360)
+    compass_from_direction_degrees = np.mod(compass_to_direction_degrees + 180, 360)
 
-    met_direction_degrees_expected_max = 360
-    met_direction_degrees_expected_min = 0
+    compass_direction_degrees_expected_max = 360
+    compass_direction_degrees_expected_min = 0
 
-    met_direction_degrees_max = np.max(met_from_direction_degrees)
-    met_direction_degrees_min = np.min(met_from_direction_degrees)
+    compass_direction_degrees_max = np.max(compass_from_direction_degrees)
+    compass_direction_degrees_min = np.min(compass_from_direction_degrees)
 
-    if met_direction_degrees_max > met_direction_degrees_expected_max:
+    if compass_direction_degrees_max > compass_direction_degrees_expected_max:
         raise ValueError(
-            f"Maximum meterological direction value {met_direction_degrees_max}° "
-            f"exceeds expected maximum of {met_direction_degrees_expected_max}°"
+            f"Maximum compass direction value {compass_direction_degrees_max}° "
+            f"exceeds expected maximum of {compass_direction_degrees_expected_max}°"
         )
 
-    if met_direction_degrees_min < met_direction_degrees_expected_min:
+    if compass_direction_degrees_min < compass_direction_degrees_expected_min:
         raise ValueError(
-            f"Minimum meterological direction value {met_direction_degrees_min}° "
-            f"is below expected minimum of {met_direction_degrees_expected_min}°"
+            f"Minimum compass direction value {compass_direction_degrees_min}° "
+            f"is below expected minimum of {compass_direction_degrees_expected_min}°"
         )
 
     # Set directions to NaN where speed is below threshold
-    met_from_direction_degrees = xr.where(
+    compass_from_direction_degrees = xr.where(
         ds.speed > direction_undefined_speed_threshold_ms,
-        met_from_direction_degrees,
+        compass_from_direction_degrees,
         np.nan,
     )
 
-    ds["from_direction"] = met_from_direction_degrees
+    output_variable_name = "from_direction"
+
+    ds[output_variable_name] = compass_from_direction_degrees
+
+    specified_attrs = config["derived_vap_specification"][output_variable_name][
+        "attributes"
+    ]
 
     # Add CF-compliant metadata
     ds.from_direction.attrs = {
-        "long_name": "Sea Water Velocity From Direction",
-        "standard_name": "sea_water_velocity_from_direction",
-        "units": "degree",
-        "valid_min": "0.0",
-        "valid_max": "360.0",
-        # From CF Standard Name
-        "description": (
-            "A velocity is a vector quantity. "
-            'The phrase "from_direction" indicates the direction from which the '
-            "velocity vector is coming. The direction is a bearing in the usual "
-            "geographical sense, measured positive clockwise from due north."
+        **specified_attrs,
+        "direction_reference": (
+            "Reference table for velocity components and resulting from_direction:\n"
+            "| Eastward (u) | Northward (v) | From Direction | Cardinal Direction |\n"
+            "| 1            | 0             | 270            | West               |\n"
+            "| 1            | 1             | 225            | Southwest          |\n"
+            "| 0            | 1             | 180            | South              |\n"
+            "| -1           | 1             | 135            | Southeast          |\n"
+            "| -1           | 0             | 90             | East               |\n"
+            "| -1           | -1            | 45             | Northeast          |\n"
+            "| 0            | -1            | 0              | North              |\n"
+            "| 1            | -1            | 315            | Northwest          |\n"
+            "| 0            | 0             | undefined      | undefined          |"
         ),
-        "methodology": (
-            "Direction is calculated using arctan2(v,u) to get the mathematical angle, "
-            "then converting to meteorological 'from' direction by adding 270° "
-            "and taking modulo 360. This single transformation combines both the "
-            "conversion to meteorological convention and the conversion to 'from' direction. "
+        "additional_processing": (
+            "Direction is calculated using numpy.arctan2(v,u) to get the cartesian angle, "
+            "converting to compass 'to' direction by (90° - cartesian angle) mod 360, "
+            "then converting to compass 'from' direction by (compass_to_direction + 180°) mod 360. "
             f"Directions are set to NaN for speeds below {direction_undefined_speed_threshold_ms} m/s."
         ),
         "computation": (
-            "mathematical_direction_degrees = np.rad2deg(np.arctan2(ds.v, ds.u))\n"
-            "meteorological_from_direction_degrees = np.mod(mathematical_direction_degrees + 270, 360)"
+            "cartesian_direction_degrees = np.rad2deg(np.arctan2(ds.v, ds.u))\n"
+            "compass_to_direction_degrees = np.mod(90 - cartesian_degrees, 360)\n"
+            "compass_from_direction_degrees = np.mod(compass_to_direction_degrees + 180, 360)\n"
         ),
         "input_variables": (
             "u: eastward_sea_water_velocity (m/s), "
