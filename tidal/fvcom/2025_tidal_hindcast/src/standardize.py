@@ -890,7 +890,7 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             file_name_convention_manager.generate_filename_for_data_level(
                 output_ds,
                 output_name,
-                config["dataset_name"],
+                config["dataset"]["name"],
                 "a1",
                 temporal=temporal_string,
             )
