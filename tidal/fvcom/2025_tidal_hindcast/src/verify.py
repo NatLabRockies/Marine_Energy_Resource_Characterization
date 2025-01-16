@@ -262,12 +262,26 @@ def model_specification_verifier(config, ds, filepath):
             )
 
         # Check coordinates
+        # expected_coords = var_spec["coordinates"]
+        # actual_coords = list(var.coords)
+        # if sorted(actual_coords) != sorted(expected_coords):
+        #     raise ValueError(
+        #         f"Variable {var_name} has coordinates {actual_coords}, "
+        #         f"expected {expected_coords} in {filepath}"
+        #     )
+
+        # Check that all expected coordinates are present in dataset but
+        # explicitly allow "extra" coordinates
+        # ValueError: Variable lat has coordinates ['x', 'y', 'lon', 'lat'], expected ['lon', 'lat'] in /kfs2/projects/hindcastra/Tidal/Puget_Sound_corrected/02012015/psm_0001.nc
         expected_coords = var_spec["coordinates"]
         actual_coords = list(var.coords)
-        if sorted(actual_coords) != sorted(expected_coords):
+        missing_coords = [
+            coord for coord in expected_coords if coord not in actual_coords
+        ]
+        if missing_coords:
             raise ValueError(
-                f"Variable {var_name} has coordinates {actual_coords}, "
-                f"expected {expected_coords} in {filepath}"
+                f"Variable {var_name} is missing required coordinates {missing_coords}. "
+                f"Has {actual_coords}, required coordinates are {expected_coords} in {filepath}"
             )
 
         # Check attributes
