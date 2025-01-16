@@ -195,23 +195,40 @@ class FVCOMStandardizer:
         for var_name, var_spec in required_vars.items():
             # Check if variable exists
             try:
-                _ = ds[var_name]
+                var = ds[var_name]
             except KeyError:
-                raise KeyError(f"Required variable {var_name} not in dataset")
+                raise KeyError(f"Required variable {var_name} missing")
 
-            # Verify dimensions
-            for dim in var_spec["dimensions"]:
-                if dim not in ds.dims:
-                    raise ValueError(
-                        f"Required dimension '{dim}' missing for variable '{var_name}'"
-                    )
+            # Check data type
+            if str(var.dtype) != var_spec["dtype"]:
+                raise ValueError(
+                    f"Variable {var_name} has dtype {var.dtype}, "
+                    f"expected {var_spec['dtype']}"
+                )
 
-            # Verify coordinates
-            for coord in var_spec["coordinates"]:
-                if coord not in ds.coords and coord not in ds:
-                    raise ValueError(
-                        f"Required coordinate '{coord}' missing for variable '{var_name}'"
-                    )
+            # Check dimensions
+            expected_dims = var_spec["dimensions"]
+            actual_dims = list(var.dims)
+            if actual_dims != expected_dims:
+                raise ValueError(
+                    f"Variable {var_name} has dimensions {actual_dims}, "
+                    f"expected {expected_dims}"
+                )
+
+        # Check coordinates
+        expected_coords = var_spec["coordinates"]
+        actual_coords = list(var.coords)
+        if sorted(actual_coords) != sorted(expected_coords):
+            raise ValueError(
+                f"Variable {var_name} has coordinates {actual_coords}, "
+                f"expected {expected_coords}"
+            )
+
+        existing_attrs = ds[var_name].attrs
+        existing_attrs.update(var_spec["attrs"])
+        ds[var_name].attrs = existing_attrs
+
+        return ds
 
     def clean_variables(self, ds, required_vars):
         """
