@@ -229,7 +229,7 @@ def model_specification_verifier(config, ds, filepath):
     }
 
     # Check model and convention attributes
-    for attr, check in verifications.items():
+    for _, check in verifications.items():
         if check["actual"] != check["expected"]:
             raise ValueError(
                 f"{check['name']} {check['actual']} in {filepath} does not match "
@@ -238,22 +238,52 @@ def model_specification_verifier(config, ds, filepath):
 
     # Verify required variables
     required_vars = config["model_specification"]["required_original_variables"]
-    for var_name, expected_standard_name in required_vars.items():
+    for var_name, var_spec in required_vars.items():
+        # Check if variable exists
         if var_name not in ds.variables:
             raise ValueError(f"Required variable {var_name} missing in {filepath}")
 
-        if expected_standard_name is not None:
-            var = ds[var_name]
-            if "standard_name" not in var.attrs:
+        var = ds[var_name]
+
+        # Check data type
+        if str(var.dtype) != var_spec["dtype"]:
+            raise ValueError(
+                f"Variable {var_name} has dtype {var.dtype}, "
+                f"expected {var_spec['dtype']} in {filepath}"
+            )
+
+        # Check dimensions
+        expected_dims = var_spec["dimensions"]
+        actual_dims = list(var.dims)
+        if actual_dims != expected_dims:
+            raise ValueError(
+                f"Variable {var_name} has dimensions {actual_dims}, "
+                f"expected {expected_dims} in {filepath}"
+            )
+
+        # Check coordinates
+        expected_coords = var_spec["coordinates"]
+        actual_coords = list(var.coords)
+        if sorted(actual_coords) != sorted(expected_coords):
+            raise ValueError(
+                f"Variable {var_name} has coordinates {actual_coords}, "
+                f"expected {expected_coords} in {filepath}"
+            )
+
+        # Check attributes
+        for attr_name, attr_value in var_spec["attributes"].items():
+            if attr_name not in var.attrs:
                 raise ValueError(
-                    f"Variable {var_name} missing standard_name attribute in {filepath}"
+                    f"Variable {var_name} missing required attribute {attr_name} "
+                    f"in {filepath}"
+                )
+            if var.attrs[attr_name] != attr_value:
+                raise ValueError(
+                    f"Variable {var_name} has attribute {attr_name}={var.attrs[attr_name]}, "
+                    f"expected {attr_value} in {filepath}"
                 )
 
-            if var.attrs["standard_name"] != expected_standard_name:
-                raise ValueError(
-                    f"Variable {var_name} has standard_name {var.attrs['standard_name']}, "
-                    f"expected {expected_standard_name} in {filepath}"
-                )
+    return True
 
 
 def verify_dataset(config, location, nc_files):
