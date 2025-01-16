@@ -288,10 +288,10 @@ class FVCOMStandardizer:
 
         coords = coord_manager.standardize_fvcom_coords(ds, utm_zone)
 
-        ds.lat_center.values = coords["lat_centers"]
-        ds.lon_center.values = coords["lon_centers"]
-        ds.lat_node.values = coords["lat_corners"]
-        ds.lon_node.values = coords["lon_corners"]
+        ds.latc.values = coords["lat_centers"]
+        ds.lonc.values = coords["lon_centers"]
+        ds.lat.values = coords["lat_corners"]
+        ds.lon.values = coords["lon_corners"]
 
         return ds
 
