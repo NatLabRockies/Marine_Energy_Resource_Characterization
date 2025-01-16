@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from . import file_manager, file_name_convention_manager
+from . import attrs_manager, file_manager, file_name_convention_manager
 
 
 def validate_u_and_v(ds):
@@ -502,6 +502,14 @@ def derive_vap(config, location_key):
                 "b1",
                 temporal=temporal_string,
             )
+        )
+
+        this_ds = attrs_manager.standardize_dataset_global_attrs(
+            this_ds,
+            config,
+            location,
+            "b1",
+            str(nc_file),
         )
 
         output_path = Path(
