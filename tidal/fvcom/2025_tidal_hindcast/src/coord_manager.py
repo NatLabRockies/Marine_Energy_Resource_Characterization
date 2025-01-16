@@ -200,7 +200,14 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
                 return False
         return True
 
-    centers_valid = verify_centers_in_corners(lat_centers, lat_corners_mapped)
+    center_points = list(zip(lon_centers, lat_centers))
+    corner_triangles = [
+        list(zip(lons, lats))
+        for lons, lats in zip(lon_corners_mapped, lat_corners_mapped)
+    ]
+
+    centers_valid = verify_centers_in_corners(center_points, corner_triangles)
+
     if not centers_valid:
         raise ValueError("Warning: Some center points lie outside their corner bounds")
 
