@@ -1,7 +1,14 @@
 config = {
-    "dataset_name": "tidal_hindcast_fvcom",
-    # Input and Output Directories
+    "dataset": {
+        "name": "tidal_hindcast_fvcom",
+        "version": "0.1.0",
+        "issue_date": "2025-02-01",
+    },
+    "code": {
+        "version": "0.1.0",
+    },
     "dir": {
+        # Input and Output Directories
         # Input Data Directories
         "input": {
             "original": "/projects/hindcastra/Tidal",
