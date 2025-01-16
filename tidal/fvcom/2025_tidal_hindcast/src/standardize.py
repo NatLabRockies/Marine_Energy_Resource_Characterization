@@ -31,10 +31,10 @@ class FVCOMStandardizer:
         }
 
         self.coord_mapping = {
-            "lon": "lon_node",  # Node (corner) longitude
             "lat": "lat_node",  # Node (corner) latitude
-            "lonc": "lon_center",  # Face center longitude
+            "lon": "lon_node",  # Node (corner) longitude
             "latc": "lat_center",  # Face center latitude
+            "lonc": "lon_center",  # Face center longitude
             "siglay": "sigma_layer",  # Sigma layer depths
             "siglev": "sigma_level",  # Sigma level depths
         }
@@ -343,11 +343,11 @@ class FVCOMStandardizer:
             Dataset with added face node coordinates following UGRID conventions
         """
         # Create new face node coordinates with proper dimensions and attributes
-        ds["lat_face_nodes"] = xr.DataArray(
+        ds["lat_face_node"] = xr.DataArray(
             face_nodes["lat_face_nodes"],
             dims=[
                 "face",
-                "face_nodes",
+                "face_node",
             ],  # Using standardized dimension names from dim_mapping
             attrs={
                 "standard_name": "latitude",
@@ -355,20 +355,20 @@ class FVCOMStandardizer:
                 "units": "degrees_north",
                 "mesh": "mesh",
                 "location": "face_node",  # UGRID convention for location type
-                "coordinates": "lon_face_nodes lat_face_nodes",  # Cross-reference coordinate pair
+                "coordinates": "lon_face_node lat_face_node",  # Cross-reference coordinate pair
             },
         )
 
-        ds["lon_face_nodes"] = xr.DataArray(
+        ds["lon_face_node"] = xr.DataArray(
             face_nodes["lon_face_nodes"],
-            dims=["face", "face_nodes"],
+            dims=["face", "face_node"],
             attrs={
                 "standard_name": "longitude",
                 "long_name": "Longitude of mesh face nodes",
                 "units": "degrees_east",
                 "mesh": "mesh",
                 "location": "face_node",
-                "coordinates": "lon_face_nodes lat_face_nodes",
+                "coordinates": "lon_face_node lat_face_node",
             },
         )
 

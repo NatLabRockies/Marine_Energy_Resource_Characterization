@@ -223,9 +223,9 @@ config = {
                 "coverage_content_type": "coordinate",
             },
         },
-        "lat": {
+        "lat_node": {
             "dtype": "float32",
-            "coordinates": ["lon", "lat"],
+            "coordinates": ["lat_node", "lon_node"],
             "dimensions": ["node"],
             "attributes": {
                 "long_name": "nodal latitude",
@@ -236,9 +236,9 @@ config = {
                 "valid_max": "90",
             },
         },
-        "lon": {
+        "lon_node": {
             "dtype": "float32",
-            "coordinates": ["lon", "lat"],
+            "coordinates": ["lon_node", "lat_node"],
             "dimensions": ["node"],
             "attributes": {
                 "long_name": "nodal longitude",
@@ -250,9 +250,9 @@ config = {
             },
         },
         # Face Center
-        "latc": {
+        "lat_center": {
             "dtype": "float32",
-            "coordinates": ["lonc", "latc"],
+            "coordinates": ["lat_center", "lon_center"],
             "dimensions": ["face"],
             "attributes": {
                 "long_name": "zonal latitude",
@@ -263,9 +263,9 @@ config = {
                 "valid_max": "90",
             },
         },
-        "lonc": {
+        "lon_center": {
             "dtype": "float32",
-            "coordinates": ["lonc", "latc"],
+            "coordinates": ["lat_center", "lon_center"],
             "dimensions": ["face"],
             "attributes": {
                 "long_name": "zonal longitude",
@@ -278,20 +278,27 @@ config = {
         },
         "face": {
             "dtype": "int64",
-            "coordinates": ["lonc", "latc"],
+            "coordinates": ["lat_center", "lon_center"],
             "dimensions": ["face"],
             "attributes": {},
             "coverage_content_type": "coordinate",
         },
         "node": {
             "dtype": "int64",
-            "coordinates": ["lon", "lat"],
+            "coordinates": ["lat_node", "lon_node"],
             "dimensions": ["node"],
             "attributes": {},
         },
         "nv": {
             "dtype": "int32",
-            "coordinates": ["lonc", "latc"],
+            "coordinates": ["lat_center", "lon_center"],
+            "dimensions": ["three", "face"],
+            "attributes": {"long_name": "nodes surrounding element"},
+            "coverage_content_type": "referenceInformation",
+        },
+        "face_node": {
+            "dtype": "int32",
+            "coordinates": ["lat_face_node", "lon_face_node"],
             "dimensions": ["three", "face"],
             "attributes": {"long_name": "nodes surrounding element"},
             "coverage_content_type": "referenceInformation",
@@ -305,8 +312,8 @@ config = {
         },
         "u": {
             "dtype": "float32",
-            "coordinates": ["lonc", "latc", "time"],
-            "dimensions": ["time", "siglay", "face"],
+            "coordinates": ["lat_center", "lon_center", "time"],
+            "dimensions": ["time", "sigma_layer", "face"],
             "attributes": {
                 "long_name": "Eastward Water Velocity",
                 "standard_name": "eastward_sea_water_velocity",
@@ -320,8 +327,8 @@ config = {
         },
         "v": {
             "dtype": "float32",
-            "coordinates": ["lonc", "latc", "time"],
-            "dimensions": ["time", "siglay", "face"],
+            "coordinates": ["lat_center", "lon_center", "time"],
+            "dimensions": ["time", "sigma_layer", "face"],
             "attributes": {
                 "long_name": "Northward Water Velocity",
                 "standard_name": "Northward_sea_water_velocity",
@@ -336,8 +343,8 @@ config = {
     },
     "derived_vap_specification": {
         "speed": {
-            "coordinates": ["lonc", "latc", "time"],
-            "dimensions": ["time", "siglay", "face"],
+            "coordinates": ["lat_center", "lon_center", "time"],
+            "dimensions": ["time", "sigma_layer", "face"],
             "attributes": {
                 "long_name": "Sea Water Speed",
                 "standard_name": "sea_water_speed",
@@ -352,8 +359,8 @@ config = {
         },
         "from_direction": {
             "dtype": "float32",
-            "coordinates": ["lonc", "latc", "time"],
-            "dimensions": ["time", "siglay", "face"],
+            "coordinates": ["lat_center", "lon_center", "time"],
+            "dimensions": ["time", "sigma_layer", "face"],
             "attributes": {
                 "long_name": "Sea Water Velocity From Direction",
                 "standard_name": "sea_water_velocity_from_direction",
@@ -375,8 +382,8 @@ config = {
         },
         "power_density": {
             "dtype": "float32",
-            "coordinates": ["lonc", "latc", "time"],
-            "dimensions": ["time", "siglay", "face"],
+            "coordinates": ["lat_center", "lon_center", "time"],
+            "dimensions": ["time", "sigma_layer", "face"],
             "attributes": {
                 "long_name": "Sea Water Power Density",
                 "units": "W m-2",
