@@ -194,8 +194,10 @@ class FVCOMStandardizer:
         """
         for var_name, var_spec in required_vars.items():
             # Check if variable exists
-            if var_name not in ds:
-                raise ValueError(f"Required variable '{var_name}' missing from dataset")
+            try:
+                _ = ds[var_name]
+            except KeyError:
+                raise KeyError(f"Required variable {var_name} not in dataset")
 
             # Verify dimensions
             for dim in var_spec["dimensions"]:
