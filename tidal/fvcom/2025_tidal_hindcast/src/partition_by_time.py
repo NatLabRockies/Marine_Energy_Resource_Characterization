@@ -3,7 +3,7 @@ import gc
 import numpy as np
 import pandas as pd
 import xarray as xr
-from . import file_manager, file_name_convention_manager
+from . import attrs_manager, file_manager, file_name_convention_manager
 
 
 def partition_by_time(config, location_key, time_df, force_reprocess=False):
@@ -93,7 +93,10 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
             # Concatenate datasets
             print(f"Concatenating {len(datasets)} datasets...")
             combined_ds = xr.concat(datasets, dim="time")
-            combined_ds.attrs["source_files"] = list(source_filenames)
+
+            combined_ds = attrs_manager.standardize_dataset_global_attrs(
+                combined_ds, config, location, "a2", [str(f) for f in source_filenames]
+            )
 
             # Generate output filename
             data_level_file_name = (
