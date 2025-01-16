@@ -423,36 +423,23 @@ class FVCOMStandardizer:
 
     def add_face_nodes_dimension(self, ds, face_nodes):
         """
-        Add face node coordinates to the dataset with UGRID-compliant dimensions and attributes.
-
-        Parameters
-        ----------
-        ds : xarray.Dataset
-            Dataset to add face node coordinates to
-        face_nodes : dict
-            Dictionary containing face node coordinates with keys:
-            - 'lat_face_nodes': numpy.ndarray of face node latitudes
-            - 'lon_face_nodes': numpy.ndarray of face node longitudes
-
-        Returns
-        -------
-        xarray.Dataset
-            Dataset with added face node coordinates following UGRID conventions
+        Add face node coordinates to the dataset with UGRID-compliant dimensions and attributes,
+        and assign these coordinates to all face-centered variables.
         """
-        # Create new face node coordinates with proper dimensions and attributes
+        # First create the UGRID-compliant face node coordinate variables
         ds["lat_face_node"] = xr.DataArray(
             face_nodes["lat_face_nodes"],
-            dims=[
-                "face",
-                "face_node",
-            ],  # Using standardized dimension names from dim_mapping
+            dims=["face", "face_node"],
             attrs={
                 "standard_name": "latitude",
-                "long_name": "Latitude of Mesh Face None",
+                "long_name": "Face Node Latitude",
                 "units": "degrees_north",
                 "mesh": "mesh",
-                "location": "face_node",  # UGRID convention for location type
-                "coordinates": "lon_face_node lat_face_node",  # Cross-reference coordinate pair
+                "location": "face_node",
+                "coverage_content_type": "coordinate",
+                "valid_min": "-90",
+                "valid_max": "90",
+                "coordinates": "lon_face_node lat_face_node",
             },
         )
 
@@ -461,13 +448,50 @@ class FVCOMStandardizer:
             dims=["face", "face_node"],
             attrs={
                 "standard_name": "longitude",
-                "long_name": "Longitude of Mesh Face Node",
+                "long_name": "Face Node Longitude",
                 "units": "degrees_east",
                 "mesh": "mesh",
                 "location": "face_node",
+                "coverage_content_type": "coordinate",
+                "valid_min": "-180",
+                "valid_max": "180",
                 "coordinates": "lon_face_node lat_face_node",
             },
         )
+
+        # Function to check if a variable is face-centered
+        def is_face_centered(var):
+            if not any(dim in var.dims for dim in ["nele", "face"]):
+                return False
+
+            # Check attributes
+            attrs = var.attrs
+            return (
+                ("location" in attrs and attrs["location"].lower() == "face")
+                or ("grid" in attrs and attrs["grid"] == "fvcom_grid")
+                or ("mesh" in attrs and "fvcom" in attrs["mesh"].lower())
+            )
+
+        # Update coordinates for face-centered variables
+        for var_name, var in ds.data_vars.items():
+            if is_face_centered(var):
+                # Get existing coordinates
+                coords = var.coords.copy()
+
+                # Add face node coordinates
+                coords["lat_face_node"] = ds.lat_face_node
+                coords["lon_face_node"] = ds.lon_face_node
+
+                # Update the coordinates attribute to include face node coordinates
+                if "coordinates" in var.attrs:
+                    coord_list = var.attrs["coordinates"].split()
+                    for new_coord in ["lat_face_node", "lon_face_node"]:
+                        if new_coord not in coord_list:
+                            coord_list.append(new_coord)
+                    var.attrs["coordinates"] = " ".join(coord_list)
+
+                # Assign updated coordinates
+                ds[var_name] = var.assign_coords(coords)
 
         return ds
 
@@ -507,8 +531,6 @@ class FVCOMStandardizer:
         ds, face_nodes = self.standardize_coordinate_values(ds, location)
 
         required_vars = config["standardized_variable_specification"]
-
-        ds = self.add_face_node_connectivity(ds, required_vars)
 
         # Then rename dimensions and coordinates
         ds = self._rename_dimensions(ds)
