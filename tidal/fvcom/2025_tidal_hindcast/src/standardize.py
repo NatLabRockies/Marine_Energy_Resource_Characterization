@@ -26,8 +26,8 @@ class FVCOMStandardizer:
             "node": "node",  # Already matches UGRID spec
             "three": "nodes_per_face",  # Number of nodes per face
             "time": "time",  # Keep time dimension as is
-            "siglay": "layer",  # Vertical layers
-            "siglev": "level",  # Vertical levels
+            "siglay": "sigma_layer",  # Vertical layers
+            "siglev": "sigma_level",  # Vertical levels
         }
 
         self.coord_mapping = {
