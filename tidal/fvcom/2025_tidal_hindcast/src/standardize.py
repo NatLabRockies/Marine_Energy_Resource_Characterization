@@ -19,6 +19,203 @@ from . import (
 )
 
 
+class FVCOMStandardizer:
+    """
+    A class to standardize FVCOM datasets by applying UGRID conventions.
+    First renames dimensions and coordinates to match UGRID spec, then adds appropriate attributes.
+    """
+
+    def __init__(self):
+        """Initialize the standardizer."""
+        self.dim_mapping = {
+            "nele": "face",  # FVCOM elements are 2D faces
+            "node": "node",  # Already matches UGRID spec
+            "three": "face_nodes",  # Number of nodes per face
+            "time": "time",  # Keep time dimension as is
+            "siglay": "layer",  # Vertical layers
+            "siglev": "level",  # Vertical levels
+        }
+
+        self.coord_mapping = {
+            "lon": "lon_corners",  # Node (corner) longitude
+            "lat": "lat_corners",  # Node (corner) latitude
+            "lonc": "lon_centers",  # Face center longitude
+            "latc": "lat_centers",  # Face center latitude
+            "siglay": "sigma_layer",  # Sigma layer depths
+            "siglev": "sigma_level",  # Sigma level depths
+        }
+
+    def _rename_dimensions(self, ds):
+        """
+        Rename dimensions to follow UGRID conventions.
+
+        Parameters:
+        -----------
+        ds : xarray.Dataset
+            Dataset with original FVCOM dimensions
+
+        Returns:
+        --------
+        xarray.Dataset
+            Dataset with standardized dimension names
+        """
+        rename_dict = {
+            old: new for old, new in self.dim_mapping.items() if old in ds.dims
+        }
+        return ds.rename(rename_dict)
+
+    def _rename_coordinates(self, ds):
+        """
+        Rename coordinates to follow UGRID conventions.
+
+        Parameters:
+        -----------
+        ds : xarray.Dataset
+            Dataset with original FVCOM coordinates
+
+        Returns:
+        --------
+        xarray.Dataset
+            Dataset with standardized coordinate names
+        """
+        rename_dict = {
+            old: new for old, new in self.coord_mapping.items() if old in ds.variables
+        }
+        return ds.rename(rename_dict)
+
+    def _add_mesh_topology_attrs(self, ds):
+        """
+        Add mesh topology attributes following UGRID conventions for a 3D unstructured mesh.
+        Uses standardized dimension and coordinate names.
+        """
+        ds["mesh"] = xr.DataArray(
+            attrs={
+                "cf_role": "mesh_topology",
+                "long_name": "3D unstructured mesh topology",
+                "topology_dimension": 3,
+                "node_coordinates": "lon_corners lat_corners",
+                "face_coordinates": "lon_centers lat_centers",
+                "face_node_connectivity": "nv",
+                "vertical_coordinates": "sigma_layer sigma_level",
+                "coordinate_system": "sigma",
+                "face_dimension": "face",
+                "node_dimension": "node",
+                "vertical_dimension": ["layer", "level"],
+            }
+        )
+        return ds
+
+    def _add_coordinate_attrs(self, ds):
+        """Add coordinate attributes following UGRID conventions."""
+        # Node coordinates
+        if "lon_corners" in ds:
+            ds.lon_corners.attrs.update(
+                {
+                    "standard_name": "longitude",
+                    "long_name": "Nodal longitude",
+                    "units": "degrees_east",
+                    "mesh": "mesh",
+                }
+            )
+
+        if "lat_corners" in ds:
+            ds.lat_corners.attrs.update(
+                {
+                    "standard_name": "latitude",
+                    "long_name": "Nodal latitude",
+                    "units": "degrees_north",
+                    "mesh": "mesh",
+                }
+            )
+
+        # Face coordinates
+        if "lon_centers" in ds:
+            ds.lon_centers.attrs.update(
+                {
+                    "standard_name": "longitude",
+                    "long_name": "Zonal longitude",
+                    "units": "degrees_east",
+                    "mesh": "mesh",
+                }
+            )
+
+        if "lat_centers" in ds:
+            ds.lat_centers.attrs.update(
+                {
+                    "standard_name": "latitude",
+                    "long_name": "Zonal latitude",
+                    "units": "degrees_north",
+                    "mesh": "mesh",
+                }
+            )
+
+        return ds
+
+    def _add_vertical_coordinate_attrs(self, ds):
+        """Add vertical coordinate attributes following UGRID conventions."""
+        if "sigma_layer" in ds:
+            ds.sigma_layer.attrs.update(
+                {
+                    "standard_name": "ocean_sigma/general_coordinate",
+                    "long_name": "Sigma Layers",
+                    "positive": "up",
+                    "valid_min": -1.0,
+                    "valid_max": 0.0,
+                    "formula_terms": "sigma: sigma_layer eta: zeta depth: h",
+                    "mesh": "mesh",
+                }
+            )
+
+        if "sigma_level" in ds:
+            ds.sigma_level.attrs.update(
+                {
+                    "standard_name": "ocean_sigma/general_coordinate",
+                    "long_name": "Sigma Levels",
+                    "positive": "up",
+                    "valid_min": -1.0,
+                    "valid_max": 0.0,
+                    "formula_terms": "sigma: sigma_level eta: zeta depth: h",
+                    "mesh": "mesh",
+                }
+            )
+
+        return ds
+
+    def standardize(self, ds, utm_zone):
+        """
+        Standardize an FVCOM dataset by first renaming dimensions and coordinates
+        to match UGRID conventions, then adding appropriate attributes.
+
+        Parameters:
+        -----------
+        ds : xarray.Dataset
+            The FVCOM dataset to standardize
+
+        Returns:
+        --------
+        xarray.Dataset
+            Dataset with standardized names and UGRID attributes
+        """
+
+        coords = coord_manager.standardize_fvcom_coords(ds, utm_zone)
+
+        # First rename dimensions and coordinates
+        ds = self._rename_dimensions(ds)
+        ds = self._rename_coordinates(ds)
+
+        # Then add UGRID convention attributes
+        ds = self._add_mesh_topology_attrs(ds)
+        ds = self._add_coordinate_attrs(ds)
+        ds = self._add_vertical_coordinate_attrs(ds)
+
+        ds["lat_centers"].values = coords["lat_centers"]
+        ds["lon_centers"].values = coords["lon_centers"]
+        ds["lat_corners"].values = coords["lat_corners"]
+        ds["lon_corners"].values = coords["lon_corners"]
+
+        return ds
+
+
 class DatasetStandardizer:
     def __init__(self, config, location_key):
         self.config = config
@@ -267,7 +464,8 @@ class DatasetStandardizer:
 
 
 def standardize_dataset(config, location_key, valid_timestamps_df):
-    standardizer = DatasetStandardizer(config, location_key)
+    # standardizer = DatasetStandardizer(config, location_key)
+    standardizer = FVCOMStandardizer()
 
     # Check for existing standardization file
     location = config["location_specification"][location_key]
@@ -301,7 +499,7 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
     ]
 
     time_manager.does_time_match_specification(
-        time_df["timestamp"], standardizer.location["expected_delta_t_seconds"]
+        time_df["timestamp"], location["expected_delta_t_seconds"]
     )
     std_files = []
 
@@ -314,13 +512,30 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         print(f"Start time: {this_df['timestamp'].iloc[0]}")
         print(f"End time: {this_df['timestamp'].iloc[-1]}")
         print("Beginning standardization...")
-        output_ds = standardizer.standardize_single_file(source_file, this_df)
+        # output_ds = standardizer.standardize_single_file(source_file, this_df)
+        utm_zone = None
+        if location["coordinates"]["system"] == "utm":
+            utm_zone = location["coordinates"]["zone"]
+
+        # output_ds = standardizer.standardize_single_file(source_file, utm_zone)
+        output_ds = standardizer.standardize(source_file, utm_zone)
+
+        output_ds["time"] = this_df["timestamp"].values
+        output_ds["time"].attrs = {
+            "standard_name": "time",
+            "long_name": "time",
+            "axis": "T",
+            "calendar": "proleptic_gregorian",
+            "units": "nanoseconds since 1970-01-01T00:00:00Z",  # Explicit nanosecond units
+            "precision": "nanosecond",
+        }
+
         print("Finished Standardization!...")
         print("Adding Global Attributes...")
         output_ds = attrs_manager.standardize_dataset_global_attrs(
             output_ds,
             config,
-            standardizer.location,
+            location,
             "a1",
             [str(f) for f in [source_file]],
             input_ds_is_original_model_output=True,
