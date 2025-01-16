@@ -177,56 +177,123 @@ class FVCOMStandardizer:
 
     def verify_required_variables(self, ds, required_vars):
         """
-        Verify that dataset contains all required variables with correct dimensions
-        and coordinates.
+        Verify that dataset contains all required variables with correct specifications.
+
+        Checks for existence, data type, dimensions, coordinates, and attributes of all
+        required variables in the dataset. Variables can be data variables, coordinates,
+        or other variables accessible via ds[key].
 
         Parameters
         ----------
         ds : xarray.Dataset
             Dataset to verify
         required_vars : dict
-            Dictionary specifying required variables and their properties
+            Dictionary specifying required variables and their properties.
+            Each variable specification should contain:
+                - dtype: str, required data type
+                - dimensions: list, required dimension names
+                - coordinates: list, required coordinate names
+                - attributes: dict, required attributes
+                - coverage_content_type: str, optional content type
 
         Raises
         ------
+        KeyError
+            If a required variable is missing from the dataset
         ValueError
-            If any required variables, dimensions, or coordinates are missing
+            If any variable's properties don't match specifications:
+            - Incorrect data type
+            - Missing or extra dimensions
+            - Wrong dimension order
+            - Missing or extra coordinates
+            - Missing required attributes
         """
         for var_name, var_spec in required_vars.items():
-            # Check if variable exists
+            # Verify variable exists
             try:
                 var = ds[var_name]
-            except KeyError:
-                raise KeyError(f"Required variable {var_name} missing")
-
-            # Check data type
-            if str(var.dtype) != var_spec["dtype"]:
-                raise ValueError(
-                    f"Variable {var_name} has dtype {var.dtype}, "
-                    f"expected {var_spec['dtype']}"
+            except KeyError as _:
+                raise KeyError(
+                    f"Required variable '{var_name}' missing from dataset. "
+                    f"Available variables: {list(ds.variables.keys())}"
                 )
 
-            # Check dimensions
+            # Verify data type
+            expected_dtype = var_spec["dtype"]
+            actual_dtype = str(var.dtype)
+
+            # Handle datetime comparison specially
+            if expected_dtype.startswith("datetime64"):
+                if not actual_dtype.startswith("datetime64"):
+                    raise ValueError(
+                        f"Variable '{var_name}' has incorrect dtype.\n"
+                        f"Expected datetime64 type, got: {actual_dtype}"
+                    )
+            elif actual_dtype != expected_dtype:
+                raise ValueError(
+                    f"Variable '{var_name}' has incorrect dtype.\n"
+                    f"Expected: {expected_dtype}\n"
+                    f"Got: {actual_dtype}"
+                )
+
+            # Verify dimensions
             expected_dims = var_spec["dimensions"]
             actual_dims = list(var.dims)
+
+            # Check for missing or extra dimensions
+            missing_dims = set(expected_dims) - set(actual_dims)
+            extra_dims = set(actual_dims) - set(expected_dims)
+
+            if missing_dims or extra_dims:
+                error_msg = f"Variable '{var_name}' has incorrect dimensions.\n"
+                if missing_dims:
+                    error_msg += f"Missing dimensions: {missing_dims}\n"
+                if extra_dims:
+                    error_msg += f"Extra dimensions: {extra_dims}\n"
+                raise ValueError(error_msg)
+
+            # Check dimension order
             if actual_dims != expected_dims:
                 raise ValueError(
-                    f"Variable {var_name} has dimensions {actual_dims}, "
-                    f"expected {expected_dims}"
+                    f"Variable '{var_name}' has incorrect dimension order.\n"
+                    f"Expected: {expected_dims}\n"
+                    f"Got: {actual_dims}"
                 )
 
-        # Check coordinates
-        expected_coords = var_spec["coordinates"]
-        actual_coords = list(var.coords)
-        if sorted(actual_coords) != sorted(expected_coords):
-            raise ValueError(
-                f"Variable {var_name} has coordinates {actual_coords}, "
-                f"expected {expected_coords}"
-            )
+            # Verify coordinates
+            expected_coords = var_spec["coordinates"]
+            actual_coords = list(var.coords)
 
-        existing_attrs = ds[var_name].attrs
-        existing_attrs.update(var_spec["attrs"])
-        ds[var_name].attrs = existing_attrs
+            # Check for missing or extra coordinates
+            missing_coords = set(expected_coords) - set(actual_coords)
+            if missing_coords:
+                raise ValueError(
+                    f"Variable '{var_name}' is missing coordinates: {missing_coords}\n"
+                    f"Available coordinates: {actual_coords}"
+                )
+
+            # Update attributes, preserving existing ones not in specification
+            existing_attrs = dict(var.attrs)  # Make a copy of existing attributes
+            required_attrs = var_spec.get("attributes", {})
+
+            # Check for required attributes
+            for attr_name, attr_value in required_attrs.items():
+                if attr_name not in existing_attrs:
+                    existing_attrs[attr_name] = attr_value
+                elif existing_attrs[attr_name] != attr_value:
+                    raise ValueError(
+                        f"Variable '{var_name}' has incorrect value for attribute '{attr_name}'.\n"
+                        f"Expected: {attr_value}\n"
+                        f"Got: {existing_attrs[attr_name]}"
+                    )
+
+            # Add coverage_content_type if specified
+            if "coverage_content_type" in var_spec:
+                existing_attrs["coverage_content_type"] = var_spec[
+                    "coverage_content_type"
+                ]
+
+            ds[var_name].attrs = existing_attrs
 
         return ds
 
