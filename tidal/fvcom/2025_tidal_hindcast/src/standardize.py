@@ -24,7 +24,7 @@ class FVCOMStandardizer:
         self.dim_mapping = {
             "nele": "face",  # FVCOM elements are 2D faces
             "node": "node",  # Already matches UGRID spec
-            "three": "face_nodes",  # Number of nodes per face
+            "three": "nodes_per_face",  # Number of nodes per face
             "time": "time",  # Keep time dimension as is
             "siglay": "layer",  # Vertical layers
             "siglev": "level",  # Vertical levels

@@ -292,21 +292,21 @@ config = {
         "nv": {
             "dtype": "int32",
             "coordinates": ["lat_center", "lon_center"],
-            "dimensions": ["three", "face"],
+            "dimensions": ["nodes_per_face", "face"],
             "attributes": {"long_name": "nodes surrounding element"},
             "coverage_content_type": "referenceInformation",
         },
         "face_node": {
             "dtype": "int32",
             "coordinates": ["lat_face_node", "lon_face_node"],
-            "dimensions": ["three", "face"],
+            "dimensions": ["nodes_per_face", "face"],
             "attributes": {"long_name": "nodes surrounding element"},
             "coverage_content_type": "referenceInformation",
         },
-        "three": {
+        "nodes_per_face": {
             "dtype": "int64",
             "coordinates": [],
-            "dimensions": ["three"],
+            "dimensions": ["nodes_per_face"],
             "attributes": {},
             "coverage_content_type": "referenceInformation",
         },
