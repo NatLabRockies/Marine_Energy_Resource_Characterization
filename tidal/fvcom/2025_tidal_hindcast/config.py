@@ -297,7 +297,7 @@ config = {
             "coverage_content_type": "referenceInformation",
         },
         "face_node": {
-            "dtype": "int32",
+            "dtype": "int64",
             "coordinates": ["lat_face_node", "lon_face_node"],
             "dimensions": ["nodes_per_face", "face"],
             "attributes": {"long_name": "nodes surrounding element"},
