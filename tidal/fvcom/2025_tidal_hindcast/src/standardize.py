@@ -278,7 +278,7 @@ class FVCOMStandardizer:
 
         return ds
 
-    def standardize(self, ds, config, location):
+    def standardize(self, ds_path, config, location):
         """
         Standardize an FVCOM dataset by verifying required variables and adding UGRID conventions.
 
@@ -294,8 +294,7 @@ class FVCOMStandardizer:
         xarray.Dataset
             Dataset with standardized names and UGRID attributes
         """
-        # Create a copy to avoid modifying the original
-        # ds = ds.copy()
+        ds = xr.open_dataset(ds_path, decode_times=False)
 
         required_vars = config["standardized_variable_specification"]
 
