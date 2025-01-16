@@ -57,19 +57,6 @@ def get_node_to_cell_mapping(ds):
     return ds["nv"].values.T - 1  # Shape: (nele, 3)
 
 
-def normalize_longitude(lon):
-    """
-    Normalize longitude values to the range [-180, 180].
-
-    Args:
-        lon: Longitude values in degrees
-
-    Returns:
-        Normalized longitude values
-    """
-    return np.where(lon > 180, lon - 360, lon)
-
-
 def verify_latitude_range(lat, variable_name="latitude"):
     """
     Verify that latitude values are within the valid range [-90, 90].
@@ -116,19 +103,111 @@ def verify_longitude_range(lon, variable_name="longitude"):
         )
 
 
+def normalize_longitude(lon):
+    """
+    Normalize longitude values to the range [-180, 180].
+    Handles arrays of longitudes that may cross the international date line.
+
+    Args:
+        lon: Longitude values in degrees
+
+    Returns:
+        Normalized longitude values
+    """
+    lon = np.asarray(lon)
+    return ((lon + 180) % 360) - 180
+
+
+def adjust_longitudes_for_dateline(lons):
+    """
+    Adjust longitude values when they cross the international date line
+    to ensure proper geometric calculations.
+
+    Args:
+        lons: Array of longitude values that may cross the date line
+
+    Returns:
+        Adjusted longitude values
+    """
+    mean_lon = np.mean(lons)
+    if mean_lon > 0:
+        return np.where(lons < 0, lons + 360, lons)
+    else:
+        return np.where(lons > 0, lons - 360, lons)
+
+
+def verify_centers_in_faces(centers, face_vertices):
+    """
+    Verify that cell centers lie within their triangular faces,
+    handling cases where triangles cross the international date line.
+
+    Args:
+        centers: List of (lon, lat) center points
+        face_vertices: List of triangles, each with 3 (lon, lat) vertices
+
+    Returns:
+        bool: True if all centers are within their faces
+    """
+
+    def point_in_triangle(point, triangle):
+        # Extract coordinates
+        x, y = point
+        x1, y1 = triangle[0]
+        x2, y2 = triangle[1]
+        x3, y3 = triangle[2]
+
+        # Check if triangle crosses date line by looking for large longitude differences
+        lons = np.array([x1, x2, x3, x])
+        if np.max(np.abs(np.diff(lons))) > 180:
+            # Adjust longitudes to handle date line crossing
+            lons = adjust_longitudes_for_dateline(lons)
+            x1, x2, x3, x = lons
+
+        # Calculate barycentric coordinates
+        denom = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3)
+        if np.abs(denom) < 1e-10:  # Handle degenerate triangles
+            return False
+
+        a = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / denom
+        b = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) / denom
+        c = 1 - a - b
+
+        # Check if point is inside triangle with small tolerance for numerical precision
+        eps = 1e-10
+        return (
+            (-eps <= a <= 1 + eps) and (-eps <= b <= 1 + eps) and (-eps <= c <= 1 + eps)
+        )
+
+    # Check each center against its corresponding triangular face
+    for center, triangle in zip(centers, face_vertices):
+        if not point_in_triangle(center, triangle):
+            return False
+    return True
+
+
 def standardize_fvcom_coords(ds, utm_zone: int = None):
+    """
+    Standardize FVCOM coordinates, handling cases where geometries cross the international date line.
+
+    Args:
+        ds: xarray Dataset containing FVCOM grid data
+        utm_zone: Optional UTM zone number for coordinate conversion
+
+    Returns:
+        dict: Standardized coordinate information
+    """
     coord_system = ds.attrs.get("CoordinateSystem")
     coord_projection = ds.attrs.get("CoordinateProjection", "none")
     if not coord_system:
         raise ValueError("NetCDF file missing CoordinateSystem attribute")
 
-    # Get original coordinates for face centers and nodes
+    # Get original coordinates
     original_lat_centers = ds["latc"].values
     original_lon_centers = ds["lonc"].values
     original_lat_nodes = ds["lat"].values
     original_lon_nodes = ds["lon"].values
 
-    # If coordinates are zeros, use conversion
+    # Handle zero coordinates case
     if np.allclose(original_lat_centers, 0.0) and np.allclose(
         original_lon_centers, 0.0
     ):
@@ -152,69 +231,41 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
         lat_nodes = original_lat_nodes
         lon_nodes = original_lon_nodes
 
-    # Normalize and verify all coordinates
+    # Normalize all longitudes consistently
     lon_centers = normalize_longitude(lon_centers)
     lon_nodes = normalize_longitude(lon_nodes)
 
+    # Verify coordinate ranges
     verify_latitude_range(lat_centers)
     verify_longitude_range(lon_centers)
     verify_latitude_range(lat_nodes)
     verify_longitude_range(lon_nodes)
 
-    # Get the node connectivity for each face
+    # Get node connectivity and face coordinates
     face_node_indices = get_node_to_cell_mapping(ds)
+    lat_face_nodes = lat_nodes[face_node_indices]
+    lon_face_nodes = lon_nodes[face_node_indices]
 
-    # Get coordinates of nodes for each face using connectivity
-    lat_face_nodes = lat_nodes[face_node_indices]  # Shape: (nfaces, 3)
-    lon_face_nodes = lon_nodes[face_node_indices]  # Shape: (nfaces, 3)
+    if lat_face_nodes.shape[1] != 3 or lon_face_nodes.shape[1] != 3:
+        raise ValueError("Expected exactly 3 nodes per face")
 
-    if lat_face_nodes.shape[1] != 3:
-        raise ValueError(
-            f"Expected exactly 3 nodes per face, got {lat_face_nodes.shape[1]}"
-        )
-    if lon_face_nodes.shape[1] != 3:
-        raise ValueError(
-            f"Expected exactly 3 nodes per face, got {lon_face_nodes.shape[1]}"
-        )
-
-    # Verify centers are within triangular faces
-    def verify_centers_in_faces(centers, face_vertices):
-        def point_in_triangle(point, triangle):
-            # Implementation using barycentric coordinates
-            x, y = point
-            x1, y1 = triangle[0]
-            x2, y2 = triangle[1]
-            x3, y3 = triangle[2]
-            # Calculate barycentric coordinates
-            denom = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3)
-            a = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / denom
-            b = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) / denom
-            c = 1 - a - b
-            # Check if point is inside triangle
-            return (0 <= a <= 1) and (0 <= b <= 1) and (0 <= c <= 1)
-
-        # Check each center against its corresponding triangular face
-        for center, triangle in zip(centers, face_vertices):
-            if not point_in_triangle(center, triangle):
-                return False
-        return True
-
+    # Prepare data for validation
     center_points = list(zip(lon_centers, lat_centers))
     face_triangles = [
         list(zip(lons, lats)) for lons, lats in zip(lon_face_nodes, lat_face_nodes)
     ]
-    centers_valid = verify_centers_in_faces(center_points, face_triangles)
 
-    if not centers_valid:
-        raise ValueError("Warning: Some face centers lie outside their face bounds")
+    # Validate centers with date line handling
+    if not verify_centers_in_faces(center_points, face_triangles):
+        raise ValueError("Some face centers lie outside their face bounds")
 
     return {
         "lat_centers": lat_centers,
         "lon_centers": lon_centers,
-        "lat_nodes": lat_nodes,  # Original node coordinates
-        "lon_nodes": lon_nodes,  # Original node coordinates
-        "lat_face_nodes": lat_face_nodes,  # Node coordinates per face (nfaces, 3)
-        "lon_face_nodes": lon_face_nodes,  # Node coordinates per face (nfaces, 3)
+        "lat_nodes": lat_nodes,
+        "lon_nodes": lon_nodes,
+        "lat_face_nodes": lat_face_nodes,
+        "lon_face_nodes": lon_face_nodes,
     }
 
 
