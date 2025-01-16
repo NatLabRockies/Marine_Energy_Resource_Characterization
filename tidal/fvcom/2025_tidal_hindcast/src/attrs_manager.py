@@ -437,11 +437,7 @@ def create_input_history_dict(
         }
     else:
         input_history_dict = json.loads(ds.attrs["input_history_json"])
-        input_history_dict.extend(
-            {
-                data_level: processed_files,
-            }
-        )
+        input_history_dict[data_level] = processed_files
 
     return json.dumps(input_history_dict, indent=2, ensure_ascii=False)
 
