@@ -102,43 +102,43 @@ class FVCOMStandardizer:
     def _add_coordinate_attrs(self, ds):
         """Add coordinate attributes following UGRID conventions."""
         # Node coordinates
-        if "lon_node" in ds:
-            ds.lon_node.attrs.update(
-                {
-                    "standard_name": "longitude",
-                    "long_name": "Nodal longitude",
-                    "units": "degrees_east",
-                    "mesh": "mesh",
-                }
-            )
-
         if "lat_node" in ds:
             ds.lat_node.attrs.update(
                 {
                     "standard_name": "latitude",
-                    "long_name": "Nodal latitude",
+                    "long_name": "Nodal Latitude",
                     "units": "degrees_north",
+                    "mesh": "mesh",
+                }
+            )
+
+        if "lon_node" in ds:
+            ds.lon_node.attrs.update(
+                {
+                    "standard_name": "longitude",
+                    "long_name": "Nodal Longitude",
+                    "units": "degrees_east",
                     "mesh": "mesh",
                 }
             )
 
         # Face coordinates
-        if "lon_center" in ds:
-            ds.lon_center.attrs.update(
-                {
-                    "standard_name": "longitude",
-                    "long_name": "Zonal longitude",
-                    "units": "degrees_east",
-                    "mesh": "mesh",
-                }
-            )
-
         if "lat_center" in ds:
             ds.lat_center.attrs.update(
                 {
                     "standard_name": "latitude",
-                    "long_name": "Zonal latitude",
+                    "long_name": "Face Center Latitude",
                     "units": "degrees_north",
+                    "mesh": "mesh",
+                }
+            )
+
+        if "lon_center" in ds:
+            ds.lon_center.attrs.update(
+                {
+                    "standard_name": "longitude",
+                    "long_name": "Face Center Longitude",
+                    "units": "degrees_east",
                     "mesh": "mesh",
                 }
             )
@@ -151,7 +151,7 @@ class FVCOMStandardizer:
             ds.sigma_layer.attrs.update(
                 {
                     "standard_name": "ocean_sigma/general_coordinate",
-                    "long_name": "Sigma Layers",
+                    "long_name": "Sigma Layer",
                     "positive": "up",
                     "valid_min": -1.0,
                     "valid_max": 0.0,
@@ -164,7 +164,7 @@ class FVCOMStandardizer:
             ds.sigma_level.attrs.update(
                 {
                     "standard_name": "ocean_sigma/general_coordinate",
-                    "long_name": "Sigma Levels",
+                    "long_name": "Sigma Level",
                     "positive": "up",
                     "valid_min": -1.0,
                     "valid_max": 0.0,
@@ -418,7 +418,7 @@ class FVCOMStandardizer:
             ],  # Using standardized dimension names from dim_mapping
             attrs={
                 "standard_name": "latitude",
-                "long_name": "Latitude of mesh face nodes",
+                "long_name": "Latitude of Mesh Face None",
                 "units": "degrees_north",
                 "mesh": "mesh",
                 "location": "face_node",  # UGRID convention for location type
@@ -431,7 +431,7 @@ class FVCOMStandardizer:
             dims=["face", "face_node"],
             attrs={
                 "standard_name": "longitude",
-                "long_name": "Longitude of mesh face nodes",
+                "long_name": "Longitude of Mesh Face Node",
                 "units": "degrees_east",
                 "mesh": "mesh",
                 "location": "face_node",

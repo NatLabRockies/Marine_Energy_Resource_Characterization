@@ -228,7 +228,7 @@ config = {
             "coordinates": ["lat_node", "lon_node"],
             "dimensions": ["node"],
             "attributes": {
-                "long_name": "nodal latitude",
+                "long_name": "Nodal Latitude",
                 "standard_name": "latitude",
                 "units": "degrees_north",
                 "coverage_content_type": "coordinate",
@@ -241,7 +241,7 @@ config = {
             "coordinates": ["lon_node", "lat_node"],
             "dimensions": ["node"],
             "attributes": {
-                "long_name": "nodal longitude",
+                "long_name": "Nodal Longitude",
                 "standard_name": "longitude",
                 "units": "degrees_east",
                 "coverage_content_type": "coordinate",
@@ -255,7 +255,7 @@ config = {
             "coordinates": ["lat_center", "lon_center"],
             "dimensions": ["face"],
             "attributes": {
-                "long_name": "zonal latitude",
+                "long_name": "Face Center Latitude",
                 "standard_name": "latitude",
                 "units": "degrees_north",
                 "coverage_content_type": "coordinate",
@@ -268,7 +268,7 @@ config = {
             "coordinates": ["lat_center", "lon_center"],
             "dimensions": ["face"],
             "attributes": {
-                "long_name": "zonal longitude",
+                "long_name": "Face Center Longitude",
                 "standard_name": "longitude",
                 "units": "degrees_east",
                 "coverage_content_type": "coordinate",
