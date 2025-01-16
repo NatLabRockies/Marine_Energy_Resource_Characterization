@@ -24,7 +24,7 @@ class FVCOMStandardizer:
         self.dim_mapping = {
             "nele": "face",  # FVCOM elements are 2D faces
             "node": "node",  # Already matches UGRID spec
-            "three": "nodes_per_face",  # Number of nodes per face
+            "three": "face_node_index",  # Number of nodes per face
             "time": "time",  # Keep time dimension as is
             "siglay": "sigma_layer",  # Vertical layers
             "siglev": "sigma_level",  # Vertical levels
@@ -423,13 +423,39 @@ class FVCOMStandardizer:
 
     def add_face_nodes_dimension(self, ds, face_nodes):
         """
-        Add face node coordinates to the dataset with UGRID-compliant dimensions and attributes,
-        and assign these coordinates to all face-centered variables.
+        Add face node coordinates to the dataset with UGRID-compliant dimensions and attributes.
+        Associates nodes with faces through a connectivity array following UGRID conventions.
+
+        Parameters
+        ----------
+        ds : xarray.Dataset
+            Dataset to add face node coordinates to
+        face_nodes : dict
+            Dictionary containing face node coordinates with keys:
+            - 'lat_face_nodes': numpy.ndarray of face node latitudes
+            - 'lon_face_nodes': numpy.ndarray of face node longitudes
+
+        Returns
+        -------
+        xarray.Dataset
+            Dataset with added face node coordinates following UGRID conventions
         """
-        # First create the UGRID-compliant face node coordinate variables
+        # Add the face_nodes dimension
+        ds["face_node_index"] = xr.DataArray(
+            [0, 1, 2],  # The three nodes of each triangular face
+            dims=["face_node"],
+            attrs={
+                "long_name": "Index of node within face",
+                "cf_role": "face_node_connectivity",
+                "start_index": 0,
+            },
+        )
+
+        # Create the face node coordinates
         ds["lat_face_node"] = xr.DataArray(
             face_nodes["lat_face_nodes"],
             dims=["face", "face_node"],
+            coords={"face_node_index": ds.face_node_index},
             attrs={
                 "standard_name": "latitude",
                 "long_name": "Face Node Latitude",
@@ -439,13 +465,13 @@ class FVCOMStandardizer:
                 "coverage_content_type": "coordinate",
                 "valid_min": "-90",
                 "valid_max": "90",
-                "coordinates": "lon_face_node lat_face_node",
             },
         )
 
         ds["lon_face_node"] = xr.DataArray(
             face_nodes["lon_face_nodes"],
             dims=["face", "face_node"],
+            coords={"face_node_index": ds.face_node_index},
             attrs={
                 "standard_name": "longitude",
                 "long_name": "Face Node Longitude",
@@ -455,43 +481,17 @@ class FVCOMStandardizer:
                 "coverage_content_type": "coordinate",
                 "valid_min": "-180",
                 "valid_max": "180",
-                "coordinates": "lon_face_node lat_face_node",
             },
         )
 
-        # Function to check if a variable is face-centered
-        def is_face_centered(var):
-            if not any(dim in var.dims for dim in ["nele", "face"]):
-                return False
-
-            # Check attributes
-            attrs = var.attrs
-            return (
-                ("location" in attrs and attrs["location"].lower() == "face")
-                or ("grid" in attrs and attrs["grid"] == "fvcom_grid")
-                or ("mesh" in attrs and "fvcom" in attrs["mesh"].lower())
-            )
-
-        # Update coordinates for face-centered variables
-        for var_name, var in ds.data_vars.items():
-            if is_face_centered(var):
-                # Get existing coordinates
-                coords = var.coords.copy()
-
-                # Add face node coordinates
-                coords["lat_face_node"] = ds.lat_face_node
-                coords["lon_face_node"] = ds.lon_face_node
-
-                # Update the coordinates attribute to include face node coordinates
-                if "coordinates" in var.attrs:
-                    coord_list = var.attrs["coordinates"].split()
-                    for new_coord in ["lat_face_node", "lon_face_node"]:
-                        if new_coord not in coord_list:
-                            coord_list.append(new_coord)
-                    var.attrs["coordinates"] = " ".join(coord_list)
-
-                # Assign updated coordinates
-                ds[var_name] = var.assign_coords(coords)
+        # Add mesh topology attributes to make the relationship clear
+        ds["mesh"].attrs.update(
+            {
+                "face_node_connectivity": "face_node_index",
+                "face_coordinates": "lon_center lat_center",
+                "face_node_coordinates": "lon_face_node lat_face_node",
+            }
+        )
 
         return ds
 
