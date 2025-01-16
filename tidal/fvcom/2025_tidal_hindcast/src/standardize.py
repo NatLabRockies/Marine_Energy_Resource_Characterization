@@ -873,7 +873,9 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             "a1",
             [str(f) for f in [source_file]],
             input_ds_is_original_model_output=True,
-            coordinate_reference_system_string=coord_manager.OUTPUT_COORDINATE_REFERENCE_SYSTEM,
+            coordinate_reference_system_string=str(
+                coord_manager.OUTPUT_COORDINATE_REFERENCE_SYSTEM
+            ),
         )
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
