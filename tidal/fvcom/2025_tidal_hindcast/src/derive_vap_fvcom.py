@@ -503,6 +503,47 @@ def calculate_sea_floor_depth(ds):
     return ds
 
 
+def calculate_vertical_average(ds, variable_name):
+    """
+    Calculate vertical average for a given variable and include standard deviation in attributes.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing the variable to be averaged
+    variable_name : str
+        Name of variable to average vertically
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added vertically averaged variable
+    """
+    if variable_name not in ds:
+        raise KeyError(f"Dataset must contain '{variable_name}'")
+
+    # Calculate vertical average and standard deviation
+    vert_avg_name = f"{variable_name}_vert_avg"
+
+    ds[vert_avg_name] = ds[variable_name].mean(dim="sigma")
+    vert_std = ds[variable_name].std(dim="sigma")
+
+    # Copy and modify attributes for averaged variable
+    # Start with original attributes but remove standard_name if it exists
+    attrs = ds[variable_name].attrs.copy()
+    attrs.pop("standard_name", None)
+
+    ds[vert_avg_name].attrs = {
+        **attrs,
+        "long_name": f"Vertically averaged {ds[variable_name].attrs.get('long_name', variable_name)}",
+        "vertical_averaging": "Mean across sigma layers",
+        "vertical_std": float(vert_std.mean()),  # Average std across all points/times
+        "vertical_std_description": "Mean standard deviation across sigma layers",
+    }
+
+    return ds
+
+
 def derive_vap(config, location_key):
     location = config["location_specification"][location_key]
 
@@ -525,6 +566,17 @@ def derive_vap(config, location_key):
         this_ds = calculate_depth(this_ds)
         print("\tCalculating sea_floor_depth...")
         this_ds = calculate_sea_floor_depth(this_ds)
+
+        print("\tCalculating u vertical average")
+        this_ds = calculate_vertical_average(this_ds, "u")
+        print("\tCalculating v vertical average")
+        this_ds = calculate_vertical_average(this_ds, "v")
+        print("\tCalculating speed vertical average")
+        this_ds = calculate_vertical_average(this_ds, "speed")
+        print("\tCalculating from_direction vertical average")
+        this_ds = calculate_vertical_average(this_ds, "from_direction")
+        print("\tCalculating power_density vertical average")
+        this_ds = calculate_vertical_average(this_ds, "power_density")
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
         if expected_delta_t_seconds == 3600:
