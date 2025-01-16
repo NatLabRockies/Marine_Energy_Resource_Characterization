@@ -306,7 +306,7 @@ config = {
         "face_node_index": {
             "dtype": "int64",
             "coordinates": [],
-            "dimensions": ["face_node_index"],
+            "dimensions": ["face_node"],
             "attributes": {},
             "coverage_content_type": "referenceInformation",
         },
