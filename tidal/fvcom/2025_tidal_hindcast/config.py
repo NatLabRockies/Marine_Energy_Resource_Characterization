@@ -298,7 +298,7 @@ config = {
         },
         "face_node": {
             "dtype": "int64",
-            "coordinates": ["lat_face_node", "lon_face_node"],
+            "coordinates": ["face_node_index"],
             "dimensions": ["face_node"],
             "attributes": {"long_name": "nodes surrounding element"},
             "coverage_content_type": "referenceInformation",
