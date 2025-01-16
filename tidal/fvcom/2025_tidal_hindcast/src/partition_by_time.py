@@ -100,7 +100,7 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
                 file_name_convention_manager.generate_filename_for_data_level(
                     combined_ds,
                     location["output_name"],
-                    config["dataset_name"],
+                    config["dataset"]["name"],
                     "a2",
                     temporal=temporal_string,
                 )
