@@ -292,7 +292,7 @@ config = {
         "nv": {
             "dtype": "int32",
             "coordinates": ["lat_center", "lon_center"],
-            "dimensions": ["nodes_per_face", "face"],
+            "dimensions": ["face_node_index"],
             "attributes": {"long_name": "nodes surrounding element"},
             "coverage_content_type": "referenceInformation",
         },
@@ -306,7 +306,7 @@ config = {
         "nodes_per_face": {
             "dtype": "int64",
             "coordinates": [],
-            "dimensions": ["nodes_per_face"],
+            "dimensions": ["face_node_index"],
             "attributes": {},
             "coverage_content_type": "referenceInformation",
         },
