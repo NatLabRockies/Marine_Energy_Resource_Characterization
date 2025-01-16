@@ -1,8 +1,3 @@
-import json
-import os
-import socket
-import platform
-
 from pathlib import Path
 
 import pandas as pd
@@ -15,7 +10,6 @@ from . import (
     file_name_convention_manager,
     file_manager,
     time_manager,
-    version,
 )
 
 
@@ -37,10 +31,10 @@ class FVCOMStandardizer:
         }
 
         self.coord_mapping = {
-            "lon": "lon_corners",  # Node (corner) longitude
-            "lat": "lat_corners",  # Node (corner) latitude
-            "lonc": "lon_centers",  # Face center longitude
-            "latc": "lat_centers",  # Face center latitude
+            "lon": "lon_node",  # Node (corner) longitude
+            "lat": "lat_node",  # Node (corner) latitude
+            "lonc": "lon_center",  # Face center longitude
+            "latc": "lat_center",  # Face center latitude
             "siglay": "sigma_layer",  # Sigma layer depths
             "siglev": "sigma_level",  # Sigma level depths
         }
@@ -108,8 +102,8 @@ class FVCOMStandardizer:
     def _add_coordinate_attrs(self, ds):
         """Add coordinate attributes following UGRID conventions."""
         # Node coordinates
-        if "lon_corners" in ds:
-            ds.lon_corners.attrs.update(
+        if "lon_node" in ds:
+            ds.lon_node.attrs.update(
                 {
                     "standard_name": "longitude",
                     "long_name": "Nodal longitude",
@@ -118,8 +112,8 @@ class FVCOMStandardizer:
                 }
             )
 
-        if "lat_corners" in ds:
-            ds.lat_corners.attrs.update(
+        if "lat_node" in ds:
+            ds.lat_node.attrs.update(
                 {
                     "standard_name": "latitude",
                     "long_name": "Nodal latitude",
@@ -129,8 +123,8 @@ class FVCOMStandardizer:
             )
 
         # Face coordinates
-        if "lon_centers" in ds:
-            ds.lon_centers.attrs.update(
+        if "lon_center" in ds:
+            ds.lon_center.attrs.update(
                 {
                     "standard_name": "longitude",
                     "long_name": "Zonal longitude",
@@ -139,8 +133,8 @@ class FVCOMStandardizer:
                 }
             )
 
-        if "lat_centers" in ds:
-            ds.lat_centers.attrs.update(
+        if "lat_center" in ds:
+            ds.lat_center.attrs.update(
                 {
                     "standard_name": "latitude",
                     "long_name": "Zonal latitude",
@@ -181,25 +175,136 @@ class FVCOMStandardizer:
 
         return ds
 
-    def standardize(self, ds, utm_zone):
+    def verify_required_variables(self, ds, required_vars):
         """
-        Standardize an FVCOM dataset by first renaming dimensions and coordinates
-        to match UGRID conventions, then adding appropriate attributes.
+        Verify that dataset contains all required variables with correct dimensions
+        and coordinates.
+
+        Parameters
+        ----------
+        ds : xarray.Dataset
+            Dataset to verify
+        required_vars : dict
+            Dictionary specifying required variables and their properties
+
+        Raises
+        ------
+        ValueError
+            If any required variables, dimensions, or coordinates are missing
+        """
+        for var_name, var_spec in required_vars.items():
+            # Check if variable exists
+            if var_name not in ds:
+                raise ValueError(f"Required variable '{var_name}' missing from dataset")
+
+            # Verify dimensions
+            for dim in var_spec["dimensions"]:
+                if dim not in ds.dims:
+                    raise ValueError(
+                        f"Required dimension '{dim}' missing for variable '{var_name}'"
+                    )
+
+            # Verify coordinates
+            for coord in var_spec["coordinates"]:
+                if coord not in ds.coords and coord not in ds:
+                    raise ValueError(
+                        f"Required coordinate '{coord}' missing for variable '{var_name}'"
+                    )
+
+    def clean_variables(self, ds, required_vars):
+        """
+        Remove non-required variables from dataset, preserving all coordinates and dimensions.
+
+        Parameters
+        ----------
+        ds : xarray.Dataset
+            Dataset to clean
+        required_vars : dict
+            Dictionary specifying required variables
+
+        Returns
+        -------
+        xarray.Dataset
+            Dataset with only required variables, coordinates, and dimensions
+        """
+        vars_to_drop = [
+            var
+            for var in ds.variables
+            if var not in required_vars and var not in ds.coords and var not in ds.dims
+        ]
+
+        return ds.drop_vars(vars_to_drop)
+
+    def standardize_variables(self, ds, required_vars):
+        """
+        Update variable attributes and dtypes according to specification.
+
+        Parameters
+        ----------
+        ds : xarray.Dataset
+            Dataset to standardize
+        required_vars : dict
+            Dictionary specifying required variables and their properties
+
+        Returns
+        -------
+        xarray.Dataset
+            Dataset with standardized attributes and dtypes
+        """
+        for var_name, var_spec in required_vars.items():
+            # Update attributes
+            ds[var_name].attrs.clear()
+            ds[var_name].attrs.update(var_spec.get("attributes", {}))
+
+            # Set dtype if specified
+            if "dtype" in var_spec:
+                ds[var_name] = ds[var_name].astype(var_spec["dtype"])
+
+        return ds
+
+    def standardize_coordinate_values(self, ds, location):
+        utm_zone = None
+        if location["coordinates"]["system"] == "utm":
+            utm_zone = location["coordinates"]["zone"]
+
+        coords = coord_manager.standardize_fvcom_coords(ds, utm_zone)
+
+        ds.lat_center.values = coords["lat_centers"]
+        ds.lon_center.values = coords["lon_centers"]
+        ds.lat_node.values = coords["lat_corners"]
+        ds.lon_node.values = coords["lon_corners"]
+
+        return ds
+
+    def standardize(self, ds, config, location):
+        """
+        Standardize an FVCOM dataset by verifying required variables and adding UGRID conventions.
 
         Parameters:
         -----------
         ds : xarray.Dataset
             The FVCOM dataset to standardize
+        required_vars : dict
+            Dictionary specifying required variables and their properties
 
         Returns:
         --------
         xarray.Dataset
             Dataset with standardized names and UGRID attributes
         """
+        # Create a copy to avoid modifying the original
+        # ds = ds.copy()
 
-        coords = coord_manager.standardize_fvcom_coords(ds, utm_zone)
+        required_vars = config["standardized_variable_specification"]
 
-        # First rename dimensions and coordinates
+        # First verify all required variables exist
+        self.verify_required_variables(ds, required_vars)
+
+        # Then clean and standardize variables
+        ds = self.clean_variables(ds, required_vars)
+        ds = self.standardize_variables(ds, required_vars)
+
+        # Then rename dimensions and coordinates
         ds = self._rename_dimensions(ds)
         ds = self._rename_coordinates(ds)
 
@@ -208,10 +313,7 @@ class FVCOMStandardizer:
         ds = self._add_coordinate_attrs(ds)
         ds = self._add_vertical_coordinate_attrs(ds)
 
-        ds["lat_centers"].values = coords["lat_centers"]
-        ds["lon_centers"].values = coords["lon_centers"]
-        ds["lat_corners"].values = coords["lat_corners"]
-        ds["lon_corners"].values = coords["lon_corners"]
+        ds = self.standardize_coordinate_values(ds, location)
 
         return ds
 
@@ -511,15 +613,11 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         print(f"Number of timestamps: {len(this_df)}")
         print(f"Start time: {this_df['timestamp'].iloc[0]}")
         print(f"End time: {this_df['timestamp'].iloc[-1]}")
-        print("Beginning standardization...")
-        # output_ds = standardizer.standardize_single_file(source_file, this_df)
-        utm_zone = None
-        if location["coordinates"]["system"] == "utm":
-            utm_zone = location["coordinates"]["zone"]
+        print("Performing standardization...")
 
-        # output_ds = standardizer.standardize_single_file(source_file, utm_zone)
-        output_ds = standardizer.standardize(source_file, utm_zone)
+        output_ds = standardizer.standardize(source_file, config, location)
 
+        print("Correcting `time`")
         output_ds["time"] = this_df["timestamp"].values
         output_ds["time"].attrs = {
             "standard_name": "time",
