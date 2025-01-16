@@ -446,7 +446,7 @@ class FVCOMStandardizer:
         ds["time"] = corrected_timestamps
         ds["time"].attrs = {
             "standard_name": "time",
-            "long_name": "time",
+            "long_name": "Time",
             "axis": "T",
             "calendar": "proleptic_gregorian",
             "units": "nanoseconds since 1970-01-01T00:00:00Z",  # Explicit nanosecond units
