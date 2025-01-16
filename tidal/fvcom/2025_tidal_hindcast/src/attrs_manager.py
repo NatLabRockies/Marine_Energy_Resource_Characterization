@@ -154,8 +154,8 @@ def compute_geospatial_bounds(ds, crs_string=None):
     }
 
     # Get latitude and longitude variables
-    lat = ds.latitude
-    lon = ds.longitude
+    lat = ds.lat_node
+    lon = ds.lon_node
 
     # Check for required units
     if not hasattr(lat, "units"):
