@@ -303,7 +303,7 @@ config = {
             "attributes": {"long_name": "nodes surrounding element"},
             "coverage_content_type": "referenceInformation",
         },
-        "nodes_per_face": {
+        "face_node_index": {
             "dtype": "int64",
             "coordinates": [],
             "dimensions": ["face_node_index"],
