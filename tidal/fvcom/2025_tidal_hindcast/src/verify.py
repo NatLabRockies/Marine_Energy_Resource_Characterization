@@ -119,8 +119,8 @@ class CoordinateSystemVerifier:
         if len(self.lat_centers) == 0:
             self.lat_centers = coords["lat_centers"]
             self.lon_centers = coords["lon_centers"]
-            self.lat_corners = coords["lat_corners"]
-            self.lon_corners = coords["lon_corners"]
+            self.lat_nodes = coords["lat_nodes"]
+            self.lon_nodes = coords["lon_nodes"]
             self.reference_dataset = location["output_name"]
             return True
 
@@ -128,8 +128,8 @@ class CoordinateSystemVerifier:
         matches = (
             np.array_equal(coords["lat_centers"], self.lat_centers)
             and np.array_equal(coords["lon_centers"], self.lon_centers)
-            and np.array_equal(coords["lat_corners"], self.lat_corners)
-            and np.array_equal(coords["lon_corners"], self.lon_corners)
+            and np.array_equal(coords["lat_nodes"], self.lat_nodes)
+            and np.array_equal(coords["lon_nodes"], self.lon_nodes)
         )
 
         if not matches:
