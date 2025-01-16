@@ -282,16 +282,95 @@ class FVCOMStandardizer:
         return ds
 
     def standardize_coordinate_values(self, ds, location):
+        """
+        Standardize coordinate values by converting from UTM if necessary and preparing face node coordinates.
+
+        Parameters
+        ----------
+        ds : xarray.Dataset
+            Dataset containing FVCOM coordinate variables (lat, lon, latc, lonc)
+        location : dict
+            Dictionary containing coordinate system information with structure:
+            {
+                'coordinates': {
+                    'system': str,  # 'utm' or other
+                    'zone': int,    # UTM zone number if applicable
+                }
+            }
+
+        Returns
+        -------
+        tuple
+            - xarray.Dataset: Dataset with standardized coordinate values
+            - dict: Face node coordinates with keys 'lat_face_nodes' and 'lon_face_nodes'
+        """
+
         utm_zone = None
         if location["coordinates"]["system"] == "utm":
             utm_zone = location["coordinates"]["zone"]
 
         coords = coord_manager.standardize_fvcom_coords(ds, utm_zone)
 
+        # Update existing coordinates
         ds.latc.values = coords["lat_centers"]
         ds.lonc.values = coords["lon_centers"]
-        ds.lat.values = coords["lat_corners"]
-        ds.lon.values = coords["lon_corners"]
+        ds.lat.values = coords["lat_nodes"]
+        ds.lon.values = coords["lon_nodes"]
+
+        face_nodes = {
+            "lat_face_nodes": coords["lat_face_nodes"],
+            "lon_face_nodes": coords["lon_face_nodes"],
+        }
+
+        return ds, face_nodes
+
+    def add_face_nodes_dimension(self, ds, face_nodes):
+        """
+        Add face node coordinates to the dataset with UGRID-compliant dimensions and attributes.
+
+        Parameters
+        ----------
+        ds : xarray.Dataset
+            Dataset to add face node coordinates to
+        face_nodes : dict
+            Dictionary containing face node coordinates with keys:
+            - 'lat_face_nodes': numpy.ndarray of face node latitudes
+            - 'lon_face_nodes': numpy.ndarray of face node longitudes
+
+        Returns
+        -------
+        xarray.Dataset
+            Dataset with added face node coordinates following UGRID conventions
+        """
+        # Create new face node coordinates with proper dimensions and attributes
+        ds["lat_face_nodes"] = xr.DataArray(
+            face_nodes["lat_face_nodes"],
+            dims=[
+                "face",
+                "face_nodes",
+            ],  # Using standardized dimension names from dim_mapping
+            attrs={
+                "standard_name": "latitude",
+                "long_name": "Latitude of mesh face nodes",
+                "units": "degrees_north",
+                "mesh": "mesh",
+                "location": "face_node",  # UGRID convention for location type
+                "coordinates": "lon_face_nodes lat_face_nodes",  # Cross-reference coordinate pair
+            },
+        )
+
+        ds["lon_face_nodes"] = xr.DataArray(
+            face_nodes["lon_face_nodes"],
+            dims=["face", "face_nodes"],
+            attrs={
+                "standard_name": "longitude",
+                "long_name": "Longitude of mesh face nodes",
+                "units": "degrees_east",
+                "mesh": "mesh",
+                "location": "face_node",
+                "coordinates": "lon_face_nodes lat_face_nodes",
+            },
+        )
 
         return ds
 
@@ -328,7 +407,7 @@ class FVCOMStandardizer:
         ds = xr.open_dataset(ds_path, decode_times=False)
 
         ds = self.standardize_time(ds, corrected_timestamps)
-        ds = self.standardize_coordinate_values(ds, location)
+        ds, face_nodes = self.standardize_coordinate_values(ds, location)
 
         required_vars = config["standardized_variable_specification"]
 
@@ -342,6 +421,8 @@ class FVCOMStandardizer:
         ds = self._add_mesh_topology_attrs(ds)
         ds = self._add_coordinate_attrs(ds)
         ds = self._add_vertical_coordinate_attrs(ds)
+
+        ds = self.add_face_nodes_dimension(ds, face_nodes)
 
         # Verify all required variables exist
         self.verify_required_variables(ds, required_vars)

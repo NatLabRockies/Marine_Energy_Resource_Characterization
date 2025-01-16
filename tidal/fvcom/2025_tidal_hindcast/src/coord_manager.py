@@ -122,10 +122,11 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
     if not coord_system:
         raise ValueError("NetCDF file missing CoordinateSystem attribute")
 
+    # Get original coordinates for face centers and nodes
     original_lat_centers = ds["latc"].values
     original_lon_centers = ds["lonc"].values
-    original_lat_corners = ds["lat"].values
-    original_lon_corners = ds["lon"].values
+    original_lat_nodes = ds["lat"].values
+    original_lon_nodes = ds["lon"].values
 
     # If coordinates are zeros, use conversion
     if np.allclose(original_lat_centers, 0.0) and np.allclose(
@@ -133,89 +134,87 @@ def standardize_fvcom_coords(ds, utm_zone: int = None):
     ):
         original_utm_x_centers = ds["xc"].values
         original_utm_y_centers = ds["yc"].values
-        original_utm_x_corners = ds["x"].values
-        original_utm_y_corners = ds["y"].values
+        original_utm_x_nodes = ds["x"].values
+        original_utm_y_nodes = ds["y"].values
         transformer = create_transformer(coord_system, coord_projection, utm_zone)
         if transformer:
             lon_centers, lat_centers = transformer.transform(
                 original_utm_x_centers, original_utm_y_centers
             )
-            lon_corners, lat_corners = transformer.transform(
-                original_utm_x_corners, original_utm_y_corners
+            lon_nodes, lat_nodes = transformer.transform(
+                original_utm_x_nodes, original_utm_y_nodes
             )
         else:
             raise ValueError("Zero coordinates but no transformation defined")
     else:
         lat_centers = original_lat_centers
         lon_centers = original_lon_centers
-        lat_corners = original_lat_corners
-        lon_corners = original_lon_corners
+        lat_nodes = original_lat_nodes
+        lon_nodes = original_lon_nodes
 
+    # Normalize and verify all coordinates
     lon_centers = normalize_longitude(lon_centers)
-    lon_corners = normalize_longitude(lon_corners)
+    lon_nodes = normalize_longitude(lon_nodes)
 
     verify_latitude_range(lat_centers)
     verify_longitude_range(lon_centers)
-    verify_latitude_range(lat_corners)
-    verify_longitude_range(lon_corners)
+    verify_latitude_range(lat_nodes)
+    verify_longitude_range(lon_nodes)
 
-    # Reorganize corners to match centers using nv mapping
-    corner_indices = get_node_to_cell_mapping(ds)
+    # Get the node connectivity for each face
+    face_node_indices = get_node_to_cell_mapping(ds)
 
-    # Reorder corners to match centers
-    lat_corners_mapped = lat_corners[corner_indices]  # Shape: (nele, 3)
-    lon_corners_mapped = lon_corners[corner_indices]  # Shape: (nele, 3)
+    # Get coordinates of nodes for each face using connectivity
+    lat_face_nodes = lat_nodes[face_node_indices]  # Shape: (nfaces, 3)
+    lon_face_nodes = lon_nodes[face_node_indices]  # Shape: (nfaces, 3)
 
-    if lat_corners_mapped.shape[1] != 3:
+    if lat_face_nodes.shape[1] != 3:
         raise ValueError(
-            f"Expected exactly 3 lat corners per cell, got {lat_corners_mapped.shape[1]}"
+            f"Expected exactly 3 nodes per face, got {lat_face_nodes.shape[1]}"
+        )
+    if lon_face_nodes.shape[1] != 3:
+        raise ValueError(
+            f"Expected exactly 3 nodes per face, got {lon_face_nodes.shape[1]}"
         )
 
-    if lon_corners_mapped.shape[1] != 3:
-        raise ValueError(
-            f"Expected exactly 3 lon corners per cell, got {lon_corners_mapped.shape[1]}"
-        )
-
-    # Verify centers are within corners
-    def verify_centers_in_corners(centers, corners):
+    # Verify centers are within triangular faces
+    def verify_centers_in_faces(centers, face_vertices):
         def point_in_triangle(point, triangle):
             # Implementation using barycentric coordinates
             x, y = point
             x1, y1 = triangle[0]
             x2, y2 = triangle[1]
             x3, y3 = triangle[2]
-
             # Calculate barycentric coordinates
             denom = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3)
             a = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / denom
             b = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) / denom
             c = 1 - a - b
-
             # Check if point is inside triangle
             return (0 <= a <= 1) and (0 <= b <= 1) and (0 <= c <= 1)
 
-        # Check each center against its corresponding triangle
-        for center, triangle in zip(centers, corners):
+        # Check each center against its corresponding triangular face
+        for center, triangle in zip(centers, face_vertices):
             if not point_in_triangle(center, triangle):
                 return False
         return True
 
     center_points = list(zip(lon_centers, lat_centers))
-    corner_triangles = [
-        list(zip(lons, lats))
-        for lons, lats in zip(lon_corners_mapped, lat_corners_mapped)
+    face_triangles = [
+        list(zip(lons, lats)) for lons, lats in zip(lon_face_nodes, lat_face_nodes)
     ]
-
-    centers_valid = verify_centers_in_corners(center_points, corner_triangles)
+    centers_valid = verify_centers_in_faces(center_points, face_triangles)
 
     if not centers_valid:
-        raise ValueError("Warning: Some center points lie outside their corner bounds")
+        raise ValueError("Warning: Some face centers lie outside their face bounds")
 
     return {
         "lat_centers": lat_centers,
         "lon_centers": lon_centers,
-        "lat_corners": lat_corners_mapped,
-        "lon_corners": lon_corners_mapped,
+        "lat_nodes": lat_nodes,  # Original node coordinates
+        "lon_nodes": lon_nodes,  # Original node coordinates
+        "lat_face_nodes": lat_face_nodes,  # Node coordinates per face (nfaces, 3)
+        "lon_face_nodes": lon_face_nodes,  # Node coordinates per face (nfaces, 3)
     }
 
 
