@@ -175,6 +175,36 @@ class FVCOMStandardizer:
 
         return ds
 
+    def add_face_node_connectivity(self, ds):
+        """
+        Add face node connectivity following UGRID conventions.
+        Dynamically determines start_index based on the minimum node index in the dataset.
+        """
+        # Assuming the original FVCOM connectivity array is called 'nv'
+        if "nv" not in ds:
+            raise ValueError("Dataset missing required connectivity array 'nv'")
+
+        # Determine start_index dynamically
+        start_index = int(ds.nv.min().values)  # Convert from numpy type to Python int
+
+        # Create face_node coordinate with proper attributes
+        ds["face_node"] = ds["nv"].rename({"three": "nodes_per_face"})
+        ds["face_node"].attrs.update(
+            {
+                "long_name": "Nodes defining each face",
+                "standard_name": "face_node_connectivity",
+                "cf_role": "face_node_connectivity",
+                "start_index": start_index,  # Dynamically determined
+                "mesh": "mesh",
+            }
+        )
+
+        # Update the mesh topology attributes to reference this connectivity
+        if "mesh" in ds:
+            ds.mesh.attrs["face_node_connectivity"] = "face_node"
+
+        return ds
+
     def verify_required_variables(self, ds, required_vars):
         """
         Verify that dataset contains all required variables with correct specifications.
@@ -478,7 +508,7 @@ class FVCOMStandardizer:
 
         required_vars = config["standardized_variable_specification"]
 
-        # ds = self.standardize_variables(ds, required_vars)
+        ds = self.add_face_node_connectivity(ds, required_vars)
 
         # Then rename dimensions and coordinates
         ds = self._rename_dimensions(ds)
