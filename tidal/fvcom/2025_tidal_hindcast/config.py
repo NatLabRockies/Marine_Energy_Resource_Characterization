@@ -27,22 +27,367 @@ config = {
         "model_version": "FVCOM_4.3.1",
         "conventions": "CF-1.0",
         "required_original_variables": {
-            # Node
-            "lat": "latitude",
-            "lon": "longitude",
-            "latc": "latitude",
-            "lonc": "longitude",
-            "Times": None,
-            "u": "eastward_sea_water_velocity",
-            "v": "Northward_sea_water_velocity",  # The capital N is in the original data
-            "zeta": "sea_surface_height_above_geoid",
-            "h_center": "sea_floor_depth_below_geoid",
-            "siglev_center": "ocean_sigma/general_coordinate",
-            "nv": None,
-            "three": None,
+            # Time
+            "time": {
+                "dtype": "float32",  # 53379.0
+                "coordinates": ["time"],
+                "dimensions": ["time"],
+                "attributes": {
+                    "long_name": "time",
+                    "units": "days since 1858-11-17 00:00:00",
+                    "format": "modified julian day (MJD)",
+                    "time_zone": "UTC",
+                },
+            },
+            "Times": {
+                "dtype": "|S26",  # 2005-01-09T00:00:00.000000
+                "coordinates": ["time"],
+                "dimensions": ["time"],
+                "attributes": {"time_zone": "UTC"},
+            },
+            # Nodal
+            "lat": {
+                "dtype": "float32",
+                "coordinates": ["lon", "lat"],
+                "dimensions": ["node"],
+                "attributes": {
+                    "long_name": "nodal latitude",
+                    "standard_name": "latitude",
+                    "units": "degrees_north",
+                },
+            },
+            "lon": {
+                "dtype": "float32",
+                "coordinates": ["lon", "lat"],
+                "dimensions": ["node"],
+                "attributes": {
+                    "long_name": "nodal longitude",
+                    "standard_name": "longitude",
+                    "units": "degrees_east",
+                },
+            },
+            # Zonal Center
+            "latc": {
+                "dtype": "float32",
+                "coordinates": ["lonc", "latc"],
+                "dimensions": ["nele"],
+                "attributes": {
+                    "long_name": "zonal latitude",
+                    "standard_name": "latitude",
+                    "units": "degrees_north",
+                },
+            },
+            "lonc": {
+                "dtype": "float32",
+                "coordinates": ["lonc", "latc"],
+                "dimensions": ["nele"],
+                "attributes": {
+                    "long_name": "zonal longitude",
+                    "standard_name": "longitude",
+                    "units": "degrees_east",
+                },
+            },
+            # Nodal
+            "x": {
+                "dtype": "float32",
+                "coordinates": ["lon", "lat"],
+                "dimensions": ["node"],
+                "attributes": {"long_name": "nodal x-coordinate", "units": "meters"},
+            },
+            "y": {
+                "dtype": "float32",
+                "coordinates": ["lon", "lat"],
+                "dimensions": ["node"],
+                "attributes": {"long_name": "nodal y-coordinate", "units": "meters"},
+            },
+            # Zonal Center
+            "xc": {
+                "dtype": "float32",
+                "coordinates": ["lonc", "latc"],
+                "dimensions": ["nele"],
+                "attributes": {"long_name": "zonal x-coordinate", "units": "meters"},
+            },
+            "yc": {
+                "dtype": "float32",
+                "coordinates": ["lonc", "latc"],
+                "dimensions": ["nele"],
+                "attributes": {"long_name": "zonal y-coordinate", "units": "meters"},
+            },
+            # Supporting Dimensions / Coordinates
+            "nele": {
+                "dtype": "int64",
+                "coordinates": ["lonc", "latc"],
+                "dimensions": ["nele"],
+                "attributes": {},
+            },
+            "node": {
+                "dtype": "int64",
+                "coordinates": ["lon", "lat"],
+                "dimensions": ["node"],
+                "attributes": {},
+            },
+            "nv": {
+                "dtype": "int32",
+                "coordinates": ["lonc", "latc"],
+                "dimensions": ["three", "nele"],
+                "attributes": {"long_name": "nodes surrounding element"},
+            },
+            "three": {
+                "dtype": "int64",
+                "coordinates": [],
+                "dimensions": ["three"],
+                "attributes": {},
+            },
+            # Heights
+            "zeta": {
+                "dtype": "float32",
+                "coordinates": ["lon", "lat", "time"],
+                "dimensions": ["time", "node"],
+                "attributes": {
+                    "long_name": "Water Surface Elevation",
+                    "units": "meters",
+                    "positive": "up",
+                    "standard_name": "sea_surface_height_above_geoid",
+                    "grid": "Bathymetry_Mesh",
+                    "type": "data",
+                    "location": "node",
+                },
+            },
+            "h_center": {
+                "dtype": "float32",
+                "coordinates": ["lonc", "latc"],
+                "dimensions": ["nele"],
+                "attributes": {
+                    "long_name": "Bathymetry",
+                    "standard_name": "sea_floor_depth_below_geoid",
+                    "units": "m",
+                    "positive": "down",
+                    "grid": "grid1 grid3",
+                    "grid_location": "center",
+                },
+            },
+            # Depths
+            "siglev_center": {
+                "dtype": "float32",
+                "coordinates": ["lonc", "latc"],
+                "dimensions": ["siglev", "nele"],
+                "attributes": {
+                    "long_name": "Sigma Levels",
+                    "standard_name": "ocean_sigma/general_coordinate",
+                    "positive": "up",
+                    "valid_min": -1.0,
+                    "valid_max": 0.0,
+                    "formula_terms": "sigma:siglay_center eta: zeta_center depth: h_center",
+                },
+            },
+            # Model Output
+            "u": {
+                "dtype": "float32",
+                "coordinates": ["lonc", "latc", "time"],
+                "dimensions": ["time", "siglay", "nele"],
+                "attributes": {
+                    "long_name": "Eastward Water Velocity",
+                    "standard_name": "eastward_sea_water_velocity",
+                    "units": "meters s-1",
+                    "grid": "fvcom_grid",
+                    "type": "data",
+                    "mesh": "fvcom_mesh",
+                    "location": "face",
+                },
+            },
+            "v": {
+                "dtype": "float32",
+                "coordinates": ["lonc", "latc", "time"],
+                "dimensions": ["time", "siglay", "nele"],
+                "attributes": {
+                    "long_name": "Northward Water Velocity",
+                    "standard_name": "Northward_sea_water_velocity",
+                    "units": "meters s-1",
+                    "grid": "fvcom_grid",
+                    "type": "data",
+                    "mesh": "fvcom_mesh",
+                    "location": "face",
+                },
+            },
         },
     },
-    "derived_vap_specification": {""},
+    "standardized_variable_specification": {
+        "time": {
+            "dtype": "datetime64[ns]",
+            "coordinates": ["time"],
+            "dimensions": ["time"],
+            "attributes": {
+                "standard_name": "time",
+                "long_name": "Time",
+                "time_zone": "UTC",
+                "coverage_content_type": "coordinate",
+            },
+        },
+        "lat": {
+            "dtype": "float32",
+            "coordinates": ["lon", "lat"],
+            "dimensions": ["node"],
+            "attributes": {
+                "long_name": "nodal latitude",
+                "standard_name": "latitude",
+                "units": "degrees_north",
+                "coverage_content_type": "coordinate",
+                "valid_min": "-90",
+                "valid_max": "90",
+            },
+        },
+        "lon": {
+            "dtype": "float32",
+            "coordinates": ["lon", "lat"],
+            "dimensions": ["node"],
+            "attributes": {
+                "long_name": "nodal longitude",
+                "standard_name": "longitude",
+                "units": "degrees_east",
+                "coverage_content_type": "coordinate",
+                "valid_min": "-180",
+                "valid_max": "180",
+            },
+        },
+        # Face Center
+        "latc": {
+            "dtype": "float32",
+            "coordinates": ["lonc", "latc"],
+            "dimensions": ["face"],
+            "attributes": {
+                "long_name": "zonal latitude",
+                "standard_name": "latitude",
+                "units": "degrees_north",
+                "coverage_content_type": "coordinate",
+                "valid_min": "-90",
+                "valid_max": "90",
+            },
+        },
+        "lonc": {
+            "dtype": "float32",
+            "coordinates": ["lonc", "latc"],
+            "dimensions": ["face"],
+            "attributes": {
+                "long_name": "zonal longitude",
+                "standard_name": "longitude",
+                "units": "degrees_east",
+                "coverage_content_type": "coordinate",
+                "valid_min": "-180",
+                "valid_max": "180",
+            },
+        },
+        "face": {
+            "dtype": "int64",
+            "coordinates": ["lonc", "latc"],
+            "dimensions": ["face"],
+            "attributes": {},
+            "coverage_content_type": "coordinate",
+        },
+        "node": {
+            "dtype": "int64",
+            "coordinates": ["lon", "lat"],
+            "dimensions": ["node"],
+            "attributes": {},
+        },
+        "nv": {
+            "dtype": "int32",
+            "coordinates": ["lonc", "latc"],
+            "dimensions": ["three", "face"],
+            "attributes": {"long_name": "nodes surrounding element"},
+            "coverage_content_type": "referenceInformation",
+        },
+        "three": {
+            "dtype": "int64",
+            "coordinates": [],
+            "dimensions": ["three"],
+            "attributes": {},
+            "coverage_content_type": "referenceInformation",
+        },
+        "u": {
+            "dtype": "float32",
+            "coordinates": ["lonc", "latc", "time"],
+            "dimensions": ["time", "siglay", "face"],
+            "attributes": {
+                "long_name": "Eastward Water Velocity",
+                "standard_name": "eastward_sea_water_velocity",
+                "units": "meters s-1",
+                "grid": "fvcom_grid",
+                "type": "data",
+                "mesh": "fvcom_mesh",
+                "location": "face",
+                "coverage_content_type": "modelResult",
+            },
+        },
+        "v": {
+            "dtype": "float32",
+            "coordinates": ["lonc", "latc", "time"],
+            "dimensions": ["time", "siglay", "face"],
+            "attributes": {
+                "long_name": "Northward Water Velocity",
+                "standard_name": "Northward_sea_water_velocity",
+                "units": "meters s-1",
+                "grid": "fvcom_grid",
+                "type": "data",
+                "mesh": "fvcom_mesh",
+                "location": "face",
+                "coverage_content_type": "modelResult",
+            },
+        },
+    },
+    "derived_vap_specification": {
+        "speed": {
+            "coordinates": ["lonc", "latc", "time"],
+            "dimensions": ["time", "siglay", "face"],
+            "attributes": {
+                "long_name": "Sea Water Speed",
+                "standard_name": "sea_water_speed",
+                "units": "m s-1",
+                "description": "Speed is the magnitude of velocity.",
+                "grid": "fvcom_grid",
+                "type": "data",
+                "mesh": "fvcom_mesh",
+                "location": "face",
+                "coverage_content_type": "modelResult",
+            },
+        },
+        "from_direction": {
+            "dtype": "float32",
+            "coordinates": ["lonc", "latc", "time"],
+            "dimensions": ["time", "siglay", "face"],
+            "attributes": {
+                "long_name": "Sea Water Velocity From Direction",
+                "standard_name": "sea_water_velocity_from_direction",
+                "units": "degree",
+                "description": (
+                    "A velocity is a vector quantity. "
+                    'The phrase "from_direction" indicates the direction from which the '
+                    "velocity vector is coming. The direction is a bearing in the usual "
+                    "geographical sense, measured positive clockwise from due north."
+                ),
+                "valid_min": "0.0",
+                "valid_max": "360.0",
+                "grid": "fvcom_grid",
+                "type": "data",
+                "mesh": "fvcom_mesh",
+                "location": "face",
+                "coverage_content_type": "modelResult",
+            },
+        },
+        "power_density": {
+            "dtype": "float32",
+            "coordinates": ["lonc", "latc", "time"],
+            "dimensions": ["time", "siglay", "face"],
+            "attributes": {
+                "long_name": "Sea Water Power Density",
+                "units": "W m-2",
+                "grid": "fvcom_grid",
+                "type": "data",
+                "mesh": "fvcom_mesh",
+                "location": "face",
+                "coverage_content_type": "modelResult",
+            },
+        },
+    },
     "time_specification": {
         # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop_duplicates.html
         "drop_duplicate_timestamps_keep_strategy": "first",
