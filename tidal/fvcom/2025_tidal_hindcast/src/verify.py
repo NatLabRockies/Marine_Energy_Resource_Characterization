@@ -240,10 +240,10 @@ def model_specification_verifier(config, ds, filepath):
     required_vars = config["model_specification"]["required_original_variables"]
     for var_name, var_spec in required_vars.items():
         # Check if variable exists
-        if var_name not in ds.variables:
-            raise ValueError(f"Required variable {var_name} missing in {filepath}")
-
-        var = ds[var_name]
+        try:
+            var = ds[var_name]
+        except KeyError:
+            raise KeyError(f"Required variable {var_name} missing in {filepath}")
 
         # Check data type
         if str(var.dtype) != var_spec["dtype"]:
