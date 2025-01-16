@@ -40,23 +40,32 @@ class DatasetStandardizer:
                         "axis": "T",
                     },
                 ),
-                "cell": (
-                    "cell",
-                    np.arange(len(coords_dict["lat_centers"])),
-                    {"long_name": "Cell Index", "axis": "N", "cf_role": "cell_index"},
-                ),
-                "vertex": (
-                    "vertex",
+                "fvcom_node": (
+                    "fvcom_node",
                     np.arange(coords_dict["lat_corners"].shape[1]),
-                    {"long_name": "Vertex Index", "cf_role": "vertex_index"},
+                    {
+                        "standard_name": "mesh_node",
+                        "long_name": "Mesh node",
+                        "cf_role": "mesh_node",
+                    },
+                ),
+                "fvcom_face": (
+                    "fvcom_face",
+                    np.arange(len(coords_dict["lat_centers"])),
+                    {
+                        "standard_name": "mesh_face",
+                        "long_name": "Mesh face",
+                        "cf_role": "mesh_face",
+                    },
                 ),
                 "sigma": (
                     "sigma",
                     coords_dict["sigma_levels"],
                     {
-                        "long_name": "Sigma Layer",
-                        "positive": "up",
                         "standard_name": "ocean_sigma_coordinate",
+                        "long_name": "Sigma layer",
+                        "positive": "up",
+                        "formula_terms": "sigma: sigma eta: zeta depth: h_center",
                     },
                 ),
             }
@@ -64,54 +73,65 @@ class DatasetStandardizer:
         return ds
 
     def _create_cf_compliant_coords(self, ds, coords_dict):
-        ds["latitude"] = xr.DataArray(
-            data=coords_dict["lat_centers"],
-            dims=["cell"],
-            attrs={
-                "standard_name": "latitude",
-                "long_name": "Cell Center Latitude",
-                "units": "degrees_north",
-                "axis": "Y",
-                "coverage_content_type": "coordinate",
-                "grid_mapping": "mesh",
-            },
-        )
-
-        ds["longitude"] = xr.DataArray(
-            data=coords_dict["lon_centers"],
-            dims=["cell"],
-            attrs={
-                "standard_name": "longitude",
-                "long_name": "Cell Center Longitude",
-                "units": "degrees_east",
-                "axis": "X",
-                "coverage_content_type": "coordinate",
-                "grid_mapping": "mesh",
-            },
-        )
-
-        ds["latitude_vertices"] = xr.DataArray(
-            data=coords_dict["lat_corners"],
-            dims=["cell", "vertex"],
-            attrs={
-                "standard_name": "latitude",
-                "long_name": "Cell Vertex Latitudes",
-                "units": "degrees_north",
-                "coverage_content_type": "coordinate",
-                "grid_mapping": "mesh",
-            },
-        )
-
-        ds["longitude_vertices"] = xr.DataArray(
+        # Node coordinates
+        ds["fvcom_node_x"] = xr.DataArray(
             data=coords_dict["lon_corners"],
-            dims=["cell", "vertex"],
+            dims=["fvcom_node"],
             attrs={
                 "standard_name": "longitude",
-                "long_name": "Cell Vertex Longitudes",
+                "long_name": "Longitude of mesh nodes",
                 "units": "degrees_east",
-                "coverage_content_type": "coordinate",
-                "grid_mapping": "mesh",
+                "mesh": "fvcom",
             },
+        )
+
+        ds["fvcom_node_y"] = xr.DataArray(
+            data=coords_dict["lat_corners"],
+            dims=["fvcom_node"],
+            attrs={
+                "standard_name": "latitude",
+                "long_name": "Latitude of mesh nodes",
+                "units": "degrees_north",
+                "mesh": "fvcom",
+            },
+        )
+
+        # Face (element center) coordinates
+        ds["fvcom_face_x"] = xr.DataArray(
+            data=coords_dict["lon_centers"],
+            dims=["fvcom_face"],
+            attrs={
+                "standard_name": "longitude",
+                "long_name": "Longitude of mesh face centers",
+                "units": "degrees_east",
+                "mesh": "fvcom",
+            },
+        )
+
+        ds["fvcom_face_y"] = xr.DataArray(
+            data=coords_dict["lat_centers"],
+            dims=["fvcom_face"],
+            attrs={
+                "standard_name": "latitude",
+                "long_name": "Latitude of mesh face centers",
+                "units": "degrees_north",
+                "mesh": "fvcom",
+            },
+        )
+
+        return ds
+
+    def _add_mesh_topology(self, ds):
+        ds["fvcom"] = xr.DataArray(
+            attrs={
+                "cf_role": "mesh_topology",
+                "long_name": "Mesh topology",
+                "topology_dimension": 2,
+                "node_coordinates": "fvcom_node_x fvcom_node_y",
+                "face_coordinates": "fvcom_face_x fvcom_face_y",
+                "face_node_connectivity": "fvcom_face_nodes",
+                "coordinate_reference_system": "WGS84",
+            }
         )
         return ds
 
@@ -121,27 +141,10 @@ class DatasetStandardizer:
             dims=["sigma"],
             attrs={
                 "standard_name": "ocean_sigma_coordinate",
-                "long_name": "Sigma Layer Centers",
+                "long_name": "Sigma layer centers",
                 "positive": "up",
-                "formula_terms": "sigma: sigma eta: zeta depth: h_center",
-                "computed_standard_name": "depth",
-                "coverage_content_type": "coordinate",
-            },
-        )
-        return ds
-
-    def _add_mesh_topology(self, ds):
-        ds["mesh"] = xr.DataArray(
-            data=np.ones(len(ds.cell)),
-            dims=["cell"],
-            attrs={
-                "cf_role": "mesh_topology",
-                "topology_dimension": 2,
-                "node_coordinates": "latitude longitude",
-                "face_coordinates": "latitude_vertices longitude_vertices",
-                "coordinate_reference_system": "WGS84",
-                "long_name": "Mesh Topology",
-                "coverage_content_type": "modelResult",
+                "formula_terms": "sigma: sigma eta: zeta depth: h",
+                "mesh": "fvcom",
             },
         )
         return ds
@@ -164,19 +167,20 @@ class DatasetStandardizer:
                 coords = {
                     "time": ds.time,
                     "sigma": ds.sigma,
-                    "cell": ds.cell,
+                    "fvcom_face": ds.fvcom_face,
                 }
-                dims = ["time", "sigma", "cell"]
+                dims = ["time", "sigma", "fvcom_face"]
                 data = orig_ds[var_name].values
                 new_var_name = var_name
             elif var_name == "zeta":
                 coords = {
                     "time": ds.time,
-                    "cell": ds.cell,
+                    "fvcom_node": ds.fvcom_node,
                 }
-                dims = ["time", "cell"]
-                data = self._interpolate_zeta_to_cell_centers(orig_ds)
-                new_var_name = "zeta_center"
+                dims = ["time", "fvcom_node"]
+                # data = self._interpolate_zeta_to_cell_centers(orig_ds)
+                data = orig_ds[var_name].values
+                new_var_name = "zeta"
             elif var_name == "h_center":
                 coords = {
                     "cell": ds.cell,
@@ -236,10 +240,13 @@ class DatasetStandardizer:
         utm_zone = None
         if self.location["coordinates"]["system"] == "utm":
             utm_zone = self.location["coordinates"]["zone"]
+
         print("Standardizing coords...")
         coords = coord_manager.standardize_fvcom_coords(ds, utm_zone)
+
         print("Extracting sigma_layer...")
         sigma_layers = self._extract_sigma_layer(ds)
+
         print("Creating new ds...")
         new_ds = self._create_base_coords(
             {
@@ -257,84 +264,6 @@ class DatasetStandardizer:
         print("Adding variables ...")
         new_ds = self._add_variables(new_ds, ds.sel(time=time_df["original"].values))
         return new_ds
-
-
-class DatasetFinalizer:
-    @staticmethod
-    def _get_system_metadata() -> dict:
-        return {
-            "hostname": socket.gethostname(),
-            "platform": platform.platform(),
-            "python_version": platform.python_version(),
-            "processor": platform.processor(),
-        }
-
-    @staticmethod
-    def _get_conda_info() -> dict:
-        try:
-            import subprocess
-            import json
-
-            env_name = os.getenv("CONDA_DEFAULT_ENV", "unknown")
-            conda_version = subprocess.run(
-                ["conda", "--version"], capture_output=True, text=True
-            ).stdout.strip()
-
-            conda_list = subprocess.run(
-                ["conda", "list", "--json"], capture_output=True, text=True
-            )
-            packages = json.loads(conda_list.stdout)
-            package_str = ", ".join(
-                f"{pkg['name']}={pkg['version']}" for pkg in packages
-            )
-
-            return {
-                "conda_environment": env_name,
-                "conda_version": conda_version,
-                "conda_packages": package_str,
-            }
-        except Exception as e:
-            return {
-                "conda_environment": "error_getting_conda_info",
-                "conda_version": "error_getting_conda_info",
-                "conda_packages": f"error_getting_conda_info: {str(e)}",
-            }
-
-    @staticmethod
-    def add_global_attributes(
-        ds,
-        config,
-        location,
-        source_files,
-        version,
-    ):
-        existing_metadata = {
-            f"original_{key}": value for key, value in ds.attrs.items()
-        }
-
-        new_metadata = {
-            **existing_metadata,
-            **config["metadata"],
-            "processing_location_specification": json.dumps(location),
-            "processing_timestamp": pd.Timestamp.now(tz="UTC").isoformat(),
-            "processing_user": os.getenv("USER", "unknown"),
-            "processing_software_version": version,
-            **DatasetFinalizer._get_system_metadata(),
-            **DatasetFinalizer._get_conda_info(),
-            "source_file_count": len(source_files),
-            "source_files": ", ".join(source_files),
-            "Conventions": "CF-1.0",
-            "institution": "PNNL",
-            "references": "FVCOM Manual",
-            "source": "FVCOM 4.3.1 model output",
-            "history": f'Created {pd.Timestamp.now(tz="UTC").isoformat()}',
-            "mesh_type": "unstructured",
-            "coordinate_reference_system": "WGS84 (EPSG:4326)",
-            "geospatial_vertical_positive": "up",
-        }
-
-        ds.attrs = new_metadata
-        return ds
 
 
 def standardize_dataset(config, location_key, valid_timestamps_df):
