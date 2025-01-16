@@ -328,6 +328,7 @@ class FVCOMStandardizer:
         ds = xr.open_dataset(ds_path, decode_times=False)
 
         ds = self.standardize_time(ds, corrected_timestamps)
+        ds = self.standardize_coordinate_values(ds, location)
 
         required_vars = config["standardized_variable_specification"]
 
@@ -341,8 +342,6 @@ class FVCOMStandardizer:
         ds = self._add_mesh_topology_attrs(ds)
         ds = self._add_coordinate_attrs(ds)
         ds = self._add_vertical_coordinate_attrs(ds)
-
-        ds = self.standardize_coordinate_values(ds, location)
 
         # Verify all required variables exist
         self.verify_required_variables(ds, required_vars)
