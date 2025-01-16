@@ -403,8 +403,10 @@ config = {
             # 0   NaT
             "files_to_exclude": ["MD_AIS_west_hrBathy_0370.nc"],
             "expected_delta_t_seconds": 3600,  # 60 min
+            "temporal_resolution": "hourly",
             "coordinates": {"system": "latitude/longitude"},
             "description": "",
+            "summary": "",
             "partition_frequency": "M",  # Monthly, Roughly 73GB per file
         },
         "cook_inlet": {
@@ -418,8 +420,10 @@ config = {
             "start_date": "2005-01-01 00:00:00",
             "end_date": "2005-12-31 23:00:00",
             "expected_delta_t_seconds": 3600,  # 60 min
+            "temporal_resolution": "hourly",
             "coordinates": {"system": "latitude/longitude"},
             "description": "",
+            "summary": "",
             "partition_frequency": "M",  # Monthly, Roughly 35GB per file
         },
         "piscataqua_river": {
@@ -432,8 +436,10 @@ config = {
             "start_date": "2007-01-01 00:00:00",
             "end_date": "2007-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
+            "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 19},
             "description": "",
+            "summary": "",
             "partition_frequency": "M",  # Monthly, Roughly 67GB per file
         },
         "puget_sound": {
@@ -457,8 +463,10 @@ config = {
             # This dataset is missing one day!
             "end_date": "2015-12-30 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
+            "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 10},
             "description": "",
+            "summary": "",
             "partition_frequency": "D",  # Weekly
         },
         "western_passage": {
@@ -473,8 +481,11 @@ config = {
             "start_date": "2017-01-01 00:00:00",
             "end_date": "2017-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
+            "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 10},
+            "title": "Western Passage High Fidelity Tidal Hindcast",
             "description": "",
+            "summary": "",
             "partition_frequency": "M",  # Monthly, Roughly 50GB per file
         },
     },
