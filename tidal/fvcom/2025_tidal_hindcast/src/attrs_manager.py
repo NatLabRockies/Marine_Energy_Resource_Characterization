@@ -792,11 +792,13 @@ def standardize_dataset_global_attrs(
 
     else:
         allowed_changing_keys = [
+            "code_url",
             "data_level",
             "datastream",
             "history",
             "id",
             "inputs",
+            "input_history_json",
             "temporal",
             "date_modified",
             "date_metadata_modified",
