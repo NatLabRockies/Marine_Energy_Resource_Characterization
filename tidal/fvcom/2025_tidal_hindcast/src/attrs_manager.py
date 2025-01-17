@@ -210,20 +210,24 @@ def compute_modification_dates(ds):
     Raises:
     ValueError: If neither 'history' nor 'date_created' attributes exist
     """
-    date_attrs = {}
+    result = {}
 
     # Try to get date_created from either history or existing date_created
-    if "history" in ds.attrs:
+    if "date_created" in ds.attrs:
+        result["date_created"] = ds.attrs["date_created"]
+    elif "history" in ds.attrs:
         history = ds.attrs["history"]
         if "model started at:" in history:
             date_str = history.split("model started at:")[1].strip()
             try:
                 created_date = datetime.strptime(date_str, "%m/%d/%Y   %H:%M")
-                date_attrs["date_created"] = created_date.isoformat()
+                result["date_created"] = created_date.isoformat()
             except ValueError:
-                date_attrs["date_created"] = None
-    elif "date_created" in ds.attrs:
-        date_attrs["date_created"] = ds.attrs["date_created"]
+                result["date_created"] = None
+        else:
+            raise ValueError(
+                f"Unexpected history attr. Expecting 'model started at' got {history}"
+            )
     else:
         raise ValueError(
             "Neither 'history' nor 'date_created' attributes found in dataset"
@@ -234,10 +238,10 @@ def compute_modification_dates(ds):
     current_time_str = now.isoformat()
 
     # Add remaining attributes
-    date_attrs["date_modified"] = current_time_str
-    date_attrs["date_metadata_modified"] = current_time_str
+    result["date_modified"] = current_time_str
+    result["date_metadata_modified"] = current_time_str
 
-    return date_attrs
+    return result
 
 
 def compute_vertical_attributes(ds):
@@ -456,8 +460,6 @@ def standardize_dataset_global_attrs(
     )
 
     modification_dates = compute_modification_dates(ds)
-    print(modification_dates)
-    exit()
 
     vertical_attributes = compute_vertical_attributes(ds)
 
