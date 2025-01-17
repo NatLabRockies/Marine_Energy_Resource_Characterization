@@ -246,7 +246,28 @@ def model_specification_verifier(config, ds, filepath):
             raise KeyError(f"Required variable {var_name} missing in {filepath}")
 
         # Check data type
-        if str(var.dtype) != var_spec["dtype"]:
+        # if str(var.dtype) != var_spec["dtype"]:
+        #     raise ValueError(
+        #         f"Variable {var_name} has dtype {var.dtype}, "
+        #         f"expected {var_spec['dtype']} in {filepath}"
+        #     )
+
+        # Check data type with precision compatibility
+        actual_dtype = str(var.dtype)
+        expected_dtype = var_spec["dtype"]
+        if expected_dtype.startswith("float"):
+            # For float types, allow higher precision
+            # When we convert from UTM to lat/lon the type is float64
+            # Datasets without UTM are float32
+            expected_bits = int(expected_dtype.replace("float", ""))
+            actual_bits = int(actual_dtype.replace("float", ""))
+            if not (actual_dtype.startswith("float") and actual_bits >= expected_bits):
+                raise ValueError(
+                    f"Variable {var_name} has dtype {var.dtype}, "
+                    f"expected {var_spec['dtype']} or higher precision in {filepath}"
+                )
+        elif actual_dtype != expected_dtype:
+            # For non-float types, require exact match
             raise ValueError(
                 f"Variable {var_name} has dtype {var.dtype}, "
                 f"expected {var_spec['dtype']} in {filepath}"
