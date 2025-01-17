@@ -259,18 +259,19 @@ class FVCOMStandardizer:
                         f"Variable '{var_name}' has incorrect dtype.\n"
                         f"Expected datetime64 type, got: {actual_dtype}"
                     )
+            elif actual_dtype.startswith("float"):
+                # For float types, allow higher precision
+                # When we convert from UTM to lat/lon the type is float64
+                # Datasets without UTM are float32
+                expected_bits = int(expected_dtype.replace("float", ""))
+                actual_bits = int(actual_dtype.replace("float", ""))
+                if not actual_bits >= expected_bits:
+                    raise ValueError(
+                        f"Variable {var_name} has dtype {var.dtype}, "
+                        f"expected {var_spec['dtype']} or higher precision"
+                    )
+
             elif actual_dtype != expected_dtype:
-                if actual_dtype.startswith("float"):
-                    # For float types, allow higher precision
-                    # When we convert from UTM to lat/lon the type is float64
-                    # Datasets without UTM are float32
-                    expected_bits = int(expected_dtype.replace("float", ""))
-                    actual_bits = int(actual_dtype.replace("float", ""))
-                    if not actual_bits >= expected_bits:
-                        raise ValueError(
-                            f"Variable {var_name} has dtype {var.dtype}, "
-                            f"expected {var_spec['dtype']} or higher precision"
-                        )
                 # For non-float types, require exact match
                 raise ValueError(
                     f"Variable {var_name} has dtype {var.dtype}, "
