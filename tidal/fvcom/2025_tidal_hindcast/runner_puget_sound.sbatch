@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
 #SBATCH --output=runner_puget_sound_%j.out
-#SBATCH --error=runner_puget_sound_%j.err
 #SBATCH --job-name=runner_puget_sound
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL

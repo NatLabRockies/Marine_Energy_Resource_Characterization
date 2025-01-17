@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
 #SBATCH --output=runner_western_passage_%j.out
-#SBATCH --error=runner_western_passage_%j.err
 #SBATCH --job-name=runner_western_passage
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL

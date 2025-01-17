@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
 #SBATCH --output=runner_piscataqua_river_%j.out
-#SBATCH --error=runner_piscataqua_river_%j.err
 #SBATCH --job-name=runner_piscataqua_river
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL

@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
 #SBATCH --output=runner_aleutian_%j.out
-#SBATCH --error=runner_aleutian_%j.err
 #SBATCH --job-name=runner_aleutian
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL

@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
 #SBATCH --output=runner_cook_inlet_%j.out
-#SBATCH --error=runner_cook_inlet_%j.err
 #SBATCH --job-name=runner_cook_inlet
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL
