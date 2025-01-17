@@ -606,12 +606,6 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         config["location_specification"][location_key]["end_date"], utc=True
     )
 
-    # Filtering timestamps between specified start and end dates (inclusive)
-    time_df = time_df[
-        (time_df["timestamp"] >= spec_start_date)
-        & (time_df["timestamp"] <= spec_end_date)
-    ]
-
     time_manager.does_time_match_specification(
         time_df["timestamp"], location["expected_delta_t_seconds"]
     )
@@ -653,6 +647,13 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             input_ds_is_original_model_output=True,
             coordinate_reference_system_string=coord_manager.OUTPUT_COORDINATE_REFERENCE_SYSTEM.to_string(),
         )
+
+        # Filtering timestamps between specified start and end dates (inclusive)
+        output_ds = output_ds.sel(time=slice(spec_start_date, spec_end_date))
+        # time_df = time_df[
+        #     (time_df["timestamp"] >= spec_start_date)
+        #     & (time_df["timestamp"] <= spec_end_date)
+        # ]
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
         if expected_delta_t_seconds == 3600:
