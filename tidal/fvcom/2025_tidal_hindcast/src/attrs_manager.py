@@ -456,6 +456,8 @@ def standardize_dataset_global_attrs(
     )
 
     modification_dates = compute_modification_dates(ds)
+    print(modification_dates)
+    exit()
 
     vertical_attributes = compute_vertical_attributes(ds)
 
