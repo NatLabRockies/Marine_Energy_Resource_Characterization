@@ -234,12 +234,8 @@ def compute_modification_dates(ds):
     current_time_str = now.isoformat()
 
     # Add remaining attributes
-    date_attrs.update(
-        {
-            "date_modified": current_time_str,
-            "date_metadata_modified": current_time_str,
-        }
-    )
+    date_attrs["date_modified"] = current_time_str
+    date_attrs["date_metadata_modified"] = current_time_str
 
     return date_attrs
 
