@@ -357,7 +357,7 @@ config = {
         },
         "h_center": {
             "dtype": "float32",
-            "coordinates": ["lat_center", "lon_center", "time"],
+            "coordinates": ["lat_center", "lon_center"],
             "dimensions": ["face"],
             "attributes": {
                 "long_name": "Bathymetry",
