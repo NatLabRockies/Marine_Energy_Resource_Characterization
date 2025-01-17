@@ -343,7 +343,7 @@ config = {
         "zeta": {
             "dtype": "float32",
             "coordinates": ["lat_center", "lon_center", "time"],
-            "dimensions": ["node"],
+            "dimensions": ["node", "time"],
             "attributes": {
                 "long_name": "Water Surface Elevation",
                 "standard_name": "sea_surface_height_above_geoid",
