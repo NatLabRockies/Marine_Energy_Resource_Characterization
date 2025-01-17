@@ -507,8 +507,7 @@ class FVCOMStandardizer:
 
         return ds
 
-    def standardize_time(self, ds, corrected_timestamps):
-        print("Correcting `time`")
+    def standardize_time(self, ds, corrected_timestamps, time_duplicate_drop_strategy):
         ds["time"] = corrected_timestamps
         ds["time"].attrs = {
             "standard_name": "time",
@@ -518,6 +517,8 @@ class FVCOMStandardizer:
             # "units": "nanoseconds since 1970-01-01T00:00:00Z",  # Explicit nanosecond units
             "precision": "nanosecond",
         }
+
+        ds = ds.drop_duplicates(dim="time", keep=time_duplicate_drop_strategy)
 
         return ds
 
@@ -539,7 +540,13 @@ class FVCOMStandardizer:
         """
         ds = xr.open_dataset(ds_path, decode_times=False)
 
-        ds = self.standardize_time(ds, corrected_timestamps)
+        time_duplicate_drop_strategy = config["time_specification"][
+            "drop_duplicate_timestamps_keep_strategy"
+        ]
+
+        ds = self.standardize_time(
+            ds, corrected_timestamps, time_duplicate_drop_strategy
+        )
         ds, face_nodes = self.standardize_coordinate_values(ds, location)
 
         required_vars = config["standardized_variable_specification"]
@@ -829,10 +836,13 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         print(f"\tDataset already verified: {output_name}")
         return pd.read_parquet(tracking_path)
 
-    drop_strategy = config["time_specification"][
-        "drop_duplicate_timestamps_keep_strategy"
-    ]
-    time_df = valid_timestamps_df.drop_duplicates(keep=drop_strategy)
+    # drop_strategy = config["time_specification"][
+    #     "drop_duplicate_timestamps_keep_strategy"
+    # ]
+
+    # time_df = valid_timestamps_df.drop_duplicates(keep=drop_strategy)
+    time_df = valid_timestamps_df.copy()
+
     spec_start_date = pd.to_datetime(
         config["location_specification"][location_key]["start_date"], utc=True
     )
