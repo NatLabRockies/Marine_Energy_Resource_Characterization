@@ -317,7 +317,7 @@ config = {
             "attributes": {
                 "long_name": "Eastward Water Velocity",
                 "standard_name": "eastward_sea_water_velocity",
-                "units": "meters s-1",
+                "units": "m s-1",
                 "grid": "fvcom_grid",
                 "type": "data",
                 "mesh": "fvcom_mesh",
@@ -332,7 +332,7 @@ config = {
             "attributes": {
                 "long_name": "Northward Water Velocity",
                 "standard_name": "Northward_sea_water_velocity",
-                "units": "meters s-1",
+                "units": "m s-1",
                 "grid": "fvcom_grid",
                 "type": "data",
                 "mesh": "fvcom_mesh",
