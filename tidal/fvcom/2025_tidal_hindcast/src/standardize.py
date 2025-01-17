@@ -363,7 +363,7 @@ class FVCOMStandardizer:
 
         return ds.drop_vars(vars_to_drop)
 
-    def standardize_variables(self, ds, required_vars):
+    def standardize_attributes(self, ds, required_vars):
         """
         Update variable attributes and dtypes according to specification.
 
@@ -380,13 +380,13 @@ class FVCOMStandardizer:
             Dataset with standardized attributes and dtypes
         """
         for var_name, var_spec in required_vars.items():
-            # Update attributes
-            ds[var_name].attrs.clear()
+            # # Update attributes
+            # ds[var_name].attrs.clear()
             ds[var_name].attrs.update(var_spec.get("attributes", {}))
 
-            # Set dtype if specified
-            if "dtype" in var_spec:
-                ds[var_name] = ds[var_name].astype(var_spec["dtype"])
+            # # Set dtype if specified
+            # if "dtype" in var_spec:
+            #     ds[var_name] = ds[var_name].astype(var_spec["dtype"])
 
         return ds
 
@@ -561,6 +561,9 @@ class FVCOMStandardizer:
         ds = self._add_vertical_coordinate_attrs(ds)
 
         ds = self.add_face_nodes_dimension(ds, face_nodes)
+
+        # Update attributes from required_vars
+        ds = self.standardize_attributes(ds, required_vars)
 
         # Verify all required variables exist
         self.verify_required_variables(ds, required_vars)
