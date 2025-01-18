@@ -649,6 +649,13 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         )
 
         # Filtering timestamps between specified start and end dates (inclusive)
+        print(spec_start_date)
+        print(output_ds.time.values[0])
+        print(output_ds.time)
+
+        print(spec_end_date)
+        print(output_ds.time.values[-1])
+
         output_ds = output_ds.sel(time=slice(spec_start_date, spec_end_date))
         # time_df = time_df[
         #     (time_df["timestamp"] >= spec_start_date)
