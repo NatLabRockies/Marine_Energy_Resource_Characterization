@@ -606,12 +606,12 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
     print(time_df.iloc[0])
     print(time_df.iloc[-1])
 
-    spec_start_date = pd.to_datetime(
-        config["location_specification"][location_key]["start_date"], utc=True
-    )
-    spec_end_date = pd.to_datetime(
-        config["location_specification"][location_key]["end_date"], utc=True
-    )
+    # spec_start_date = pd.to_datetime(
+    #     config["location_specification"][location_key]["start_date"], utc=True
+    # )
+    # spec_end_date = pd.to_datetime(
+    #     config["location_specification"][location_key]["end_date"], utc=True
+    # )
 
     time_manager.does_time_match_specification(
         time_df["timestamp"], location["expected_delta_t_seconds"]
@@ -655,7 +655,28 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             coordinate_reference_system_string=coord_manager.OUTPUT_COORDINATE_REFERENCE_SYSTEM.to_string(),
         )
 
-        # Filtering timestamps between specified start and end dates (inclusive)
+        # Filtering timestamps inclusively with respect to
+        # location start_date_utc and end_date_utc
+
+        # First verify the time_zone attribute is UTC
+        time_attrs = output_ds.time.attrs
+        if "time_zone" not in time_attrs:
+            raise ValueError("time_zone attribute missing from time coordinate")
+        if time_attrs["time_zone"] != "UTC":
+            raise ValueError(
+                f"Expected time_zone to be UTC, got {time_attrs['time_zone']}"
+            )
+
+        # Now proceed with timezone-naive timestamps for filtering
+        spec_start_date = pd.to_datetime(
+            config["location_specification"][location_key]["start_date_utc"]
+        )
+        spec_end_date = pd.to_datetime(
+            config["location_specification"][location_key]["end_date_utc"]
+        )
+
+        output_ds = output_ds.sel(time=slice(spec_start_date, spec_end_date))
+
         print(spec_start_date)
         print(output_ds.time.values[0])
         print(output_ds.time)
