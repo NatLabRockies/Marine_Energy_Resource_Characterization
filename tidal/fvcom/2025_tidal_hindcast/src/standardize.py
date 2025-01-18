@@ -599,6 +599,13 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
     # time_df = valid_timestamps_df.drop_duplicates(keep=drop_strategy)
     time_df = valid_timestamps_df.copy()
 
+    print("Cleaned Timestamps")
+    print(time_df.info())
+    print(time_df.head())
+    print(time_df.tail())
+    print(time_df.iloc[0])
+    print(time_df.iloc[-1])
+
     spec_start_date = pd.to_datetime(
         config["location_specification"][location_key]["start_date"], utc=True
     )
