@@ -2,6 +2,7 @@ import getpass
 import json
 import os
 import platform
+import re
 import socket
 import subprocess
 
@@ -9,6 +10,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 import numpy as np
+import pandas as pd
 
 
 def get_system_info():
@@ -195,6 +197,74 @@ def compute_geospatial_bounds(ds, crs_string=None):
     return bounds
 
 
+def convert_fvcom_history_to_iso_datetime(history_string: str) -> str:
+    """
+    Convert a string containing date and time information from xarray history attribute
+    to ISO format datetime string using pandas.
+
+    Args:
+        history_string (str): Input string containing date and time information
+            Example: "model started at: 28/02/2024   14:16"
+
+    Returns:
+        str: ISO format datetime string (YYYY-MM-DDTHH:MM:SS)
+
+    Raises:
+        ValueError: If date or time cannot be extracted from the input string
+    """
+    # Regular expressions for various date formats
+    date_patterns = [
+        r"(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})",  # DD/MM/YYYY or DD-MM-YYYY
+        r"(\d{4})[/-](\d{1,2})[/-](\d{1,2})",  # YYYY/MM/DD or YYYY-MM-DD
+    ]
+
+    # Regular expression for time format
+    time_pattern = r"(\d{1,2})[:]?(\d{2})(?:[:]?(\d{2}))?"
+
+    # Extract date
+    date_match = None
+    date_format = None
+
+    for pattern in date_patterns:
+        match = re.search(pattern, history_string)
+        if match:
+            date_match = match
+            # Determine if it's YYYY first or last
+            if len(match.group(3)) == 4:  # DD/MM/YYYY format
+                date_format = "%d/%m/%Y"
+                date_str = f"{match.group(1)}/{match.group(2)}/{match.group(3)}"
+            elif len(match.group(1)) == 4:  # YYYY/MM/DD format
+                date_format = "%Y/%m/%d"
+                date_str = f"{match.group(1)}/{match.group(2)}/{match.group(3)}"
+            else:  # DD/MM/YY format
+                date_format = "%d/%m/%y"
+                date_str = f"{match.group(1)}/{match.group(2)}/{match.group(3)}"
+            break
+
+    if not date_match:
+        raise ValueError("Could not extract date from input string")
+
+    # Extract time
+    time_match = re.search(time_pattern, history_string)
+    if not time_match:
+        raise ValueError("Could not extract time from input string")
+
+    # Process time components
+    hour, minute = time_match.groups()[:2]
+    second = time_match.group(3) if time_match.group(3) else "00"
+    time_str = f"{hour}:{minute}:{second}"
+
+    # Combine date and time
+    datetime_str = f"{date_str} {time_str}"
+
+    try:
+        # Use pandas to parse and convert to ISO format
+        timestamp = pd.to_datetime(datetime_str, format=f"{date_format} %H:%M:%S")
+        return timestamp.isoformat()
+    except ValueError as e:
+        raise ValueError(f"Invalid date/time components: {str(e)}")
+
+
 def compute_modification_dates(ds):
     """
     Get date-related attributes for an xarray Dataset.
@@ -217,17 +287,7 @@ def compute_modification_dates(ds):
         result["date_created"] = ds.attrs["date_created"]
     elif "history" in ds.attrs:
         history = ds.attrs["history"]
-        if "model started at:" in history:
-            date_str = history.split("model started at:")[1].strip()
-            try:
-                created_date = datetime.strptime(date_str, "%m/%d/%Y   %H:%M")
-                result["date_created"] = created_date.isoformat()
-            except ValueError:
-                result["date_created"] = None
-        else:
-            raise ValueError(
-                f"Unexpected history attr. Expecting 'model started at' got {history}"
-            )
+        result["date_created"] = convert_fvcom_history_to_iso_datetime(history)
     else:
         raise ValueError(
             "Neither 'history' nor 'date_created' attributes found in dataset"
