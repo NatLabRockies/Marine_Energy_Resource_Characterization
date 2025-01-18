@@ -72,16 +72,16 @@ class TimeVerifier:
         ):
             raise ValueError("Original timestamps were not in chronological order")
 
-        start_date = pd.to_datetime(location["start_date"], utc=True)
-        end_date = pd.to_datetime(location["end_date"], utc=True)
+        start_date_utc = pd.to_datetime(location["start_date_utc"], utc=True)
+        end_date_utc = pd.to_datetime(location["end_date_utc"], utc=True)
 
-        if timestamps.iloc[0] > start_date:
+        if timestamps.iloc[0] > start_date_utc:
             raise ValueError(
-                f"Dataset starts at {timestamps.iloc[0]}, expected {start_date}"
+                f"Dataset starts at {timestamps.iloc[0]}, expected {start_date_utc}"
             )
-        if timestamps.iloc[-1] < end_date:
+        if timestamps.iloc[-1] < end_date_utc:
             raise ValueError(
-                f"Dataset ends at {timestamps.iloc[-1]}, expected {end_date}"
+                f"Dataset ends at {timestamps.iloc[-1]}, expected {end_date_utc}"
             )
 
         time_deltas = timestamps.diff()[1:]  # Skip first NaN delta

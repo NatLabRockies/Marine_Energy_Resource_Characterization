@@ -435,8 +435,8 @@ config = {
             "output_name": "AK_aleutian_islands",
             "base_dir": "Aleutian_Islands_year",
             "files": ["*.nc"],
-            "start_date": "2010-06-03 00:00:00",
-            "end_date": "2011-06-02 23:00:00",
+            "start_date_utc": "2010-06-03 00:00:00",
+            "end_date_utc": "2011-06-02 23:00:00",
             # DatetimeIndex(['2011-06-07 00:00:00+00:00'], dtype='datetime64[ns, UTC]', freq=None)
             # 0   NaT
             "files_to_exclude": ["MD_AIS_west_hrBathy_0370.nc"],
@@ -455,8 +455,8 @@ config = {
             # DatetimeIndex(['2006-01-01 00:00:00+00:00'], dtype='datetime64[ns, UTC]', freq=None)
             # 0   NaT
             "files_to_exclude": ["cki_0366.nc"],
-            "start_date": "2005-01-01 00:00:00",
-            "end_date": "2005-12-31 23:00:00",
+            "start_date_utc": "2005-01-01 00:00:00",
+            "end_date_utc": "2005-12-31 23:00:00",
             "expected_delta_t_seconds": 3600,  # 60 min
             "temporal_resolution": "hourly",
             "coordinates": {"system": "latitude/longitude"},
@@ -471,8 +471,8 @@ config = {
             # ValueError: Time verification failure in /kfs2/projects/hindcastra/Tidal/PIR_full_year/PIR_0368.nc. Delta t is different than 1800 seconds. Check timestamps below
             # DatetimeIndex(['2008-01-01 00:00:00+00:00'], dtype='datetime64[ns, UTC]', freq=None)
             "files_to_exclude": ["PIR_0368.nc"],
-            "start_date": "2007-01-01 00:00:00",
-            "end_date": "2007-12-31 23:30:00",
+            "start_date_utc": "2007-01-01 00:00:00",
+            "end_date_utc": "2007-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 19},
@@ -497,9 +497,9 @@ config = {
                 "12012015/*.nc",
                 "12312015/*.nc",
             ],
-            "start_date": "2015-01-01 00:00:00",
+            "start_date_utc": "2015-01-01 00:00:00",
             # This dataset is missing one day!
-            "end_date": "2015-12-30 23:30:00",
+            "end_date_utc": "2015-12-30 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 10},
@@ -516,8 +516,8 @@ config = {
                 "03_Jul_Sep/*.nc",
                 "04_Oct_Dec/*.nc",
             ],
-            "start_date": "2017-01-01 00:00:00",
-            "end_date": "2017-12-31 23:30:00",
+            "start_date_utc": "2017-01-01 00:00:00",
+            "end_date_utc": "2017-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 10},
