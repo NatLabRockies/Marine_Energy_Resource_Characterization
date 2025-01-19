@@ -392,7 +392,7 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
 #     return ds
 
 
-def calculate_zeta_center(ds):
+def calculate_zeta_center(ds, max_node_difference=0.1):
     """
     Calculate water surface elevation at cell centers by averaging the values at the three
     surrounding nodes of each face.
@@ -401,21 +401,32 @@ def calculate_zeta_center(ds):
     -----------
     ds : xarray.Dataset
         Dataset containing zeta (at nodes) and nv (face-node connectivity) variables
+    max_node_difference : float, optional
+        Maximum allowed difference in meters between any two nodes in a cell.
+        Default is 0.1 meters, which is reasonable for most tidal flows.
 
     Returns:
     --------
     xarray.Dataset
         Input dataset with new zeta_center variable added
-    """
 
+    Raises:
+    -------
+    ValueError
+        If node indexing is unexpected or if node differences exceed threshold
+    """
     # Fortran (FVCOM language) uses one based indexing
     # To find the centers in Python/xArray we need to convert to zero based indexes
-    # This verifies that the indexing is 1
+
     # Verify the indexing and convert if needed
     nv_min = ds["nv"].min().item()
     if nv_min == 1:  # Confirms 1-based indexing
         # Convert from 1-based to 0-based indexing
-        node_indices = ds["nv"].transpose("face", "face_node_index") - 1
+        # Use numpy to handle the transpose and reshape
+        node_indices = ds["nv"].values.transpose(
+            2, 1, 0
+        )  # (face, face_node_index, time)
+        node_indices = node_indices - 1  # Convert to 0-based indexing
     else:
         raise ValueError(
             f"Unexpected minimum node index in nv: {nv_min}. Expected 1 for FVCOM 1-based indexing."
@@ -425,19 +436,41 @@ def calculate_zeta_center(ds):
     # Using .isel() with the connectivity array performs the indirect indexing
     zeta_at_nodes = ds["zeta"].isel(node=node_indices)
 
+    # Validate node-to-node differences within each cell
+    # Calculate pairwise differences between nodes
+    diff_01 = abs(
+        zeta_at_nodes.isel(face_node_index=0) - zeta_at_nodes.isel(face_node_index=1)
+    )
+    diff_12 = abs(
+        zeta_at_nodes.isel(face_node_index=1) - zeta_at_nodes.isel(face_node_index=2)
+    )
+    diff_20 = abs(
+        zeta_at_nodes.isel(face_node_index=2) - zeta_at_nodes.isel(face_node_index=0)
+    )
+
+    # Find maximum difference for each cell
+    max_diff = xr.concat([diff_01, diff_12, diff_20], dim="pair").max(dim="pair")
+
+    # Identify problematic cells
+    problem_cells = max_diff > max_node_difference
+    if problem_cells.any():
+        # Get the number of problematic cells and the maximum difference found
+        n_problems = problem_cells.sum().item()
+        max_found = max_diff.max().item()
+
+        # Create warning message with details
+        raise ValueError(
+            f"Found {n_problems} cells with node-to-node elevation differences "
+            f"exceeding {max_node_difference}m threshold. Maximum difference "
+            f"found: {max_found:.3f}m. This might indicate numerical instabilities "
+            "or areas of strong gradients (e.g., tidal rapids)."
+        )
+
     # Average the three nodes to get the cell center value
     zeta_center = zeta_at_nodes.mean(dim="face_node_index")
 
     # Add the proper attributes
     zeta_center.attrs = {
-        # 'long_name': 'Water Surface Elevation at Cell Centers',
-        # 'units': 'm',
-        # 'positive': 'up',
-        # 'standard_name': 'sea_surface_height_above_geoid',
-        # 'grid': 'Bathymetry_Mesh',
-        # 'type': 'data',
-        # 'location': 'face',
-        # 'coverage_content_type': 'modelResult'
         **ds.zeta.attrs,
         "long_name": "Sea Surface Height at Cell Centers",
         "coordinates": "time cell",
@@ -449,6 +482,7 @@ def calculate_zeta_center(ds):
         ),
         "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
         "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
+        "validation_threshold": f"Maximum allowed node-to-node difference: {max_node_difference}m",
     }
 
     # Add the new variable to the dataset
