@@ -575,7 +575,6 @@ class FVCOMStandardizer:
 
 
 def standardize_dataset(config, location_key, valid_timestamps_df):
-    # standardizer = DatasetStandardizer(config, location_key)
     standardizer = FVCOMStandardizer()
 
     # Check for existing standardization file
@@ -592,26 +591,7 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         print(f"\tDataset already verified: {output_name}")
         return pd.read_parquet(tracking_path)
 
-    # drop_strategy = config["time_specification"][
-    #     "drop_duplicate_timestamps_keep_strategy"
-    # ]
-
-    # time_df = valid_timestamps_df.drop_duplicates(keep=drop_strategy)
     time_df = valid_timestamps_df.copy()
-
-    print("Cleaned Timestamps")
-    print(time_df.info())
-    print(time_df.head())
-    print(time_df.tail())
-    print(time_df.iloc[0])
-    print(time_df.iloc[-1])
-
-    # spec_start_date = pd.to_datetime(
-    #     config["location_specification"][location_key]["start_date"], utc=True
-    # )
-    # spec_end_date = pd.to_datetime(
-    #     config["location_specification"][location_key]["end_date"], utc=True
-    # )
 
     time_manager.does_time_match_specification(
         time_df["timestamp"], location["expected_delta_t_seconds"]
@@ -626,24 +606,13 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         print(f"Number of timestamps: {len(this_df)}")
         print(f"Start time: {this_df['timestamp'].iloc[0]}")
         print(f"End time: {this_df['timestamp'].iloc[-1]}")
-        print("Performing standardization...")
 
+        print("Performing standardization...")
         output_ds = standardizer.standardize(
             source_file, config, location, this_df["timestamp"].values
         )
-
-        # print("Correcting `time`")
-        # output_ds["time"] = this_df["timestamp"].values
-        # output_ds["time"].attrs = {
-        #     "standard_name": "time",
-        #     "long_name": "time",
-        #     "axis": "T",
-        #     "calendar": "proleptic_gregorian",
-        #     "units": "nanoseconds since 1970-01-01T00:00:00Z",  # Explicit nanosecond units
-        #     "precision": "nanosecond",
-        # }
-
         print("Finished Standardization!...")
+
         print("Adding Global Attributes...")
         output_ds = attrs_manager.standardize_dataset_global_attrs(
             output_ds,
@@ -657,7 +626,6 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
 
         # Filtering timestamps inclusively with respect to
         # location start_date_utc and end_date_utc
-
         # First verify the time_zone attribute is UTC
         time_attrs = output_ds.time.attrs
         if "time_zone" not in time_attrs:
@@ -677,18 +645,7 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
 
         output_ds = output_ds.sel(time=slice(spec_start_date, spec_end_date))
 
-        print(spec_start_date)
-        print(output_ds.time.values[0])
-        print(output_ds.time)
-
-        print(spec_end_date)
-        print(output_ds.time.values[-1])
-
         output_ds = output_ds.sel(time=slice(spec_start_date, spec_end_date))
-        # time_df = time_df[
-        #     (time_df["timestamp"] >= spec_start_date)
-        #     & (time_df["timestamp"] <= spec_end_date)
-        # ]
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
         if expected_delta_t_seconds == 3600:
