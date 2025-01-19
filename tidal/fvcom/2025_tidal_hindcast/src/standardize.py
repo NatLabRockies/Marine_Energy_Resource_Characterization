@@ -659,15 +659,9 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             count += 1
             continue
 
-        expected_delta_t_seconds = location["expected_delta_t_seconds"]
-        if expected_delta_t_seconds == 3600:
-            temporal_string = "1h"
-        elif expected_delta_t_seconds == 1800:
-            temporal_string = "30m"
-        else:
-            raise ValueError(
-                f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
-            )
+        temporal_string = time_manager.generate_temporal_attrs(output_ds)[
+            "standard_name"
+        ]
 
         data_level_file_name = (
             file_name_convention_manager.generate_filename_for_data_level(

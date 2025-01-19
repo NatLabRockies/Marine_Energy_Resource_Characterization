@@ -3,7 +3,7 @@ import gc
 import numpy as np
 import pandas as pd
 import xarray as xr
-from . import attrs_manager, file_manager, file_name_convention_manager
+from . import attrs_manager, file_manager, file_name_convention_manager, time_manager
 
 
 def partition_by_time(config, location_key, time_df, force_reprocess=False):
@@ -19,17 +19,6 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
     # Get partition frequency from config and ensure timestamps are datetime objects
     freq = location["partition_frequency"]
     time_df["timestamp"] = pd.to_datetime(time_df["timestamp"])
-
-    # Calculate temporal string for filenames
-    expected_delta_t_seconds = location["expected_delta_t_seconds"]
-    if expected_delta_t_seconds == 3600:
-        temporal_string = "1h"
-    elif expected_delta_t_seconds == 1800:
-        temporal_string = "30m"
-    else:
-        raise ValueError(
-            f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
-        )
 
     # Check how many existing files we have for this period number
     existing_files = list(output_dir.glob("*.nc"))
@@ -97,6 +86,10 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
             combined_ds = attrs_manager.standardize_dataset_global_attrs(
                 combined_ds, config, location, "a2", [str(f) for f in source_filenames]
             )
+
+            temporal_string = time_manager.generate_temporal_attrs(combined_ds)[
+                "standard_name"
+            ]
 
             # Generate output filename
             data_level_file_name = (
