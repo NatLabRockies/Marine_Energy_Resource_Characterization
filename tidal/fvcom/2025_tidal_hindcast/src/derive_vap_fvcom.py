@@ -350,19 +350,25 @@ def calculate_zeta_center(ds):
     # nv indices are 1-based, subtract 1 to convert to 0-based
     node_to_cell_map = ds["nv"].values.T - 1  # Shape: (nele, 3)
 
-    # Initialize output array for cell-centered values
-    cell_values = np.zeros((ds.zeta.shape[0], len(node_to_cell_map)))
+    # Get the number of cells
+    n_cells = len(node_to_cell_map)
+    n_times = ds.zeta.shape[0]
+
+    # Initialize output array with correct shape
+    cell_values = np.zeros((n_times, n_cells))
 
     # For each timestep, compute mean of nodal values for each cell
-    for t in range(ds.zeta.shape[0]):
-        node_values = ds.zeta[t].values
-        cell_values[t] = np.mean(node_values[node_to_cell_map], axis=1)
+    for t in range(n_times):
+        node_values = ds.zeta[t].values  # Get values for current timestep
+        # Index into node_values using node_to_cell_map and compute mean along axis 1
+        values_for_cells = node_values[node_to_cell_map]  # Shape: (nele, 3)
+        cell_values[t, :] = np.mean(values_for_cells, axis=1)
 
     # Add interpolated values to dataset
     ds["zeta_center"] = xr.DataArray(
         cell_values,
         dims=["time", "cell"],
-        coords={"time": ds.zeta.time, "cell": np.arange(len(node_to_cell_map))},
+        coords={"time": ds.zeta.time, "cell": np.arange(n_cells)},
     )
 
     # Copy and modify attributes from original zeta variable
