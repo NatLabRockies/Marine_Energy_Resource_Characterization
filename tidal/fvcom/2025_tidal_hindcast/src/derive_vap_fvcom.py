@@ -423,10 +423,13 @@ def calculate_zeta_center(ds, max_node_difference=0.1):
     if nv_min == 1:  # Confirms 1-based indexing
         # Convert from 1-based to 0-based indexing
         # Use numpy to handle the transpose and reshape
-        node_indices = ds["nv"].values.transpose(
-            2, 1, 0
-        )  # (face, face_node_index, time)
-        node_indices = node_indices - 1  # Convert to 0-based indexing
+        # node_indices = ds["nv"].values.transpose(
+        #     2, 1, 0
+        # )  # (face, face_node_index, time)
+        # node_indices = node_indices - 1  # Convert to 0-based indexing
+        node_indices = ds["nv"].values.T - nv_min  # Shape: (nele, 3)
+        print(node_indices.shape)
+        print(node_indices[:5])
     else:
         raise ValueError(
             f"Unexpected minimum node index in nv: {nv_min}. Expected 1 for FVCOM 1-based indexing."
