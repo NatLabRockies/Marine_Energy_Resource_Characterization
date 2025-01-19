@@ -624,6 +624,13 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             coordinate_reference_system_string=coord_manager.OUTPUT_COORDINATE_REFERENCE_SYSTEM.to_string(),
         )
 
+        if len(output_ds.time) == 0:
+            print(
+                f"Warning: No timestamps found in standardized output for {source_file}. Skipping..."
+            )
+            count += 1
+            continue
+
         # Filtering timestamps inclusively with respect to
         # location start_date_utc and end_date_utc
         # First verify the time_zone attribute is UTC
@@ -645,7 +652,12 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
 
         output_ds = output_ds.sel(time=slice(spec_start_date, spec_end_date))
 
-        output_ds = output_ds.sel(time=slice(spec_start_date, spec_end_date))
+        if len(output_ds.time) == 0:
+            print(
+                f"Warning: No timestamps remain after filtering for {source_file}. Skipping..."
+            )
+            count += 1
+            continue
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
         if expected_delta_t_seconds == 3600:
