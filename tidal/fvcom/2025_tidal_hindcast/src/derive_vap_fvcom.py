@@ -346,29 +346,31 @@ def calculate_zeta_center(ds):
     if not all(var in ds for var in ["zeta", "nv"]):
         raise KeyError("Dataset must contain both 'zeta' and 'nv' variables")
 
-    # Get mapping from nodes to faces using nv connectivity array
-    # nv indices are 1-based, subtract 1 to convert to 0-based
-    node_to_cell_map = ds["nv"].values.T - 1  # Shape: (nele, 3)
+    # Get dimensions
+    n_times = ds.dims["time"]
+    n_faces = ds.dims["face"]
 
-    # Get the number of cells
-    n_cells = len(node_to_cell_map)
-    n_times = ds.zeta.shape[0]
-
-    # Initialize output array with correct shape
-    cell_values = np.zeros((n_times, n_cells))
+    # Initialize output array
+    cell_values = np.zeros((n_times, n_faces))
 
     # For each timestep, compute mean of nodal values for each cell
     for t in range(n_times):
-        node_values = ds.zeta[t].values  # Get values for current timestep
-        # Index into node_values using node_to_cell_map and compute mean along axis 1
-        values_for_cells = node_values[node_to_cell_map]  # Shape: (nele, 3)
-        cell_values[t, :] = np.mean(values_for_cells, axis=1)
+        # Get the node indices for this timestep (subtract 1 to convert from 1-based to 0-based indexing)
+        node_indices = ds.nv[t].values - 1  # Shape will be (3, n_faces)
+
+        # Get nodal values for this timestep
+        node_values = ds.zeta[t].values
+
+        # For each face, get its three node values and average them
+        # We need to transpose node_indices to get shape (n_faces, 3)
+        face_node_values = node_values[node_indices.T]  # Shape: (n_faces, 3)
+        cell_values[t] = np.mean(face_node_values, axis=1)
 
     # Add interpolated values to dataset
     ds["zeta_center"] = xr.DataArray(
         cell_values,
         dims=["time", "cell"],
-        coords={"time": ds.zeta.time, "cell": np.arange(n_cells)},
+        coords={"time": ds.zeta.time, "cell": np.arange(n_faces)},
     )
 
     # Copy and modify attributes from original zeta variable
