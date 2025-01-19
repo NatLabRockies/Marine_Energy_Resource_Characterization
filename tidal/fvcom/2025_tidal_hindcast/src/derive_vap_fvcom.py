@@ -468,7 +468,7 @@ def calculate_depth(ds):
     ValueError
         If required attributes are missing or inconsistent
     """
-    # validate_depth_inputs(ds)
+    validate_depth_inputs(ds)
 
     if "sigma_level" not in ds:
         raise KeyError("Dataset must contain 'sigma_level' coordinates")
