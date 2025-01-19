@@ -318,63 +318,126 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
     return ds
 
 
+#
+# def calculate_zeta_center(ds):
+#     """
+#     Interpolate surface elevation (zeta) from nodes to face centers.
+#
+#     This function computes the surface elevation at cell centers by averaging
+#     the nodal values that make up each triangular cell using the node-to-cell
+#     connectivity array (nv).
+#
+#     Parameters
+#     ----------
+#     ds : xarray.Dataset
+#         Dataset containing:
+#         - 'zeta': surface elevation at nodes
+#         - 'nv': node-to-cell connectivity array (1-based indices)
+#
+#     Returns
+#     -------
+#     xarray.Dataset
+#         Original dataset with added 'zeta_center' variable and CF-compliant metadata
+#
+#     Raises
+#     ------
+#     KeyError
+#         If required variables 'zeta' or 'nv' are missing
+#     """
+#     if not all(var in ds for var in ["zeta", "nv"]):
+#         raise KeyError("Dataset must contain both 'zeta' and 'nv' variables")
+#
+#     # Get dimensions
+#     n_times = ds.dims["time"]
+#     n_faces = ds.dims["face"]
+#
+#     # Initialize output array
+#     cell_values = np.zeros((n_times, n_faces))
+#
+#     # For each timestep, compute mean of nodal values for each cell
+#     for t in range(n_times):
+#         # Get the node indices for this timestep (subtract 1 to convert from 1-based to 0-based indexing)
+#         node_indices = ds.nv[t].values - 1  # Shape will be (3, n_faces)
+#
+#         # Get nodal values for this timestep
+#         node_values = ds.zeta[t].values
+#
+#         # For each face, get its three node values and average them
+#         # We need to transpose node_indices to get shape (n_faces, 3)
+#         face_node_values = node_values[node_indices.T]  # Shape: (n_faces, 3)
+#         cell_values[t] = np.mean(face_node_values, axis=1)
+#
+#     # Add interpolated values to dataset
+#     ds["zeta_center"] = xr.DataArray(
+#         cell_values,
+#         dims=["time", "cell"],
+#         coords={"time": ds.zeta.time, "cell": np.arange(n_faces)},
+#     )
+#
+#     # Copy and modify attributes from original zeta variable
+#     ds.zeta_center.attrs = {
+#         **ds.zeta.attrs,
+#         "long_name": "Sea Surface Height at Cell Centers",
+#         "coordinates": "time cell",
+#         "mesh": "cell_centered",
+#         "interpolation": (
+#             "Computed by averaging the surface elevation values from the three "
+#             "nodes that define each triangular cell using the node-to-cell "
+#             "connectivity array (nv)."
+#         ),
+#         "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
+#         "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
+#     }
+#
+#     return ds
+
+
 def calculate_zeta_center(ds):
     """
-    Interpolate surface elevation (zeta) from nodes to face centers.
+    Calculate water surface elevation at cell centers by averaging the values at the three
+    surrounding nodes of each face.
 
-    This function computes the surface elevation at cell centers by averaging
-    the nodal values that make up each triangular cell using the node-to-cell
-    connectivity array (nv).
-
-    Parameters
-    ----------
+    Parameters:
+    -----------
     ds : xarray.Dataset
-        Dataset containing:
-        - 'zeta': surface elevation at nodes
-        - 'nv': node-to-cell connectivity array (1-based indices)
+        Dataset containing zeta (at nodes) and nv (face-node connectivity) variables
 
-    Returns
-    -------
+    Returns:
+    --------
     xarray.Dataset
-        Original dataset with added 'zeta_center' variable and CF-compliant metadata
-
-    Raises
-    ------
-    KeyError
-        If required variables 'zeta' or 'nv' are missing
+        Input dataset with new zeta_center variable added
     """
-    if not all(var in ds for var in ["zeta", "nv"]):
-        raise KeyError("Dataset must contain both 'zeta' and 'nv' variables")
 
-    # Get dimensions
-    n_times = ds.dims["time"]
-    n_faces = ds.dims["face"]
+    # Fortran (FVCOM language) uses one based indexing
+    # To find the centers in Python/xArray we need to convert to zero based indexes
+    # This verifies that the indexing is 1
+    # Verify the indexing and convert if needed
+    nv_min = ds["nv"].min().item()
+    if nv_min == 1:  # Confirms 1-based indexing
+        # Convert from 1-based to 0-based indexing
+        node_indices = ds["nv"].transpose("face", "face_node_index") - 1
+    else:
+        raise ValueError(
+            f"Unexpected minimum node index in nv: {nv_min}. Expected 1 for FVCOM 1-based indexing."
+        )
 
-    # Initialize output array
-    cell_values = np.zeros((n_times, n_faces))
+    # Select zeta values for each node of each face
+    # Using .isel() with the connectivity array performs the indirect indexing
+    zeta_at_nodes = ds["zeta"].isel(node=node_indices)
 
-    # For each timestep, compute mean of nodal values for each cell
-    for t in range(n_times):
-        # Get the node indices for this timestep (subtract 1 to convert from 1-based to 0-based indexing)
-        node_indices = ds.nv[t].values - 1  # Shape will be (3, n_faces)
+    # Average the three nodes to get the cell center value
+    zeta_center = zeta_at_nodes.mean(dim="face_node_index")
 
-        # Get nodal values for this timestep
-        node_values = ds.zeta[t].values
-
-        # For each face, get its three node values and average them
-        # We need to transpose node_indices to get shape (n_faces, 3)
-        face_node_values = node_values[node_indices.T]  # Shape: (n_faces, 3)
-        cell_values[t] = np.mean(face_node_values, axis=1)
-
-    # Add interpolated values to dataset
-    ds["zeta_center"] = xr.DataArray(
-        cell_values,
-        dims=["time", "cell"],
-        coords={"time": ds.zeta.time, "cell": np.arange(n_faces)},
-    )
-
-    # Copy and modify attributes from original zeta variable
-    ds.zeta_center.attrs = {
+    # Add the proper attributes
+    zeta_center.attrs = {
+        # 'long_name': 'Water Surface Elevation at Cell Centers',
+        # 'units': 'm',
+        # 'positive': 'up',
+        # 'standard_name': 'sea_surface_height_above_geoid',
+        # 'grid': 'Bathymetry_Mesh',
+        # 'type': 'data',
+        # 'location': 'face',
+        # 'coverage_content_type': 'modelResult'
         **ds.zeta.attrs,
         "long_name": "Sea Surface Height at Cell Centers",
         "coordinates": "time cell",
@@ -387,6 +450,9 @@ def calculate_zeta_center(ds):
         "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
         "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
     }
+
+    # Add the new variable to the dataset
+    ds["zeta_center"] = zeta_center
 
     return ds
 
