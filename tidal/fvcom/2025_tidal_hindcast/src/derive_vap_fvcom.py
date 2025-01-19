@@ -415,53 +415,46 @@ def calculate_zeta_center(ds, max_node_difference=0.1):
     ValueError
         If node indexing is unexpected or if node differences exceed threshold
     """
-    # Fortran (FVCOM language) uses one based indexing
-    # To find the centers in Python/xArray we need to convert to zero based indexes
 
     # Verify the indexing and convert if needed
     nv_min = ds["nv"].min().item()
     if nv_min == 1:  # Confirms 1-based indexing
         # Convert from 1-based to 0-based indexing
-        # Use numpy to handle the transpose and reshape
-        # node_indices = ds["nv"].values.transpose(
-        #     2, 1, 0
-        # )  # (face, face_node_index, time)
-        # node_indices = node_indices - 1  # Convert to 0-based indexing
-        node_indices = ds["nv"].values.T - nv_min  # Shape: (nele, 3)
-        print(node_indices.shape)
-        print(node_indices[:5])
+        node_indices = ds["nv"].values.T - nv_min  # Shape: (nele, 3, time)
     else:
         raise ValueError(
             f"Unexpected minimum node index in nv: {nv_min}. Expected 1 for FVCOM 1-based indexing."
         )
 
-    # Select zeta values for each node of each face
-    # Using .isel() with the connectivity array performs the indirect indexing
-    zeta_at_nodes = ds["zeta"].isel(node=node_indices)
+    # Get zeta values as numpy array
+    zeta_values = ds["zeta"].values  # Shape: (time, node)
+
+    # Create array to store zeta values for each node of each face
+    # Reshape zeta to (1, time, node) for broadcasting
+    zeta_reshaped = zeta_values.reshape(zeta_values.shape[0], 1, -1)
+
+    # Use advanced indexing to get values for each node
+    # node_indices shape: (nele, 3, time)
+    # We want final shape: (time, nele, 3)
+    zeta_at_nodes = np.take_along_axis(
+        zeta_reshaped,
+        node_indices.transpose(2, 0, 1),  # Transpose to (time, nele, 3)
+        axis=2,
+    )
 
     # Validate node-to-node differences within each cell
     # Calculate pairwise differences between nodes
-    diff_01 = abs(
-        zeta_at_nodes.isel(face_node_index=0) - zeta_at_nodes.isel(face_node_index=1)
-    )
-    diff_12 = abs(
-        zeta_at_nodes.isel(face_node_index=1) - zeta_at_nodes.isel(face_node_index=2)
-    )
-    diff_20 = abs(
-        zeta_at_nodes.isel(face_node_index=2) - zeta_at_nodes.isel(face_node_index=0)
-    )
+    diff_01 = np.abs(zeta_at_nodes[..., 0] - zeta_at_nodes[..., 1])
+    diff_12 = np.abs(zeta_at_nodes[..., 1] - zeta_at_nodes[..., 2])
+    diff_20 = np.abs(zeta_at_nodes[..., 2] - zeta_at_nodes[..., 0])
 
     # Find maximum difference for each cell
-    max_diff = xr.concat([diff_01, diff_12, diff_20], dim="pair").max(dim="pair")
+    max_diff = np.maximum.reduce([diff_01, diff_12, diff_20])
 
-    # Identify problematic cells
-    problem_cells = max_diff > max_node_difference
-    if problem_cells.any():
-        # Get the number of problematic cells and the maximum difference found
-        n_problems = problem_cells.sum().item()
-        max_found = max_diff.max().item()
-
-        # Create warning message with details
+    # Check for problems
+    if np.any(max_diff > max_node_difference):
+        n_problems = np.sum(max_diff > max_node_difference)
+        max_found = np.max(max_diff)
         raise ValueError(
             f"Found {n_problems} cells with node-to-node elevation differences "
             f"exceeding {max_node_difference}m threshold. Maximum difference "
@@ -470,27 +463,31 @@ def calculate_zeta_center(ds, max_node_difference=0.1):
         )
 
     # Average the three nodes to get the cell center value
-    zeta_center = zeta_at_nodes.mean(dim="face_node_index")
+    zeta_center_values = np.mean(zeta_at_nodes, axis=2)  # Shape: (time, nele)
 
-    # Add the proper attributes
-    zeta_center.attrs = {
-        **ds.zeta.attrs,
-        "long_name": "Sea Surface Height at Cell Centers",
-        "coordinates": "time cell",
-        "mesh": "cell_centered",
-        "interpolation": (
-            "Computed by averaging the surface elevation values from the three "
-            "nodes that define each triangular cell using the node-to-cell "
-            "connectivity array (nv)."
-        ),
-        "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
-        "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
-        "validation_threshold": f"Maximum allowed node-to-node difference: {max_node_difference}m",
-    }
+    # Create new DataArray with same dimensions as h_center
+    zeta_center = xr.DataArray(
+        zeta_center_values,
+        dims=ds.h_center.dims,
+        coords=ds.h_center.coords,
+        attrs={
+            **ds.zeta.attrs,
+            "long_name": "Sea Surface Height at Cell Centers",
+            "coordinates": "time cell",
+            "mesh": "cell_centered",
+            "interpolation": (
+                "Computed by averaging the surface elevation values from the three "
+                "nodes that define each triangular cell using the node-to-cell "
+                "connectivity array (nv)."
+            ),
+            "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
+            "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
+            "validation_threshold": f"Maximum allowed node-to-node difference: {max_node_difference}m",
+        },
+    )
 
     # Add the new variable to the dataset
     ds["zeta_center"] = zeta_center
-
     return ds
 
 
