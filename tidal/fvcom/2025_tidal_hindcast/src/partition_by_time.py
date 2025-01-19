@@ -105,7 +105,7 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
             output_path = Path(output_dir, f"{count:03d}.{data_level_file_name}")
 
             print(f"Saving partition file: {output_path}...")
-            combined_ds.to_netcdf(output_path)
+            combined_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
             partition_files.append(output_path)
             print(f"Saved partition file: {output_path}!")
 

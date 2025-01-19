@@ -3,6 +3,13 @@ config = {
         "name": "tidal_hindcast_fvcom",
         "version": "0.1.0",
         "issue_date": "2025-02-01",
+        "encoding": {
+            "time": {
+                "units": "seconds since 1970-01-01",
+                "calendar": "proleptic_gregorian",
+                "dtype": "int64",
+            }
+        },
     },
     "code": {
         "version": "0.1.0",
