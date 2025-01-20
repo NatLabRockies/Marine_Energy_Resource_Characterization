@@ -397,6 +397,8 @@ def calculate_zeta_center(ds):
     nv = ds.nv[0]  # Shape: (3, 392002)
     # FVCOM is FORTRAN based and indexes start at 1
     # Convert indexes to python convention
+    # nv = nv - 1
+    nv = ds.nv
     nv = nv - 1
 
     # Reshape zeta to prepare for the operation
