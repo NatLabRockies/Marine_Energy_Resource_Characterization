@@ -392,7 +392,7 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
 #     return ds
 
 
-def compute_zeta_center(ds):
+def calculate_zeta_center(ds):
     # Get static connectivity array from first time step
     nv = ds.nv[0]  # Shape: (3, 392002)
 
