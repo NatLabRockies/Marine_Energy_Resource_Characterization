@@ -395,6 +395,9 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
 def calculate_zeta_center(ds):
     # Get static connectivity array from first time step
     nv = ds.nv[0]  # Shape: (3, 392002)
+    # FVCOM is FORTRAN based and indexes start at 1
+    # Convert indexes to python convention
+    nv = nv - 1
 
     # Reshape zeta to prepare for the operation
     # This creates a (time, 3, face) array where each face has its 3 node values
