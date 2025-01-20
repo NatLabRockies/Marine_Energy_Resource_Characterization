@@ -751,8 +751,8 @@ def calculate_vertical_average(ds, variable_name):
     # Calculate vertical average and standard deviation
     vert_avg_name = f"{variable_name}_vert_avg"
 
-    ds[vert_avg_name] = ds[variable_name].mean(dim="sigma")
-    vert_std = ds[variable_name].std(dim="sigma")
+    ds[vert_avg_name] = ds[variable_name].mean(dim="sigma_layer")
+    vert_std = ds[variable_name].std(dim="sigma_layer")
 
     # Copy and modify attributes for averaged variable
     # Start with original attributes but remove standard_name if it exists
