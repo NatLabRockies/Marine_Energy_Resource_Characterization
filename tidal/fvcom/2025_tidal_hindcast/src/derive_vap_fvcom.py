@@ -427,7 +427,9 @@ def calculate_zeta_center(ds):
         }
     )
 
-    return zeta_center
+    ds["zeta_center"] = zeta_center
+
+    return ds
 
 
 # def calculate_zeta_center(ds, max_node_difference=0.1):
