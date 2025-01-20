@@ -623,11 +623,14 @@ def calculate_depth(ds):
     """
     validate_depth_inputs(ds)
 
-    if "sigma_level" not in ds:
+    if "sigma_layer" not in ds:
         raise KeyError("Dataset must contain 'sigma_level' coordinates")
 
+    # Extract one sigma layer
+    sigma_layer = ds.sigma_layer.T.values[0]
+
     # Calculate depth at each sigma level
-    ds["depth"] = -(ds.h_center + ds.zeta_center) * ds.sigma_level[0]
+    ds["depth"] = -(ds.h_center + ds.zeta_center) * sigma_layer
 
     # Add CF-compliant metadata
     ds.depth.attrs = {
