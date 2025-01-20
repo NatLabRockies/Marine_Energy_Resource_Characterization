@@ -630,7 +630,19 @@ def calculate_depth(ds):
     sigma_layer = ds.sigma_layer.T.values[0]
 
     # Calculate depth at each sigma level
-    ds["depth"] = -(ds.h_center + ds.zeta_center) * sigma_layer
+    # ds["depth"] = -(ds.h_center + ds.zeta_center) * sigma_layer
+
+    # Reshape sigma to (1, sigma_layer, 1) for proper broadcasting
+    sigma_3d = sigma_layer.reshape(1, -1, 1)
+
+    # Calculate total water depth (h + zeta) and reshape
+    total_depth = ds.h_center + ds.zeta_center  # Shape (time, face)
+    total_depth_3d = total_depth.expand_dims(
+        dim={"sigma_layer": len(sigma_layer)}, axis=1
+    )
+
+    # Calculate depth
+    ds["depth"] = -(total_depth_3d * sigma_3d)
 
     # Add CF-compliant metadata
     ds.depth.attrs = {
