@@ -393,8 +393,6 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
 
 
 def calculate_zeta_center(ds):
-    # Get static connectivity array from first time step
-    nv = ds.nv[0]  # Shape: (3, 392002)
     # FVCOM is FORTRAN based and indexes start at 1
     # Convert indexes to python convention
     # nv = nv - 1
@@ -406,28 +404,43 @@ def calculate_zeta_center(ds):
     zeta_at_nodes = ds.zeta.isel(node=nv)  # Should have shape (672, 3, 392002)
     print(zeta_at_nodes.shape)
 
+    print("Computing zeta_center from zeta...")
     # Average along the node dimension (axis=1)
     zeta_center = zeta_at_nodes.mean(dim="face_node_index")
 
+    print("Finished computing zeta_center!")
     # Add coordinates and attributes
     zeta_center = zeta_center.assign_coords(
         lon_center=ds.lon_center, lat_center=ds.lat_center
     )
 
     # Add attributes
-    zeta_center.attrs.update(
-        {
-            "long_name": "Water Surface Elevation at Cell Centers",
-            "units": "m",
-            "positive": "up",
-            "standard_name": "sea_surface_height_above_geoid",
-            "grid": "Bathymetry_Mesh",
-            "location": "face",
-            "coverage_content_type": "modelResult",
-        }
-    )
+    zeta_center.attrs = {
+        **ds.zeta.attrs,
+        "long_name": "Sea Surface Height at Cell Centers",
+        "coordinates": "time cell",
+        "mesh": "cell_centered",
+        "interpolation": (
+            "Computed by averaging the surface elevation values from the three "
+            "nodes that define each triangular cell using the node-to-cell "
+            "connectivity array (nv)."
+        ),
+        "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
+        "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
+        # "units": "m",
+        # "positive": "up",
+        # "standard_name": "sea_surface_height_above_geoid",
+        # "grid": "Bathymetry_Mesh",
+        # "location": "face",
+        # "coverage_content_type": "modelResult",
+    }
 
     ds["zeta_center"] = zeta_center
+
+    print(ds.zeta_center)
+    print("Max: ", ds.zeta_center.max())
+    print("Min: ", ds.zeta_center.min())
+    print("Mean: ", ds.zeta_center.mean())
 
     return ds
 
