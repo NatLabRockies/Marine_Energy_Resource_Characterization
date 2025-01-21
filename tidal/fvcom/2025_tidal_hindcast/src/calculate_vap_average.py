@@ -1,0 +1,139 @@
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import xarray as xr
+
+from . import attrs_manager, file_manager, file_name_convention_manager
+
+
+def verify_timestamps(nc_files, expected_timestamps, expected_delta_t_seconds):
+    """Verify timestamp integrity across all files before processing."""
+
+    total_timestamps = 0
+    last_timestamp = None
+    expected_diff = pd.Timedelta(seconds=expected_delta_t_seconds)
+
+    for nc_file in nc_files:
+        # Open dataset with minimal loading
+        ds = xr.open_dataset(nc_file, decode_times=True)
+        times = ds.time.values
+
+        # Check count
+        total_timestamps += len(times)
+
+        # Check spacing within file
+        time_diffs = pd.Series(times).diff()
+        if not all(time_diffs[1:] == expected_diff):
+            raise ValueError(f"Irregular timestamp spacing in {nc_file}")
+
+        # Check continuity between files
+        if last_timestamp is not None:
+            gap = pd.Timestamp(times[0]) - last_timestamp
+            if gap != expected_diff:
+                raise ValueError(f"Gap between files: {nc_file}")
+
+        last_timestamp = pd.Timestamp(times[-1])
+        ds.close()
+
+    if total_timestamps != expected_timestamps:
+        raise ValueError(
+            f"Expected {expected_timestamps} timestamps, found {total_timestamps}"
+        )
+
+    return True
+
+
+def calculate_vap_average(config, location):
+    """
+    Calculate average values across VAP NC files using rolling computation.
+
+    Args:
+        config: Configuration dictionary
+        location: Location dictionary containing site-specific parameters
+    """
+    vap_path = file_manager.get_vap_output_dir(config, location)
+    vap_nc_files = sorted(list(vap_path.rglob("*.nc")))
+
+    if len(vap_nc_files) < 12:
+        raise ValueError(
+            f"Expecting at least 12 files in {vap_path}, found {len(vap_nc_files)}: {vap_nc_files}"
+        )
+
+    # Typical year has 365 days
+    seconds_per_year = 365 * 24 * 60 * 60
+    expected_timestamps = int(seconds_per_year / location["expected_delta_t_seconds"])
+
+    print("Verifying timestamps across all files...")
+    verify_timestamps(
+        vap_nc_files, expected_timestamps, location["expected_delta_t_seconds"]
+    )
+
+    # Initialize running sums using the first file as template
+    print(f"Starting averaging of {len(vap_nc_files)} vap files...")
+    running_sum = None
+    total_times = 0
+    source_files = []
+
+    # Process each file
+    for i, nc_file in enumerate(vap_nc_files):
+        print(f"Processing File {i}: {nc_file}")
+        ds = xr.open_dataset(nc_file)
+
+        # Initialize running sum if needed
+        if running_sum is None:
+            # Drop time dimension and initialize with zeros
+            running_sum = ds.isel(time=0).copy(deep=True)
+            for var in running_sum.data_vars:
+                if "time" in ds[var].dims:
+                    running_sum[var].values.fill(0)
+
+        # Update running sum for each variable
+        for var in ds.data_vars:
+            if "time" in ds[var].dims:
+                # Sum along time dimension for this file
+                running_sum[var] += ds[var].sum(dim="time")
+
+        total_times += len(ds.time)
+        source_files.append(str(nc_file))
+        ds.close()
+
+    # Calculate final average
+    print("Computing final average...")
+    for var in running_sum.data_vars:
+        running_sum[var] = running_sum[var] / total_times
+
+    # Set up output dataset
+    averaged_ds = running_sum
+
+    # Generate output filename
+    data_level_file_name = (
+        file_name_convention_manager.generate_filename_for_data_level(
+            averaged_ds,
+            location["output_name"],
+            config["dataset"]["name"],
+            "b2",
+            temporal="1_year_average",
+        )
+    )
+
+    # Add standard attributes
+    averaged_ds = attrs_manager.standardize_dataset_global_attrs(
+        averaged_ds,
+        config,
+        location,
+        "b2",
+        source_files,
+    )
+
+    output_path = Path(
+        file_manager.get_vap_output_dir(config, location),
+        f"001.{data_level_file_name}",
+    )
+    print(f"\tSaving to {output_path}...")
+
+    averaged_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+
+    averaged_ds.close()
+
+    return output_path
