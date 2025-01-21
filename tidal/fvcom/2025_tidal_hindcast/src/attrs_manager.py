@@ -413,18 +413,86 @@ def validate_attribute_changes(
     KeyError
         If new_attrs contains keys that don't exist and aren't in allowed_changing_keys
     """
+    # Define the geospatial bounds attributes that need tolerance checking
+    geospatial_bounds_attrs = {
+        "geospatial_lat_max",
+        "geospatial_lat_min",
+        "geospatial_lon_max",
+        "geospatial_lon_min",
+    }
+
     current_attrs = ds.attrs
-    # Find keys that are changing
     changing_keys = []
+
     for key, new_value in new_attrs.items():
-        # If key exists and value is different, or key doesn't exist
         if key in current_attrs:
-            # Special case for geospatial attributes that can be converted to float
-            if "geospatial" in key.lower():
+            # Special case for geospatial bounds attributes
+            if key in geospatial_bounds_attrs:
                 try:
                     old_val = float(current_attrs[key])
                     new_val = float(new_value)
-                    # Use tolerance comparison for geospatial float values
+                    difference = abs(old_val - new_val)
+                    if difference > geospatial_degree_tolerance:
+                        if key in allowed_changing_keys:
+                            error_msg = (
+                                f"Geospatial bounds attribute '{key}' change exceeds tolerance:\n"
+                                f"  Existing value: {old_val}\n"
+                                f"  New value: {new_val}\n"
+                                f"  Difference: {difference}\n"
+                                f"  Maximum allowed difference: {geospatial_degree_tolerance}"
+                            )
+                            raise ValueError(error_msg)
+                        changing_keys.append(key)
+                    continue
+                except (ValueError, TypeError):
+                    pass
+
+            # Special case for geospatial_bounds (POLYGON string)
+            elif key == "geospatial_bounds":
+                try:
+                    # Extract coordinates from the POLYGON string
+                    def extract_coords(polygon_str):
+                        coords_str = polygon_str.split("((")[1].split("))")[0]
+                        coords_pairs = coords_str.split(",")
+                        coords = []
+                        for pair in coords_pairs:
+                            lon, lat = map(float, pair.strip().split())
+                            coords.append((lon, lat))
+                        return coords
+
+                    old_coords = extract_coords(current_attrs[key])
+                    new_coords = extract_coords(new_value)
+
+                    # Check if coordinates are within tolerance
+                    if len(old_coords) != len(new_coords):
+                        changing_keys.append(key)
+                    else:
+                        for (old_lon, old_lat), (new_lon, new_lat) in zip(
+                            old_coords, new_coords
+                        ):
+                            if (
+                                abs(old_lon - new_lon) > geospatial_degree_tolerance
+                                or abs(old_lat - new_lat) > geospatial_degree_tolerance
+                            ):
+                                if key in allowed_changing_keys:
+                                    error_msg = (
+                                        f"Geospatial bounds POLYGON coordinates change exceeds tolerance:\n"
+                                        f"  Old coordinates: {old_coords}\n"
+                                        f"  New coordinates: {new_coords}\n"
+                                        f"  Maximum allowed difference: {geospatial_degree_tolerance}"
+                                    )
+                                    raise ValueError(error_msg)
+                                changing_keys.append(key)
+                                break
+                    continue
+                except (ValueError, TypeError, IndexError):
+                    pass
+
+            # General case for other geospatial attributes
+            elif "geospatial" in key.lower():
+                try:
+                    old_val = float(current_attrs[key])
+                    new_val = float(new_value)
                     difference = abs(old_val - new_val)
                     if difference > geospatial_degree_tolerance:
                         if key in allowed_changing_keys:
@@ -439,10 +507,9 @@ def validate_attribute_changes(
                         changing_keys.append(key)
                     continue
                 except (ValueError, TypeError):
-                    # If conversion to float fails, fall through to normal comparison
                     pass
 
-            # Normal comparison for non-geospatial or non-float attributes
+            # Normal comparison for non-geospatial attributes
             if current_attrs[key] != new_value:
                 changing_keys.append(key)
         else:
