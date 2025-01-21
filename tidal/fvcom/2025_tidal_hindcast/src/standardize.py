@@ -593,6 +593,13 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
 
     time_df = valid_timestamps_df.copy()
 
+    spec_start_date = pd.to_datetime(
+        config["location_specification"][location_key]["start_date_utc"]
+    )
+    spec_end_date = pd.to_datetime(
+        config["location_specification"][location_key]["end_date_utc"]
+    )
+
     time_manager.does_time_match_specification(
         time_df["timestamp"], location["expected_delta_t_seconds"]
     )
@@ -643,13 +650,6 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             )
 
         # Now proceed with timezone-naive timestamps for filtering
-        spec_start_date = pd.to_datetime(
-            config["location_specification"][location_key]["start_date_utc"]
-        )
-        spec_end_date = pd.to_datetime(
-            config["location_specification"][location_key]["end_date_utc"]
-        )
-
         output_ds = output_ds.sel(time=slice(spec_start_date, spec_end_date))
 
         if len(output_ds.time) == 0:
@@ -681,6 +681,13 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         output_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
         print(f"Saving standardized dataframe to {output_path}...")
         count += 1
+
+    # time_df has a timestamp column, to filter the output the need a time index
+    time_df["time"] = pd.to_datetime(time_df["timestamp"]).dt.tz_localize(None)
+    time_df["time"] = time_df["time"].tz_convert(None)
+    time_df = time_df.set_index("time")
+
+    time_df = time_df.loc[spec_start_date:spec_end_date]
 
     time_df["std_files"] = [str(f) for f in std_files]
 
