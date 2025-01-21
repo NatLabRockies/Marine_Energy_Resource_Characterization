@@ -821,7 +821,7 @@ def derive_vap(config, location_key):
             file_name_convention_manager.generate_filename_for_data_level(
                 this_ds,
                 location["output_name"],
-                config["dataset_name"],
+                config["dataset"]["name"],
                 "b1",
                 temporal=temporal_string,
             )
