@@ -385,10 +385,11 @@ def compute_vertical_attributes(ds):
     return vertical_attrs
 
 
-def validate_attribute_changes(ds, new_attrs, allowed_changing_keys):
+def validate_attribute_changes(
+    ds, new_attrs, allowed_changing_keys, geospatial_degree_tolerance=0.0001
+):
     """
     Validate that only allowed global attributes are being changed in the dataset.
-
     Parameters:
     -----------
     ds : xarray.Dataset
@@ -397,26 +398,51 @@ def validate_attribute_changes(ds, new_attrs, allowed_changing_keys):
         Dictionary of new attributes to be added/updated
     allowed_changing_keys : list
         List of attribute names that are allowed to change
-
+    geospatial_degree_tolerance : float, optional
+        Tolerance for comparing geospatial attributes that can be converted to floats.
+        Default is 0.0001 degrees.
     Returns:
     --------
     bool
         True if all changes are valid
-
     Raises:
     -------
     ValueError
-        If attributes that are not in allowed_changing_keys are being modified
+        If attributes that are not in allowed_changing_keys are being modified,
+        or if geospatial attributes differ by more than the tolerance
     KeyError
         If new_attrs contains keys that don't exist and aren't in allowed_changing_keys
     """
     current_attrs = ds.attrs
-
     # Find keys that are changing
     changing_keys = []
     for key, new_value in new_attrs.items():
         # If key exists and value is different, or key doesn't exist
         if key in current_attrs:
+            # Special case for geospatial attributes that can be converted to float
+            if "geospatial" in key.lower():
+                try:
+                    old_val = float(current_attrs[key])
+                    new_val = float(new_value)
+                    # Use tolerance comparison for geospatial float values
+                    difference = abs(old_val - new_val)
+                    if difference > geospatial_degree_tolerance:
+                        if key in allowed_changing_keys:
+                            error_msg = (
+                                f"Geospatial attribute '{key}' change exceeds tolerance:\n"
+                                f"  Existing value: {old_val}\n"
+                                f"  New value: {new_val}\n"
+                                f"  Difference: {difference}\n"
+                                f"  Maximum allowed difference: {geospatial_degree_tolerance}"
+                            )
+                            raise ValueError(error_msg)
+                        changing_keys.append(key)
+                    continue
+                except (ValueError, TypeError):
+                    # If conversion to float fails, fall through to normal comparison
+                    pass
+
+            # Normal comparison for non-geospatial or non-float attributes
             if current_attrs[key] != new_value:
                 changing_keys.append(key)
         else:
@@ -425,14 +451,12 @@ def validate_attribute_changes(ds, new_attrs, allowed_changing_keys):
 
     # Find unauthorized changes
     unauthorized_changes = set(changing_keys) - set(allowed_changing_keys)
-
     if unauthorized_changes:
         error_msg = (
             f"Attempting to modify restricted attributes: {sorted(unauthorized_changes)}\n"
             f"Only these attributes can be modified: {sorted(allowed_changing_keys)}"
         )
         raise ValueError(error_msg)
-
     return True
 
 
