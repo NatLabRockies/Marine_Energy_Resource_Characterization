@@ -832,7 +832,7 @@ def derive_vap(config, location_key):
             config,
             location,
             "b1",
-            str(nc_file),
+            [str(nc_file)],
         )
 
         output_path = Path(
