@@ -851,7 +851,7 @@ def derive_vap(config, location_key):
         )
 
         print(f"\tSaving to {output_path}...")
-        this_ds.to_netcdf(output_path)
+        this_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
 
         this_ds.close()
         gc.collect()
