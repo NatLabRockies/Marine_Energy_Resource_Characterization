@@ -114,6 +114,10 @@ def calculate_vap_average(config, location):
     # Set up output dataset
     averaged_ds = running_sum
 
+    print(averaged_ds.info())
+
+    print(averaged_ds.time)
+
     # Generate output filename
     data_level_file_name = (
         file_name_convention_manager.generate_filename_for_data_level(
