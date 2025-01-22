@@ -782,7 +782,7 @@ def derive_vap(config, location_key):
 
     existing_vap_nc_files = sorted(list(vap_output_dir.rglob("*.nc")))
 
-    if len(existing_vap_nc_files) < 12:
+    if len(existing_vap_nc_files) >= 12:
         print(
             f"Found {len(existing_vap_nc_files)} files in {vap_output_dir}. Skipping derive vap!"
         )
