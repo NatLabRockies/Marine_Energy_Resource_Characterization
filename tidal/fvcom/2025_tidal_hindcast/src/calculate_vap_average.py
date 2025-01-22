@@ -129,7 +129,7 @@ def calculate_vap_average(config, location):
     )
 
     output_path = Path(
-        file_manager.get_vap_output_dir(config, location),
+        file_manager.get_summary_vap_output_dir(config, location),
         f"001.{data_level_file_name}",
     )
     print(f"\tSaving to {output_path}...")
