@@ -76,6 +76,7 @@ def calculate_vap_average(config, location):
     total_times = 0
     source_files = []
     first_timestamp = None
+    time_attrs = None  # Store time attributes
 
     # Process each file
     for i, nc_file in enumerate(vap_nc_files):
@@ -86,6 +87,7 @@ def calculate_vap_average(config, location):
         if running_sum is None:
             running_sum = ds.isel(time=0).copy(deep=True)
             first_timestamp = ds.time.isel(time=0).values
+            time_attrs = ds.time.attrs.copy()  # Save time attributes
             # Only initialize variables that need averaging
             for var in running_sum.data_vars:
                 if "time" in ds[var].dims:
@@ -108,8 +110,9 @@ def calculate_vap_average(config, location):
         if isinstance(running_sum[var].values, (np.ndarray, np.generic)):
             running_sum[var] = running_sum[var] / total_times
 
-    # Restore the first timestamp
-    running_sum["time"] = first_timestamp
+    # Restore the time coordinate with its attributes
+    running_sum = running_sum.assign_coords(time=("time", [first_timestamp]))
+    running_sum["time"].attrs = time_attrs  # Restore time attributes
 
     # Set up output dataset
     averaged_ds = running_sum
