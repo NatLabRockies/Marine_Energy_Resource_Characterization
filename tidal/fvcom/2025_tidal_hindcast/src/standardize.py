@@ -684,7 +684,6 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
 
     # time_df has a timestamp column, to filter the output the need a time index
     time_df["time"] = pd.to_datetime(time_df["timestamp"]).dt.tz_localize(None)
-    time_df["time"] = time_df["time"].tz_convert(None)
     time_df = time_df.set_index("time")
 
     time_df = time_df.loc[spec_start_date:spec_end_date]
