@@ -52,6 +52,8 @@ def calculate_vap_average(config, location):
         config: Configuration dictionary
         location: Location dictionary containing site-specific parameters
     """
+    location = config["location_specification"][location]
+
     vap_path = file_manager.get_vap_output_dir(config, location)
     vap_nc_files = sorted(list(vap_path.rglob("*.nc")))
 
