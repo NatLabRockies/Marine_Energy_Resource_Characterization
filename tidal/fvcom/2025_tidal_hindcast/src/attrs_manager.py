@@ -956,6 +956,7 @@ def standardize_dataset_global_attrs(
             "processing_level",
             # Surface elevation, `zeta`, changes for each dataset resulting in a change to this attribute
             "geospatial_vertical_min",
+            "geospatial_vertical_max",
         ]
 
         # Raise an error if there are unexpected attribute changes
