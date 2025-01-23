@@ -145,7 +145,7 @@ class FVCOMStandardizer:
 
         return ds
 
-    def add_vertical_coordinate_attrs(self, ds):
+    def _add_vertical_coordinate_attrs(self, ds):
         """Add vertical coordinate attributes following UGRID conventions."""
         if not hasattr(ds, "sigma_layer"):
             raise AttributeError("Dataset missing required 'sigma_layer' coordinate")
