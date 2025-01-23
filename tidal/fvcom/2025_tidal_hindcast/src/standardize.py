@@ -145,33 +145,37 @@ class FVCOMStandardizer:
 
         return ds
 
-    def _add_vertical_coordinate_attrs(self, ds):
+    def add_vertical_coordinate_attrs(self, ds):
         """Add vertical coordinate attributes following UGRID conventions."""
-        if "sigma_layer" in ds:
-            ds.sigma_layer.attrs.update(
-                {
-                    "standard_name": "ocean_sigma/general_coordinate",
-                    "long_name": "Sigma Layer",
-                    "positive": "up",
-                    "valid_min": -1.0,
-                    "valid_max": 0.0,
-                    "formula_terms": "sigma: sigma_layer eta: zeta depth: h",
-                    "mesh": "mesh",
-                }
-            )
+        if not hasattr(ds, "sigma_layer"):
+            raise AttributeError("Dataset missing required 'sigma_layer' coordinate")
 
-        if "sigma_level" in ds:
-            ds.sigma_level.attrs.update(
-                {
-                    "standard_name": "ocean_sigma/general_coordinate",
-                    "long_name": "Sigma Level",
-                    "positive": "up",
-                    "valid_min": -1.0,
-                    "valid_max": 0.0,
-                    "formula_terms": "sigma: sigma_level eta: zeta depth: h",
-                    "mesh": "mesh",
-                }
-            )
+        if not hasattr(ds, "sigma_level"):
+            raise AttributeError("Dataset missing required 'sigma_level' coordinate")
+
+        ds.sigma_layer.attrs.update(
+            {
+                "standard_name": "ocean_sigma/general_coordinate",
+                "long_name": "Sigma Layer",
+                "positive": "up",
+                "valid_min": -1.0,
+                "valid_max": 0.0,
+                "formula_terms": "sigma: sigma_layer eta: zeta depth: h",
+                "mesh": "mesh",
+            }
+        )
+
+        ds.sigma_level.attrs.update(
+            {
+                "standard_name": "ocean_sigma/general_coordinate",
+                "long_name": "Sigma Level",
+                "positive": "up",
+                "valid_min": -1.0,
+                "valid_max": 0.0,
+                "formula_terms": "sigma: sigma_level eta: zeta depth: h",
+                "mesh": "mesh",
+            }
+        )
 
         return ds
 
