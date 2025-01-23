@@ -452,7 +452,8 @@ config = {
             "coordinates": {"system": "latitude/longitude"},
             "description": "",
             "summary": "",
-            "partition_frequency": "M",  # Monthly, Roughly 73GB per file
+            # "partition_frequency": "M",  # Monthly, Roughly 73GB per file, out of memory in partition step
+            "partition_frequency": "W",  # Weekly, Roughly ? per file
         },
         "cook_inlet": {
             "output_name": "AK_cook_inlet",
