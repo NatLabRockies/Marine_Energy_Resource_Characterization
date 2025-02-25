@@ -476,7 +476,7 @@ def calculate_element_volumes(ds):
     return ds
 
 
-def calculate_volume_energy_flux(ds, config=None):
+def calculate_volume_energy_flux(ds):
     """
     Calculate energy flux in each element volume.
 
