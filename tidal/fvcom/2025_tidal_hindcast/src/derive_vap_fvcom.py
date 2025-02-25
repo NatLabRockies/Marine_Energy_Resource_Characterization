@@ -351,7 +351,8 @@ def calculate_element_areas(ds):
 
     for i in range(n_face):
         # Get the three nodes of this element
-        n1, n2, n3 = nv[:, i]
+        print(nv.shape)
+        n1, n2, n3 = nv[i, :]
 
         # Convert to radians
         lat1, lon1 = lat_node[n1] * DEG_TO_RAD, lon_node[n1] * DEG_TO_RAD
