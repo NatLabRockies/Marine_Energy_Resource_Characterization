@@ -417,7 +417,10 @@ def calculate_element_volumes(ds):
     zeta_center = ds.zeta_center.values  # Surface elevation at element centers
 
     # Get node indices for each element (face)
-    nv = ds.nv.values - 1  # Convert to 0-based indexing if needed
+    # Get the first timestamp node values
+    nv = ds.nv.values[0, :, :]
+    nv = nv - 1  # Convert to 0-based indexing if needed
+    # nv = ds.nv.values - 1  # Convert to 0-based indexing if needed
 
     # Get sigma layer and level values
     # In FVCOM, sigma_layer represents mid-points and sigma_level represents interfaces
