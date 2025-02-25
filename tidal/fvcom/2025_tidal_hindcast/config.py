@@ -513,7 +513,8 @@ config = {
             "coordinates": {"system": "utm", "zone": 10},
             "description": "",
             "summary": "",
-            "partition_frequency": "D",  # Weekly
+            # "partition_frequency": "D",  # Weekly, out of memory at vap step
+            "partition_frequency": "D",  # Daily
         },
         "western_passage": {
             "output_name": "ME_western_passage",
