@@ -333,7 +333,9 @@ def calculate_element_areas(ds):
         Array of element areas in square meters
     """
     # Get the node indices for each face
-    nv = ds.nv.values - 1  # Convert to 0-based indexing if needed
+    # Get single time nv, this should not change
+    nv = ds.nv.values[0, :, :]
+    nv = nv - 1  # Convert to 0-based indexing if needed
 
     # Get node coordinates
     lon_node = ds.lon_node.values
