@@ -318,6 +318,466 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
     return ds
 
 
+def calculate_element_areas(ds):
+    """
+    Calculate the areas of triangular elements in an FVCOM mesh.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        FVCOM dataset containing mesh information
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of element areas in square meters
+    """
+    # Get the node indices for each face
+    nv = ds.nv.values - 1  # Convert to 0-based indexing if needed
+
+    # Get node coordinates
+    lon_node = ds.lon_node.values
+    lat_node = ds.lat_node.values
+
+    # Constants for Earth calculations
+    R_EARTH = 6371000  # Earth radius in meters
+    DEG_TO_RAD = np.pi / 180
+
+    # Initialize the areas array
+    n_face = len(ds.face)
+    element_areas = np.zeros(n_face)
+
+    for i in range(n_face):
+        # Get the three nodes of this element
+        n1, n2, n3 = nv[:, i]
+
+        # Convert to radians
+        lat1, lon1 = lat_node[n1] * DEG_TO_RAD, lon_node[n1] * DEG_TO_RAD
+        lat2, lon2 = lat_node[n2] * DEG_TO_RAD, lon_node[n2] * DEG_TO_RAD
+        lat3, lon3 = lat_node[n3] * DEG_TO_RAD, lon_node[n3] * DEG_TO_RAD
+
+        # Convert to cartesian coordinates
+        x1 = R_EARTH * np.cos(lat1) * np.cos(lon1)
+        y1 = R_EARTH * np.cos(lat1) * np.sin(lon1)
+        z1 = R_EARTH * np.sin(lat1)
+
+        x2 = R_EARTH * np.cos(lat2) * np.cos(lon2)
+        y2 = R_EARTH * np.cos(lat2) * np.sin(lon2)
+        z2 = R_EARTH * np.sin(lat2)
+
+        x3 = R_EARTH * np.cos(lat3) * np.cos(lon3)
+        y3 = R_EARTH * np.cos(lat3) * np.sin(lon3)
+        z3 = R_EARTH * np.sin(lat3)
+
+        # Vectors for two sides of the triangle
+        v1 = np.array([x2 - x1, y2 - y1, z2 - z1])
+        v2 = np.array([x3 - x1, y3 - y1, z3 - z1])
+
+        # Cross product for area
+        cross = np.cross(v1, v2)
+        area = 0.5 * np.sqrt(np.sum(cross**2))
+        element_areas[i] = area
+
+    return element_areas
+
+
+def calculate_element_volumes(ds):
+    """
+    Calculate volumes for each element at each time step and sigma layer using
+    actual sigma layer and level information from the dataset.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        FVCOM dataset containing bathymetry, surface elevation, and mesh information
+    config : dict, optional
+        Configuration dictionary
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'element_volume' variable
+    """
+    # Calculate element areas
+    element_areas = calculate_element_areas(ds)
+
+    # Get dimensions
+    n_time = len(ds.time)
+    n_sigma_layer = len(ds.sigma_layer)
+    n_face = len(ds.face)
+    n_node = len(ds.node)
+
+    # Initialize volume array
+    element_volumes = np.zeros((n_time, n_sigma_layer, n_face))
+
+    # Get bathymetry and sea surface height
+    h_center = ds.h_center.values  # Bathymetry at element centers
+    zeta_center = ds.zeta_center.values  # Surface elevation at element centers
+
+    # Get node indices for each element (face)
+    nv = ds.nv.values - 1  # Convert to 0-based indexing if needed
+
+    # Get sigma layer and level values
+    # In FVCOM, sigma_layer represents mid-points and sigma_level represents interfaces
+    sigma_layer_values = ds.sigma_layer.values  # Shape: (n_sigma_layer, n_node)
+    sigma_level_values = ds.sigma_level.values  # Shape: (n_sigma_level, n_node)
+
+    # Calculate layer thicknesses at nodes
+    # Layer thickness is the difference between adjacent sigma levels
+    layer_thickness_at_nodes = np.zeros((n_sigma_layer, n_node))
+    for layer in range(n_sigma_layer):
+        # Note: sigma coordinates are negative (0 at surface, -1 at bottom)
+        # so the thickness is the absolute difference
+        layer_thickness_at_nodes[layer, :] = np.abs(
+            sigma_level_values[layer + 1, :] - sigma_level_values[layer, :]
+        )
+
+    # Calculate element volumes for each time step and layer
+    for t in range(n_time):
+        # Total water depth at this time step (bathymetry + surface elevation)
+        total_depth = np.abs(h_center[t]) + zeta_center[t]
+
+        for layer in range(n_sigma_layer):
+            for face in range(n_face):
+                # Get nodes for this element
+                node1, node2, node3 = nv[:, face]
+
+                # Get layer thickness at each node of this element
+                thickness1 = layer_thickness_at_nodes[layer, node1]
+                thickness2 = layer_thickness_at_nodes[layer, node2]
+                thickness3 = layer_thickness_at_nodes[layer, node3]
+
+                # Average layer thickness for this element
+                avg_layer_thickness = (thickness1 + thickness2 + thickness3) / 3.0
+
+                # Layer thickness as a fraction of total water depth
+                layer_thickness_meters = total_depth[face] * avg_layer_thickness
+
+                # Volume = area * thickness
+                element_volumes[t, layer, face] = (
+                    element_areas[face] * layer_thickness_meters
+                )
+
+    # Add element volumes to dataset
+    ds["element_volume"] = xr.DataArray(
+        element_volumes,
+        dims=["time", "sigma_layer", "face"],
+        attrs={
+            "long_name": "Element Volume",
+            "standard_name": "volume_of_water_per_element",
+            "units": "m^3",
+            "description": "Volume of each triangular element at each time step and sigma layer",
+            "methodology": "Calculated as element area multiplied by layer thickness",
+            "computation": "element_volume = element_area * (total_water_depth * sigma_layer_thickness)",
+            "input_variables": "h_center: bathymetry (m), zeta_center: surface elevation (m), sigma_layer: sigma coordinate",
+        },
+    )
+
+    return ds
+
+
+def calculate_volume_energy_flux(ds, config=None):
+    """
+    Calculate energy flux in each element volume.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        FVCOM dataset containing 'speed' and 'element_volume'
+    config : dict, optional
+        Configuration dictionary
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'volume_energy_flux' variable
+    """
+    if "speed" not in ds:
+        raise KeyError(
+            "Dataset must contain 'speed'. Please calculate sea water speed first."
+        )
+
+    if "element_volume" not in ds:
+        raise KeyError(
+            "Dataset must contain 'element_volume'. Please calculate element volumes first."
+        )
+
+    # Energy flux = power density * volume
+    # Power density is already calculated as 0.5 * rho * speed^3
+    volume_energy_flux = ds.power_density * ds.element_volume
+
+    # Add volume energy flux to dataset
+    ds["volume_energy_flux"] = volume_energy_flux
+
+    # Add metadata
+    ds.volume_energy_flux.attrs = {
+        "long_name": "Volume Energy Flux",
+        "units": "W",
+        "description": "Energy flux in each element volume",
+        "methodology": "Calculated as power density multiplied by element volume",
+        "computation": "volume_energy_flux = power_density * element_volume",
+        "input_variables": "power_density: sea water power density (W/m^2), element_volume: volume of water per element (m^3)",
+    }
+
+    return ds
+
+
+def calculate_vertical_avg_energy_flux(ds, config=None):
+    """
+    Calculate vertically averaged energy flux.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        FVCOM dataset containing 'volume_energy_flux' and 'element_volume'
+    config : dict, optional
+        Configuration dictionary
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'vertical_avg_energy_flux' variable
+    """
+    if "volume_energy_flux" not in ds:
+        raise KeyError(
+            "Dataset must contain 'volume_energy_flux'. Please calculate volume energy flux first."
+        )
+
+    if "element_volume" not in ds:
+        raise KeyError(
+            "Dataset must contain 'element_volume'. Please calculate element volumes first."
+        )
+
+    # Sum energy flux and volume over all sigma layers
+    total_energy_flux = ds.volume_energy_flux.sum(dim="sigma_layer")
+    total_volume = ds.element_volume.sum(dim="sigma_layer")
+
+    # Calculate vertical average energy flux
+    vertical_avg_energy_flux = total_energy_flux / total_volume
+
+    # Add vertical average energy flux to dataset
+    ds["vertical_avg_energy_flux"] = vertical_avg_energy_flux
+
+    # Add metadata
+    ds.vertical_avg_energy_flux.attrs = {
+        "long_name": "Vertical Average Energy Flux",
+        "units": "W/m^3",
+        "description": "Energy flux averaged over the water column",
+        "methodology": "Calculated as sum of energy flux over all sigma layers divided by sum of volumes",
+        "computation": 'vertical_avg_energy_flux = sum(volume_energy_flux, dim="sigma_layer") / sum(element_volume, dim="sigma_layer")',
+        "input_variables": "volume_energy_flux: energy flux in each element volume (W), element_volume: volume of water per element (m^3)",
+    }
+
+    return ds
+
+
+def calculate_volume_avg_energy_flux(ds, config=None):
+    """
+    Calculate volume-weighted average energy flux across the entire domain.
+
+    This function computes the total energy flux in the entire domain divided by
+    the total volume, providing a single value for each time step that represents
+    the volume-weighted average energy flux across all elements.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        FVCOM dataset containing 'volume_energy_flux' and 'element_volume'
+    config : dict, optional
+        Configuration dictionary
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'volume_avg_energy_flux' variable
+    """
+    if "volume_energy_flux" not in ds:
+        raise KeyError(
+            "Dataset must contain 'volume_energy_flux'. Please calculate volume energy flux first."
+        )
+
+    if "element_volume" not in ds:
+        raise KeyError(
+            "Dataset must contain 'element_volume'. Please calculate element volumes first."
+        )
+
+    # Sum energy flux and volume over all elements and sigma layers
+    total_energy_flux = ds.volume_energy_flux.sum(dim=["sigma_layer", "face"])
+    total_volume = ds.element_volume.sum(dim=["sigma_layer", "face"])
+
+    # Calculate volume average energy flux
+    volume_avg_energy_flux = total_energy_flux / total_volume
+
+    # Add volume average energy flux to dataset
+    ds["volume_avg_energy_flux"] = volume_avg_energy_flux
+
+    # Add metadata
+    ds.volume_avg_energy_flux.attrs = {
+        "long_name": "Volume Average Energy Flux",
+        "units": "W/m^3",
+        "description": "Energy flux averaged over the entire domain volume",
+        "methodology": "Calculated as sum of energy flux over all elements and sigma layers divided by total volume",
+        "computation": 'volume_avg_energy_flux = sum(volume_energy_flux, dim=["sigma_layer", "face"]) / sum(element_volume, dim=["sigma_layer", "face"])',
+        "input_variables": "volume_energy_flux: energy flux in each element volume (W), element_volume: volume of water per element (m^3)",
+    }
+
+    return ds
+
+
+def calculate_column_volume_avg_energy_flux(ds, config=None):
+    """
+    Calculate volume-weighted average energy flux for each vertical column (face).
+
+    This function computes the volume-weighted average of energy flux across the entire
+    water column for each face, providing a single value per face that better handles
+    outliers compared to simple averages of speed.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        FVCOM dataset containing 'volume_energy_flux' and 'element_volume'
+    config : dict, optional
+        Configuration dictionary
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'column_volume_avg_energy_flux' variable
+    """
+    if "volume_energy_flux" not in ds:
+        raise KeyError(
+            "Dataset must contain 'volume_energy_flux'. Please calculate volume energy flux first."
+        )
+
+    if "element_volume" not in ds:
+        raise KeyError(
+            "Dataset must contain 'element_volume'. Please calculate element volumes first."
+        )
+
+    # Sum energy flux and volume over sigma layers for each face
+    # This gives us the total energy flux and total volume for each vertical column
+    total_energy_flux_per_column = ds.volume_energy_flux.sum(dim="sigma_layer")
+    total_volume_per_column = ds.element_volume.sum(dim="sigma_layer")
+
+    # Calculate volume-weighted average energy flux for each column
+    column_volume_avg_energy_flux = (
+        total_energy_flux_per_column / total_volume_per_column
+    )
+
+    # Add to dataset
+    ds["column_volume_avg_energy_flux"] = column_volume_avg_energy_flux
+
+    # Add metadata
+    ds.column_volume_avg_energy_flux.attrs = {
+        "long_name": "Column Volume-Weighted Average Energy Flux",
+        "units": "W/m^3",
+        "description": "Volume-weighted average energy flux for each vertical water column",
+        "methodology": "Calculated as sum of energy flux over all sigma layers divided by sum of volumes for each face",
+        "computation": 'column_volume_avg_energy_flux = sum(volume_energy_flux, dim="sigma_layer") / sum(element_volume, dim="sigma_layer")',
+        "input_variables": "volume_energy_flux: energy flux in each element volume (W), element_volume: volume of water per element (m^3)",
+        "visualization_purpose": "Provides a spatially-distributed metric of energy flux suitable for mapping, accounting for variable water depths and reducing the impact of outliers compared to simple speed averages",
+    }
+
+    return ds
+
+
+def calculate_robust_column_energy_flux(ds, config=None, percentile=95):
+    """
+    Calculate a robust metric of energy flux for mapping that reduces the influence of outliers.
+
+    This function computes a percentile-based energy flux for each vertical column,
+    providing a metric that is less sensitive to extreme values than mean or maximum
+    while still representing the high-energy parts of the water column.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        FVCOM dataset containing 'power_density' and 'element_volume'
+    config : dict, optional
+        Configuration dictionary
+    percentile : float, optional
+        Percentile to use for the calculation (default: 95)
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'robust_column_energy_flux' variable
+    """
+    if "power_density" not in ds:
+        raise KeyError(
+            "Dataset must contain 'power_density'. Please calculate sea water power density first."
+        )
+
+    if "element_volume" not in ds:
+        raise KeyError(
+            "Dataset must contain 'element_volume'. Please calculate element volumes first."
+        )
+
+    # Get dimensions for computation
+    n_time = len(ds.time)
+    n_face = len(ds.face)
+
+    # Initialize output array
+    robust_energy_flux = np.zeros((n_time, n_face))
+
+    # For each time step and face, calculate the volume-weighted percentile
+    for t in range(n_time):
+        for f in range(n_face):
+            # Extract power density and volume for this column
+            power_density_column = ds.power_density[t, :, f].values
+            volume_column = ds.element_volume[t, :, f].values
+
+            # Sort by power density
+            sort_idx = np.argsort(power_density_column)
+            sorted_power = power_density_column[sort_idx]
+            sorted_volume = volume_column[sort_idx]
+
+            # Calculate cumulative volume fraction
+            cum_volume = np.cumsum(sorted_volume)
+            total_volume = cum_volume[-1]
+            volume_fraction = cum_volume / total_volume
+
+            # Find the power density at the specified percentile
+            # Use linear interpolation to find the exact percentile
+            percentile_fraction = percentile / 100.0
+
+            if percentile_fraction <= volume_fraction[0]:
+                # Handle edge case where percentile is below first value
+                robust_energy_flux[t, f] = sorted_power[0]
+            elif percentile_fraction >= volume_fraction[-1]:
+                # Handle edge case where percentile is above last value
+                robust_energy_flux[t, f] = sorted_power[-1]
+            else:
+                # Find the two points to interpolate between
+                idx = np.searchsorted(volume_fraction, percentile_fraction)
+                v0, v1 = volume_fraction[idx - 1], volume_fraction[idx]
+                p0, p1 = sorted_power[idx - 1], sorted_power[idx]
+
+                # Linear interpolation
+                interp_factor = (percentile_fraction - v0) / (v1 - v0)
+                robust_energy_flux[t, f] = p0 + interp_factor * (p1 - p0)
+
+    # Add to dataset
+    ds["robust_column_energy_flux"] = xr.DataArray(
+        robust_energy_flux,
+        dims=["time", "face"],
+        coords={"time": ds.time, "face": ds.face},
+    )
+
+    # Add metadata
+    ds.robust_column_energy_flux.attrs = {
+        "long_name": f"Volume-Weighted {percentile}th Percentile Energy Flux",
+        "units": "W/m^2",
+        "description": f"Volume-weighted {percentile}th percentile of power density in each vertical column",
+        "methodology": f"Calculated as the volume-weighted {percentile}th percentile of power density values in each vertical column",
+        "computation": "Calculated using volume-weighted percentile of power density values for each face",
+        "input_variables": "power_density: sea water power density (W/m^2), element_volume: volume of water per element (m^3)",
+        "visualization_purpose": "Provides a robust metric for mapping energy flux that reduces the influence of outliers while still representing high-energy regions",
+    }
+
+    return ds
+
+
 #
 # def calculate_zeta_center(ds):
 #     """
