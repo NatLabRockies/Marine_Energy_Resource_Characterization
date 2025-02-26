@@ -872,20 +872,15 @@ def calculate_robust_column_energy_flux(ds, config=None, percentile=95):
 def calculate_zeta_center(ds):
     # FVCOM is FORTRAN based and indexes start at 1
     # Convert indexes to python convention
-    # nv = nv - 1
-    nv = ds.nv
-    nv = nv - 1
+    nv = ds.nv - 1
 
     # Reshape zeta to prepare for the operation
     # This creates a (time, 3, face) array where each face has its 3 node values
     zeta_at_nodes = ds.zeta.isel(node=nv)  # Should have shape (672, 3, 392002)
-    print(zeta_at_nodes.shape)
 
-    print("Computing zeta_center from zeta...")
     # Average along the node dimension (axis=1)
     zeta_center = zeta_at_nodes.mean(dim="face_node_index")
 
-    print("Finished computing zeta_center!")
     # Add coordinates and attributes
     zeta_center = zeta_center.assign_coords(
         lon_center=ds.lon_center, lat_center=ds.lat_center
@@ -904,20 +899,9 @@ def calculate_zeta_center(ds):
         ),
         "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
         "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
-        # "units": "m",
-        # "positive": "up",
-        # "standard_name": "sea_surface_height_above_geoid",
-        # "grid": "Bathymetry_Mesh",
-        # "location": "face",
-        # "coverage_content_type": "modelResult",
     }
 
     ds["zeta_center"] = zeta_center
-
-    print(ds.zeta_center)
-    print("Max: ", ds.zeta_center.max())
-    print("Min: ", ds.zeta_center.min())
-    print("Mean: ", ds.zeta_center.mean())
 
     return ds
 
