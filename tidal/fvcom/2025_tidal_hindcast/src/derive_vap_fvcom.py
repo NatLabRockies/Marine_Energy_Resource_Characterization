@@ -388,7 +388,7 @@ def calculate_element_areas(ds):
     return element_areas
 
 
-def calculate_element_volumes_fully(ds):
+def calculate_element_volume(ds):
     """
     Calculate volumes for each element at each time step and sigma layer
 
@@ -1284,7 +1284,7 @@ def derive_vap(config, location_key):
         this_ds = calculate_sea_floor_depth(this_ds)
 
         print("\tCalculating element volumes...")
-        this_ds = calculate_element_volumes(this_ds)
+        this_ds = calculate_element_volume(this_ds)
 
         print("\tCalculating volume energy flux...")
         this_ds = calculate_volume_energy_flux(this_ds)
