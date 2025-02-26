@@ -320,7 +320,7 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
 
 def calculate_element_areas(ds):
     """
-    Calculate the areas of triangular elements in an FVCOM mesh.
+    Calculate the areas of triangular elements in an FVCOM mesh
 
     Parameters
     ----------
@@ -332,10 +332,8 @@ def calculate_element_areas(ds):
     numpy.ndarray
         Array of element areas in square meters
     """
-    # Get the node indices for each face
-    # Get single time nv, this should not change
-    nv = ds.nv.values[0, :, :]
-    nv = nv - 1  # Convert to 0-based indexing if needed
+    # Get the node indices for each face - first time index only
+    nv = ds.nv.values[0, :, :] - 1  # Convert to 0-based indexing
 
     # Get node coordinates
     lon_node = ds.lon_node.values
@@ -345,55 +343,59 @@ def calculate_element_areas(ds):
     R_EARTH = 6371000  # Earth radius in meters
     DEG_TO_RAD = np.pi / 180
 
-    # Initialize the areas array
-    n_face = len(ds.face)
-    element_areas = np.zeros(n_face)
+    # Convert all nodes to radians
+    lat_rad = lat_node * DEG_TO_RAD
+    lon_rad = lon_node * DEG_TO_RAD
 
-    for i in range(n_face):
-        # Get the three nodes of this element
-        n1, n2, n3 = nv[:, i]
+    # Convert all nodes to cartesian coordinates
+    x = R_EARTH * np.cos(lat_rad) * np.cos(lon_rad)
+    y = R_EARTH * np.cos(lat_rad) * np.sin(lon_rad)
+    z = R_EARTH * np.sin(lat_rad)
 
-        # Convert to radians
-        lat1, lon1 = lat_node[n1] * DEG_TO_RAD, lon_node[n1] * DEG_TO_RAD
-        lat2, lon2 = lat_node[n2] * DEG_TO_RAD, lon_node[n2] * DEG_TO_RAD
-        lat3, lon3 = lat_node[n3] * DEG_TO_RAD, lon_node[n3] * DEG_TO_RAD
+    # Get coordinates for each node of each triangle
+    # Using advanced indexing to extract the coordinates for all triangles at once
+    x1 = x[nv[0, :]]
+    y1 = y[nv[0, :]]
+    z1 = z[nv[0, :]]
 
-        # Convert to cartesian coordinates
-        x1 = R_EARTH * np.cos(lat1) * np.cos(lon1)
-        y1 = R_EARTH * np.cos(lat1) * np.sin(lon1)
-        z1 = R_EARTH * np.sin(lat1)
+    x2 = x[nv[1, :]]
+    y2 = y[nv[1, :]]
+    z2 = z[nv[1, :]]
 
-        x2 = R_EARTH * np.cos(lat2) * np.cos(lon2)
-        y2 = R_EARTH * np.cos(lat2) * np.sin(lon2)
-        z2 = R_EARTH * np.sin(lat2)
+    x3 = x[nv[2, :]]
+    y3 = y[nv[2, :]]
+    z3 = z[nv[2, :]]
 
-        x3 = R_EARTH * np.cos(lat3) * np.cos(lon3)
-        y3 = R_EARTH * np.cos(lat3) * np.sin(lon3)
-        z3 = R_EARTH * np.sin(lat3)
+    # Calculate vectors for sides of triangles (vectorized)
+    # First vector: from point 1 to point 2
+    v1x = x2 - x1
+    v1y = y2 - y1
+    v1z = z2 - z1
 
-        # Vectors for two sides of the triangle
-        v1 = np.array([x2 - x1, y2 - y1, z2 - z1])
-        v2 = np.array([x3 - x1, y3 - y1, z3 - z1])
+    # Second vector: from point 1 to point 3
+    v2x = x3 - x1
+    v2y = y3 - y1
+    v2z = z3 - z1
 
-        # Cross product for area
-        cross = np.cross(v1, v2)
-        area = 0.5 * np.sqrt(np.sum(cross**2))
-        element_areas[i] = area
+    # Cross product components (vectorized)
+    crossx = v1y * v2z - v1z * v2y
+    crossy = v1z * v2x - v1x * v2z
+    crossz = v1x * v2y - v1y * v2x
+
+    # Calculate area using magnitude of cross product
+    element_areas = 0.5 * np.sqrt(crossx**2 + crossy**2 + crossz**2)
 
     return element_areas
 
 
-def calculate_element_volumes(ds):
+def calculate_element_volumes_fully(ds):
     """
-    Calculate volumes for each element at each time step and sigma layer using
-    actual sigma layer and level information from the dataset.
+    Calculate volumes for each element at each time step and sigma layer
 
     Parameters
     ----------
     ds : xarray.Dataset
         FVCOM dataset containing bathymetry, surface elevation, and mesh information
-    config : dict, optional
-        Configuration dictionary
 
     Returns
     -------
@@ -407,61 +409,71 @@ def calculate_element_volumes(ds):
     n_time = len(ds.time)
     n_sigma_layer = len(ds.sigma_layer)
     n_face = len(ds.face)
-    n_node = len(ds.node)
-
-    # Initialize volume array
-    element_volumes = np.zeros((n_time, n_sigma_layer, n_face))
 
     # Get bathymetry and sea surface height
     h_center = ds.h_center.values  # Bathymetry at element centers
     zeta_center = ds.zeta_center.values  # Surface elevation at element centers
 
-    # Get node indices for each element (face)
-    # Get the first timestamp node values
-    nv = ds.nv.values[0, :, :]
-    nv = nv - 1  # Convert to 0-based indexing if needed
-    # nv = ds.nv.values - 1  # Convert to 0-based indexing if needed
+    # Get node indices for each element (face) - first time index only
+    nv = ds.nv.values[0, :, :] - 1  # Convert to 0-based indexing
 
     # Get sigma layer and level values
-    # In FVCOM, sigma_layer represents mid-points and sigma_level represents interfaces
     sigma_layer_values = ds.sigma_layer.values  # Shape: (n_sigma_layer, n_node)
     sigma_level_values = ds.sigma_level.values  # Shape: (n_sigma_level, n_node)
 
-    # Calculate layer thicknesses at nodes
+    # Calculate layer thicknesses at nodes (vectorized)
     # Layer thickness is the difference between adjacent sigma levels
-    layer_thickness_at_nodes = np.zeros((n_sigma_layer, n_node))
-    for layer in range(n_sigma_layer):
-        # Note: sigma coordinates are negative (0 at surface, -1 at bottom)
-        # so the thickness is the absolute difference
-        layer_thickness_at_nodes[layer, :] = np.abs(
-            sigma_level_values[layer + 1, :] - sigma_level_values[layer, :]
-        )
+    layer_thickness_at_nodes = np.abs(
+        sigma_level_values[1 : n_sigma_layer + 1, :]
+        - sigma_level_values[:n_sigma_layer, :]
+    )
 
-    # Calculate element volumes for each time step and layer
-    for t in range(n_time):
-        # Total water depth at this time step (bathymetry + surface elevation)
-        total_depth = np.abs(h_center[t]) + zeta_center[t]
+    # Create indices arrays for advanced indexing
+    # We need to get the thickness at each of the three nodes for each face, for each layer
 
-        for layer in range(n_sigma_layer):
-            for face in range(n_face):
-                # Get nodes for this element
-                node1, node2, node3 = nv[:, face]
+    # Create a 3D array where each slice represents one layer
+    # and contains the node indices for all faces
+    layer_indices = np.zeros((n_sigma_layer, 3, n_face), dtype=int)
+    for i in range(3):
+        layer_indices[:, i, :] = nv[i, :]
 
-                # Get layer thickness at each node of this element
-                thickness1 = layer_thickness_at_nodes[layer, node1]
-                thickness2 = layer_thickness_at_nodes[layer, node2]
-                thickness3 = layer_thickness_at_nodes[layer, node3]
+    # Create a meshgrid for the sigma layers
+    layer_mesh = np.arange(n_sigma_layer)[:, np.newaxis, np.newaxis]
+    layer_mesh = np.broadcast_to(layer_mesh, (n_sigma_layer, 3, n_face))
 
-                # Average layer thickness for this element
-                avg_layer_thickness = (thickness1 + thickness2 + thickness3) / 3.0
+    # Get all layer thicknesses for all nodes of all elements in one operation
+    # This will be shape (n_sigma_layer, 3, n_face)
+    all_node_thicknesses = layer_thickness_at_nodes[layer_mesh, layer_indices]
 
-                # Layer thickness as a fraction of total water depth
-                layer_thickness_meters = total_depth[face] * avg_layer_thickness
+    # Average the thickness of the three nodes for each element and each layer
+    # Result shape: (n_sigma_layer, n_face)
+    element_thickness_fraction = np.mean(all_node_thicknesses, axis=1)
 
-                # Volume = area * thickness
-                element_volumes[t, layer, face] = (
-                    element_areas[face] * layer_thickness_meters
-                )
+    # Calculate total water depth at each time step
+    # Shape: (n_time, n_face)
+    total_depth = np.abs(h_center) + zeta_center
+
+    # Reshape arrays for broadcasting
+    # element_areas: (n_face) -> (1, n_sigma_layer, n_face)
+    element_areas_broadcast = element_areas.reshape(1, 1, n_face).repeat(
+        n_sigma_layer, axis=1
+    )
+
+    # total_depth: (n_time, n_face) -> (n_time, 1, n_face)
+    total_depth_broadcast = total_depth.reshape(n_time, 1, n_face)
+
+    # element_thickness_fraction: (n_sigma_layer, n_face) -> (1, n_sigma_layer, n_face)
+    element_thickness_fraction_broadcast = element_thickness_fraction.reshape(
+        1, n_sigma_layer, n_face
+    )
+
+    # Calculate all volumes in a single vectorized operation
+    # element_volumes shape: (n_time, n_sigma_layer, n_face)
+    element_volumes = (
+        element_areas_broadcast
+        * total_depth_broadcast
+        * element_thickness_fraction_broadcast
+    )
 
     # Add element volumes to dataset
     ds["element_volume"] = xr.DataArray(
@@ -472,8 +484,8 @@ def calculate_element_volumes(ds):
             "standard_name": "volume_of_water_per_element",
             "units": "m^3",
             "description": "Volume of each triangular element at each time step and sigma layer",
-            "methodology": "Calculated as element area multiplied by layer thickness",
-            "computation": "element_volume = element_area * (total_water_depth * sigma_layer_thickness)",
+            "methodology": "Calculated as element area multiplied by layer thickness using fully vectorized operations",
+            "computation": "element_volume = element_area * total_water_depth * sigma_layer_thickness",
             "input_variables": "h_center: bathymetry (m), zeta_center: surface elevation (m), sigma_layer: sigma coordinate",
         },
     )
@@ -1274,23 +1286,20 @@ def derive_vap(config, location_key):
         print("\tCalculating element volumes...")
         this_ds = calculate_element_volumes(this_ds)
 
-        print("\tCalculating element volumes...")
-        this_ds = calculate_element_volumes(this_ds)
-
         print("\tCalculating volume energy flux...")
         this_ds = calculate_volume_energy_flux(this_ds)
 
         print("\tCalculating vertical avg energy flux...")
         this_ds = calculate_vertical_avg_energy_flux(this_ds)
 
-        print("\tCalculating volume avg energy flux...")
-        this_ds = calculate_volume_avg_energy_flux(this_ds)
+        # print("\tCalculating volume avg energy flux...")
+        # this_ds = calculate_volume_avg_energy_flux(this_ds)
 
         print("\tCalculating column avg energy flux...")
         this_ds = calculate_column_volume_avg_energy_flux(this_ds)
 
-        print("\tCalculating robust column avg energy flux...")
-        this_ds = calculate_robust_column_energy_flux(this_ds)
+        # print("\tCalculating robust column avg energy flux...")
+        # this_ds = calculate_robust_column_energy_flux(this_ds)
 
         print("\tCalculating u vertical average")
         this_ds = calculate_vertical_average(this_ds, "u")
