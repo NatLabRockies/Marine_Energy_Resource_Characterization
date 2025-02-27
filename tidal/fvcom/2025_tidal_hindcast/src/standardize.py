@@ -681,7 +681,7 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             file_manager.get_standardized_output_dir(config, location),
             f"{count:03d}.{data_level_file_name}",
         )
-        std_files.extend([output_path] * len(this_df))
+        std_files.extend([output_path] * len(output_ds.time))
         output_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
         print(f"Saving standardized dataframe to {output_path}...")
         count += 1
