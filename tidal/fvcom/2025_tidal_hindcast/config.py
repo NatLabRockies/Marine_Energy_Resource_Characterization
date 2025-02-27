@@ -529,7 +529,7 @@ config = {
             "end_date_utc": "2017-12-31 23:30:00",
             "expected_delta_t_seconds": 1800,  # 30 min
             "temporal_resolution": "half-hourly",
-            "coordinates": {"system": "utm", "zone": 10},
+            "coordinates": {"system": "utm", "zone": 19},
             "title": "Western Passage High Fidelity Tidal Hindcast",
             "description": "",
             "summary": "",
