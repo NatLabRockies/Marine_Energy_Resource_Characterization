@@ -2,8 +2,11 @@ import gc
 
 from pathlib import Path
 
+import dask
 import numpy as np
 import xarray as xr
+
+from dask.diagnostics import ProgressBar
 
 from . import attrs_manager, file_manager, file_name_convention_manager
 
@@ -727,7 +730,6 @@ def calculate_zeta_center(ds):
     return ds
 
 
-
 def validate_depth_inputs(ds):
     """
     Validate required variables for depth calculations in an xarray Dataset.
@@ -1063,9 +1065,20 @@ def derive_vap(config, location_key):
         )
         return
 
+    # Set xarray to preserve attributes during operations
+    xr.set_options(keep_attrs=True)
+
     for count, nc_file in enumerate(std_partition_nc_files, start=1):
         print(f"Calculating vap for {nc_file}")
-        this_ds = xr.open_dataset(nc_file)
+
+        # Simple chunking with specific dimensions for time and face
+        # Process full time dimension, but chunk the large face dimension
+        chunks = {
+            "time": "auto",  # Process all timesteps together
+            "face": "auto",  # Let dask automatically determine chunk size for face
+        }
+
+        this_ds = xr.open_dataset(nc_file, chunks=chunks)
 
         print("\tCalculating speed...")
         this_ds = calculate_sea_water_speed(this_ds, config)
@@ -1084,6 +1097,7 @@ def derive_vap(config, location_key):
 
         print("\tCalculating depth...")
         this_ds = calculate_depth(this_ds)
+
         print("\tCalculating sea_floor_depth...")
         this_ds = calculate_sea_floor_depth(this_ds)
 
@@ -1166,7 +1180,11 @@ def derive_vap(config, location_key):
         )
 
         print(f"\tSaving to {output_path}...")
-        this_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
 
+        # Add progress bar for the computation phase
+        with ProgressBar():
+            this_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+
+        # Clean up to free memory
         this_ds.close()
         gc.collect()
