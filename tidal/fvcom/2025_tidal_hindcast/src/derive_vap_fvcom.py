@@ -1107,14 +1107,36 @@ def derive_vap(config, location_key):
 
         print("\tCalculating u vertical average")
         this_ds = calculate_vertical_average(this_ds, "u")
+
         print("\tCalculating v vertical average")
         this_ds = calculate_vertical_average(this_ds, "v")
+
         print("\tCalculating speed vertical average")
         this_ds = calculate_vertical_average(this_ds, "speed")
+
         print("\tCalculating from_direction vertical average")
         this_ds = calculate_vertical_average(this_ds, "from_direction")
+
         print("\tCalculating power_density vertical average")
         this_ds = calculate_vertical_average(this_ds, "power_density")
+
+        print("\tCalculating speed vertical median")
+        this_ds = calculate_vertical_median(this_ds, "speed")
+
+        print("\tCalculating power_density vertical median")
+        this_ds = calculate_vertical_median(this_ds, "power_density")
+
+        print("\tCalculating volume_energy_flux vertical median")
+        this_ds = calculate_vertical_median(this_ds, "volume_energy_flux")
+
+        print("\tCalculating speed vertical 95th_percentile")
+        this_ds = calculate_vertical_95th_percentile(this_ds, "speed")
+
+        print("\tCalculating power_density vertical 95th_percentile")
+        this_ds = calculate_vertical_95th_percentile(this_ds, "power_density")
+
+        print("\tCalculating volume_energy_flux vertical 95th_percentile")
+        this_ds = calculate_vertical_95th_percentile(this_ds, "volume_energy_flux")
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
         if expected_delta_t_seconds == 3600:
