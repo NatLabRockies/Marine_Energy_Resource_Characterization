@@ -566,7 +566,6 @@ def calculate_volume_energy_flux(ds):
         )
 
     # Energy flux = power density * volume
-    # Power density is already calculated as 0.5 * rho * speed^3
     volume_energy_flux = ds.power_density * ds.element_volume
 
     # Add volume energy flux to dataset
