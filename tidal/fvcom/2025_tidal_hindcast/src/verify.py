@@ -245,14 +245,7 @@ def model_specification_verifier(config, ds, filepath):
         except KeyError:
             raise KeyError(f"Required variable {var_name} missing in {filepath}")
 
-        # Check data type
-        # if str(var.dtype) != var_spec["dtype"]:
-        #     raise ValueError(
-        #         f"Variable {var_name} has dtype {var.dtype}, "
-        #         f"expected {var_spec['dtype']} in {filepath}"
-        #     )
-
-        # Check data type with precision compatibility
+        # Check data type with precision flexibility
         actual_dtype = str(var.dtype)
         expected_dtype = var_spec["dtype"]
         if expected_dtype.startswith("float"):
@@ -281,15 +274,6 @@ def model_specification_verifier(config, ds, filepath):
                 f"Variable {var_name} has dimensions {actual_dims}, "
                 f"expected {expected_dims} in {filepath}"
             )
-
-        # Check coordinates
-        # expected_coords = var_spec["coordinates"]
-        # actual_coords = list(var.coords)
-        # if sorted(actual_coords) != sorted(expected_coords):
-        #     raise ValueError(
-        #         f"Variable {var_name} has coordinates {actual_coords}, "
-        #         f"expected {expected_coords} in {filepath}"
-        #     )
 
         # Check that all expected coordinates are present in dataset but
         # explicitly allow "extra" coordinates
