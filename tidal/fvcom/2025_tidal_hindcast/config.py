@@ -395,6 +395,29 @@ config = {
                 "coverage_content_type": "modelResult",
             },
         },
+        "to_direction": {
+            "dtype": "float32",
+            "coordinates": ["lat_center", "lon_center", "time"],
+            "dimensions": ["time", "sigma_layer", "face"],
+            "attributes": {
+                "long_name": "Sea Water Velocity To Direction ",
+                "standard_name": "sea_water_velocity_to_direction",
+                "units": "degree",
+                "description": (
+                    "A velocity is a vector quantity. "
+                    "The phrase 'to_direction' indicates the direction toward which the "
+                    "velocity vector is pointing (the destination of flow). The direction is a bearing in the usual "
+                    "geographical sense, measured positive clockwise from true north."
+                ),
+                "valid_min": "0.0",
+                "valid_max": "360.0",
+                "grid": "fvcom_grid",
+                "type": "data",
+                "mesh": "fvcom_mesh",
+                "location": "face",
+                "coverage_content_type": "modelResult",
+            },
+        },
         "from_direction": {
             "dtype": "float32",
             "coordinates": ["lat_center", "lon_center", "time"],
@@ -405,9 +428,9 @@ config = {
                 "units": "degree",
                 "description": (
                     "A velocity is a vector quantity. "
-                    'The phrase "from_direction" indicates the direction from which the '
-                    "velocity vector is coming. The direction is a bearing in the usual "
-                    "geographical sense, measured positive clockwise from due north."
+                    "The phrase 'from_direction' indicates the direction from which the "
+                    "velocity vector is coming (the source of flow). The direction is a bearing in the usual "
+                    "geographical sense, measured positive clockwise from true north."
                 ),
                 "valid_min": "0.0",
                 "valid_max": "360.0",
