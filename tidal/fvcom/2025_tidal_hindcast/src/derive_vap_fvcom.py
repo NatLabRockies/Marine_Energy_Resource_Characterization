@@ -1,15 +1,83 @@
+import cProfile
 import gc
+import io
+import os
+import pstats
+import time
 
 from pathlib import Path
 
 import dask
 import dask.array as da
 import numpy as np
+import psutil
 import xarray as xr
 
 from dask.diagnostics import ProgressBar
 
 from . import attrs_manager, file_manager, file_name_convention_manager
+
+
+def get_memory_mb():
+    """Get current memory usage in MB"""
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss / (1024 * 1024)
+
+
+def profile_function(func):
+    """
+    Decorator to profile a function's execution time and memory usage.
+
+    Parameters
+    ----------
+    func : function
+        Function to profile
+
+    Returns
+    -------
+    function
+        Wrapper function that profiles execution
+    """
+
+    def wrapper(*args, **kwargs):
+        # Get memory before execution
+        mem_before = get_memory_mb()
+
+        # Set up profiler
+        profiler = cProfile.Profile()
+        profiler.enable()
+        start_time = time.time()
+
+        # Execute the function
+        result = func(*args, **kwargs)
+
+        # Get execution time
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
+        # Get memory after execution
+        mem_after = get_memory_mb()
+        mem_diff = mem_after - mem_before
+
+        # Disable profiler
+        profiler.disable()
+
+        # Print performance summary
+        print(f"\n### PROFILING: {func.__name__} ###")
+        print(f"Time: {elapsed_time:.2f} seconds")
+        print(f"Memory: {mem_before:.1f} MB → {mem_after:.1f} MB (Δ {mem_diff:.1f} MB)")
+
+        # Get detailed stats
+        s = io.StringIO()
+        ps = pstats.Stats(profiler, stream=s).sort_stats("cumulative")
+        ps.print_stats(20)  # Print top 20 functions by cumulative time
+
+        # Print formatted stats
+        print(s.getvalue())
+
+        return result
+
+    return wrapper
 
 
 def validate_u_and_v(ds):
@@ -679,19 +747,40 @@ def calculate_column_volume_avg_energy_flux(ds):
     return ds
 
 
+@profile_function
 def calculate_zeta_center(ds):
+    """
+    Calculate sea surface height at cell centers.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing zeta and nv variables
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added zeta_center variable
+    """
     # FVCOM is FORTRAN based and indexes start at 1
-    # Convert indexes to python convention
+    # Convert indexes to python convention and fully compute
+    print("\t\tComputing nv array...")
     nv = ds.nv.compute() - 1
 
-    # Reshape zeta to prepare for the operation
-    # This creates a (time, 3, face) array where each face has its 3 node values
-    zeta_at_nodes = ds.zeta.isel(node=nv)  # Should have shape (672, 3, 392002)
+    # Fully compute zeta array
+    print("\t\tComputing zeta array...")
+    zeta = ds.zeta.compute()
 
-    # Average along the node dimension (axis=1)
+    # Perform the indexing operation using computed arrays
+    print("\t\tPerforming indexing operation...")
+    zeta_at_nodes = zeta.isel(node=nv)
+
+    # Average along the node dimension
+    print("\t\tCalculating mean...")
     zeta_center = zeta_at_nodes.mean(dim="face_node_index")
 
     # Add coordinates and attributes
+    print("\t\tAdding coordinates...")
     zeta_center = zeta_center.assign_coords(
         lon_center=ds.lon_center, lat_center=ds.lat_center
     )
@@ -711,7 +800,13 @@ def calculate_zeta_center(ds):
         "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
     }
 
+    # Add to dataset
     ds["zeta_center"] = zeta_center
+
+    # Clear any cached computations to free memory
+    print("\t\tClearing cached data...")
+    zeta = None
+    zeta_at_nodes = None
 
     return ds
 
