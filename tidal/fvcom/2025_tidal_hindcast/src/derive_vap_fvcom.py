@@ -383,11 +383,10 @@ def calculate_element_areas(ds):
         Array of element areas in square meters
     """
     # Get the node indices for each face - first time index only
-    nv = ds.nv.values[0, :, :] - 1  # Convert to 0-based indexing
+    nv = ds.nv.isel(time=0).compute().values - 1  # Convert to 0-based indexing
 
-    # Get node coordinates
-    lon_node = ds.lon_node.values
-    lat_node = ds.lat_node.values
+    lon_node = ds.lon_node.compute().values
+    lat_node = ds.lat_node.compute().values
 
     # Constants for Earth calculations
     R_EARTH = 6371000  # Earth radius in meters
@@ -452,24 +451,21 @@ def calculate_element_volume(ds):
     xarray.Dataset
         Original dataset with added 'element_volume' variable
     """
-    # Calculate element areas
+    # Calculate element areas - these are constant for all time steps
     element_areas = calculate_element_areas(ds)
 
     # Get dimensions
-    n_time = len(ds.time)
+    # n_time = len(ds.time)
     n_sigma_layer = len(ds.sigma_layer)
     n_face = len(ds.face)
 
-    # Get bathymetry and sea surface height
-    h_center = ds.h_center.values  # Bathymetry at element centers
-    zeta_center = ds.zeta_center.values  # Surface elevation at element centers
-
     # Get node indices for each element (face) - first time index only
-    nv = ds.nv.values[0, :, :] - 1  # Convert to 0-based indexing
+    # Need to compute to avoid Dask indexing issues
+    nv = ds.nv.isel(time=0).compute().values - 1  # Convert to 0-based indexing
 
-    # Get sigma layer and level values
-    sigma_layer_values = ds.sigma_layer.values  # Shape: (n_sigma_layer, n_node)
-    sigma_level_values = ds.sigma_level.values  # Shape: (n_sigma_level, n_node)
+    # Get sigma layer and level values - these are usually small arrays
+    # sigma_layer_values = ds.sigma_layer.compute().values
+    sigma_level_values = ds.sigma_level.compute().values
 
     # Calculate layer thicknesses at nodes (vectorized)
     # Layer thickness is the difference between adjacent sigma levels
@@ -499,37 +495,26 @@ def calculate_element_volume(ds):
     # Result shape: (n_sigma_layer, n_face)
     element_thickness_fraction = np.mean(all_node_thicknesses, axis=1)
 
-    # Calculate total water depth at each time step
-    # Shape: (n_time, n_face)
-    total_depth = np.abs(h_center) + zeta_center
+    total_depth = abs(ds.h_center) + ds.zeta_center
 
-    # Reshape arrays for broadcasting
-    # element_areas: (n_face) -> (1, n_sigma_layer, n_face)
-    element_areas_broadcast = element_areas.reshape(1, 1, n_face).repeat(
-        n_sigma_layer, axis=1
+    # First create a DataArray for element_areas
+    element_areas_da = xr.DataArray(
+        element_areas, dims=["face"], coords={"face": ds.face}
     )
 
-    # total_depth: (n_time, n_face) -> (n_time, 1, n_face)
-    total_depth_broadcast = total_depth.reshape(n_time, 1, n_face)
-
-    # element_thickness_fraction: (n_sigma_layer, n_face) -> (1, n_sigma_layer, n_face)
-    element_thickness_fraction_broadcast = element_thickness_fraction.reshape(
-        1, n_sigma_layer, n_face
+    # Create a DataArray for element_thickness_fraction
+    element_thickness_da = xr.DataArray(
+        element_thickness_fraction,
+        dims=["sigma_layer", "face"],
+        coords={"sigma_layer": ds.sigma_layer, "face": ds.face},
     )
 
-    # Calculate all volumes in a single vectorized operation
-    # element_volumes shape: (n_time, n_sigma_layer, n_face)
-    element_volumes = (
-        element_areas_broadcast
-        * total_depth_broadcast
-        * element_thickness_fraction_broadcast
-    )
+    # Calculate volumes using xarray operations to maintain Dask arrays
+    element_volumes = element_areas_da * total_depth * element_thickness_da
 
     # Add element volumes to dataset
-    ds["element_volume"] = xr.DataArray(
-        element_volumes,
-        dims=["time", "sigma_layer", "face"],
-        attrs={
+    ds["element_volume"] = element_volumes.assign_attrs(
+        {
             "long_name": "Element Volume",
             "standard_name": "volume_of_water_per_element",
             "units": "m^3",
@@ -537,7 +522,7 @@ def calculate_element_volume(ds):
             "methodology": "Calculated as element area multiplied by layer thickness using fully vectorized operations",
             "computation": "element_volume = element_area * total_water_depth * sigma_layer_thickness",
             "input_variables": "h_center: bathymetry (m), zeta_center: surface elevation (m), sigma_layer: sigma coordinate",
-        },
+        }
     )
 
     return ds
@@ -697,7 +682,7 @@ def calculate_column_volume_avg_energy_flux(ds):
 def calculate_zeta_center(ds):
     # FVCOM is FORTRAN based and indexes start at 1
     # Convert indexes to python convention
-    nv = ds.nv - 1
+    nv = ds.nv.compute() - 1
 
     # Reshape zeta to prepare for the operation
     # This creates a (time, 3, face) array where each face has its 3 node values
@@ -814,7 +799,7 @@ def calculate_depth(ds):
         raise KeyError("Dataset must contain 'sigma_level' coordinates")
 
     # Extract one sigma layer
-    sigma_layer = ds.sigma_layer.T.values[0]
+    sigma_layer = ds.sigma_layer.compute().T.values[0]
 
     # Calculate depth at each sigma level
     # ds["depth"] = -(ds.h_center + ds.zeta_center) * sigma_layer
