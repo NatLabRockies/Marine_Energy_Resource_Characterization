@@ -113,6 +113,7 @@ def validate_u_and_v(ds):
         raise ValueError(f"Units mismatch: u: {u_units}, v: {v_units}")
 
 
+@profile_function
 def calculate_sea_water_speed(ds, config):
     """
     Calculate sea water speed from velocity components using vector magnitude.
@@ -169,6 +170,7 @@ def calculate_sea_water_speed(ds, config):
     return ds
 
 
+@profile_function
 def calculate_sea_water_to_direction(
     ds, config, direction_undefined_speed_threshold_ms=0.0
 ):
@@ -292,6 +294,7 @@ def calculate_sea_water_to_direction(
     return ds
 
 
+@profile_function
 def calculate_sea_water_from_direction(
     ds, config, direction_undefined_speed_threshold_ms=0.0
 ):
