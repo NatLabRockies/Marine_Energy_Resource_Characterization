@@ -1238,7 +1238,7 @@ def calculate_sea_floor_depth(ds):
 
 def calculate_vertical_average(ds, variable_name):
     """
-    Calculate vertical average for a given variable and include standard deviation in attributes.
+    Calculate vertical average for a given variable
 
     Parameters
     ----------
@@ -1259,7 +1259,6 @@ def calculate_vertical_average(ds, variable_name):
     vert_avg_name = f"{variable_name}_vert_avg"
 
     ds[vert_avg_name] = ds[variable_name].mean(dim="sigma_layer")
-    vert_std = ds[variable_name].std(dim="sigma_layer")
 
     # Copy and modify attributes for averaged variable
     # Start with original attributes but remove standard_name if it exists
@@ -1270,8 +1269,6 @@ def calculate_vertical_average(ds, variable_name):
         **attrs,
         "long_name": f"Vertically averaged {ds[variable_name].attrs.get('long_name', variable_name)}",
         "vertical_averaging": "Mean across sigma layers",
-        "vertical_std": float(vert_std.mean()),  # Average std across all points/times
-        "vertical_std_description": "Mean standard deviation across sigma layers",
     }
 
     return ds
