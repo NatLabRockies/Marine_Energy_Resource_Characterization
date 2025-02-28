@@ -1096,14 +1096,8 @@ def derive_vap(config, location_key):
         print("\tCalculating vertical avg energy flux...")
         this_ds = calculate_vertical_avg_energy_flux(this_ds)
 
-        # print("\tCalculating volume avg energy flux...")
-        # this_ds = calculate_volume_avg_energy_flux(this_ds)
-
         print("\tCalculating column avg energy flux...")
         this_ds = calculate_column_volume_avg_energy_flux(this_ds)
-
-        # print("\tCalculating robust column avg energy flux...")
-        # this_ds = calculate_robust_column_energy_flux(this_ds)
 
         print("\tCalculating u vertical average")
         this_ds = calculate_vertical_average(this_ds, "u")
