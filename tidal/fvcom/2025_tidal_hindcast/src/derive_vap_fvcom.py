@@ -573,7 +573,7 @@ def calculate_volume_energy_flux(ds):
 
     # Add metadata
     ds.volume_energy_flux.attrs = {
-        "long_name": "Volume Energy Flux",
+        "long_name": "Model Element Volume Energy Flux",
         "units": "W",
         "description": "Energy flux in each element volume",
         "methodology": "Calculated as power density multiplied by element volume",
