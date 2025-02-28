@@ -951,6 +951,100 @@ def calculate_vertical_average(ds, variable_name):
     return ds
 
 
+def calculate_vertical_median(ds, variable_name):
+    """
+    Calculate the median value of a variable along a specified dimension.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset with the variable to calculate median for
+    variable_name : str
+        Name of the variable to calculate median for
+    dim : str, optional
+        Dimension to calculate median along, default "time"
+
+    Returns
+    -------
+    xarray.Dataset
+        Input dataset with added median variable
+    """
+    if variable_name not in ds.variables:
+        raise KeyError(
+            f"Dataset must contain '{variable_name}'. "
+            f"Please ensure this variable exists in the dataset."
+        )
+
+    dim = "sigma_layer"
+
+    # Calculate median along the specified dimension
+    median_values = ds[variable_name].median(dim=dim)
+
+    output_variable_name = f"{variable_name}_median"
+
+    ds[output_variable_name] = median_values
+
+    # Add basic metadata
+    ds[output_variable_name].attrs = {
+        "long_name": f"Vertical median of {ds[variable_name].attrs.get('long_name', variable_name)}",
+        "units": ds[variable_name].attrs.get("units", ""),
+        "additional_processing": (f"Median calculated along the {dim} dimension."),
+        "computation": (f"median_values = ds['{variable_name}'].median(dim='{dim}')\n"),
+        "input_variables": (f"{variable_name}: original variable"),
+    }
+
+    return ds
+
+
+def calculate_vertical_95th_percentile(ds, variable_name):
+    """
+    Calculate the 95th percentile value of a variable along a specified dimension.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset with the variable to calculate 95th percentile for
+    variable_name : str
+        Name of the variable to calculate 95th percentile for
+    dim : str, optional
+        Dimension to calculate 95th percentile along, default "time"
+
+    Returns
+    -------
+    xarray.Dataset
+        Input dataset with added 95th percentile variable
+    """
+    if variable_name not in ds.variables:
+        raise KeyError(
+            f"Dataset must contain '{variable_name}'. "
+            f"Please ensure this variable exists in the dataset."
+        )
+
+    dim = "sigma_layer"
+
+    # Calculate 95th percentile along the specified dimension
+    percentile_95_values = ds[variable_name].quantile(0.95, dim=dim)
+
+    output_variable_name = f"{variable_name}_vert_95th_percentile"
+
+    ds[output_variable_name] = percentile_95_values
+
+    # Add basic metadata
+    ds[output_variable_name].attrs = {
+        "long_name": f"95th percentile of {ds[variable_name].attrs.get('long_name', variable_name)}",
+        "units": ds[variable_name].attrs.get("units", ""),
+        "additional_processing": (
+            f"95th percentile calculated along the {dim} dimension."
+        ),
+        "computation": (
+            f"percentile_95_values = ds['{variable_name}'].quantile(0.95, dim='{dim}')\n"
+        ),
+        "input_variables": (f"{variable_name}: original variable"),
+    }
+
+    return ds
+
+
 def derive_vap(config, location_key):
     location = config["location_specification"][location_key]
 
