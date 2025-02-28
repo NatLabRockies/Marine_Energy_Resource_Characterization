@@ -633,60 +633,7 @@ def calculate_vertical_avg_energy_flux(ds, config=None):
     return ds
 
 
-def calculate_volume_avg_energy_flux(ds, config=None):
-    """
-    Calculate volume-weighted average energy flux across the entire domain.
-
-    This function computes the total energy flux in the entire domain divided by
-    the total volume, providing a single value for each time step that represents
-    the volume-weighted average energy flux across all elements.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        FVCOM dataset containing 'volume_energy_flux' and 'element_volume'
-    config : dict, optional
-        Configuration dictionary
-
-    Returns
-    -------
-    xarray.Dataset
-        Original dataset with added 'volume_avg_energy_flux' variable
-    """
-    if "volume_energy_flux" not in ds:
-        raise KeyError(
-            "Dataset must contain 'volume_energy_flux'. Please calculate volume energy flux first."
-        )
-
-    if "element_volume" not in ds:
-        raise KeyError(
-            "Dataset must contain 'element_volume'. Please calculate element volumes first."
-        )
-
-    # Sum energy flux and volume over all elements and sigma layers
-    total_energy_flux = ds.volume_energy_flux.sum(dim=["sigma_layer", "face"])
-    total_volume = ds.element_volume.sum(dim=["sigma_layer", "face"])
-
-    # Calculate volume average energy flux
-    volume_avg_energy_flux = total_energy_flux / total_volume
-
-    # Add volume average energy flux to dataset
-    ds["volume_avg_energy_flux"] = volume_avg_energy_flux
-
-    # Add metadata
-    ds.volume_avg_energy_flux.attrs = {
-        "long_name": "Volume Average Energy Flux",
-        "units": "W/m^3",
-        "description": "Energy flux averaged over the entire domain volume",
-        "methodology": "Calculated as sum of energy flux over all elements and sigma layers divided by total volume",
-        "computation": 'volume_avg_energy_flux = sum(volume_energy_flux, dim=["sigma_layer", "face"]) / sum(element_volume, dim=["sigma_layer", "face"])',
-        "input_variables": "volume_energy_flux: energy flux in each element volume (W), element_volume: volume of water per element (m^3)",
-    }
-
-    return ds
-
-
-def calculate_column_volume_avg_energy_flux(ds, config=None):
+def calculate_column_volume_avg_energy_flux(ds):
     """
     Calculate volume-weighted average energy flux for each vertical column (face).
 
