@@ -49,6 +49,7 @@ def calculate_vap_average(config, location):
     Calculate average values across VAP NC files using rolling computation.
     Only variables are averaged, preserving original dimensions and coordinates.
     Time dimension will use the first timestamp from the dataset.
+    All variable attributes are preserved in the output dataset.
 
     Args:
         config: Configuration dictionary
@@ -77,6 +78,7 @@ def calculate_vap_average(config, location):
     source_files = []
     first_timestamp = None
     time_attrs = None  # Store time attributes
+    var_attrs = {}  # Dictionary to store variable attributes
 
     # Process each file
     for i, nc_file in enumerate(vap_nc_files):
@@ -88,6 +90,11 @@ def calculate_vap_average(config, location):
             running_sum = ds.isel(time=0).copy(deep=True)
             first_timestamp = ds.time.isel(time=0).values
             time_attrs = ds.time.attrs.copy()  # Save time attributes
+
+            # Store all variable attributes
+            for var in ds.data_vars:
+                var_attrs[var] = ds[var].attrs.copy()
+
             # Only initialize variables that need averaging
             for var in running_sum.data_vars:
                 if "time" in ds[var].dims:
@@ -109,6 +116,9 @@ def calculate_vap_average(config, location):
             continue  # Skip dimensions and coordinates
         if isinstance(running_sum[var].values, (np.ndarray, np.generic)):
             running_sum[var] = running_sum[var] / total_times
+            # Restore variable attributes
+            if var in var_attrs:
+                running_sum[var].attrs = var_attrs[var]
 
     # Restore the time coordinate with its attributes
     running_sum = running_sum.assign_coords(time=("time", [first_timestamp]))
