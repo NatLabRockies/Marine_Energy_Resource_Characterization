@@ -97,48 +97,28 @@ def calculate_sea_water_speed(ds, config):
     return ds
 
 
-def calculate_sea_water_direction(
+def calculate_sea_water_to_direction(
     ds, config, direction_undefined_speed_threshold_ms=0.0
 ):
     """
-    Calculate sea water velocity direction in meteorological convention.
+    Calculate the direction sea water is flowing TO in compass convention.
 
-    This function computes the direction water is coming FROM (like wind direction),
-    measured clockwise from true north.
-
-    The conversion from cartesian to meteorological 'from' direction works in two steps:
-    1. Convert cartesian angle to compass 'to' direction:
-       - Subtract cartesian angle from 90° to change reference from east to north
-       - Use modulo 360 to normalize to [0, 360) range
-
-    2. Convert compass 'to' direction to 'from' direction:
-       - Add 180° to get the opposite direction
-       - Use modulo 360 to normalize to [0, 360) range
+    For a velocity vector with u=1, v=0 (flowing eastward):
+    - to_direction = 90° (water flowing toward the east)
 
     Parameters
     ----------
     ds : xarray.Dataset
-        Dataset containing:
-        - 'u': eastward sea water velocity component
-        - 'v': northward sea water velocity component
-        - 'speed': magnitude of velocity (must be pre-computed)
+        Dataset with 'u', 'v', and 'speed' variables
+    config : dict
+        Configuration dictionary
     direction_undefined_speed_threshold_ms : float, optional
-        Speed threshold below which direction is set to NaN since direction
-        becomes meaningless for near-zero velocities. Default is 0.0 m/s.
+        Speed threshold below which direction is set to NaN, default 0.0 m/s
 
     Returns
     -------
     xarray.Dataset
-        Original dataset with added 'sea_water_velocity_from_direction' variable
-
-    Notes
-    -----
-    Direction values follow these conventions:
-    - 0° : water flowing from north to south
-    - 90° : water flowing from east to west
-    - 180° : water flowing from south to north
-    - 270° : water flowing from west to east
-
+        Input dataset with added 'to_direction' variable
     """
     validate_u_and_v(ds)
 
@@ -148,10 +128,7 @@ def calculate_sea_water_direction(
             "Please run calculate_sea_water_speed() first."
         )
 
-    # Calculate cartesian angle using arctan2 (counterclockwise from east)
-    # arctan2 radian angle is measured counterclockwise from the positive x-axis
-    # numpy outputs from 0 to 180 on the positive y and from 0 to -180 on the negative y
-    # Compass 270 degrees is 180 in numpy
+    # Calculate cartesian angle (counterclockwise from east)
     cartesian_angle_degrees = np.rad2deg(np.arctan2(ds.v, ds.u))
 
     # Validate direction ranges
@@ -173,24 +150,16 @@ def calculate_sea_water_direction(
             f"is below expected minimum of {cartesian_angle_degrees_expected_min}°"
         )
 
-    # Convert to compass to direction:
-    # | u, v  | Cartesian Angle | 90 - Cartesian Angle | Modulo 360 (to_direction) | Compass To | (to + 180) % 360 (from_direction) | Compass From
-    # | 1, 0  | 0               | 90 - 0 = 90          | 90 % 360 = 90             | E          | (90 + 180) % 360 = 270            | W
-    # | 1, 1  | 45              | 90 - 45 = 45         | 45 % 360 = 45             | NE         | (45 + 180) % 360 = 225            | SW
-    # | 0, 1  | 90              | 90 - 90 = 0          | 0 % 360 = 0               | N          | (0 + 180) % 360 = 180             | S
-    # | -1, 1 | 135             | 90 - 135 = -45       | -45 % 360 = 315           | NW         | (315 + 180) % 360 = 135           | SE
-    # | -1, 0 | 180             | 90 - 180 = -90       | -90 % 360 = 270           | W          | (270 + 180) % 360 = 90            | E
-    # | -1,-1 | -135            | 90 - -135 = 225      | 225 % 360 = 225           | SW         | (225 + 180) % 360 = 45            | NE
-    # | 0, -1 | -90             | 90 - -90 = 180       | 180 % 360 = 180           | S          | (180 + 180) % 360 = 0             | N
-    # | 1, -1 | -45             | 90 - -45 = 135       | 135 % 360 = 135           | SE         | (135 + 180) % 360 = 315           | NW
+    # Convert from cartesian angle to compass 'to' direction:
+    # Example: u=1, v=0 (east) has cartesian angle 0°
+    # 90 - 0 = 90° (pointing east)
     compass_to_direction_degrees = np.mod(90 - cartesian_angle_degrees, 360)
-    compass_from_direction_degrees = np.mod(compass_to_direction_degrees + 180, 360)
 
     compass_direction_degrees_expected_max = 360
     compass_direction_degrees_expected_min = 0
 
-    compass_direction_degrees_max = np.max(compass_from_direction_degrees)
-    compass_direction_degrees_min = np.min(compass_from_direction_degrees)
+    compass_direction_degrees_max = np.max(compass_to_direction_degrees)
+    compass_direction_degrees_min = np.min(compass_to_direction_degrees)
 
     if compass_direction_degrees_max > compass_direction_degrees_expected_max:
         raise ValueError(
@@ -205,11 +174,93 @@ def calculate_sea_water_direction(
         )
 
     # Set directions to NaN where speed is below threshold
-    compass_from_direction_degrees = xr.where(
+    compass_to_direction_degrees = xr.where(
         ds.speed > direction_undefined_speed_threshold_ms,
-        compass_from_direction_degrees,
+        compass_to_direction_degrees,
         np.nan,
     )
+
+    output_variable_name = "to_direction"
+
+    ds[output_variable_name] = compass_to_direction_degrees
+
+    specified_attrs = config["derived_vap_specification"][output_variable_name][
+        "attributes"
+    ]
+
+    # Add CF-compliant metadata
+    ds.to_direction.attrs = {
+        **specified_attrs,
+        "direction_reference": (
+            "Reference table for velocity components and resulting to_direction:\n"
+            "| Eastward (u) | Northward (v) | To Direction | Cardinal Direction |\n"
+            "| 1            | 0             | 90           | East               |\n"
+            "| 1            | 1             | 45           | Northeast          |\n"
+            "| 0            | 1             | 0            | North              |\n"
+            "| -1           | 1             | 315          | Northwest          |\n"
+            "| -1           | 0             | 270          | West               |\n"
+            "| -1           | -1            | 225          | Southwest          |\n"
+            "| 0            | -1            | 180          | South              |\n"
+            "| 1            | -1            | 135          | Southeast          |\n"
+            "| 0            | 0             | undefined    | undefined          |"
+        ),
+        "additional_processing": (
+            f"Directions set to NaN for speeds below {direction_undefined_speed_threshold_ms} m/s."
+        ),
+        "computation": (
+            "cartesian_angle_degrees = np.rad2deg(np.arctan2(ds.v, ds.u))\n"
+            "compass_to_direction_degrees = np.mod(90 - cartesian_angle_degrees, 360)\n"
+        ),
+        "input_variables": (
+            "u: eastward_sea_water_velocity (m/s), "
+            "v: northward_sea_water_velocity (m/s)"
+        ),
+    }
+
+    return ds
+
+
+def calculate_sea_water_from_direction(
+    ds, config, direction_undefined_speed_threshold_ms=0.0
+):
+    """
+    Calculate the direction sea water is coming FROM in meteorological convention.
+
+    For a velocity vector with u=1, v=0 (flowing eastward):
+    - from_direction = 270° (water coming from the west)
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset with 'u', 'v', and 'speed' variables, optionally 'to_direction'
+    config : dict
+        Configuration dictionary
+    direction_undefined_speed_threshold_ms : float, optional
+        Speed threshold below which direction is set to NaN, default 0.0 m/s
+
+    Returns
+    -------
+    xarray.Dataset
+        Input dataset with added 'from_direction' variable
+    """
+    # Check if to_direction already exists, if not calculate it
+    if "to_direction" not in ds.variables:
+        ds = calculate_sea_water_to_direction(
+            ds, config, direction_undefined_speed_threshold_ms
+        )
+
+    # Convert compass 'to' direction to 'from' direction by adding 180°
+    # Example: u=1, v=0 (east) has to_direction 90°
+    # 90 + 180 = 270° (coming from west)
+    compass_from_direction_degrees = np.mod(ds.to_direction + 180, 360)
+
+    # Set directions to NaN where speed is below threshold
+    if "speed" in ds.variables:
+        compass_from_direction_degrees = xr.where(
+            ds.speed > direction_undefined_speed_threshold_ms,
+            compass_from_direction_degrees,
+            np.nan,
+        )
 
     output_variable_name = "from_direction"
 
@@ -236,19 +287,14 @@ def calculate_sea_water_direction(
             "| 0            | 0             | undefined      | undefined          |"
         ),
         "additional_processing": (
-            "Direction is calculated using numpy.arctan2(v,u) to get the cartesian angle, "
-            "converting to compass 'to' direction by (90° - cartesian angle) mod 360, "
-            "then converting to compass 'from' direction by (compass_to_direction + 180°) mod 360. "
-            f"Directions are set to NaN for speeds below {direction_undefined_speed_threshold_ms} m/s."
+            f"Directions set to NaN for speeds below {direction_undefined_speed_threshold_ms} m/s."
         ),
         "computation": (
-            "cartesian_direction_degrees = np.rad2deg(np.arctan2(ds.v, ds.u))\n"
-            "compass_to_direction_degrees = np.mod(90 - cartesian_degrees, 360)\n"
-            "compass_from_direction_degrees = np.mod(compass_to_direction_degrees + 180, 360)\n"
+            "compass_from_direction_degrees = np.mod(ds.to_direction + 180, 360)\n"
         ),
         "input_variables": (
-            "u: eastward_sea_water_velocity (m/s), "
-            "v: northward_sea_water_velocity (m/s)"
+            "to_direction: sea_water_velocity_to_direction (degrees), "
+            "speed: sea_water_velocity (m/s)"
         ),
     }
 
@@ -1255,10 +1301,16 @@ def derive_vap(config, location_key):
 
         print("\tCalculating speed...")
         this_ds = calculate_sea_water_speed(this_ds, config)
-        print("\tCalculating direction...")
-        this_ds = calculate_sea_water_direction(this_ds, config)
+
+        print("\tCalculating to direction...")
+        this_ds = calculate_sea_water_to_direction(this_ds, config)
+
+        print("\tCalculating from direction...")
+        this_ds = calculate_sea_water_from_direction(this_ds, config)
+
         print("\tCalculating power density...")
         this_ds = calculate_sea_water_power_density(this_ds, config)
+
         print("\tCalculating zeta_center...")
         this_ds = calculate_zeta_center(this_ds)
 
