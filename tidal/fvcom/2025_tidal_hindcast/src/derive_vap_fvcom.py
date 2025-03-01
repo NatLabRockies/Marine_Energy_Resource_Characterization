@@ -1,83 +1,11 @@
-import cProfile
 import gc
-import io
-import os
-import pstats
-import time
 
 from pathlib import Path
 
-import dask
-import dask.array as da
 import numpy as np
-import psutil
 import xarray as xr
 
-from dask.diagnostics import ProgressBar
-
 from . import attrs_manager, file_manager, file_name_convention_manager
-
-
-def get_memory_mb():
-    """Get current memory usage in MB"""
-    process = psutil.Process(os.getpid())
-    return process.memory_info().rss / (1024 * 1024)
-
-
-def profile_function(func):
-    """
-    Decorator to profile a function's execution time and memory usage.
-
-    Parameters
-    ----------
-    func : function
-        Function to profile
-
-    Returns
-    -------
-    function
-        Wrapper function that profiles execution
-    """
-
-    def wrapper(*args, **kwargs):
-        # Get memory before execution
-        mem_before = get_memory_mb()
-
-        # Set up profiler
-        profiler = cProfile.Profile()
-        profiler.enable()
-        start_time = time.time()
-
-        # Execute the function
-        result = func(*args, **kwargs)
-
-        # Get execution time
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-
-        # Get memory after execution
-        mem_after = get_memory_mb()
-        mem_diff = mem_after - mem_before
-
-        # Disable profiler
-        profiler.disable()
-
-        # Print performance summary
-        print(f"\n### PROFILING: {func.__name__} ###")
-        print(f"Time: {elapsed_time:.2f} seconds")
-        print(f"Memory: {mem_before:.1f} MB → {mem_after:.1f} MB (Δ {mem_diff:.1f} MB)")
-
-        # Get detailed stats
-        s = io.StringIO()
-        ps = pstats.Stats(profiler, stream=s).sort_stats("cumulative")
-        ps.print_stats(20)  # Print top 20 functions by cumulative time
-
-        # Print formatted stats
-        print(s.getvalue())
-
-        return result
-
-    return wrapper
 
 
 def validate_u_and_v(ds):
@@ -113,7 +41,6 @@ def validate_u_and_v(ds):
         raise ValueError(f"Units mismatch: u: {u_units}, v: {v_units}")
 
 
-@profile_function
 def calculate_sea_water_speed(ds, config):
     """
     Calculate sea water speed from velocity components using vector magnitude.
@@ -170,7 +97,6 @@ def calculate_sea_water_speed(ds, config):
     return ds
 
 
-@profile_function
 def calculate_sea_water_to_direction(
     ds, config, direction_undefined_speed_threshold_ms=0.0
 ):
@@ -294,7 +220,6 @@ def calculate_sea_water_to_direction(
     return ds
 
 
-@profile_function
 def calculate_sea_water_from_direction(
     ds, config, direction_undefined_speed_threshold_ms=0.0
 ):
@@ -454,10 +379,11 @@ def calculate_element_areas(ds):
         Array of element areas in square meters
     """
     # Get the node indices for each face - first time index only
-    nv = ds.nv.isel(time=0).compute().values - 1  # Convert to 0-based indexing
+    nv = ds.nv.values[0, :, :] - 1  # Convert to 0-based indexing
 
-    lon_node = ds.lon_node.compute().values
-    lat_node = ds.lat_node.compute().values
+    # Get node coordinates
+    lon_node = ds.lon_node.values
+    lat_node = ds.lat_node.values
 
     # Constants for Earth calculations
     R_EARTH = 6371000  # Earth radius in meters
@@ -522,21 +448,24 @@ def calculate_element_volume(ds):
     xarray.Dataset
         Original dataset with added 'element_volume' variable
     """
-    # Calculate element areas - these are constant for all time steps
+    # Calculate element areas
     element_areas = calculate_element_areas(ds)
 
     # Get dimensions
-    # n_time = len(ds.time)
+    n_time = len(ds.time)
     n_sigma_layer = len(ds.sigma_layer)
     n_face = len(ds.face)
 
-    # Get node indices for each element (face) - first time index only
-    # Need to compute to avoid Dask indexing issues
-    nv = ds.nv.isel(time=0).compute().values - 1  # Convert to 0-based indexing
+    # Get bathymetry and sea surface height
+    h_center = ds.h_center.values  # Bathymetry at element centers
+    zeta_center = ds.zeta_center.values  # Surface elevation at element centers
 
-    # Get sigma layer and level values - these are usually small arrays
-    # sigma_layer_values = ds.sigma_layer.compute().values
-    sigma_level_values = ds.sigma_level.compute().values
+    # Get node indices for each element (face) - first time index only
+    nv = ds.nv.values[0, :, :] - 1  # Convert to 0-based indexing
+
+    # Get sigma layer and level values
+    sigma_layer_values = ds.sigma_layer.values  # Shape: (n_sigma_layer, n_node)
+    sigma_level_values = ds.sigma_level.values  # Shape: (n_sigma_level, n_node)
 
     # Calculate layer thicknesses at nodes (vectorized)
     # Layer thickness is the difference between adjacent sigma levels
@@ -566,26 +495,37 @@ def calculate_element_volume(ds):
     # Result shape: (n_sigma_layer, n_face)
     element_thickness_fraction = np.mean(all_node_thicknesses, axis=1)
 
-    total_depth = abs(ds.h_center) + ds.zeta_center
+    # Calculate total water depth at each time step
+    # Shape: (n_time, n_face)
+    total_depth = np.abs(h_center) + zeta_center
 
-    # First create a DataArray for element_areas
-    element_areas_da = xr.DataArray(
-        element_areas, dims=["face"], coords={"face": ds.face}
+    # Reshape arrays for broadcasting
+    # element_areas: (n_face) -> (1, n_sigma_layer, n_face)
+    element_areas_broadcast = element_areas.reshape(1, 1, n_face).repeat(
+        n_sigma_layer, axis=1
     )
 
-    # Create a DataArray for element_thickness_fraction
-    element_thickness_da = xr.DataArray(
-        element_thickness_fraction,
-        dims=["sigma_layer", "face"],
-        coords={"sigma_layer": ds.sigma_layer, "face": ds.face},
+    # total_depth: (n_time, n_face) -> (n_time, 1, n_face)
+    total_depth_broadcast = total_depth.reshape(n_time, 1, n_face)
+
+    # element_thickness_fraction: (n_sigma_layer, n_face) -> (1, n_sigma_layer, n_face)
+    element_thickness_fraction_broadcast = element_thickness_fraction.reshape(
+        1, n_sigma_layer, n_face
     )
 
-    # Calculate volumes using xarray operations to maintain Dask arrays
-    element_volumes = element_areas_da * total_depth * element_thickness_da
+    # Calculate all volumes in a single vectorized operation
+    # element_volumes shape: (n_time, n_sigma_layer, n_face)
+    element_volumes = (
+        element_areas_broadcast
+        * total_depth_broadcast
+        * element_thickness_fraction_broadcast
+    )
 
     # Add element volumes to dataset
-    ds["element_volume"] = element_volumes.assign_attrs(
-        {
+    ds["element_volume"] = xr.DataArray(
+        element_volumes,
+        dims=["time", "sigma_layer", "face"],
+        attrs={
             "long_name": "Element Volume",
             "standard_name": "volume_of_water_per_element",
             "units": "m^3",
@@ -593,7 +533,7 @@ def calculate_element_volume(ds):
             "methodology": "Calculated as element area multiplied by layer thickness using fully vectorized operations",
             "computation": "element_volume = element_area * total_water_depth * sigma_layer_thickness",
             "input_variables": "h_center: bathymetry (m), zeta_center: surface elevation (m), sigma_layer: sigma coordinate",
-        }
+        },
     )
 
     return ds
@@ -750,40 +690,19 @@ def calculate_column_volume_avg_energy_flux(ds):
     return ds
 
 
-@profile_function
 def calculate_zeta_center(ds):
-    """
-    Calculate sea surface height at cell centers.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        Dataset containing zeta and nv variables
-
-    Returns
-    -------
-    xarray.Dataset
-        Dataset with added zeta_center variable
-    """
     # FVCOM is FORTRAN based and indexes start at 1
-    # Convert indexes to python convention and fully compute
-    print("\t\tComputing nv array...")
-    nv = ds.nv.compute() - 1
+    # Convert indexes to python convention
+    nv = ds.nv - 1
 
-    # Fully compute zeta array
-    print("\t\tComputing zeta array...")
-    zeta = ds.zeta.compute()
+    # Reshape zeta to prepare for the operation
+    # This creates a (time, 3, face) array where each face has its 3 node values
+    zeta_at_nodes = ds.zeta.isel(node=nv)  # Should have shape (672, 3, 392002)
 
-    # Perform the indexing operation using computed arrays
-    print("\t\tPerforming indexing operation...")
-    zeta_at_nodes = zeta.isel(node=nv)
-
-    # Average along the node dimension
-    print("\t\tCalculating mean...")
+    # Average along the node dimension (axis=1)
     zeta_center = zeta_at_nodes.mean(dim="face_node_index")
 
     # Add coordinates and attributes
-    print("\t\tAdding coordinates...")
     zeta_center = zeta_center.assign_coords(
         lon_center=ds.lon_center, lat_center=ds.lat_center
     )
@@ -803,15 +722,10 @@ def calculate_zeta_center(ds):
         "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
     }
 
-    # Add to dataset
     ds["zeta_center"] = zeta_center
 
-    # Clear any cached computations to free memory
-    print("\t\tClearing cached data...")
-    zeta = None
-    zeta_at_nodes = None
-
     return ds
+
 
 
 def validate_depth_inputs(ds):
@@ -897,7 +811,7 @@ def calculate_depth(ds):
         raise KeyError("Dataset must contain 'sigma_level' coordinates")
 
     # Extract one sigma layer
-    sigma_layer = ds.sigma_layer.compute().T.values[0]
+    sigma_layer = ds.sigma_layer.T.values[0]
 
     # Calculate depth at each sigma level
     # ds["depth"] = -(ds.h_center + ds.zeta_center) * sigma_layer
@@ -999,164 +913,6 @@ def calculate_sea_floor_depth(ds):
     return ds
 
 
-def calculate_all_vertical_stats(ds, variable_name):
-    """
-    Calculate all vertical statistics (average, median, 95th percentile) for a variable
-    in a single pass to improve performance.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        Dataset containing the variable to be processed
-    variable_name : str
-        Name of variable to calculate statistics for
-
-    Returns
-    -------
-    xarray.Dataset
-        Dataset with added statistical variables
-    """
-    if variable_name not in ds:
-        print(f"\tSkipping {variable_name} - not found in dataset")
-        return ds
-
-    print(f"\tCalculating {variable_name} vertical average")
-    print(f"\tCalculating {variable_name} vertical median")
-    print(f"\tCalculating {variable_name} vertical 95th_percentile")
-
-    # Get original variable and its attributes
-    var = ds[variable_name]
-    orig_attrs = var.attrs.copy()
-
-    # Create a common function for all three calculations
-    # This is more efficient than calculating them separately
-    def calc_stats(x):
-        # Compute mean, median and 95th percentile at once
-        # This is faster than three separate calls when using dask
-        mean_val = np.mean(x, axis=0)
-
-        # Sort once for both median and percentile
-        sorted_x = np.sort(x, axis=0)
-        n = x.shape[0]
-
-        # Extract median
-        if n % 2 == 0:
-            median_val = (sorted_x[n // 2 - 1] + sorted_x[n // 2]) / 2
-        else:
-            median_val = sorted_x[n // 2]
-
-        # Extract 95th percentile
-        idx = int(np.ceil(0.95 * n) - 1)
-        p95_val = sorted_x[idx]
-
-        return mean_val, median_val, p95_val
-
-    # Apply the function to compute all statistics at once
-    if hasattr(var.data, "map_blocks") and isinstance(var.data, da.Array):
-        # For dask arrays, use map_blocks to maintain chunking
-        mean_data, median_data, p95_data = da.apply_along_axis(
-            lambda x: calc_stats(x),
-            axis=var.get_axis_num("sigma_layer"),
-            arr=var.data,
-            dtype=var.dtype,
-        )
-    else:
-        # For numpy arrays, use apply_along_axis directly
-        results = np.apply_along_axis(
-            calc_stats, axis=var.get_axis_num("sigma_layer"), arr=var.values
-        )
-        mean_data, median_data, p95_data = results
-
-    # Create the mean DataArray with appropriate metadata
-    vert_avg_name = f"{variable_name}_vert_avg"
-    ds[vert_avg_name] = xr.DataArray(
-        mean_data,
-        dims=var.dims[1:],  # Remove sigma_layer dimension
-        coords={k: var.coords[k] for k in var.dims if k != "sigma_layer"},
-    )
-
-    # Set mean attributes
-    mean_attrs = orig_attrs.copy()
-    mean_attrs.pop("standard_name", None)
-    ds[vert_avg_name].attrs = {
-        **mean_attrs,
-        "long_name": f"Vertically averaged {orig_attrs.get('long_name', variable_name)}",
-        "vertical_averaging": "Mean across sigma layers",
-    }
-
-    # Create the median DataArray with appropriate metadata
-    median_name = f"{variable_name}_median"
-    ds[median_name] = xr.DataArray(
-        median_data,
-        dims=var.dims[1:],  # Remove sigma_layer dimension
-        coords={k: var.coords[k] for k in var.dims if k != "sigma_layer"},
-    )
-
-    # Set median attributes
-    ds[median_name].attrs = {
-        "long_name": f"Vertical median of {orig_attrs.get('long_name', variable_name)}",
-        "units": orig_attrs.get("units", ""),
-        "additional_processing": "Median calculated along the sigma_layer dimension.",
-        "computation": f"median_values = ds['{variable_name}'].median(dim='sigma_layer')",
-        "input_variables": f"{variable_name}: original variable",
-    }
-
-    # Create the 95th percentile DataArray with appropriate metadata
-    p95_name = f"{variable_name}_vert_95th_percentile"
-    ds[p95_name] = xr.DataArray(
-        p95_data,
-        dims=var.dims[1:],  # Remove sigma_layer dimension
-        coords={k: var.coords[k] for k in var.dims if k != "sigma_layer"},
-    )
-
-    # Set 95th percentile attributes
-    ds[p95_name].attrs = {
-        "long_name": f"95th percentile of {orig_attrs.get('long_name', variable_name)}",
-        "units": orig_attrs.get("units", ""),
-        "additional_processing": "95th percentile calculated along the sigma_layer dimension.",
-        "computation": f"percentile_95_values = ds['{variable_name}'].quantile(0.95, dim='sigma_layer')",
-        "input_variables": f"{variable_name}: original variable",
-    }
-
-    return ds
-
-
-def calculate_vertical_statistics(ds):
-    """
-    Calculate all vertical statistics for relevant variables in one pass
-    while preserving individual print statements.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        Dataset to calculate statistics for
-
-    Returns
-    -------
-    xarray.Dataset
-        Dataset with added statistical variables
-    """
-    # Variables that need all statistics
-    full_stat_vars = ["speed", "power_density", "volume_energy_flux"]
-
-    # Variables that need only average
-    avg_only_vars = ["u", "v", "to_direction", "from_direction"]
-
-    # Process variables needing all statistics
-    for var in full_stat_vars:
-        if var in ds:
-            ds = calculate_all_vertical_stats(ds, var)
-
-    # Process variables needing only average
-    for var in avg_only_vars:
-        if var in ds:
-            print(f"\tCalculating {var} vertical average")
-            ds = calculate_vertical_average(ds, var)
-
-    return ds
-
-
-# Keep the original functions for backward compatibility
 def calculate_vertical_average(ds, variable_name):
     """
     Calculate vertical average for a given variable
@@ -1205,6 +961,8 @@ def calculate_vertical_median(ds, variable_name):
         Dataset with the variable to calculate median for
     variable_name : str
         Name of the variable to calculate median for
+    dim : str, optional
+        Dimension to calculate median along, default "time"
 
     Returns
     -------
@@ -1248,6 +1006,8 @@ def calculate_vertical_95th_percentile(ds, variable_name):
         Dataset with the variable to calculate 95th percentile for
     variable_name : str
         Name of the variable to calculate 95th percentile for
+    dim : str, optional
+        Dimension to calculate 95th percentile along, default "time"
 
     Returns
     -------
@@ -1303,19 +1063,9 @@ def derive_vap(config, location_key):
         )
         return
 
-    # Set xarray to preserve attributes during operations
-    xr.set_options(keep_attrs=True)
-
     for count, nc_file in enumerate(std_partition_nc_files, start=1):
         print(f"Calculating vap for {nc_file}")
-
-        # Define Dask chunking strategy
-        chunks = {
-            "time": "auto",  # Process all timesteps together
-            "face": "auto",  # Let dask automatically determine chunk size for face
-        }
-
-        this_ds = xr.open_dataset(nc_file, chunks=chunks)
+        this_ds = xr.open_dataset(nc_file)
 
         print("\tCalculating speed...")
         this_ds = calculate_sea_water_speed(this_ds, config)
@@ -1334,7 +1084,6 @@ def derive_vap(config, location_key):
 
         print("\tCalculating depth...")
         this_ds = calculate_depth(this_ds)
-
         print("\tCalculating sea_floor_depth...")
         this_ds = calculate_sea_floor_depth(this_ds)
 
@@ -1350,10 +1099,38 @@ def derive_vap(config, location_key):
         print("\tCalculating column avg energy flux...")
         this_ds = calculate_column_volume_avg_energy_flux(this_ds)
 
-        # Use the optimized vertical statistics calculation
-        # This will generate all the same print statements as before
-        # but perform the calculations more efficiently
-        this_ds = calculate_vertical_statistics(this_ds)
+        print("\tCalculating u vertical average")
+        this_ds = calculate_vertical_average(this_ds, "u")
+
+        print("\tCalculating v vertical average")
+        this_ds = calculate_vertical_average(this_ds, "v")
+
+        print("\tCalculating speed vertical average")
+        this_ds = calculate_vertical_average(this_ds, "speed")
+
+        print("\tCalculating from_direction vertical average")
+        this_ds = calculate_vertical_average(this_ds, "from_direction")
+
+        print("\tCalculating power_density vertical average")
+        this_ds = calculate_vertical_average(this_ds, "power_density")
+
+        print("\tCalculating speed vertical median")
+        this_ds = calculate_vertical_median(this_ds, "speed")
+
+        print("\tCalculating power_density vertical median")
+        this_ds = calculate_vertical_median(this_ds, "power_density")
+
+        print("\tCalculating volume_energy_flux vertical median")
+        this_ds = calculate_vertical_median(this_ds, "volume_energy_flux")
+
+        print("\tCalculating speed vertical 95th_percentile")
+        this_ds = calculate_vertical_95th_percentile(this_ds, "speed")
+
+        print("\tCalculating power_density vertical 95th_percentile")
+        this_ds = calculate_vertical_95th_percentile(this_ds, "power_density")
+
+        print("\tCalculating volume_energy_flux vertical 95th_percentile")
+        this_ds = calculate_vertical_95th_percentile(this_ds, "volume_energy_flux")
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
         if expected_delta_t_seconds == 3600:
@@ -1389,11 +1166,7 @@ def derive_vap(config, location_key):
         )
 
         print(f"\tSaving to {output_path}...")
+        this_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
 
-        # Add progress bar for the computation phase
-        with ProgressBar():
-            this_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
-
-        # Clean up to free memory
         this_ds.close()
         gc.collect()
