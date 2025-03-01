@@ -423,9 +423,20 @@ class FVCOMStandardizer:
             utm_zone = location["coordinates"]["zone"]
 
         print(f"Standardizing using utm zone {utm_zone}")
-        exit()
 
         coords = coord_manager.standardize_fvcom_coords(ds, utm_zone)
+
+        lat_center_max = np.max(coords["lat_centers"])
+        lat_center_min = np.min(coords["lat_centers"])
+        lon_center_max = np.max(coords["lon_centers"])
+        lon_center_min = np.min(coords["lon_centers"])
+
+        print(lat_center_max)
+        print(lat_center_min)
+        print(lon_center_max)
+        print(lon_center_min)
+
+        exit()
 
         # Update existing coordinates
         ds.latc.values = coords["lat_centers"]
