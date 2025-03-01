@@ -267,7 +267,8 @@ def single_timestamp_partition(
 
                 output_path = Path(
                     output_dir,
-                    f"{file_counter:03d}_{timestamp_str}.{data_level_file_name}",
+                    # f"{file_counter:05d}.{data_level_file_name}",
+                    data_level_file_name,
                 )
 
                 # Create a copy of the dataset for the thread to work with
