@@ -122,9 +122,7 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
     return partition_files
 
 
-def single_timestamp_partition(
-    config, location_key, input_files, force_reprocess=False
-):
+def single_timestamp_partition(config, location_key, force_reprocess=False):
     """
     Partitions each input file into separate files with one timestamp per file.
     Processes files in order and verifies timestamps are in sequence.
@@ -143,8 +141,9 @@ def single_timestamp_partition(
     output_dir.mkdir(parents=True, exist_ok=True)
     partition_files = []
 
+    input_directory = file_manager.get_standardized_output_dir(config, location)
     # Sort input files to ensure we process them in order
-    sorted_input_files = sorted(list(input_files))
+    sorted_input_files = sorted(list(input_directory.rglob("*.nc")))
 
     # Keep track of all timestamps to verify ordering at the end
     all_timestamps = []

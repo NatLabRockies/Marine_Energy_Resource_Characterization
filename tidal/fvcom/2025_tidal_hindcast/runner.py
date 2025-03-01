@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     print("Step 3: Partitioning Standardized Dataset by Time...")
     # partition_by_time(config, args.location, valid_std_files_df)
-    single_timestamp_partition(config, args.location, valid_std_files_df)
+    single_timestamp_partition(config, args.location)
 
     print("Step 4: Calculating Derived Value Added Products...")
     derive_vap(config, args.location)
