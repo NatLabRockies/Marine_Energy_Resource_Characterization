@@ -133,7 +133,7 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
     # Determine the number of processes to use
     num_processes = min(mp.cpu_count(), len(process_args))
 
-    num_processes = int(num_processes / 2)
+    num_processes = int(num_processes / 4)
 
     # Process the time periods in parallel
     with mp.Pool(num_processes) as pool:
