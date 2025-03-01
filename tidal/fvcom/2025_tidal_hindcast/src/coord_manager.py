@@ -74,8 +74,10 @@ def create_transformer(coord_system: str, coord_projection: str, utm_zone: int =
     # CoordinateProjection	none
     # For puget_sound the projection string or UTM zone is not specified anywhere is the original data.
     # It is derived from the name of the dataset and verified by plotting points on a map
-    elif coord_system == "Cartesian" and coord_projection == "none" and utm_zone:
+    # elif coord_system == "Cartesian" and coord_projection == "none" and utm_zone:
+    if coord_system == "Cartesian" and utm_zone:
         # https://epsg.io/26910 (Puget Sound)
+        # https://epsg.io/26919 (Western Passage and Piscataqua River)
         utm_epsg = f"269{str(utm_zone).zfill(2)}"  # NAD83 UTM zones, using NAD83 based on the above datasets
         source_crs = pyproj.CRS(f"EPSG:{utm_epsg}")
         print(f"Using UTM zone {utm_zone} with EPSG code {utm_epsg}")
