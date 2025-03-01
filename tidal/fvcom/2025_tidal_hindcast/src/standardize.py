@@ -449,8 +449,6 @@ class FVCOMStandardizer:
         print("Y Center Min", y_center_max)
         print("Y Center Max", y_center_min)
 
-        exit()
-
         # Update existing coordinates
         ds.latc.values = coords["lat_centers"]
         ds.lonc.values = coords["lon_centers"]
