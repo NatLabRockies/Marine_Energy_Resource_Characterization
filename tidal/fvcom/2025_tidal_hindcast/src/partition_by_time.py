@@ -143,9 +143,10 @@ def single_timestamp_partition(config, location_key, force_reprocess=False):
 
     input_directory = file_manager.get_standardized_output_dir(config, location)
     print(input_directory)
-    exit()
     # Sort input files to ensure we process them in order
     sorted_input_files = sorted(list(input_directory.rglob("*.nc")))
+    print(sorted_input_files)
+    exit()
 
     # Keep track of all timestamps to verify ordering at the end
     all_timestamps = []
