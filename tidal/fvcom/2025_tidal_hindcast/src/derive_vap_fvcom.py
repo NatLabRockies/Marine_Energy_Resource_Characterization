@@ -1,5 +1,7 @@
 import gc
+import multiprocessing as mp
 
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -1023,6 +1025,107 @@ def calculate_depth_statistics(ds, variable_name):
     return ds
 
 
+def process_single_file(nc_file, config, location, output_dir, file_index):
+    """Process a single netCDF file and save the results."""
+    print(f"Calculating vap for {nc_file}")
+    this_ds = xr.open_dataset(nc_file)
+
+    print(f"\t[{file_index}] Calculating speed...")
+    this_ds = calculate_sea_water_speed(this_ds, config)
+
+    print(f"\t[{file_index}] Calculating to direction...")
+    this_ds = calculate_sea_water_to_direction(this_ds, config)
+
+    print(f"\t[{file_index}] Calculating from direction...")
+    this_ds = calculate_sea_water_from_direction(this_ds, config)
+
+    print(f"\t[{file_index}] Calculating power density...")
+    this_ds = calculate_sea_water_power_density(this_ds, config)
+
+    print(f"\t[{file_index}] Calculating zeta_center...")
+    this_ds = calculate_zeta_center(this_ds)
+
+    print(f"\t[{file_index}] Calculating depth...")
+    this_ds = calculate_depth(this_ds)
+    print(f"\t[{file_index}] Calculating sea_floor_depth...")
+    this_ds = calculate_sea_floor_depth(this_ds)
+
+    print(f"\t[{file_index}] Calculating element volumes...")
+    this_ds = calculate_element_volume(this_ds)
+
+    print(f"\t[{file_index}] Calculating volume energy flux...")
+    this_ds = calculate_volume_energy_flux(this_ds)
+
+    print(f"\t[{file_index}] Calculating vertical avg energy flux...")
+    this_ds = calculate_vertical_avg_energy_flux(this_ds)
+
+    print(f"\t[{file_index}] Calculating column avg energy flux...")
+    this_ds = calculate_column_volume_avg_energy_flux(this_ds)
+
+    print(f"\t[{file_index}] Calculating u vertical average")
+    this_ds = calculate_depth_average(this_ds, "u")
+
+    print(f"\t[{file_index}] Calculating v vertical average")
+    this_ds = calculate_depth_average(this_ds, "v")
+
+    print(f"\t[{file_index}] Calculating to_direction vertical average")
+    this_ds = calculate_depth_average(this_ds, "to_direction")
+
+    print(f"\t[{file_index}] Calculating from_direction vertical average")
+    this_ds = calculate_depth_average(this_ds, "from_direction")
+
+    print(f"\t[{file_index}] Calculating speed depth average statistics")
+    this_ds = calculate_depth_statistics(this_ds, "speed")
+
+    print(f"\t[{file_index}] Calculating power_density depth average statistics")
+    this_ds = calculate_depth_statistics(this_ds, "power_density")
+
+    print(f"\t[{file_index}] Calculating volume_energy_flux depth average statistics")
+    this_ds = calculate_depth_statistics(this_ds, "volume_energy_flux")
+
+    expected_delta_t_seconds = location["expected_delta_t_seconds"]
+    if expected_delta_t_seconds == 3600:
+        temporal_string = "1h"
+    elif expected_delta_t_seconds == 1800:
+        temporal_string = "30m"
+    else:
+        raise ValueError(
+            f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
+        )
+
+    data_level_file_name = (
+        file_name_convention_manager.generate_filename_for_data_level(
+            this_ds,
+            location["output_name"],
+            config["dataset"]["name"],
+            "b1",
+            temporal=temporal_string,
+        )
+    )
+
+    this_ds = attrs_manager.standardize_dataset_global_attrs(
+        this_ds,
+        config,
+        location,
+        "b1",
+        [str(nc_file)],
+    )
+
+    # Use the provided file_index to ensure correct sequential numbering
+    output_path = Path(
+        output_dir,
+        f"{file_index:03d}.{data_level_file_name}",
+    )
+
+    print(f"\t[{file_index}] Saving to {output_path}...")
+    this_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+
+    this_ds.close()
+    gc.collect()
+
+    return file_index
+
+
 def derive_vap(config, location_key):
     location = config["location_specification"][location_key]
 
@@ -1041,98 +1144,29 @@ def derive_vap(config, location_key):
         )
         return
 
+    # Create a list of arguments for each file to be processed
+    process_args = []
     for count, nc_file in enumerate(std_partition_nc_files, start=1):
-        print(f"Calculating vap for {nc_file}")
-        this_ds = xr.open_dataset(nc_file)
+        process_args.append((nc_file, config, location, vap_output_dir, count))
 
-        print("\tCalculating speed...")
-        this_ds = calculate_sea_water_speed(this_ds, config)
+    # Determine the number of processes to use
+    num_processes = min(mp.cpu_count(), len(std_partition_nc_files))
 
-        print("\tCalculating to direction...")
-        this_ds = calculate_sea_water_to_direction(this_ds, config)
+    print(f"Using {num_processes} to multiprocess VAP computation")
 
-        print("\tCalculating from direction...")
-        this_ds = calculate_sea_water_from_direction(this_ds, config)
+    # Create a partial function with the common arguments
+    process_func = partial(
+        process_single_file, config=config, location=location, output_dir=vap_output_dir
+    )
 
-        print("\tCalculating power density...")
-        this_ds = calculate_sea_water_power_density(this_ds, config)
-
-        print("\tCalculating zeta_center...")
-        this_ds = calculate_zeta_center(this_ds)
-
-        print("\tCalculating depth...")
-        this_ds = calculate_depth(this_ds)
-        print("\tCalculating sea_floor_depth...")
-        this_ds = calculate_sea_floor_depth(this_ds)
-
-        print("\tCalculating element volumes...")
-        this_ds = calculate_element_volume(this_ds)
-
-        print("\tCalculating volume energy flux...")
-        this_ds = calculate_volume_energy_flux(this_ds)
-
-        print("\tCalculating vertical avg energy flux...")
-        this_ds = calculate_vertical_avg_energy_flux(this_ds)
-
-        print("\tCalculating column avg energy flux...")
-        this_ds = calculate_column_volume_avg_energy_flux(this_ds)
-
-        print("\tCalculating u vertical average")
-        this_ds = calculate_depth_average(this_ds, "u")
-
-        print("\tCalculating v vertical average")
-        this_ds = calculate_depth_average(this_ds, "v")
-
-        print("\tCalculating to_direction vertical average")
-        this_ds = calculate_depth_average(this_ds, "to_direction")
-
-        print("\tCalculating from_direction vertical average")
-        this_ds = calculate_depth_average(this_ds, "from_direction")
-
-        print("\tCalculating speed depth average statistics")
-        this_ds = calculate_depth_statistics(this_ds, "speed")
-
-        print("\tCalculating power_density depth average statistics")
-        this_ds = calculate_depth_statistics(this_ds, "power_density")
-
-        print("\tCalculating volume_energy_flux depth average statistics")
-        this_ds = calculate_depth_statistics(this_ds, "volume_energy_flux")
-
-        expected_delta_t_seconds = location["expected_delta_t_seconds"]
-        if expected_delta_t_seconds == 3600:
-            temporal_string = "1h"
-        elif expected_delta_t_seconds == 1800:
-            temporal_string = "30m"
-        else:
-            raise ValueError(
-                f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
-            )
-
-        data_level_file_name = (
-            file_name_convention_manager.generate_filename_for_data_level(
-                this_ds,
-                location["output_name"],
-                config["dataset"]["name"],
-                "b1",
-                temporal=temporal_string,
-            )
+    # Process the files in parallel
+    with mp.Pool(num_processes) as pool:
+        # We use starmap to unpack the tuple of arguments
+        results = pool.starmap(
+            process_func,
+            [
+                (args[0], args[4]) for args in process_args
+            ],  # Only pass nc_file and file_index
         )
 
-        this_ds = attrs_manager.standardize_dataset_global_attrs(
-            this_ds,
-            config,
-            location,
-            "b1",
-            [str(nc_file)],
-        )
-
-        output_path = Path(
-            file_manager.get_vap_output_dir(config, location),
-            f"{count:03d}.{data_level_file_name}",
-        )
-
-        print(f"\tSaving to {output_path}...")
-        this_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
-
-        this_ds.close()
-        gc.collect()
+    print(f"Completed processing {len(results)} files with multiprocessing.")
