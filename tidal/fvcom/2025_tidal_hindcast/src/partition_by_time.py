@@ -158,13 +158,6 @@ def single_timestamp_partition(config, location_key, force_reprocess=False):
         # Open the dataset
         ds = xr.open_dataset(input_file)
 
-        # Get source filenames
-        source_filenames = []
-        if "source_files" in ds.attrs:
-            source_filenames = [Path(f).name for f in ds.attrs["source_files"]]
-        else:
-            source_filenames = [Path(input_file).name]
-
         # Get all timestamps in this file
         timestamps = pd.to_datetime(ds.time.values)
 
@@ -185,7 +178,7 @@ def single_timestamp_partition(config, location_key, force_reprocess=False):
                 config,
                 location,
                 "a2",
-                [str(f) for f in source_filenames],
+                [str(input_file)],
             )
 
             # Generate temporal string
