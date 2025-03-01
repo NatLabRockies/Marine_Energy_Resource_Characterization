@@ -556,7 +556,9 @@ config = {
             "title": "Western Passage High Fidelity Tidal Hindcast",
             "description": "",
             "summary": "",
-            "partition_frequency": "M",  # Monthly, Roughly 50GB per file
+            # "partition_frequency": "M",  # Monthly, Roughly 50GB per file
+            # Trying to improve VAP compute time and find a balance between # of files and file size
+            "partition_frequency": "12h",
         },
     },
     "global_attributes": {
