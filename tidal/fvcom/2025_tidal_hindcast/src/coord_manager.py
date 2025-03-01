@@ -30,43 +30,43 @@ def create_transformer(coord_system: str, coord_projection: str, utm_zone: int =
     # western_passage
     # CoordinateSystem	Cartesian
     # CoordinateProjection	proj=tmerc +datum=NAD83 +lon_0=-70d10 lat_0=42d50 k=.9999666666666667 x_0=900000 y_0=0
-    if coord_system == "Cartesian" and coord_projection.startswith("proj="):
-        # Handle degree-minute notation in projection strings (e.g., -70d10 → -70.16667)
-        import re
-
-        def convert_degree_minute_to_decimal(match):
-            # Extract the sign, degrees, and minutes
-            full_match = match.group(0)
-            sign = -1 if full_match.startswith("-") else 1
-            degree_part = match.group(1)
-            minute_part = match.group(2)
-
-            # Convert degrees and minutes to decimal degrees
-            degrees = float(degree_part.replace("-", "").replace("+", ""))
-            minutes = float(minute_part)
-            decimal_degrees = sign * (degrees + minutes / 60.0)
-
-            return str(decimal_degrees)
-
-        # Use regex to find and replace degree-minute notation
-        # This pattern matches: optional - or +, followed by digits, followed by 'd',
-        # followed by more digits
-        degree_minute_pattern = r"([-+]?\d+)d(\d+)"
-        fixed_proj = re.sub(
-            degree_minute_pattern, convert_degree_minute_to_decimal, coord_projection
-        )
-
-        if fixed_proj != coord_projection:
-            print("Converted degree-minute notation in projection string:")
-            print(f"Original: {coord_projection}")
-            print(f"Converted: {fixed_proj}")
-
-        try:
-            source_crs = pyproj.CRS.from_proj4(fixed_proj)
-        except Exception as e:
-            print(f"Error parsing projection string: {e}")
-            print("Attempting to use original projection string")
-            source_crs = pyproj.CRS.from_proj4(coord_projection)
+    # if coord_system == "Cartesian" and coord_projection.startswith("proj="):
+    #     # Handle degree-minute notation in projection strings (e.g., -70d10 → -70.16667)
+    #     import re
+    #
+    #     def convert_degree_minute_to_decimal(match):
+    #         # Extract the sign, degrees, and minutes
+    #         full_match = match.group(0)
+    #         sign = -1 if full_match.startswith("-") else 1
+    #         degree_part = match.group(1)
+    #         minute_part = match.group(2)
+    #
+    #         # Convert degrees and minutes to decimal degrees
+    #         degrees = float(degree_part.replace("-", "").replace("+", ""))
+    #         minutes = float(minute_part)
+    #         decimal_degrees = sign * (degrees + minutes / 60.0)
+    #
+    #         return str(decimal_degrees)
+    #
+    #     # Use regex to find and replace degree-minute notation
+    #     # This pattern matches: optional - or +, followed by digits, followed by 'd',
+    #     # followed by more digits
+    #     degree_minute_pattern = r"([-+]?\d+)d(\d+)"
+    #     fixed_proj = re.sub(
+    #         degree_minute_pattern, convert_degree_minute_to_decimal, coord_projection
+    #     )
+    #
+    #     if fixed_proj != coord_projection:
+    #         print("Converted degree-minute notation in projection string:")
+    #         print(f"Original: {coord_projection}")
+    #         print(f"Converted: {fixed_proj}")
+    #
+    #     try:
+    #         source_crs = pyproj.CRS.from_proj4(fixed_proj)
+    #     except Exception as e:
+    #         print(f"Error parsing projection string: {e}")
+    #         print("Attempting to use original projection string")
+    #         source_crs = pyproj.CRS.from_proj4(coord_projection)
 
     # For UTM with no projection string, puget_sound
     # puget_sound
