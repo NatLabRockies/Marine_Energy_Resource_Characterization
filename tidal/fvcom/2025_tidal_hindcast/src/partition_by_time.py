@@ -156,6 +156,7 @@ def single_timestamp_partition(config, location_key, force_reprocess=False):
         print(f"Processing file: {input_file}")
 
         # Open the dataset
+        print(f"Reading: {input_file}")
         ds = xr.open_dataset(input_file)
 
         # Get all timestamps in this file
@@ -170,6 +171,7 @@ def single_timestamp_partition(config, location_key, force_reprocess=False):
 
             # Subset to just this timestamp
             time_index = np.where(ds.time.values == np.datetime64(timestamp))[0][0]
+            print(f"Selecting time index: {time_index}")
             ds_single_time = ds.isel(time=[time_index])
 
             # Standardize attributes
@@ -189,6 +191,7 @@ def single_timestamp_partition(config, location_key, force_reprocess=False):
             # Format timestamp for filename
             timestamp_str = pd.to_datetime(timestamp).strftime("%Y%m%dT%H%M%S")
 
+            print("Building output_file name...")
             # Generate output filename
             data_level_file_name = (
                 file_name_convention_manager.generate_filename_for_data_level(
@@ -204,27 +207,17 @@ def single_timestamp_partition(config, location_key, force_reprocess=False):
                 output_dir, f"{file_counter:03d}_{timestamp_str}.{data_level_file_name}"
             )
 
-            # Skip if file exists and we're not forcing reprocess
-            if output_path.exists() and not force_reprocess:
-                print(f"File {output_path} already exists, skipping...")
-                partition_files.append(output_path)
-                file_counter += 1
-                continue
-
             print(f"Saving single timestamp file: {output_path}")
             ds_single_time.to_netcdf(
                 output_path, encoding=config["dataset"]["encoding"]
             )
+
             partition_files.append(output_path)
             print(f"Saved single timestamp file: {output_path}")
 
             # Increment file counter for next file
             file_counter += 1
             timestamp_counter += 1
-
-        # Close the dataset
-        ds.close()
-        gc.collect()
 
     # Verify timestamps are in order
     if all_timestamps:
