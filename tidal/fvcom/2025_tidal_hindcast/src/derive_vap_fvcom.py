@@ -727,7 +727,6 @@ def calculate_zeta_center(ds):
     return ds
 
 
-
 def validate_depth_inputs(ds):
     """
     Validate required variables for depth calculations in an xarray Dataset.
@@ -913,133 +912,112 @@ def calculate_sea_floor_depth(ds):
     return ds
 
 
-def calculate_vertical_average(ds, variable_name):
+def calculate_depth_average(ds, variable_name):
     """
-    Calculate vertical average for a given variable
+    Calculate depth average for a given variable
 
     Parameters
     ----------
     ds : xarray.Dataset
         Dataset containing the variable to be averaged
     variable_name : str
-        Name of variable to average vertically
+        Name of variable to average across depth
 
     Returns
     -------
     xarray.Dataset
-        Dataset with added vertically averaged variable
+        Dataset with added depth-averaged variable
     """
     if variable_name not in ds:
         raise KeyError(f"Dataset must contain '{variable_name}'")
 
-    # Calculate vertical average and standard deviation
-    vert_avg_name = f"{variable_name}_vert_avg"
+    # Calculate depth average
+    depth_avg_name = f"{variable_name}_depth_avg"
 
-    ds[vert_avg_name] = ds[variable_name].mean(dim="sigma_layer")
+    ds[depth_avg_name] = ds[variable_name].mean(dim="sigma_layer")
 
     # Copy and modify attributes for averaged variable
     # Start with original attributes but remove standard_name if it exists
     attrs = ds[variable_name].attrs.copy()
     attrs.pop("standard_name", None)
 
-    ds[vert_avg_name].attrs = {
+    ds[depth_avg_name].attrs = {
         **attrs,
-        "long_name": f"Vertically averaged {ds[variable_name].attrs.get('long_name', variable_name)}",
-        "vertical_averaging": "Mean across sigma layers",
+        "long_name": f"Depth averaged {ds[variable_name].attrs.get('long_name', variable_name)}",
+        "depth_averaging": "Mean across sigma layers",
     }
 
     return ds
 
 
-def calculate_vertical_median(ds, variable_name):
+def calculate_depth_statistics(ds, variable_name):
     """
-    Calculate the median value of a variable along a specified dimension.
+    Calculate depth statistics (mean, median, 95th percentile) for a given variable.
+
+    This function computes multiple depth-based statistics in a single pass to avoid
+    redundant data access.
 
     Parameters
     ----------
     ds : xarray.Dataset
-        Dataset with the variable to calculate median for
+        Dataset containing the variable to be analyzed
     variable_name : str
-        Name of the variable to calculate median for
-    dim : str, optional
-        Dimension to calculate median along, default "time"
+        Name of variable to calculate statistics for
 
     Returns
     -------
     xarray.Dataset
-        Input dataset with added median variable
+        Dataset with added depth statistics variables
     """
-    if variable_name not in ds.variables:
-        raise KeyError(
-            f"Dataset must contain '{variable_name}'. "
-            f"Please ensure this variable exists in the dataset."
-        )
+    if variable_name not in ds:
+        raise KeyError(f"Dataset must contain '{variable_name}'")
 
     dim = "sigma_layer"
 
-    # Calculate median along the specified dimension
-    median_values = ds[variable_name].median(dim=dim)
+    # Calculate all statistics in one go
+    depth_avg_name = f"{variable_name}_depth_avg"
+    depth_median_name = f"{variable_name}depth_median"
+    depth_95th_name = f"{variable_name}_depth_95th_percentile"
 
-    output_variable_name = f"{variable_name}_median"
+    # Get original variable attributes
+    orig_attrs = ds[variable_name].attrs.copy()
+    orig_long_name = orig_attrs.get("long_name", variable_name)
+    orig_units = orig_attrs.get("units", "")
 
-    ds[output_variable_name] = median_values
+    # Calculate mean
+    ds[depth_avg_name] = ds[variable_name].mean(dim=dim)
 
-    # Add basic metadata
-    ds[output_variable_name].attrs = {
-        "long_name": f"Vertical median of {ds[variable_name].attrs.get('long_name', variable_name)}",
-        "units": ds[variable_name].attrs.get("units", ""),
-        "additional_processing": (f"Median calculated along the {dim} dimension."),
-        "computation": (f"median_values = ds['{variable_name}'].median(dim='{dim}')\n"),
-        "input_variables": (f"{variable_name}: original variable"),
+    # Calculate median
+    ds[depth_median_name] = ds[variable_name].median(dim=dim)
+
+    # Calculate 95th percentile
+    ds[depth_95th_name] = ds[variable_name].quantile(0.95, dim=dim)
+
+    # Set attributes for mean
+    avg_attrs = orig_attrs.copy()
+    avg_attrs.pop("standard_name", None)
+    ds[depth_avg_name].attrs = {
+        **avg_attrs,
+        "long_name": f"Depth averaged {orig_long_name}",
+        "depth_averaging": "Mean across sigma layers",
     }
 
-    return ds
+    # Set attributes for median
+    ds[depth_median_name].attrs = {
+        "long_name": f"Depth median of {orig_long_name}",
+        "units": orig_units,
+        "additional_processing": f"Median calculated along the {dim} dimension.",
+        "computation": f"median_values = ds['{variable_name}'].median(dim='{dim}')",
+        "input_variables": f"{variable_name}: original variable",
+    }
 
-
-def calculate_vertical_95th_percentile(ds, variable_name):
-    """
-    Calculate the 95th percentile value of a variable along a specified dimension.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        Dataset with the variable to calculate 95th percentile for
-    variable_name : str
-        Name of the variable to calculate 95th percentile for
-    dim : str, optional
-        Dimension to calculate 95th percentile along, default "time"
-
-    Returns
-    -------
-    xarray.Dataset
-        Input dataset with added 95th percentile variable
-    """
-    if variable_name not in ds.variables:
-        raise KeyError(
-            f"Dataset must contain '{variable_name}'. "
-            f"Please ensure this variable exists in the dataset."
-        )
-
-    dim = "sigma_layer"
-
-    # Calculate 95th percentile along the specified dimension
-    percentile_95_values = ds[variable_name].quantile(0.95, dim=dim)
-
-    output_variable_name = f"{variable_name}_vert_95th_percentile"
-
-    ds[output_variable_name] = percentile_95_values
-
-    # Add basic metadata
-    ds[output_variable_name].attrs = {
-        "long_name": f"95th percentile of {ds[variable_name].attrs.get('long_name', variable_name)}",
-        "units": ds[variable_name].attrs.get("units", ""),
-        "additional_processing": (
-            f"95th percentile calculated along the {dim} dimension."
-        ),
-        "computation": (
-            f"percentile_95_values = ds['{variable_name}'].quantile(0.95, dim='{dim}')\n"
-        ),
-        "input_variables": (f"{variable_name}: original variable"),
+    # Set attributes for 95th percentile
+    ds[depth_95th_name].attrs = {
+        "long_name": f"95th percentile of {orig_long_name} across depth",
+        "units": orig_units,
+        "additional_processing": f"95th percentile calculated along the {dim} dimension.",
+        "computation": f"percentile_95_values = ds['{variable_name}'].quantile(0.95, dim='{dim}')",
+        "input_variables": f"{variable_name}: original variable",
     }
 
     return ds
@@ -1100,37 +1078,25 @@ def derive_vap(config, location_key):
         this_ds = calculate_column_volume_avg_energy_flux(this_ds)
 
         print("\tCalculating u vertical average")
-        this_ds = calculate_vertical_average(this_ds, "u")
+        this_ds = calculate_depth_average(this_ds, "u")
 
         print("\tCalculating v vertical average")
-        this_ds = calculate_vertical_average(this_ds, "v")
+        this_ds = calculate_depth_average(this_ds, "v")
 
-        print("\tCalculating speed vertical average")
-        this_ds = calculate_vertical_average(this_ds, "speed")
+        print("\tCalculating to_direction vertical average")
+        this_ds = calculate_depth_average(this_ds, "to_direction")
 
         print("\tCalculating from_direction vertical average")
-        this_ds = calculate_vertical_average(this_ds, "from_direction")
+        this_ds = calculate_depth_average(this_ds, "from_direction")
 
-        print("\tCalculating power_density vertical average")
-        this_ds = calculate_vertical_average(this_ds, "power_density")
+        print("\tCalculating speed depth average statistics")
+        this_ds = calculate_depth_statistics(this_ds, "speed")
 
-        print("\tCalculating speed vertical median")
-        this_ds = calculate_vertical_median(this_ds, "speed")
+        print("\tCalculating power_density depth average statistics")
+        this_ds = calculate_depth_statistics(this_ds, "power_density")
 
-        print("\tCalculating power_density vertical median")
-        this_ds = calculate_vertical_median(this_ds, "power_density")
-
-        print("\tCalculating volume_energy_flux vertical median")
-        this_ds = calculate_vertical_median(this_ds, "volume_energy_flux")
-
-        print("\tCalculating speed vertical 95th_percentile")
-        this_ds = calculate_vertical_95th_percentile(this_ds, "speed")
-
-        print("\tCalculating power_density vertical 95th_percentile")
-        this_ds = calculate_vertical_95th_percentile(this_ds, "power_density")
-
-        print("\tCalculating volume_energy_flux vertical 95th_percentile")
-        this_ds = calculate_vertical_95th_percentile(this_ds, "volume_energy_flux")
+        print("\tCalculating volume_energy_flux depth average statistics")
+        this_ds = calculate_depth_statistics(this_ds, "volume_energy_flux")
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
         if expected_delta_t_seconds == 3600:
