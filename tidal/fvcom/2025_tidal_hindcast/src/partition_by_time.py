@@ -173,13 +173,13 @@ def single_timestamp_partition(config, location_key, force_reprocess=False):
             ds_single_time = ds.isel(time=[time_index])
 
             # Standardize attributes
-            ds_single_time = attrs_manager.standardize_dataset_global_attrs(
-                ds_single_time,
-                config,
-                location,
-                "a2",
-                [str(input_file)],
-            )
+            # ds_single_time = attrs_manager.standardize_dataset_global_attrs(
+            #     ds_single_time,
+            #     config,
+            #     location,
+            #     "a2",
+            #     [str(input_file)],
+            # )
 
             # Generate temporal string
             # temporal_string = time_manager.generate_temporal_attrs(ds_single_time)[
