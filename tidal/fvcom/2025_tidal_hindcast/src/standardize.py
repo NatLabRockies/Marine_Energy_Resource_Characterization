@@ -431,10 +431,23 @@ class FVCOMStandardizer:
         lon_center_max = np.max(coords["lon_centers"])
         lon_center_min = np.min(coords["lon_centers"])
 
-        print(lat_center_max)
-        print(lat_center_min)
-        print(lon_center_max)
-        print(lon_center_min)
+        print("Lat Center Max", lat_center_max)
+        print("Lat Center Min", lat_center_min)
+        print("Lon Center Min", lon_center_max)
+        print("Lon Center Max", lon_center_min)
+
+        xc = ds.xc.values  # Longitude
+        yc = ds.xc.values  # Latitude
+
+        x_center_max = np.max(xc)
+        x_center_min = np.min(xc)
+        y_center_max = np.max(yc)
+        y_center_min = np.min(yc)
+
+        print("X Center Max", x_center_max)
+        print("X Center Min", x_center_min)
+        print("Y Center Min", y_center_max)
+        print("Y Center Max", y_center_min)
 
         exit()
 
