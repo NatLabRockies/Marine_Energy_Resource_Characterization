@@ -476,7 +476,8 @@ config = {
             "description": "",
             "summary": "",
             # "partition_frequency": "M",  # Monthly, Roughly 73GB per file, out of memory in partition step
-            "partition_frequency": "W",  # Weekly, Roughly ? per file
+            # "partition_frequency": "W",  # Weekly, Roughly ? per file
+            "partition_frequency": "12h",
         },
         "cook_inlet": {
             "output_name": "AK_cook_inlet",
@@ -493,7 +494,8 @@ config = {
             "coordinates": {"system": "latitude/longitude"},
             "description": "",
             "summary": "",
-            "partition_frequency": "M",  # Monthly, Roughly 35GB per file
+            # "partition_frequency": "M",  # Monthly, Roughly 35GB per file
+            "partition_frequency": "12h",
         },
         "piscataqua_river": {
             "output_name": "NH_piscataqua_river",
@@ -509,7 +511,8 @@ config = {
             "coordinates": {"system": "utm", "zone": 19},
             "description": "",
             "summary": "",
-            "partition_frequency": "M",  # Monthly, Roughly 67GB per file
+            # "partition_frequency": "M",  # Monthly, Roughly 67GB per file
+            "partition_frequency": "12h",
         },
         "puget_sound": {
             "output_name": "WA_puget_sound",
@@ -537,7 +540,8 @@ config = {
             "description": "",
             "summary": "",
             # "partition_frequency": "D",  # Weekly, out of memory at vap step
-            "partition_frequency": "D",  # Daily
+            # "partition_frequency": "D",  # Daily
+            "partition_frequency": "12h",
         },
         "western_passage": {
             "output_name": "ME_western_passage",
