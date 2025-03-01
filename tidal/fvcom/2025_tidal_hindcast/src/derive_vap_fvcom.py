@@ -1151,6 +1151,10 @@ def derive_vap(config, location_key):
     # Determine the number of processes to use
     num_processes = min(mp.cpu_count(), len(std_partition_nc_files))
 
+    num_processes = int(num_processes / 2)
+
+    print(f"Using {num_processes} to process vap data")
+
     # Process the files in parallel
     with mp.Pool(num_processes) as pool:
         # We use starmap to unpack the tuple of arguments
