@@ -422,6 +422,9 @@ class FVCOMStandardizer:
         if location["coordinates"]["system"] == "utm":
             utm_zone = location["coordinates"]["zone"]
 
+        print(f"Standardizing using utm zone {utm_zone}")
+        exit()
+
         coords = coord_manager.standardize_fvcom_coords(ds, utm_zone)
 
         # Update existing coordinates
