@@ -1,7 +1,6 @@
 import gc
 import multiprocessing as mp
 
-from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -1152,21 +1151,15 @@ def derive_vap(config, location_key):
     # Determine the number of processes to use
     num_processes = min(mp.cpu_count(), len(std_partition_nc_files))
 
-    print(f"Using {num_processes} to multiprocess VAP computation")
-
-    # Create a partial function with the common arguments
-    process_func = partial(
-        process_single_file, config=config, location=location, output_dir=vap_output_dir
-    )
-
     # Process the files in parallel
     with mp.Pool(num_processes) as pool:
         # We use starmap to unpack the tuple of arguments
         results = pool.starmap(
-            process_func,
+            process_single_file,
             [
-                (args[0], args[4]) for args in process_args
-            ],  # Only pass nc_file and file_index
+                (args[0], config, location, vap_output_dir, args[4])
+                for args in process_args
+            ],
         )
 
     print(f"Completed processing {len(results)} files with multiprocessing.")
