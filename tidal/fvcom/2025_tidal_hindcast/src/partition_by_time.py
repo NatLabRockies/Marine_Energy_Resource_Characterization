@@ -182,9 +182,9 @@ def single_timestamp_partition(config, location_key, force_reprocess=False):
             )
 
             # Generate temporal string
-            temporal_string = time_manager.generate_temporal_attrs(ds_single_time)[
-                "standard_name"
-            ]
+            # temporal_string = time_manager.generate_temporal_attrs(ds_single_time)[
+            #     "standard_name"
+            # ]
 
             # Format timestamp for filename
             timestamp_str = pd.to_datetime(timestamp).strftime("%Y%m%dT%H%M%S")
@@ -196,7 +196,7 @@ def single_timestamp_partition(config, location_key, force_reprocess=False):
                     location["output_name"],
                     config["dataset"]["name"],
                     "a2",
-                    temporal=temporal_string,
+                    # temporal=temporal_string,
                 )
             )
 
