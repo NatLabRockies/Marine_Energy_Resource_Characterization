@@ -541,7 +541,8 @@ config = {
             "summary": "",
             # "partition_frequency": "D",  # Weekly, out of memory at vap step
             # "partition_frequency": "D",  # Daily
-            "partition_frequency": "12h",
+            # "partition_frequency": "12h",
+            "partition_frequency": "M",
         },
         "western_passage": {
             "output_name": "ME_western_passage",

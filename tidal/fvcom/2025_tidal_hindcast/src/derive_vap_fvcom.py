@@ -1215,6 +1215,7 @@ def derive_vap(config, location_key):
     cpu_count = mp.cpu_count()
     # Using 1/4 of available CPUs or 1, whichever is larger
     num_processes = max(1, int(cpu_count / 4))
+    num_processes = 2
 
     print(
         f"Using {num_processes} processes to process {len(files_to_process)} vap data files"
