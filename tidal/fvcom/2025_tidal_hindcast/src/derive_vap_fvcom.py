@@ -953,10 +953,9 @@ def calculate_depth_average(ds, variable_name):
 
 def calculate_depth_statistics(ds, variable_name):
     """
-    Calculate depth statistics (mean, median, 95th percentile) for a given variable.
-
+    Calculate depth statistics (mean, median, max, (max - max[i - 1]) percentile) for a given variable.
     This function computes multiple depth-based statistics in a single pass to avoid
-    redundant data access.
+    redundant data access, with optimized percentile calculation.
 
     Parameters
     ----------
@@ -978,12 +977,22 @@ def calculate_depth_statistics(ds, variable_name):
     # Calculate all statistics in one go
     depth_avg_name = f"{variable_name}_depth_avg"
     depth_median_name = f"{variable_name}depth_median"
-    depth_95th_name = f"{variable_name}_depth_95th_percentile"
+
+    # For the high value (average of max and second max), determine the actual percentile
+    n_elements = ds[variable_name].sizes[dim]
+    # Position for second-highest value in a zero-indexed array is n_elements - 2
+    # Second highest is at position n_elements - 1 in 1-indexed ranking
+    # So its percentile is (n_elements - 1) / n_elements * 100
+    actual_percentile = (n_elements - 1) / n_elements * 100
+
+    depth_percentile_name = (
+        f"{variable_name}_depth_{int(actual_percentile)}th_percentile"
+    )
+    depth_max_name = f"{variable_name}_depth_max"
 
     # Get original variable attributes
     orig_attrs = ds[variable_name].attrs.copy()
     orig_long_name = orig_attrs.get("long_name", variable_name)
-    orig_units = orig_attrs.get("units", "")
 
     # Calculate mean
     ds[depth_avg_name] = ds[variable_name].mean(dim=dim)
@@ -991,8 +1000,37 @@ def calculate_depth_statistics(ds, variable_name):
     # Calculate median
     ds[depth_median_name] = ds[variable_name].median(dim=dim)
 
-    # Calculate 95th percentile
-    ds[depth_95th_name] = ds[variable_name].quantile(0.95, dim=dim)
+    # Extract the variable data as a numpy array
+    var_data = ds[variable_name].values
+
+    # Find the axis index for the sigma_layer dimension
+    axis = ds[variable_name].dims.index(dim)
+
+    # Partition to get the two highest values (max and second max)
+    # This is much faster than sorting the entire array
+    k1 = var_data.shape[axis] - 1  # Index of max value (0-indexed)
+    k2 = var_data.shape[axis] - 2  # Index of second max value (0-indexed)
+
+    # Use np.partition which partially sorts the array so elements at positions
+    # >= k are in their final sorted positions
+    partitioned = np.partition(var_data, [k2, k1], axis=axis)
+
+    # Extract the max value (last element in the partitioned array)
+    max_values = np.take(partitioned, k1, axis=axis)
+
+    # Extract the second max value (second-to-last element)
+    second_max_values = np.take(partitioned, k2, axis=axis)
+
+    # Calculate the average of max and second max
+    percentile_data = (max_values + second_max_values) / 2.0
+
+    # Create a new DataArray for the high value with proper dimensions
+    dims_without_depth = [d for d in ds[variable_name].dims if d != dim]
+
+    # Store the maximum values separately
+    ds[depth_max_name] = (dims_without_depth, max_values)
+
+    ds[depth_percentile_name] = (dims_without_depth, percentile_data)
 
     # Set attributes for mean
     avg_attrs = orig_attrs.copy()
@@ -1003,22 +1041,23 @@ def calculate_depth_statistics(ds, variable_name):
         "depth_averaging": "Mean across sigma layers",
     }
 
-    # Set attributes for median
+    # Set attributes for other calculations
     ds[depth_median_name].attrs = {
-        "long_name": f"Depth median of {orig_long_name}",
-        "units": orig_units,
-        "additional_processing": f"Median calculated along the {dim} dimension.",
-        "computation": f"median_values = ds['{variable_name}'].median(dim='{dim}')",
-        "input_variables": f"{variable_name}: original variable",
+        **avg_attrs,
+        "long_name": f"Depth median {orig_long_name}",
+        "depth_averaging": "Median across sigma layers",
     }
 
-    # Set attributes for 95th percentile
-    ds[depth_95th_name].attrs = {
-        "long_name": f"95th percentile of {orig_long_name} across depth",
-        "units": orig_units,
-        "additional_processing": f"95th percentile calculated along the {dim} dimension.",
-        "computation": f"percentile_95_values = ds['{variable_name}'].quantile(0.95, dim='{dim}')",
-        "input_variables": f"{variable_name}: original variable",
+    ds[depth_percentile_name].attrs = {
+        **avg_attrs,
+        "long_name": f"Depth {int(actual_percentile)}th percentile {orig_long_name}",
+        "depth_averaging": f"Average of maximum and second maximum across sigma layers (approx. {int(actual_percentile)}th percentile)",
+    }
+
+    ds[depth_max_name].attrs = {
+        **avg_attrs,
+        "long_name": f"Depth maximum {orig_long_name}",
+        "depth_averaging": "Maximum value across sigma layers",
     }
 
     return ds
