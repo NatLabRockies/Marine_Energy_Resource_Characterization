@@ -1,6 +1,4 @@
 import gc
-import multiprocessing as mp
-
 from pathlib import Path
 
 import numpy as np
@@ -101,7 +99,7 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
     """
     Partitions time-series data into separate files based on configured frequency.
     Skips processing if the expected number of output files already exists.
-    Uses multiprocessing to speed up the operation.
+    Processes each time period sequentially.
     """
     location = config["location_specification"][location_key]
     output_dir = file_manager.get_standardized_partition_output_dir(config, location)
@@ -125,29 +123,13 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
         )
         return existing_files
 
-    # Create a list of arguments for each period to be processed
-    process_args = []
+    # Process each time period sequentially
+    partition_files = []
     for count, period_data in enumerate(time_groups, 1):
-        process_args.append((period_data, config, location, output_dir, count))
+        result = process_single_period(period_data, config, location, output_dir, count)
+        if result is not None:
+            partition_files.append(Path(result))
 
-    # Determine the number of processes to use
-    num_processes = min(mp.cpu_count(), len(process_args))
-
-    # num_processes = int(num_processes / 4)
-    num_processes = 2
-
-    # Process the time periods in parallel
-    with mp.Pool(num_processes) as pool:
-        results = pool.starmap(
-            process_single_period,
-            [(args[0], args[1], args[2], args[3], args[4]) for args in process_args],
-        )
-
-    # Filter out None results and create a list of output files
-    partition_files = [Path(path) for path in results if path is not None]
-
-    print(
-        f"Completed processing {len(partition_files)} time partitions with multiprocessing."
-    )
+    print(f"Completed processing {len(partition_files)} time partitions sequentially.")
 
     return partition_files
