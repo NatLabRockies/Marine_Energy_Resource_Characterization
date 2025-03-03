@@ -543,7 +543,8 @@ config = {
             # "partition_frequency": "D",  # Daily
             # "partition_frequency": "12h",
             # "partition_frequency": "M", Monthly OOM at Partition Step
-            "partition_frequency": "W",
+            # "partition_frequency": "W", This starts with 5 days
+            "partition_frequency": "7D",
         },
         "western_passage": {
             "output_name": "ME_western_passage",
