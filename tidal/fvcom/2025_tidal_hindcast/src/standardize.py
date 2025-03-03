@@ -39,6 +39,91 @@ class FVCOMStandardizer:
             "siglev": "sigma_level",  # Sigma level depths
         }
 
+    def populate_siglay(self, ds):
+        """
+        Add or update siglay variable in FVCOM dataset.
+        If siglay exists but has incorrect dimensions or data, it will be updated.
+        siglay is computed as the midpoint between consecutive siglev values.
+
+        Parameters:
+        -----------
+        ds : xarray.Dataset
+            FVCOM dataset that needs the siglay variable updated
+
+        Returns:
+        --------
+        xarray.Dataset
+            Dataset with proper siglay variable
+        """
+        # Check if siglev exists in the dataset
+        if "siglev" not in ds.variables:
+            raise ValueError(
+                "Cannot create siglay: siglev variable not found in dataset."
+            )
+
+        # Check if 'node' dimension exists
+        if "node" not in ds.dims:
+            raise ValueError(
+                "Cannot create siglay: node dimension not found in dataset."
+            )
+
+        # Get the siglev dimension size
+        siglev_size = ds.dims["siglev"]
+
+        # Ensure we have enough levels to create layers
+        if siglev_size < 2:
+            raise ValueError(
+                f"Cannot create siglay: need at least 2 siglevs, but found {siglev_size}"
+            )
+
+        # Compute siglay as the average of consecutive siglev values
+        # Note: siglay will have size one less than siglev
+        siglay_size = siglev_size - 1
+
+        # For each node, compute the midpoint between consecutive siglev values
+        # In FVCOM, siglev has dimensions (siglev, node)
+        siglev_values = ds.siglev.values
+        siglay_values = np.zeros((siglay_size, ds.dims["node"]), dtype=np.float32)
+
+        for i in range(siglay_size):
+            siglay_values[i, :] = (siglev_values[i, :] + siglev_values[i + 1, :]) / 2.0
+
+        # Check if siglay exists but needs to be updated
+        if "siglay" in ds.variables:
+            # Check if the existing siglay has the wrong shape or doesn't include the node dimension
+            if len(ds.siglay.dims) == 1 or "node" not in ds.siglay.dims:
+                print(
+                    "siglay variable exists but has incorrect dimensions. Updating..."
+                )
+                # Create a new siglay with correct dimensions and data
+                ds = ds.drop_vars("siglay")
+            else:
+                # If it's already correct, we don't need to do anything
+                print(
+                    "siglay variable already exists with correct dimensions. No action taken."
+                )
+                return ds
+
+        # Create or recreate the siglay variable with the same attributes as siglev
+        ds = ds.assign(
+            {
+                "siglay": xr.DataArray(
+                    data=siglay_values,
+                    dims=["siglay", "node"],
+                    attrs={k: v for k, v in ds.siglev.attrs.items()},
+                )
+            }
+        )
+
+        # Update the attributes to reflect this is for siglay
+        if "long_name" in ds.siglay.attrs:
+            ds.siglay.attrs["long_name"] = "Sigma Layers"
+
+        print(
+            f"Successfully populated siglay variable with dimensions ({siglay_size}, {ds.dims['node']})"
+        )
+        return ds
+
     def _rename_dimensions(self, ds):
         """
         Rename dimensions to follow UGRID conventions.
@@ -568,6 +653,10 @@ class FVCOMStandardizer:
             Dataset with standardized names and UGRID attributes
         """
         ds = xr.open_dataset(ds_path, decode_times=False)
+
+        if location["base_dir"] == "PIR_full_year":
+            print("Adding siglay to PIR...")
+            ds = self.populate_siglay(ds)
 
         time_duplicate_drop_strategy = config["time_specification"][
             "drop_duplicate_timestamps_keep_strategy"
