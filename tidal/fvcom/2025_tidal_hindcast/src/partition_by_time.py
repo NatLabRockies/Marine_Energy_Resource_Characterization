@@ -127,11 +127,20 @@ def process_single_period(period_data, config, location, output_dir, count):
     return str(output_path) if output_path and output_path.exists() else None
 
 
-def partition_by_time(config, location_key, time_df, force_reprocess=False):
+def partition_by_time(
+    config, location_key, time_df, force_reprocess=False, use_multiprocessing=False
+):
     """
     Partitions time-series data into separate files based on configured frequency.
     Skips processing if the expected number of output files already exists.
-    Uses multiprocessing to speed up the operation.
+    Can run either sequentially or with multiprocessing based on the flag.
+
+    Args:
+        config: Configuration dictionary
+        location_key: Key to look up location in the configuration
+        time_df: DataFrame containing timestamps and file information
+        force_reprocess: If True, reprocess even if files exist
+        use_multiprocessing: If True, use multiprocessing; otherwise process sequentially
     """
     location = config["location_specification"][location_key]
     output_dir = file_manager.get_standardized_partition_output_dir(config, location)
@@ -160,17 +169,50 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
     for count, period_data in enumerate(time_groups, 1):
         process_args.append((period_data, config, location, output_dir, count))
 
-    # Determine the number of processes to use
-    num_processes = min(mp.cpu_count(), len(process_args))
-    # Limit to 2 processes to avoid excessive file operations
-    num_processes = 2
+    results = []
 
-    # Process the time periods in parallel
-    with mp.Pool(num_processes) as pool:
-        results = pool.starmap(
-            process_single_period,
-            [(args[0], args[1], args[2], args[3], args[4]) for args in process_args],
+    if use_multiprocessing:
+        # Multiprocessing approach
+        # Limit to 2 processes to avoid excessive file operations
+        num_processes = 2
+        print(
+            f"Processing {len(process_args)} time partitions with {num_processes} processes"
         )
+
+        # Process the time periods in parallel, but one chunk at a time to control memory
+        with mp.Pool(num_processes) as pool:
+            # Process in smaller chunks to avoid loading too much at once
+            chunk_size = 2  # Process only 2 files at a time
+            for i in range(0, len(process_args), chunk_size):
+                chunk = process_args[i : i + chunk_size]
+                print(
+                    f"Processing chunk {i//chunk_size + 1}/{(len(process_args)-1)//chunk_size + 1}"
+                )
+
+                # Process this chunk
+                chunk_results = pool.starmap(
+                    process_single_period,
+                    [(args[0], args[1], args[2], args[3], args[4]) for args in chunk],
+                )
+
+                results.extend(chunk_results)
+
+                # Force garbage collection between chunks
+                gc.collect()
+
+        print("Completed processing time partitions with multiprocessing.")
+    else:
+        # Sequential processing approach
+        print(f"Processing {len(process_args)} time partitions sequentially")
+
+        for count, args in enumerate(process_args, 1):
+            print(f"Processing partition {count}/{len(process_args)}")
+            result = process_single_period(args[0], args[1], args[2], args[3], args[4])
+            results.append(result)
+            # Force garbage collection after each file
+            gc.collect()
+
+        print("Completed processing time partitions sequentially.")
 
     # Wait a moment to ensure all file operations are complete
     time.sleep(1)
@@ -183,8 +225,6 @@ def partition_by_time(config, location_key, time_df, force_reprocess=False):
         if not file_path.exists():
             print(f"Warning: Expected output file does not exist: {file_path}")
 
-    print(
-        f"Completed processing {len(partition_files)} time partitions with multiprocessing."
-    )
+    print(f"Successfully created {len(partition_files)} partition files.")
 
     return partition_files
