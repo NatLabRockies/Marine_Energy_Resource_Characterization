@@ -1174,10 +1174,8 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
         return -file_index
 
 
-def derive_vap(config, location_key):
-    """Derive value-added products from standardized netCDF files."""
+def derive_vap(config, location_key, use_multiprocessing=False):
     location = config["location_specification"][location_key]
-
     std_partition_path = file_manager.get_standardized_partition_output_dir(
         config, location
     )
@@ -1210,57 +1208,71 @@ def derive_vap(config, location_key):
         print("No new files to process.")
         return
 
-    # Determine a reasonable number of processes
-    # Use a smaller fraction of available CPUs to avoid memory issues
-    cpu_count = mp.cpu_count()
-    # Using 1/4 of available CPUs or 1, whichever is larger
-    num_processes = max(1, int(cpu_count / 4))
-    num_processes = 2
-
-    print(
-        f"Using {num_processes} processes to process {len(files_to_process)} vap data files"
-    )
-
-    # Set a timeout for each task to avoid indefinite hanging
-    timeout_per_file = 3600  # 1 hour per file, adjust as needed
-
-    # Use a context manager with timeout
     results = []
-    try:
-        # Process files in chunks to avoid memory overflow
-        chunk_size = min(10, len(files_to_process))  # Process max 10 files at a time
 
-        for i in range(0, len(files_to_process), chunk_size):
-            chunk = files_to_process[i : i + chunk_size]
+    if use_multiprocessing:
+        # Multiprocessing approach
+        # Determine a reasonable number of processes
+        # Use a smaller fraction of available CPUs to avoid memory issues
+        cpu_count = mp.cpu_count()
+        # Using 1/4 of available CPUs or 1, whichever is larger
+        num_processes = max(1, int(cpu_count / 4))
+        num_processes = 2
+        print(
+            f"Using {num_processes} processes to process {len(files_to_process)} vap data files"
+        )
 
-            print(
-                f"Processing chunk {i//chunk_size + 1}/{(len(files_to_process)-1)//chunk_size + 1}"
-            )
+        # Set a timeout for each task to avoid indefinite hanging
+        timeout_per_file = 3600  # 1 hour per file, adjust as needed
 
-            with mp.Pool(num_processes) as pool:
-                chunk_results = pool.starmap_async(
-                    process_single_file,
-                    [
-                        (nc_file, config, location, vap_output_dir, idx)
-                        for nc_file, idx in chunk
-                    ],
-                ).get(timeout=timeout_per_file * len(chunk))
+        try:
+            # Process files in chunks to avoid memory overflow
+            chunk_size = min(
+                10, len(files_to_process)
+            )  # Process max 10 files at a time
+            for i in range(0, len(files_to_process), chunk_size):
+                chunk = files_to_process[i : i + chunk_size]
+                print(
+                    f"Processing chunk {i//chunk_size + 1}/{(len(files_to_process)-1)//chunk_size + 1}"
+                )
+                with mp.Pool(num_processes) as pool:
+                    chunk_results = pool.starmap_async(
+                        process_single_file,
+                        [
+                            (nc_file, config, location, vap_output_dir, idx)
+                            for nc_file, idx in chunk
+                        ],
+                    ).get(timeout=timeout_per_file * len(chunk))
+                    results.extend(chunk_results)
+                # Force garbage collection between chunks
+                gc.collect()
+            print(f"Completed processing {len(results)} files with multiprocessing.")
+        except mp.TimeoutError:
+            print("ERROR: Processing timed out.")
+        except Exception as e:
+            print(f"ERROR during multiprocessing: {str(e)}")
+    else:
+        # Sequential processing approach
+        print(f"Processing {len(files_to_process)} vap data files sequentially")
 
-                results.extend(chunk_results)
+        for nc_file, idx in files_to_process:
+            try:
+                print(f"Processing file {idx}/{len(files_to_process)}: {nc_file}")
+                result = process_single_file(
+                    nc_file, config, location, vap_output_dir, idx
+                )
+                results.append(result)
+                # Force garbage collection after each file
+                gc.collect()
+            except Exception as e:
+                print(f"ERROR processing file {idx}: {str(e)}")
+                results.append(-idx)  # Mark as failed with negative index
 
-            # Force garbage collection between chunks
-            gc.collect()
+        print(f"Completed processing {len(results)} files sequentially.")
 
-        print(f"Completed processing {len(results)} files with multiprocessing.")
-
-        # Check for any errors in processing
-        failed_files = [i for i in results if i < 0]
-        if failed_files:
-            print(
-                f"WARNING: {len(failed_files)} files failed to process: {[-i for i in failed_files]}"
-            )
-
-    except mp.TimeoutError:
-        print("ERROR: Processing timed out.")
-    except Exception as e:
-        print(f"ERROR during multiprocessing: {str(e)}")
+    # Check for any errors in processing (for both approaches)
+    failed_files = [i for i in results if i < 0]
+    if failed_files:
+        print(
+            f"WARNING: {len(failed_files)} files failed to process: {[-i for i in failed_files]}"
+        )
