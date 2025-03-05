@@ -64,8 +64,13 @@ def calculate_vap_average(config, location):
         )
 
     # Typical year has 365 days
-    seconds_per_year = 365 * 24 * 60 * 60
+    days_per_year = 365
+    if location["output_name"] == "WA_puget_sound":
+        # Puget sound is missing one day
+        days_per_year = 364
+    seconds_per_year = days_per_year * 24 * 60 * 60
     expected_timestamps = int(seconds_per_year / location["expected_delta_t_seconds"])
+
     print("Verifying timestamps across all files...")
     verify_timestamps(
         vap_nc_files, expected_timestamps, location["expected_delta_t_seconds"]
