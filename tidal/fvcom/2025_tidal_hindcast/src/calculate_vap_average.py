@@ -44,6 +44,34 @@ def verify_timestamps(nc_files, expected_timestamps, expected_delta_t_seconds):
     return True
 
 
+def verify_constant_variables(ds1, ds2, constant_vars):
+    """
+    Verify that specified variables have the same values across datasets.
+
+    Args:
+        ds1: First dataset containing the variables
+        ds2: Second dataset containing the variables
+        constant_vars: List of variable names to verify
+
+    Returns:
+        dict: Dictionary of variables with comparison results
+    """
+    results = {}
+
+    for var_name in constant_vars:
+        if var_name in ds1 and var_name in ds2:
+            # Check if the values are identical
+            if np.array_equal(ds1[var_name].values, ds2[var_name].values):
+                results[var_name] = True
+            else:
+                results[var_name] = False
+        else:
+            # Variable missing in one of the datasets
+            results[var_name] = False
+
+    return results
+
+
 def calculate_vap_average(config, location):
     """
     Calculate average values across VAP NC files using rolling computation.
@@ -51,10 +79,16 @@ def calculate_vap_average(config, location):
     Time dimension will use the first timestamp from the dataset.
     All variable attributes are preserved in the output dataset.
 
+    Certain variables specified in constant_variables will not be averaged,
+    but will be verified to be identical across all files.
+
     Args:
         config: Configuration dictionary
         location: Location dictionary containing site-specific parameters
     """
+    # List of variables that should remain constant (not averaged)
+    constant_variables = ["nv"]
+
     location = config["location_specification"][location]
     vap_path = file_manager.get_vap_output_dir(config, location)
     vap_nc_files = sorted(list(vap_path.rglob("*.nc")))
