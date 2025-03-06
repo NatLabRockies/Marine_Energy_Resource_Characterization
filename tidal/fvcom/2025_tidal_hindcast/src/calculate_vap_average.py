@@ -74,7 +74,7 @@ def verify_constant_variables(ds1, ds2, constant_vars):
 
 def calculate_vap_average(config, location):
     """
-    Calculate average values across VAP NC files using rolling computation.
+    Calculate average values across VAP NC files using rolling average computation.
     Only variables are averaged, preserving original dimensions and coordinates.
     Time dimension will use the first timestamp from the dataset.
     All variable attributes are preserved in the output dataset.
@@ -112,8 +112,8 @@ def calculate_vap_average(config, location):
 
     # Initialize template using the first file
     print(f"Starting averaging of {len(vap_nc_files)} vap files...")
-    running_sum = None
-    total_times = 0
+    running_avg = None
+    count = 0
     source_files = []
     first_timestamp = None
     time_attrs = None  # Store time attributes
@@ -124,10 +124,11 @@ def calculate_vap_average(config, location):
     for i, nc_file in enumerate(vap_nc_files):
         print(f"Processing File {i}: {nc_file}")
         ds = xr.open_dataset(nc_file)
+        current_times = len(ds.time)
 
-        # Initialize running sum and save first timestamp if needed
-        if running_sum is None:
-            running_sum = ds.isel(time=0).copy(deep=True)
+        # Initialize running average and save first timestamp if needed
+        if running_avg is None:
+            running_avg = ds.isel(time=0).copy(deep=True)
             first_timestamp = ds.time.isel(time=0).values
             time_attrs = ds.time.attrs.copy()  # Save time attributes
             first_ds = (
@@ -139,10 +140,16 @@ def calculate_vap_average(config, location):
                 var_attrs[var] = ds[var].attrs.copy()
 
             # Only initialize variables that need averaging
-            for var in running_sum.data_vars:
+            for var in running_avg.data_vars:
                 if "time" in ds[var].dims and var not in constant_variables:
-                    running_sum[var].values.fill(0)
+                    # Use float64 for better numerical stability
+                    if np.issubdtype(running_avg[var].dtype, np.integer):
+                        running_avg[var] = running_avg[var].astype(np.float64)
+                    elif np.issubdtype(running_avg[var].dtype, np.floating):
+                        running_avg[var] = running_avg[var].astype(np.float64)
 
+                    # Initialize to zero (will be properly set in the first iteration)
+                    running_avg[var].values.fill(0)
         else:
             # Verify constant variables
             for var in constant_variables:
@@ -153,39 +160,65 @@ def calculate_vap_average(config, location):
                             f"WARNING: Variable '{var}' differs between files. Using value from first file."
                         )
 
-        # Update running sum for variables only (skip constant variables)
+        # Update running average for variables - using rolling average formula
         for var in ds.data_vars:
             if "time" in ds[var].dims and var not in constant_variables:
-                running_sum[var] += ds[var].sum(dim="time")
+                # Calculate mean for this file
+                if np.issubdtype(ds[var].dtype, np.integer):
+                    # Safely convert integers to float64 first
+                    file_avg = ds[var].astype(np.float64).mean(dim="time")
+                else:
+                    file_avg = ds[var].mean(dim="time")
 
-        total_times += len(ds.time)
+                # Update the rolling average using the formula:
+                # new_avg = old_avg + (new_value - old_avg) / new_count
+                if count == 0:
+                    # First iteration - simply set to the file average
+                    running_avg[var] = file_avg
+                else:
+                    weight = current_times / (count + current_times)
+                    running_avg[var] = (
+                        running_avg[var] + (file_avg - running_avg[var]) * weight
+                    )
+
+        count += current_times
         source_files.append(str(nc_file))
         ds.close()
 
-    # Calculate final average for variables only (skip constant variables)
-    print("Computing final average...")
-    for var in running_sum.data_vars:
+    print("Completing final average calculation...")
+    # The running_avg already contains the final average values
+
+    # Restore variable attributes and potentially convert back to original types
+    for var in running_avg.data_vars:
         if (
-            var in running_sum.dims
-            or var in running_sum.coords
-            or var in constant_variables
+            var not in running_avg.dims
+            and var not in running_avg.coords
+            and var not in constant_variables
         ):
-            continue  # Skip dimensions, coordinates, and constant variables
-        if isinstance(running_sum[var].values, (np.ndarray, np.generic)):
-            running_sum[var] = running_sum[var] / total_times
             # Restore variable attributes
             if var in var_attrs:
-                running_sum[var].attrs = var_attrs[var]
+                running_avg[var].attrs = var_attrs[var]
+
+                # Optionally convert back to original type if safe and configured
+                original_dtype = var_attrs[var].get("_original_dtype")
+                if original_dtype and config.get("preserve_dtypes", False):
+                    try:
+                        # Test conversion for safety
+                        test_conversion = running_avg[var].values.astype(original_dtype)
+                        running_avg[var] = running_avg[var].astype(original_dtype)
+                    except (OverflowError, ValueError):
+                        print(
+                            f"WARNING: Cannot safely convert {var} back to {original_dtype}. Keeping higher precision."
+                        )
 
     # Restore the time coordinate with its attributes
-    running_sum = running_sum.assign_coords(time=("time", [first_timestamp]))
-    running_sum["time"].attrs = time_attrs  # Restore time attributes
+    running_avg = running_avg.assign_coords(time=("time", [first_timestamp]))
+    running_avg["time"].attrs = time_attrs  # Restore time attributes
 
     # Set up output dataset
-    averaged_ds = running_sum
+    averaged_ds = running_avg
 
     print(averaged_ds.info())
-
     print(averaged_ds.time)
 
     # Generate output filename
