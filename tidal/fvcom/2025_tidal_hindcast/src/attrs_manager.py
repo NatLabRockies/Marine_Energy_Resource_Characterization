@@ -602,19 +602,24 @@ def standardize_dataset_global_attrs(
     input_ds_is_original_model_output=False,
     coordinate_reference_system_string=None,
 ):
+    print("Getting repo info...")
     code_metadata = extract_git_repo_versioning()
 
     config_global_attrs = config["global_attributes"]
 
+    print("Computing geospatial bounds...")
     geospatial_bounds = compute_geospatial_bounds(
         ds, coordinate_reference_system_string
     )
 
+    print("Computing modification dates...")
     modification_dates = compute_modification_dates(ds)
 
+    print("Computing vertical attributes...")
     vertical_attributes = compute_vertical_attributes(ds)
 
     # Use json to encode source files as a dict of lists of source files to track provenance
+    print("Computing input_history_json...")
     input_history_json = create_input_history_dict(
         ds, data_level, input_files, input_ds_is_original_model_output
     )
@@ -930,15 +935,18 @@ def standardize_dataset_global_attrs(
     }
 
     # Remove key/value pairs where the value is None
+    print("Cleaning up attributes...")
     standardized_attributes = {
         k: v for k, v in standardized_attributes.items() if v is not None
     }
 
+    print("Cleaning up attributes...")
     if input_ds_is_original_model_output is True:
         original_attributes = {
             f"original_{key}": value for key, value in ds.attrs.items()
         }
 
+        print("Updating standardized attributes...")
         standardized_attributes.update(original_attributes)
 
     else:
@@ -960,10 +968,13 @@ def standardize_dataset_global_attrs(
         ]
 
         # Raise an error if there are unexpected attribute changes
+        print("Validating attribute changes...")
         validate_attribute_changes(ds, standardized_attributes, allowed_changing_keys)
 
+    print("Setting attributes..")
     ds.attrs = standardized_attributes
 
+    print("Returning new dataset...")
     return ds
 
 

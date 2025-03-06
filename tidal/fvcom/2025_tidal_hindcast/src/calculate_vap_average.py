@@ -221,6 +221,7 @@ def calculate_vap_average(config, location):
     print(averaged_ds.info())
     print(averaged_ds.time)
 
+    print("Generating data level file name...")
     # Generate output filename
     data_level_file_name = (
         file_name_convention_manager.generate_filename_for_data_level(
@@ -232,6 +233,7 @@ def calculate_vap_average(config, location):
         )
     )
 
+    print("Adding standard attributes...")
     # Add standard attributes
     averaged_ds = attrs_manager.standardize_dataset_global_attrs(
         averaged_ds,
