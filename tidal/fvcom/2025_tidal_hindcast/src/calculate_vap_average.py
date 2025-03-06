@@ -118,6 +118,7 @@ def calculate_vap_average(config, location):
     first_timestamp = None
     time_attrs = None  # Store time attributes
     var_attrs = {}  # Dictionary to store variable attributes
+    first_ds = None  # Store the first dataset for constant variable verification
 
     # Process each file
     for i, nc_file in enumerate(vap_nc_files):
@@ -129,6 +130,9 @@ def calculate_vap_average(config, location):
             running_sum = ds.isel(time=0).copy(deep=True)
             first_timestamp = ds.time.isel(time=0).values
             time_attrs = ds.time.attrs.copy()  # Save time attributes
+            first_ds = (
+                ds.copy()
+            )  # Store first dataset for constant variable verification
 
             # Store all variable attributes
             for var in ds.data_vars:
@@ -136,23 +140,37 @@ def calculate_vap_average(config, location):
 
             # Only initialize variables that need averaging
             for var in running_sum.data_vars:
-                if "time" in ds[var].dims:
+                if "time" in ds[var].dims and var not in constant_variables:
                     running_sum[var].values.fill(0)
 
-        # Update running sum for variables only
+        else:
+            # Verify constant variables
+            for var in constant_variables:
+                if var in list(ds.keys()) and var in list(first_ds.keys()):
+                    # Check if values are identical
+                    if not np.array_equal(ds[var].values, first_ds[var].values):
+                        print(
+                            f"WARNING: Variable '{var}' differs between files. Using value from first file."
+                        )
+
+        # Update running sum for variables only (skip constant variables)
         for var in ds.data_vars:
-            if "time" in ds[var].dims:
+            if "time" in ds[var].dims and var not in constant_variables:
                 running_sum[var] += ds[var].sum(dim="time")
 
         total_times += len(ds.time)
         source_files.append(str(nc_file))
         ds.close()
 
-    # Calculate final average for variables only
+    # Calculate final average for variables only (skip constant variables)
     print("Computing final average...")
     for var in running_sum.data_vars:
-        if var in running_sum.dims or var in running_sum.coords:
-            continue  # Skip dimensions and coordinates
+        if (
+            var in running_sum.dims
+            or var in running_sum.coords
+            or var in constant_variables
+        ):
+            continue  # Skip dimensions, coordinates, and constant variables
         if isinstance(running_sum[var].values, (np.ndarray, np.generic)):
             running_sum[var] = running_sum[var] / total_times
             # Restore variable attributes
