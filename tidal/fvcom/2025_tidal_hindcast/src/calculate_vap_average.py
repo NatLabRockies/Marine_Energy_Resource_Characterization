@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from . import attrs_manager, file_manager, file_name_convention_manager
+from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
 
 
 def verify_timestamps(nc_files, expected_timestamps, expected_delta_t_seconds):
@@ -248,6 +248,14 @@ def calculate_vap_average(config, location):
         f"001.{data_level_file_name}",
     )
     print(f"\tSaving to {output_path}...")
-    averaged_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
-    averaged_ds.close()
+    # averaged_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+
+    averaged_ds.to_netcdf(
+        output_path,
+        encoding=nc_manager.define_compression_encoding(
+            averaged_ds,
+            base_encoding=config["dataset"]["encoding"],
+            compression_strategy="none",
+        ),
+    )
     return output_path

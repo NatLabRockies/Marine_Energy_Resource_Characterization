@@ -4,11 +4,14 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 
+from src.nc_manger import define_compression_encoding
+
 from . import (
     attrs_manager,
     coord_manager,
     file_name_convention_manager,
     file_manager,
+    nc_manager,
     time_manager,
 )
 
@@ -796,7 +799,16 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
             f"{count:03d}.{data_level_file_name}",
         )
         std_files.extend([output_path] * len(output_ds.time))
-        output_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+
+        output_ds.to_netcdf(
+            output_path,
+            encoding=nc_manager.define_compression_encoding(
+                output_ds,
+                base_encoding=config["dataset"]["encoding"],
+                compression_strategy="none",
+            ),
+        )
+
         print(f"Saving standardized dataframe to {output_path}...")
         count += 1
 

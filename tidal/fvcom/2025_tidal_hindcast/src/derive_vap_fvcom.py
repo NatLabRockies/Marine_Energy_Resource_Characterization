@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from . import attrs_manager, file_manager, file_name_convention_manager
+from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
 
 
 def validate_u_and_v(ds):
@@ -1162,7 +1162,15 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             )
 
             print(f"\t[{file_index}] Saving to {output_path}...")
-            this_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+            # this_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+            this_ds.to_netcdf(
+                output_path,
+                encoding=nc_manager.define_compression_encoding(
+                    this_ds,
+                    base_encoding=config["dataset"]["encoding"],
+                    compression_strategy="none",
+                ),
+            )
 
         gc.collect()
 

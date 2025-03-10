@@ -7,7 +7,13 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from . import attrs_manager, file_manager, file_name_convention_manager, time_manager
+from . import (
+    attrs_manager,
+    file_manager,
+    file_name_convention_manager,
+    nc_manager,
+    time_manager,
+)
 
 
 def process_single_period(period_data, config, location, output_dir, count):
@@ -92,7 +98,15 @@ def process_single_period(period_data, config, location, output_dir, count):
 
             print(f"[{count}] Saving partition file: {output_path}...")
             # Save the file and sync to ensure it's written to disk
-            combined_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+            # combined_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+            combined_ds.to_netcdf(
+                output_path,
+                encoding=nc_manager.define_compression_encoding(
+                    combined_ds,
+                    base_encoding=config["dataset"]["encoding"],
+                    compression_strategy="none",
+                ),
+            )
 
             # Verify the file exists before continuing
             wait_count = 0
