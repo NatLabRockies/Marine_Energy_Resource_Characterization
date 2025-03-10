@@ -111,7 +111,7 @@ class FVCOMStandardizer:
                 "siglay": xr.DataArray(
                     data=siglay_values,
                     dims=["siglay", "node"],
-                    attrs={k: v for k, v in ds.siglev.attrs.items()},
+                    attrs=dict(ds.siglev.attrs.items()),
                 )
             }
         )
