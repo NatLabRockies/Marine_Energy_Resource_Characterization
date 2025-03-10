@@ -4,8 +4,6 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 
-from src.nc_manger import define_compression_encoding
-
 from . import (
     attrs_manager,
     coord_manager,
