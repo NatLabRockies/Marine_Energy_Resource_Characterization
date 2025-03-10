@@ -69,7 +69,7 @@ class FVCOMStandardizer:
             )
 
         # Get the siglev dimension size
-        siglev_size = ds.dims["siglev"]
+        siglev_size = ds.sizes["siglev"]
 
         # Ensure we have enough levels to create layers
         if siglev_size < 2:
@@ -84,7 +84,7 @@ class FVCOMStandardizer:
         # For each node, compute the midpoint between consecutive siglev values
         # In FVCOM, siglev has dimensions (siglev, node)
         siglev_values = ds.siglev.values
-        siglay_values = np.zeros((siglay_size, ds.dims["node"]), dtype=np.float32)
+        siglay_values = np.zeros((siglay_size, ds.sizes["node"]), dtype=np.float32)
 
         for i in range(siglay_size):
             siglay_values[i, :] = (siglev_values[i, :] + siglev_values[i + 1, :]) / 2.0
@@ -121,7 +121,7 @@ class FVCOMStandardizer:
             ds.siglay.attrs["long_name"] = "Sigma Layers"
 
         print(
-            f"Successfully populated siglay variable with dimensions ({siglay_size}, {ds.dims['node']})"
+            f"Successfully populated siglay variable with dimensions ({siglay_size}, {ds.sizes['node']})"
         )
         return ds
 
