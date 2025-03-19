@@ -5,8 +5,11 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=1:00:00
+##SBATCH --time=12:00:00
 #SBATCH --partition=debug
+#SBATCH --ntasks=12
+#SBATCH --nodes=1
+#SBATCH --time=5
 
 # Load necessary modules (if any)
 module load anaconda3/2023.07-2
