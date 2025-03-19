@@ -191,7 +191,7 @@ def calculate_sea_water_to_direction(
 
     # Set directions to NaN where speed is below threshold
     compass_to_direction_degrees = xr.where(
-        ds.speed > direction_undefined_speed_threshold_ms,
+        ds[output_names["speed"]] > direction_undefined_speed_threshold_ms,
         compass_to_direction_degrees,
         np.nan,
     )
@@ -203,7 +203,7 @@ def calculate_sea_water_to_direction(
     specified_attrs = config["derived_vap_specification"]["to_direction"]["attributes"]
 
     # Add CF-compliant metadata
-    ds.to_direction.attrs = {
+    ds[output_variable_name].attrs = {
         **specified_attrs,
         "direction_reference": (
             "Reference table for velocity components and resulting to_direction:\n"
@@ -271,7 +271,7 @@ def calculate_sea_water_from_direction(
     # Set directions to NaN where speed is below threshold
     if output_names["speed"] in ds.variables:
         compass_from_direction_degrees = xr.where(
-            ds.speed > direction_undefined_speed_threshold_ms,
+            ds[output_names["speed"]] > direction_undefined_speed_threshold_ms,
             compass_from_direction_degrees,
             np.nan,
         )
@@ -285,7 +285,7 @@ def calculate_sea_water_from_direction(
     ]
 
     # Add CF-compliant metadata
-    ds.from_direction.attrs = {
+    ds[output_variable_name].attrs = {
         **specified_attrs,
         "direction_reference": (
             "Reference table for velocity components and resulting from_direction:\n"
@@ -357,7 +357,7 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
     specified_attrs = config["derived_vap_specification"]["power_density"]["attributes"]
 
     # Add CF-compliant metadata
-    ds.power_density.attrs = {
+    ds[output_variable_name].attrs = {
         **specified_attrs,
         "additional_processing": (
             "Computed using the fluid power density equation P = ½ρv³ with seawater "
@@ -584,7 +584,7 @@ def calculate_volume_energy_flux(ds):
     ds[output_names["volume_energy_flux"]] = volume_energy_flux
 
     # Add metadata
-    ds.volume_energy_flux.attrs = {
+    ds[output_names["volume_energy_flux"]].attrs = {
         "long_name": "Model Element Volume Energy Flux",
         "units": "W",
         "description": "Energy flux in each element volume",
@@ -899,7 +899,7 @@ def calculate_sea_floor_depth(ds):
     ds[output_names["sea_floor_depth"]] = -(ds.h_center) + ds.zeta_center
 
     # Add CF-compliant metadata
-    ds.seafloor_depth.attrs = {
+    ds[output_names["sea_floor_depth"]].attrs = {
         "long_name": "Sea Floor Depth Below Sea Surface",
         "standard_name": "sea_floor_depth_below_sea_surface",
         "units": ds.h_center.attrs["units"],
