@@ -703,15 +703,35 @@ def calculate_volume_energy_flux(ds):
 
 
 def calculate_zeta_center(ds):
+    """
+    Calculate sea surface elevation at cell centers from node values.
+
+    This function performs a horizontal interpolation from nodes to cell centers
+    at the surface (sigma=0), with no vertical interpolation involved.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing:
+        - 'zeta': sea surface elevation at nodes
+        - 'nv': connectivity array
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'zeta_center' variable
+    """
     # FVCOM is FORTRAN based and indexes start at 1
     # Convert indexes to python convention
     nv = ds.nv - 1
 
     # Reshape zeta to prepare for the operation
     # This creates a (time, 3, face) array where each face has its 3 node values
+    # Note: zeta is already at the surface (sigma=0) in the FVCOM model
     zeta_at_nodes = ds.zeta.isel(node=nv)  # Should have shape (672, 3, 392002)
 
-    # Average along the node dimension (axis=1)
+    # Average along the node dimension (axis=1) to get cell center values
+    # This is a horizontal spatial average, not a vertical one
     zeta_center = zeta_at_nodes.mean(dim="face_node_index")
 
     # Add coordinates and attributes
@@ -725,13 +745,15 @@ def calculate_zeta_center(ds):
         "long_name": "Sea Surface Height at Cell Centers",
         "coordinates": "time cell",
         "mesh": "cell_centered",
+        "location": "surface (sigma=0)",
         "interpolation": (
             "Computed by averaging the surface elevation values from the three "
             "nodes that define each triangular cell using the node-to-cell "
-            "connectivity array (nv)."
+            "connectivity array (nv). This is a horizontal interpolation at the "
+            "surface level (sigma=0), not a vertical interpolation."
         ),
         "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
-        "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
+        "input_variables": "zeta: sea_surface_height_above_geoid at nodes (surface level)",
     }
 
     ds[output_names["zeta_center"]] = zeta_center
@@ -788,13 +810,13 @@ def calculate_depth(ds):
     """
     Calculate depth at sigma levels for FVCOM output.
 
-    This function computes the depth at each sigma layer using the equation:
+    This function computes the depth at each sigma level using the equation:
     depth = -(h + ζ) * σ
 
     where:
         h: bathymetry (positive down from geoid)
         ζ: sea surface elevation (positive up from geoid)
-        σ: sigma layer coordinates (negative, surface to bottom)
+        σ: sigma level coordinates (0 at surface to -1 at bottom)
 
     Parameters
     ----------
@@ -802,7 +824,7 @@ def calculate_depth(ds):
         Dataset containing:
         - 'h_center': bathymetry at cell centers
         - 'zeta_center': water surface elevation at cell centers
-        - 'sigma': sigma layer coordinates
+        - 'sigma_layer': sigma level coordinates
 
     Returns
     -------
@@ -819,13 +841,10 @@ def calculate_depth(ds):
     validate_depth_inputs(ds)
 
     if "sigma_layer" not in ds:
-        raise KeyError("Dataset must contain 'sigma_level' coordinates")
+        raise KeyError("Dataset must contain 'sigma_layer' coordinates")
 
-    # Extract one sigma layer
+    # Extract sigma levels
     sigma_layer = ds.sigma_layer.T.values[0]
-
-    # Calculate depth at each sigma level
-    # ds["depth"] = -(ds.h_center + ds.zeta_center) * sigma_layer
 
     # Reshape sigma to (1, sigma_layer, 1) for proper broadcasting
     sigma_3d = sigma_layer.reshape(1, -1, 1)
@@ -836,7 +855,7 @@ def calculate_depth(ds):
         dim={"sigma_layer": len(sigma_layer)}, axis=1
     )
 
-    # Calculate depth
+    # Calculate depth - this gives depths that are positive down from the surface
     ds[output_names["depth"]] = -(total_depth_3d * sigma_3d)
 
     # Add CF-compliant metadata
@@ -848,12 +867,13 @@ def calculate_depth(ds):
         "coordinates": "time cell sigma",
         "description": (
             "Depth represents the vertical distance below the sea surface at each sigma "
-            "layer, varying with both the fixed bathymetry and time-varying surface elevation."
+            "level, varying with both the fixed bathymetry and time-varying surface elevation."
         ),
         "methodology": (
             "Depth is calculated using the sigma coordinate transformation: "
             "depth = -(h + ζ) * σ, where h is bathymetry, ζ is surface elevation, "
-            "and σ is the sigma layer coordinate."
+            "and σ is the sigma level coordinate. This makes depth=0 at the surface (σ=0) "
+            "and depth=h+ζ at the bottom (σ=-1)."
         ),
         "computation": "depth = -(h_center + zeta_center) * sigma",
         "input_variables": (
@@ -893,10 +913,12 @@ def calculate_sea_floor_depth(ds):
     ValueError
         If required attributes are missing or inconsistent
     """
-    # validate_depth_inputs(ds)
+    validate_depth_inputs(ds)
 
     # Calculate total water column depth
-    ds[output_names["sea_floor_depth"]] = -(ds.h_center) + ds.zeta_center
+    # Since h_center is already positive down from geoid and zeta_center is positive up,
+    # the correct formula is h_center + zeta_center to get the total water depth
+    ds[output_names["sea_floor_depth"]] = ds.h_center + ds.zeta_center
 
     # Add CF-compliant metadata
     ds[output_names["sea_floor_depth"]].attrs = {
@@ -910,11 +932,11 @@ def calculate_sea_floor_depth(ds):
         ),
         "methodology": (
             "Total water column depth is calculated by combining the fixed bathymetry "
-            "and time-varying surface elevation. Since h_center is stored as negative "
-            "values (depth below geoid) and zeta_center as positive (height above geoid), "
-            "we negate h_center and add zeta_center to get the total depth."
+            "and time-varying surface elevation. Since h_center is positive down "
+            "from geoid and zeta_center is positive up from geoid, "
+            "we add them to get the total water column depth."
         ),
-        "computation": "seafloor_depth = -(h_center) + zeta_center",
+        "computation": "seafloor_depth = h_center + zeta_center",
         "input_variables": (
             "h_center: sea_floor_depth_below_geoid (m), "
             "zeta_center: sea_surface_height_above_geoid (m)"
