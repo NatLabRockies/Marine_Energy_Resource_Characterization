@@ -1212,7 +1212,7 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
         return -file_index
 
 
-def derive_vap(config, location_key, use_multiprocessing=True):
+def derive_vap(config, location_key, use_multiprocessing=False):
     location = config["location_specification"][location_key]
     std_partition_path = file_manager.get_standardized_partition_output_dir(
         config, location
