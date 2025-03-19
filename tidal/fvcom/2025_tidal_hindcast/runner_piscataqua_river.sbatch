@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --account=hindcastra
+#SBATCH --account=wec
 #SBATCH --output=runner_piscataqua_river_%j.out
 #SBATCH --job-name=runner_piscataqua_river
 #SBATCH --mail-type=BEGIN,END,FAIL
