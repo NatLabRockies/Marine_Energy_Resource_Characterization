@@ -94,9 +94,7 @@ def calculate_sea_water_speed(ds, config):
     # Calculate speed maintaining original dimensions
     ds[output_variable_name] = np.sqrt(ds.u**2 + ds.v**2)
 
-    specified_attrs = config["derived_vap_specification"][output_variable_name][
-        "attributes"
-    ]
+    specified_attrs = config["derived_vap_specification"]["speed"]["attributes"]
 
     # Add CF-compliant metadata
     ds[output_variable_name].attrs = {
@@ -202,9 +200,7 @@ def calculate_sea_water_to_direction(
 
     ds[output_variable_name] = compass_to_direction_degrees
 
-    specified_attrs = config["derived_vap_specification"][output_variable_name][
-        "attributes"
-    ]
+    specified_attrs = config["derived_vap_specification"]["to_direction"]["attributes"]
 
     # Add CF-compliant metadata
     ds.to_direction.attrs = {
@@ -284,7 +280,7 @@ def calculate_sea_water_from_direction(
 
     ds[output_variable_name] = compass_from_direction_degrees
 
-    specified_attrs = config["derived_vap_specification"][output_variable_name][
+    specified_attrs = config["derived_vap_specification"]["from_direction"][
         "attributes"
     ]
 
@@ -358,9 +354,7 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
     # Tidal Streams in the United States." , Jun. 2011. https://doi.org/10.2172/1219367
     ds[output_variable_name] = 0.5 * rho * ds.speed**3
 
-    specified_attrs = config["derived_vap_specification"][output_variable_name][
-        "attributes"
-    ]
+    specified_attrs = config["derived_vap_specification"]["power_density"]["attributes"]
 
     # Add CF-compliant metadata
     ds.power_density.attrs = {
