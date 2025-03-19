@@ -704,83 +704,76 @@ def calculate_volume_energy_flux(ds):
 
 def calculate_zeta_center(ds):
     """
-    Calculate sea surface elevation at cell centers from node values.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        Dataset containing:
-        - 'zeta': sea surface elevation at nodes
-        - 'nv': connectivity array
-
-    Returns
-    -------
-    xarray.Dataset
-        Original dataset with added 'zeta_center' variable
+    DIAGNOSTIC ONLY FUNCTION - Will print information about the dataset structure
+    and return the dataset unchanged. No calculations will be performed.
     """
-    # Convert indexes from FORTRAN to python convention
-    nv = ds.nv.values - 1
-
-    # Get dimensions
-    n_times = len(ds.time)
-    n_elems = nv.shape[1]
-
-    # Create result array
-    result_array = np.zeros((n_times, n_elems), dtype=np.float64)
-
-    # Process timesteps
-    for t in range(n_times):
-        if t % 10 == 0 or t == n_times - 1:
-            progress_pct = (t / (n_times - 1)) * 100 if n_times > 1 else 100
-            print(
-                f"Processing zeta_center: timestep {t+1}/{n_times} ({progress_pct:.1f}%)"
-            )
-
-        # Get zeta values for this timestep
-        zeta_values = ds.zeta.isel(time=t).values
-
-        for i in range(n_elems):
-            node1 = nv[0, i]
-            node2 = nv[1, i]
-            node3 = nv[2, i]
-
-            # Calculate average of the three nodes
-            result_array[t, i] = (
-                zeta_values[node1] + zeta_values[node2] + zeta_values[node3]
-            ) / 3.0
-
-    print(f"Completed zeta_center calculation for all {n_times} timesteps")
-
-    # Create DataArray with the results
-    zeta_center = xr.DataArray(
-        result_array,
-        dims=("time", "cell"),
-        coords={
-            "time": ds.time,
-            "lon_center": ds.lon_center if "lon_center" in ds else None,
-            "lat_center": ds.lat_center if "lat_center" in ds else None,
-        },
+    print("\n===== DIAGNOSTIC OUTPUT =====")
+    print(
+        "This function will only print diagnostic information and not modify the dataset."
     )
 
-    # Add attributes
-    zeta_center.attrs = {
-        **ds.zeta.attrs,
-        "long_name": "Sea Surface Height at Cell Centers",
-        "coordinates": "time cell",
-        "mesh": "cell_centered",
-        "location": "surface (sigma=0)",
-        "interpolation": (
-            "Computed by averaging the surface elevation values from the three "
-            "nodes that define each triangular cell using the node-to-cell "
-            "connectivity array (nv). This is a horizontal interpolation at the "
-            "surface level (sigma=0), not a vertical interpolation."
-        ),
-        "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
-        "input_variables": "zeta: sea_surface_height_above_geoid at nodes (surface level)",
-    }
+    # Print dataset information
+    print("\nDataset Variables:")
+    for var_name in ds.variables:
+        var = ds[var_name]
+        print(f"  {var_name}: shape={var.shape}, dims={var.dims}, dtype={var.dtype}")
 
-    ds[output_names["zeta_center"]] = zeta_center
+    # Examine nv structure
+    print("\nExamining nv structure:")
+    nv = ds.nv
+    print(f"  nv.shape: {nv.shape}")
+    print(f"  nv.dims: {nv.dims}")
+    print(f"  nv.dtype: {nv.dtype}")
 
+    # Sample of nv values
+    print("\nSample of nv values:")
+    nv_values = nv.values - 1  # Convert to Python 0-indexing
+    print(f"  nv_values.shape: {nv_values.shape}")
+
+    # Check what kind of object nv_values[0,0] is
+    first_idx = nv_values[0, 0]
+    print("First nv index (nv_values[0,0]):")
+    print(f"  value: {first_idx}")
+    print(f"  type: {type(first_idx)}")
+    print(f"  shape (if array): {getattr(first_idx, 'shape', 'N/A - not an array')}")
+
+    # Check zeta structure
+    print("\nExamining zeta structure:")
+    zeta = ds.zeta
+    print(f"  zeta.shape: {zeta.shape}")
+    print(f"  zeta.dims: {zeta.dims}")
+    print(f"  zeta.dtype: {zeta.dtype}")
+
+    if len(zeta.shape) >= 2:
+        print("\nAttempting to inspect sample zeta value at first timestep:")
+        try:
+            zeta_t0 = zeta.isel(time=0).values
+            print(f"  zeta_t0.shape: {zeta_t0.shape}")
+            print(f"  zeta_t0.dtype: {zeta_t0.dtype}")
+
+            # Try to access first node value
+            first_node_idx = nv_values[0, 0]
+            print(
+                f"\nAttempting to access zeta value at first node index ({first_node_idx}):"
+            )
+            try:
+                if hasattr(first_node_idx, "shape"):
+                    print(
+                        f"  Cannot directly index with array index of shape {first_node_idx.shape}"
+                    )
+                else:
+                    zeta_sample = zeta_t0[first_node_idx]
+                    print(f"  value: {zeta_sample}")
+                    print(f"  type: {type(zeta_sample)}")
+            except Exception as e:
+                print(f"  Error accessing first node value: {str(e)}")
+        except Exception as e:
+            print(f"  Error inspecting zeta: {str(e)}")
+
+    print("\n===== END DIAGNOSTIC OUTPUT =====")
+    print("Returning original dataset without modifications.")
+
+    # Return the original dataset unchanged
     return ds
 
 
