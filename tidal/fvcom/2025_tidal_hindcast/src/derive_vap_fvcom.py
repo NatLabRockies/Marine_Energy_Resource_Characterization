@@ -976,7 +976,7 @@ def calculate_depth_statistics(ds, variable_name):
 
     # Calculate all statistics in one go
     depth_avg_name = f"{variable_name}_depth_avg"
-    depth_median_name = f"{variable_name}depth_median"
+    depth_median_name = f"{variable_name}_depth_median"
 
     # For the high value (average of max and second max), determine the actual percentile
     n_elements = ds[variable_name].sizes[dim]
