@@ -715,7 +715,7 @@ def calculate_zeta_center(ds):
     ds : xarray.Dataset
         Dataset containing:
         - 'zeta': sea surface elevation at nodes
-        - 'nv': connectivity array
+        - 'nv': connectivity array with shape (3, nfaces)
 
     Returns
     -------
@@ -724,11 +724,11 @@ def calculate_zeta_center(ds):
     """
     # FVCOM is FORTRAN based and indexes start at 1
     # Convert indexes to python convention
-    nv = ds.nv.values - 1
+    nv = ds.nv.values - 1  # Shape (3, nfaces)
 
     # Get dimensions
     n_times = len(ds.time)
-    n_faces = nv.shape[1]  # Number of cells/faces
+    n_faces = nv.shape[1]  # Number of faces from second dimension of nv
 
     # Create empty array for results
     zeta_center_data = np.zeros((n_times, n_faces), dtype=ds.zeta.dtype)
@@ -745,14 +745,14 @@ def calculate_zeta_center(ds):
         # Get zeta values for this timestep
         zeta_t = ds.zeta.isel(time=t).values
 
-        # For each cell, average the values at its three nodes
-        # Important: Access each row of nv and index into zeta_t separately
-        node1_values = zeta_t[nv[0, :]]  # First node of each cell
-        node2_values = zeta_t[nv[1, :]]  # Second node of each cell
-        node3_values = zeta_t[nv[2, :]]  # Third node of each cell
+        # Get the values for each node position across all faces
+        # Each row of nv contains one node position for all faces
+        node1_values = zeta_t[nv[0]]  # First node of each face
+        node2_values = zeta_t[nv[1]]  # Second node of each face
+        node3_values = zeta_t[nv[2]]  # Third node of each face
 
-        # Average the three nodes for each cell
-        zeta_center_data[t, :] = (node1_values + node2_values + node3_values) / 3.0
+        # Average the three nodes for each face
+        zeta_center_data[t] = (node1_values + node2_values + node3_values) / 3.0
 
     # Final progress report
     print(f"Completed zeta_center calculation for all {n_times} timesteps")
