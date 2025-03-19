@@ -728,10 +728,10 @@ def calculate_zeta_center(ds):
 
     # Get dimensions
     n_times = len(ds.time)
-    n_cells = nv.shape[1]  # Number of cells/faces
+    n_faces = nv.shape[1]  # Number of cells/faces
 
     # Create empty array for results
-    zeta_center_data = np.zeros((n_times, n_cells), dtype=ds.zeta.dtype)
+    zeta_center_data = np.zeros((n_times, n_faces), dtype=ds.zeta.dtype)
 
     # Process one timestep at a time to save memory
     for t in range(n_times):
@@ -739,22 +739,23 @@ def calculate_zeta_center(ds):
         if t % 10 == 0 or t == n_times - 1:
             progress_pct = (t / (n_times - 1)) * 100 if n_times > 1 else 100
             print(
-                f"Processing zeta_center: timestep {t+1}/{n_times} ({progress_pct:.1f}%)",
+                f"Processing zeta_center: timestep {t+1}/{n_times} ({progress_pct:.1f}%)"
             )
 
         # Get zeta values for this timestep
         zeta_t = ds.zeta.isel(time=t).values
 
         # For each cell, average the values at its three nodes
-        # This uses vectorized operations across cells but not across time
-        zeta_center_data[t, :] = (
-            zeta_t[nv[0, :]] + zeta_t[nv[1, :]] + zeta_t[nv[2, :]]
-        ) / 3.0
+        # Important: Access each row of nv and index into zeta_t separately
+        node1_values = zeta_t[nv[0, :]]  # First node of each cell
+        node2_values = zeta_t[nv[1, :]]  # Second node of each cell
+        node3_values = zeta_t[nv[2, :]]  # Third node of each cell
+
+        # Average the three nodes for each cell
+        zeta_center_data[t, :] = (node1_values + node2_values + node3_values) / 3.0
 
     # Final progress report
-    print(
-        f"Completed zeta_center calculation for all {n_times} timesteps",
-    )
+    print(f"Completed zeta_center calculation for all {n_times} timesteps")
 
     # Create DataArray with the results
     zeta_center = xr.DataArray(
