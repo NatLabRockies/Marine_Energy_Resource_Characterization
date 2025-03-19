@@ -707,7 +707,8 @@ def calculate_zeta_center(ds):
     Calculate sea surface elevation at cell centers from node values.
 
     This function performs a horizontal interpolation from nodes to cell centers
-    at the surface (sigma=0), with no vertical interpolation involved.
+    at the surface (sigma=0), optimized for memory efficiency by processing
+    one timestep at a time.
 
     Parameters
     ----------
@@ -723,20 +724,47 @@ def calculate_zeta_center(ds):
     """
     # FVCOM is FORTRAN based and indexes start at 1
     # Convert indexes to python convention
-    nv = ds.nv - 1
+    nv = ds.nv.values - 1
 
-    # Reshape zeta to prepare for the operation
-    # This creates a (time, 3, face) array where each face has its 3 node values
-    # Note: zeta is already at the surface (sigma=0) in the FVCOM model
-    zeta_at_nodes = ds.zeta.isel(node=nv)  # Should have shape (672, 3, 392002)
+    # Get dimensions
+    n_times = len(ds.time)
+    n_cells = nv.shape[1]  # Number of cells/faces
 
-    # Average along the node dimension (axis=1) to get cell center values
-    # This is a horizontal spatial average, not a vertical one
-    zeta_center = zeta_at_nodes.mean(dim="face_node_index")
+    # Create empty array for results
+    zeta_center_data = np.zeros((n_times, n_cells), dtype=ds.zeta.dtype)
 
-    # Add coordinates and attributes
-    zeta_center = zeta_center.assign_coords(
-        lon_center=ds.lon_center, lat_center=ds.lat_center
+    # Process one timestep at a time to save memory
+    for t in range(n_times):
+        # Report progress every 10 timesteps
+        if t % 10 == 0 or t == n_times - 1:
+            progress_pct = (t / (n_times - 1)) * 100 if n_times > 1 else 100
+            print(
+                f"Processing zeta_center: timestep {t+1}/{n_times} ({progress_pct:.1f}%)",
+            )
+
+        # Get zeta values for this timestep
+        zeta_t = ds.zeta.isel(time=t).values
+
+        # For each cell, average the values at its three nodes
+        # This uses vectorized operations across cells but not across time
+        zeta_center_data[t, :] = (
+            zeta_t[nv[0, :]] + zeta_t[nv[1, :]] + zeta_t[nv[2, :]]
+        ) / 3.0
+
+    # Final progress report
+    print(
+        f"Completed zeta_center calculation for all {n_times} timesteps",
+    )
+
+    # Create DataArray with the results
+    zeta_center = xr.DataArray(
+        zeta_center_data,
+        dims=("time", "cell"),
+        coords={
+            "time": ds.time,
+            "lon_center": ds.lon_center,
+            "lat_center": ds.lat_center,
+        },
     )
 
     # Add attributes
