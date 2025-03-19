@@ -954,7 +954,7 @@ def calculate_depth_average(ds, variable_name):
 
     # Calculate depth average
     # depth_avg_name = f"{variable_name}_depth_avg"
-    depth_avg_name = f"{output_names["mean"]}_{sanitized_this_output_name}"
+    depth_avg_name = f"{output_names['mean']}_{sanitized_this_output_name}"
 
     ds[depth_avg_name] = ds[variable_name].mean(dim="sigma_layer")
 
@@ -1010,10 +1010,10 @@ def calculate_depth_statistics(ds, variable_name):
 
     # Calculate all statistics in one go
     # depth_avg_name = f"{variable_name}_depth_avg"
-    depth_avg_name = f"{output_names["mean"]}_{sanitized_this_output_name}"
-    depth_median_name = f"{output_names["median"]}_{sanitized_this_output_name}"
-    depth_max_name = f"{output_names["max"]}_{sanitized_this_output_name}"
-    depth_percentile_name = f"{output_names["p95"].replace("<PERCENTILE>", int(actual_percentile))}_{sanitized_this_output_name}"
+    depth_avg_name = f"{output_names['mean']}_{sanitized_this_output_name}"
+    depth_median_name = f"{output_names['median']}_{sanitized_this_output_name}"
+    depth_max_name = f"{output_names['max']}_{sanitized_this_output_name}"
+    depth_percentile_name = f"{output_names['p95'].replace('<PERCENTILE>', int(actual_percentile))}_{sanitized_this_output_name}"
     # depth_median_name = f"{variable_name}_depth_median"
     # depth_percentile_name = (
     #     f"{variable_name}_depth_{int(actual_percentile)}th_percentile"
