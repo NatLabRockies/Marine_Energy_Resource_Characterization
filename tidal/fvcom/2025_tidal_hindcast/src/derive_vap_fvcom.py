@@ -1248,7 +1248,9 @@ def derive_vap(config, location_key, use_multiprocessing=False):
 
     results = []
 
-    if use_multiprocessing:
+    use_multiprocessing = False
+
+    if use_multiprocessing is True:
         # Multiprocessing approach
         # Determine a reasonable number of processes
         # Use a smaller fraction of available CPUs to avoid memory issues
