@@ -706,36 +706,30 @@ def calculate_zeta_center(ds):
     """
     Calculate sea surface elevation at cell centers from node values.
 
-    This function performs a horizontal interpolation from nodes to cell centers
-    at the surface (sigma=0), optimized for memory efficiency by processing
-    one timestep at a time.
-
     Parameters
     ----------
     ds : xarray.Dataset
         Dataset containing:
         - 'zeta': sea surface elevation at nodes
-        - 'nv': connectivity array with shape (3, nfaces)
+        - 'nv': connectivity array
 
     Returns
     -------
     xarray.Dataset
         Original dataset with added 'zeta_center' variable
     """
-    # FVCOM is FORTRAN based and indexes start at 1
-    # Convert indexes to python convention
-    nv = ds.nv.values - 1  # Shape (3, nfaces)
+    # Convert indexes from FORTRAN to python convention
+    nv_values = ds.nv.values - 1
 
     # Get dimensions
     n_times = len(ds.time)
-    n_faces = nv.shape[1]  # Number of faces from second dimension of nv
+    n_elems = nv_values.shape[1]  # Number of elements/faces
 
-    # Create empty array for results
-    zeta_center_data = np.zeros((n_times, n_faces), dtype=ds.zeta.dtype)
+    # Create result array
+    result_array = np.zeros((n_times, n_elems), dtype=ds.zeta.dtype)
 
-    # Process one timestep at a time to save memory
+    # Process timesteps
     for t in range(n_times):
-        # Report progress every 10 timesteps
         if t % 10 == 0 or t == n_times - 1:
             progress_pct = (t / (n_times - 1)) * 100 if n_times > 1 else 100
             print(
@@ -743,28 +737,34 @@ def calculate_zeta_center(ds):
             )
 
         # Get zeta values for this timestep
-        zeta_t = ds.zeta.isel(time=t).values
+        zeta_values = ds.zeta.isel(time=t).values
 
-        # Get the values for each node position across all faces
-        # Each row of nv contains one node position for all faces
-        node1_values = zeta_t[nv[0]]  # First node of each face
-        node2_values = zeta_t[nv[1]]  # Second node of each face
-        node3_values = zeta_t[nv[2]]  # Third node of each face
+        # Process each element
+        for elem_idx in range(n_elems):
+            # Get indices of the three nodes for this element
+            node_indices = [
+                int(nv_values[0, elem_idx]),
+                int(nv_values[1, elem_idx]),
+                int(nv_values[2, elem_idx]),
+            ]
 
-        # Average the three nodes for each face
-        zeta_center_data[t] = (node1_values + node2_values + node3_values) / 3.0
+            # Get zeta values for these nodes and calculate mean
+            result_array[t, elem_idx] = (
+                zeta_values[node_indices[0]]
+                + zeta_values[node_indices[1]]
+                + zeta_values[node_indices[2]]
+            ) / 3.0
 
-    # Final progress report
     print(f"Completed zeta_center calculation for all {n_times} timesteps")
 
     # Create DataArray with the results
     zeta_center = xr.DataArray(
-        zeta_center_data,
+        result_array,
         dims=("time", "cell"),
         coords={
             "time": ds.time,
-            "lon_center": ds.lon_center,
-            "lat_center": ds.lat_center,
+            "lon_center": ds.lon_center if "lon_center" in ds else None,
+            "lat_center": ds.lat_center if "lat_center" in ds else None,
         },
     )
 
