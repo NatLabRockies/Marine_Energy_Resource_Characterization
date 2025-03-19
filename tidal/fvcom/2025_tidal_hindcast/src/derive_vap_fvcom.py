@@ -719,14 +719,14 @@ def calculate_zeta_center(ds):
         Original dataset with added 'zeta_center' variable
     """
     # Convert indexes from FORTRAN to python convention
-    nv_values = ds.nv.values - 1
+    nv = ds.nv.values - 1
 
     # Get dimensions
     n_times = len(ds.time)
-    n_elems = nv_values.shape[1]  # Number of elements/faces
+    n_elems = nv.shape[1]
 
     # Create result array
-    result_array = np.zeros((n_times, n_elems), dtype=ds.zeta.dtype)
+    result_array = np.zeros((n_times, n_elems), dtype=np.float64)
 
     # Process timesteps
     for t in range(n_times):
@@ -739,20 +739,14 @@ def calculate_zeta_center(ds):
         # Get zeta values for this timestep
         zeta_values = ds.zeta.isel(time=t).values
 
-        # Process each element
-        for elem_idx in range(n_elems):
-            # Get indices of the three nodes for this element
-            node_indices = [
-                int(nv_values[0, elem_idx]),
-                int(nv_values[1, elem_idx]),
-                int(nv_values[2, elem_idx]),
-            ]
+        for i in range(n_elems):
+            node1 = nv[0, i]
+            node2 = nv[1, i]
+            node3 = nv[2, i]
 
-            # Get zeta values for these nodes and calculate mean
-            result_array[t, elem_idx] = (
-                zeta_values[node_indices[0]]
-                + zeta_values[node_indices[1]]
-                + zeta_values[node_indices[2]]
+            # Calculate average of the three nodes
+            result_array[t, i] = (
+                zeta_values[node1] + zeta_values[node2] + zeta_values[node3]
             ) / 3.0
 
     print(f"Completed zeta_center calculation for all {n_times} timesteps")
