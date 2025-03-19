@@ -9,7 +9,7 @@
 #SBATCH --partition=debug
 #SBATCH --ntasks=12
 #SBATCH --nodes=1
-#SBATCH --time=30
+#SBATCH --time=59
 
 # Load necessary modules (if any)
 module load anaconda3/2023.07-2
