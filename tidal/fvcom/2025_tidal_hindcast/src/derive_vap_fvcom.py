@@ -1296,17 +1296,12 @@ def derive_vap(config, location_key, use_multiprocessing=False):
         print(f"Processing {len(files_to_process)} vap data files sequentially")
 
         for nc_file, idx in files_to_process:
-            try:
-                print(f"Processing file {idx}/{len(files_to_process)}: {nc_file}")
-                result = process_single_file(
-                    nc_file, config, location, vap_output_dir, idx
-                )
-                results.append(result)
-                # Force garbage collection after each file
-                gc.collect()
-            except Exception as e:
-                print(f"ERROR processing file {idx}: {str(e)}")
-                results.append(-idx)  # Mark as failed with negative index
+            print(f"Processing file {idx}/{len(files_to_process)}: {nc_file}")
+            result = process_single_file(nc_file, config, location, vap_output_dir, idx)
+            results.append(result)
+
+            # Force garbage collection after each file
+            gc.collect()
 
         print(f"Completed processing {len(results)} files sequentially.")
 
