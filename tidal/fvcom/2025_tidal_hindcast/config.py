@@ -511,8 +511,8 @@ config = {
             "coordinates": {"system": "utm", "zone": 19},
             "description": "",
             "summary": "",
-            # "partition_frequency": "M",  # Monthly, Roughly 67GB per file
-            "partition_frequency": "12h",
+            "partition_frequency": "M",  # Monthly, Roughly 67GB per file
+            # "partition_frequency": "12h",
         },
         "puget_sound": {
             "output_name": "WA_puget_sound",
