@@ -266,7 +266,7 @@ def calculate_sea_water_from_direction(
     # Convert compass 'to' direction to 'from' direction by adding 180°
     # Example: u=1, v=0 (east) has to_direction 90°
     # 90 + 180 = 270° (coming from west)
-    compass_from_direction_degrees = np.mod(ds.to_direction + 180, 360)
+    compass_from_direction_degrees = np.mod(ds[output_names["to_direction"]] + 180, 360)
 
     # Set directions to NaN where speed is below threshold
     if output_names["speed"] in ds.variables:
