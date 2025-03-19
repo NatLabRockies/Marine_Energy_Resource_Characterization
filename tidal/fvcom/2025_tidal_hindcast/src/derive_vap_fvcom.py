@@ -8,6 +8,23 @@ import xarray as xr
 
 from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
 
+output_names = {
+    "speed": "vap_sea_water_speed",
+    "to_direction": "vap_sea_water_to_direction",
+    "from_direction": "vap_sea_water_from_direction",
+    "power_density": "vap_sea_water_power_density",
+    "element_volume": "vap_element_volume",
+    "volume_energy_flux": "vap_element_volume_energy_flux",
+    # "water_column_volume_average_energy_flux": "vap_water_column_mean_energy_flux",
+    "zeta_center": "vap_zeta_center",
+    "depth": "vap_sigma_depth",
+    "seafloor_depth": "vap_sea_floor_depth",
+    "mean": "vap_water_column_mean",
+    "median": "vap_water_column_median",
+    "max": "vap_water_column_max",
+    "p95": "vap_water_column_<PERCENTILE>th_percentile",
+}
+
 
 def validate_u_and_v(ds):
     """
@@ -72,7 +89,7 @@ def calculate_sea_water_speed(ds, config):
     """
     validate_u_and_v(ds)
 
-    output_variable_name = "speed"
+    output_variable_name = output_names["speed"]
 
     # Calculate speed maintaining original dimensions
     ds[output_variable_name] = np.sqrt(ds.u**2 + ds.v**2)
@@ -181,7 +198,7 @@ def calculate_sea_water_to_direction(
         np.nan,
     )
 
-    output_variable_name = "to_direction"
+    output_variable_name = output_names["to_direction"]
 
     ds[output_variable_name] = compass_to_direction_degrees
 
@@ -245,7 +262,7 @@ def calculate_sea_water_from_direction(
         Input dataset with added 'from_direction' variable
     """
     # Check if to_direction already exists, if not calculate it
-    if "to_direction" not in ds.variables:
+    if output_names["to_direction"] not in ds.variables:
         ds = calculate_sea_water_to_direction(
             ds, config, direction_undefined_speed_threshold_ms
         )
@@ -256,14 +273,14 @@ def calculate_sea_water_from_direction(
     compass_from_direction_degrees = np.mod(ds.to_direction + 180, 360)
 
     # Set directions to NaN where speed is below threshold
-    if "speed" in ds.variables:
+    if output_names["speed"] in ds.variables:
         compass_from_direction_degrees = xr.where(
             ds.speed > direction_undefined_speed_threshold_ms,
             compass_from_direction_degrees,
             np.nan,
         )
 
-    output_variable_name = "from_direction"
+    output_variable_name = output_names["from_direction"]
 
     ds[output_variable_name] = compass_from_direction_degrees
 
@@ -334,7 +351,7 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
             "Please run calculate_sea_water_speed() first."
         )
 
-    output_variable_name = "power_density"
+    output_variable_name = output_names["power_density"]
 
     # Calculate power density using Equation 1 from
     # Haas, Kevin A., et al. "Assessment of Energy Production Potential from
@@ -523,7 +540,7 @@ def calculate_element_volume(ds):
     )
 
     # Add element volumes to dataset
-    ds["element_volume"] = xr.DataArray(
+    ds[output_names["element_volume"]] = xr.DataArray(
         element_volumes,
         dims=["time", "sigma_layer", "face"],
         attrs={
@@ -570,7 +587,7 @@ def calculate_volume_energy_flux(ds):
     volume_energy_flux = ds.power_density * ds.element_volume
 
     # Add volume energy flux to dataset
-    ds["volume_energy_flux"] = volume_energy_flux
+    ds[output_names["volume_energy_flux"]] = volume_energy_flux
 
     # Add metadata
     ds.volume_energy_flux.attrs = {
@@ -585,110 +602,110 @@ def calculate_volume_energy_flux(ds):
     return ds
 
 
-def calculate_vertical_avg_energy_flux(ds, config=None):
-    """
-    Calculate vertically averaged energy flux.
+# def calculate_vertical_avg_energy_flux(ds, config=None):
+#     """
+#     Calculate vertically averaged energy flux.
+#
+#     Parameters
+#     ----------
+#     ds : xarray.Dataset
+#         FVCOM dataset containing 'volume_energy_flux' and 'element_volume'
+#     config : dict, optional
+#         Configuration dictionary
+#
+#     Returns
+#     -------
+#     xarray.Dataset
+#         Original dataset with added 'vertical_avg_energy_flux' variable
+#     """
+#     if "volume_energy_flux" not in ds:
+#         raise KeyError(
+#             "Dataset must contain 'volume_energy_flux'. Please calculate volume energy flux first."
+#         )
+#
+#     if "element_volume" not in ds:
+#         raise KeyError(
+#             "Dataset must contain 'element_volume'. Please calculate element volumes first."
+#         )
+#
+#     # Sum energy flux and volume over all sigma layers
+#     total_energy_flux = ds.volume_energy_flux.sum(dim="sigma_layer")
+#     total_volume = ds.element_volume.sum(dim="sigma_layer")
+#
+#     # Calculate vertical average energy flux
+#     vertical_avg_energy_flux = total_energy_flux / total_volume
+#
+#     # Add vertical average energy flux to dataset
+#     ds["vertical_avg_energy_flux"] = vertical_avg_energy_flux
+#
+#     # Add metadata
+#     ds.vertical_avg_energy_flux.attrs = {
+#         "long_name": "Vertical Average Energy Flux",
+#         "units": "W/m^3",
+#         "description": "Energy flux averaged over the water column",
+#         "methodology": "Calculated as sum of energy flux over all sigma layers divided by sum of volumes",
+#         "computation": 'vertical_avg_energy_flux = sum(volume_energy_flux, dim="sigma_layer") / sum(element_volume, dim="sigma_layer")',
+#         "input_variables": "volume_energy_flux: energy flux in each element volume (W), element_volume: volume of water per element (m^3)",
+#     }
+#
+#     return ds
 
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        FVCOM dataset containing 'volume_energy_flux' and 'element_volume'
-    config : dict, optional
-        Configuration dictionary
 
-    Returns
-    -------
-    xarray.Dataset
-        Original dataset with added 'vertical_avg_energy_flux' variable
-    """
-    if "volume_energy_flux" not in ds:
-        raise KeyError(
-            "Dataset must contain 'volume_energy_flux'. Please calculate volume energy flux first."
-        )
-
-    if "element_volume" not in ds:
-        raise KeyError(
-            "Dataset must contain 'element_volume'. Please calculate element volumes first."
-        )
-
-    # Sum energy flux and volume over all sigma layers
-    total_energy_flux = ds.volume_energy_flux.sum(dim="sigma_layer")
-    total_volume = ds.element_volume.sum(dim="sigma_layer")
-
-    # Calculate vertical average energy flux
-    vertical_avg_energy_flux = total_energy_flux / total_volume
-
-    # Add vertical average energy flux to dataset
-    ds["vertical_avg_energy_flux"] = vertical_avg_energy_flux
-
-    # Add metadata
-    ds.vertical_avg_energy_flux.attrs = {
-        "long_name": "Vertical Average Energy Flux",
-        "units": "W/m^3",
-        "description": "Energy flux averaged over the water column",
-        "methodology": "Calculated as sum of energy flux over all sigma layers divided by sum of volumes",
-        "computation": 'vertical_avg_energy_flux = sum(volume_energy_flux, dim="sigma_layer") / sum(element_volume, dim="sigma_layer")',
-        "input_variables": "volume_energy_flux: energy flux in each element volume (W), element_volume: volume of water per element (m^3)",
-    }
-
-    return ds
-
-
-def calculate_column_volume_avg_energy_flux(ds):
-    """
-    Calculate volume-weighted average energy flux for each vertical column (face).
-
-    This function computes the volume-weighted average of energy flux across the entire
-    water column for each face, providing a single value per face that better handles
-    outliers compared to simple averages of speed.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        FVCOM dataset containing 'volume_energy_flux' and 'element_volume'
-    config : dict, optional
-        Configuration dictionary
-
-    Returns
-    -------
-    xarray.Dataset
-        Original dataset with added 'column_volume_avg_energy_flux' variable
-    """
-    if "volume_energy_flux" not in ds:
-        raise KeyError(
-            "Dataset must contain 'volume_energy_flux'. Please calculate volume energy flux first."
-        )
-
-    if "element_volume" not in ds:
-        raise KeyError(
-            "Dataset must contain 'element_volume'. Please calculate element volumes first."
-        )
-
-    # Sum energy flux and volume over sigma layers for each face
-    # This gives us the total energy flux and total volume for each vertical column
-    total_energy_flux_per_column = ds.volume_energy_flux.sum(dim="sigma_layer")
-    total_volume_per_column = ds.element_volume.sum(dim="sigma_layer")
-
-    # Calculate volume-weighted average energy flux for each column
-    column_volume_avg_energy_flux = (
-        total_energy_flux_per_column / total_volume_per_column
-    )
-
-    # Add to dataset
-    ds["column_volume_avg_energy_flux"] = column_volume_avg_energy_flux
-
-    # Add metadata
-    ds.column_volume_avg_energy_flux.attrs = {
-        "long_name": "Column Volume-Weighted Average Energy Flux",
-        "units": "W/m^3",
-        "description": "Volume-weighted average energy flux for each vertical water column",
-        "methodology": "Calculated as sum of energy flux over all sigma layers divided by sum of volumes for each face",
-        "computation": 'column_volume_avg_energy_flux = sum(volume_energy_flux, dim="sigma_layer") / sum(element_volume, dim="sigma_layer")',
-        "input_variables": "volume_energy_flux: energy flux in each element volume (W), element_volume: volume of water per element (m^3)",
-        "visualization_purpose": "Provides a spatially-distributed metric of energy flux suitable for mapping, accounting for variable water depths and reducing the impact of outliers compared to simple speed averages",
-    }
-
-    return ds
+# def calculate_column_volume_avg_energy_flux(ds):
+#     """
+#     Calculate volume-weighted average energy flux for each vertical column (face).
+#
+#     This function computes the volume-weighted average of energy flux across the entire
+#     water column for each face, providing a single value per face that better handles
+#     outliers compared to simple averages of speed.
+#
+#     Parameters
+#     ----------
+#     ds : xarray.Dataset
+#         FVCOM dataset containing 'volume_energy_flux' and 'element_volume'
+#     config : dict, optional
+#         Configuration dictionary
+#
+#     Returns
+#     -------
+#     xarray.Dataset
+#         Original dataset with added 'column_volume_avg_energy_flux' variable
+#     """
+#     if "volume_energy_flux" not in ds:
+#         raise KeyError(
+#             "Dataset must contain 'volume_energy_flux'. Please calculate volume energy flux first."
+#         )
+#
+#     if "element_volume" not in ds:
+#         raise KeyError(
+#             "Dataset must contain 'element_volume'. Please calculate element volumes first."
+#         )
+#
+#     # Sum energy flux and volume over sigma layers for each face
+#     # This gives us the total energy flux and total volume for each vertical column
+#     total_energy_flux_per_column = ds.volume_energy_flux.sum(dim="sigma_layer")
+#     total_volume_per_column = ds.element_volume.sum(dim="sigma_layer")
+#
+#     # Calculate volume-weighted average energy flux for each column
+#     column_volume_avg_energy_flux = (
+#         total_energy_flux_per_column / total_volume_per_column
+#     )
+#
+#     # Add to dataset
+#     ds["column_volume_avg_energy_flux"] = column_volume_avg_energy_flux
+#
+#     # Add metadata
+#     ds.column_volume_avg_energy_flux.attrs = {
+#         "long_name": "Column Volume-Weighted Average Energy Flux",
+#         "units": "W/m^3",
+#         "description": "Volume-weighted average energy flux for each vertical water column",
+#         "methodology": "Calculated as sum of energy flux over all sigma layers divided by sum of volumes for each face",
+#         "computation": 'column_volume_avg_energy_flux = sum(volume_energy_flux, dim="sigma_layer") / sum(element_volume, dim="sigma_layer")',
+#         "input_variables": "volume_energy_flux: energy flux in each element volume (W), element_volume: volume of water per element (m^3)",
+#         "visualization_purpose": "Provides a spatially-distributed metric of energy flux suitable for mapping, accounting for variable water depths and reducing the impact of outliers compared to simple speed averages",
+#     }
+#
+#     return ds
 
 
 def calculate_zeta_center(ds):
@@ -723,7 +740,7 @@ def calculate_zeta_center(ds):
         "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
     }
 
-    ds["zeta_center"] = zeta_center
+    ds[output_names["zeta_center"]] = zeta_center
 
     return ds
 
@@ -826,7 +843,7 @@ def calculate_depth(ds):
     )
 
     # Calculate depth
-    ds["depth"] = -(total_depth_3d * sigma_3d)
+    ds[output_names["depth"]] = -(total_depth_3d * sigma_3d)
 
     # Add CF-compliant metadata
     ds.depth.attrs = {
@@ -885,7 +902,7 @@ def calculate_sea_floor_depth(ds):
     # validate_depth_inputs(ds)
 
     # Calculate total water column depth
-    ds["seafloor_depth"] = -(ds.h_center) + ds.zeta_center
+    ds[output_names["sea_floor_depth"]] = -(ds.h_center) + ds.zeta_center
 
     # Add CF-compliant metadata
     ds.seafloor_depth.attrs = {
@@ -932,20 +949,24 @@ def calculate_depth_average(ds, variable_name):
     if variable_name not in ds:
         raise KeyError(f"Dataset must contain '{variable_name}'")
 
+    this_output_name = output_names[variable_name]
+    sanitized_this_output_name = this_output_name.replace("vap_", "")
+
     # Calculate depth average
-    depth_avg_name = f"{variable_name}_depth_avg"
+    # depth_avg_name = f"{variable_name}_depth_avg"
+    depth_avg_name = f"{output_names["mean"]}_{sanitized_this_output_name}"
 
     ds[depth_avg_name] = ds[variable_name].mean(dim="sigma_layer")
 
     # Copy and modify attributes for averaged variable
     # Start with original attributes but remove standard_name if it exists
-    attrs = ds[variable_name].attrs.copy()
+    attrs = ds[this_output_name].attrs.copy()
     attrs.pop("standard_name", None)
 
     ds[depth_avg_name].attrs = {
         **attrs,
-        "long_name": f"Depth averaged {ds[variable_name].attrs.get('long_name', variable_name)}",
-        "depth_averaging": "Mean across sigma layers",
+        "long_name": f"Water column mean {ds[variable_name].attrs.get('long_name', variable_name)}",
+        "statistical_computation": "Mean across sigma layers",
     }
 
     return ds
@@ -969,14 +990,13 @@ def calculate_depth_statistics(ds, variable_name):
     xarray.Dataset
         Dataset with added depth statistics variables
     """
+    this_output_name = output_names[variable_name]
+    sanitized_this_output_name = this_output_name.replace("vap_", "")
+
     if variable_name not in ds:
-        raise KeyError(f"Dataset must contain '{variable_name}'")
+        raise KeyError(f"Dataset must contain '{this_output_name}'")
 
     dim = "sigma_layer"
-
-    # Calculate all statistics in one go
-    depth_avg_name = f"{variable_name}_depth_avg"
-    depth_median_name = f"{variable_name}_depth_median"
 
     # For the high value (average of max and second max), determine the actual percentile
     n_elements = ds[variable_name].sizes[dim]
@@ -988,13 +1008,20 @@ def calculate_depth_statistics(ds, variable_name):
         ((n_elements / n_elements) + ((n_elements - 1) / n_elements)) / 2
     ) * 100
 
-    depth_percentile_name = (
-        f"{variable_name}_depth_{int(actual_percentile)}th_percentile"
-    )
-    depth_max_name = f"{variable_name}_depth_max"
+    # Calculate all statistics in one go
+    # depth_avg_name = f"{variable_name}_depth_avg"
+    depth_avg_name = f"{output_names["mean"]}_{sanitized_this_output_name}"
+    depth_median_name = f"{output_names["median"]}_{sanitized_this_output_name}"
+    depth_max_name = f"{output_names["max"]}_{sanitized_this_output_name}"
+    depth_percentile_name = f"{output_names["p95"].replace("<PERCENTILE>", int(actual_percentile))}_{sanitized_this_output_name}"
+    # depth_median_name = f"{variable_name}_depth_median"
+    # depth_percentile_name = (
+    #     f"{variable_name}_depth_{int(actual_percentile)}th_percentile"
+    # )
+    # depth_max_name = f"{variable_name}_depth_max"
 
     # Get original variable attributes
-    orig_attrs = ds[variable_name].attrs.copy()
+    orig_attrs = ds[this_output_name].attrs.copy()
     orig_long_name = orig_attrs.get("long_name", variable_name)
 
     # Calculate mean
@@ -1041,26 +1068,26 @@ def calculate_depth_statistics(ds, variable_name):
     ds[depth_avg_name].attrs = {
         **avg_attrs,
         "long_name": f"Depth averaged {orig_long_name}",
-        "depth_averaging": "Mean across sigma layers",
+        "statistical_computation": "Mean across sigma layers",
     }
 
     # Set attributes for other calculations
     ds[depth_median_name].attrs = {
         **avg_attrs,
         "long_name": f"Depth median {orig_long_name}",
-        "depth_averaging": "Median across sigma layers",
+        "statistical_computation": "Median across sigma layers",
     }
 
     ds[depth_percentile_name].attrs = {
         **avg_attrs,
         "long_name": f"Depth {int(actual_percentile)}th percentile {orig_long_name}",
-        "depth_averaging": f"Average of maximum and second maximum across sigma layers (approx. {int(actual_percentile)}th percentile)",
+        "statistical_computation": f"Average of maximum and second maximum across sigma layers (approx. {int(actual_percentile)}th percentile)",
     }
 
     ds[depth_max_name].attrs = {
         **avg_attrs,
         "long_name": f"Depth maximum {orig_long_name}",
-        "depth_averaging": "Maximum value across sigma layers",
+        "statistical_computation": "Maximum value across sigma layers",
     }
 
     return ds
@@ -1100,12 +1127,12 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             print(f"\t[{file_index}] Calculating volume energy flux...")
             this_ds = calculate_volume_energy_flux(this_ds)
 
-            print(f"\t[{file_index}] Calculating vertical avg energy flux...")
-            this_ds = calculate_vertical_avg_energy_flux(this_ds)
+            # print(f"\t[{file_index}] Calculating vertical avg energy flux...")
+            # this_ds = calculate_vertical_avg_energy_flux(this_ds)
 
-            print(f"\t[{file_index}] Calculating column avg energy flux...")
-            this_ds = calculate_column_volume_avg_energy_flux(this_ds)
-
+            # print(f"\t[{file_index}] Calculating column avg energy flux...")
+            # this_ds = calculate_column_volume_avg_energy_flux(this_ds)
+            #
             print(f"\t[{file_index}] Calculating u vertical average")
             this_ds = calculate_depth_average(this_ds, "u")
 
