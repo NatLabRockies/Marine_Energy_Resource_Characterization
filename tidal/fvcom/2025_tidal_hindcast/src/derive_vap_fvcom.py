@@ -138,9 +138,9 @@ def calculate_sea_water_to_direction(
     """
     validate_u_and_v(ds)
 
-    if "speed" not in ds.variables:
+    if output_names["speed"] not in ds.variables:
         raise KeyError(
-            "Dataset must contain 'speed'. "
+            f"Dataset must contain '{output_names['speed']}'. "
             "Please run calculate_sea_water_speed() first."
         )
 
@@ -341,9 +341,9 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
         If 'sea_water_speed' is not present in dataset
     """
 
-    if "speed" not in ds:
+    if output_names["speed"] not in ds.variables:
         raise KeyError(
-            "Dataset must contain 'speed'. "
+            f"Dataset must contain '{output_names['speed']}'. "
             "Please run calculate_sea_water_speed() first."
         )
 
@@ -352,7 +352,7 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
     # Calculate power density using Equation 1 from
     # Haas, Kevin A., et al. "Assessment of Energy Production Potential from
     # Tidal Streams in the United States." , Jun. 2011. https://doi.org/10.2172/1219367
-    ds[output_variable_name] = 0.5 * rho * ds.speed**3
+    ds[output_variable_name] = 0.5 * rho * ds[output_names["speed"]] ** 3
 
     specified_attrs = config["derived_vap_specification"]["power_density"]["attributes"]
 
@@ -578,7 +578,7 @@ def calculate_volume_energy_flux(ds):
         )
 
     # Energy flux = power density * volume
-    volume_energy_flux = ds.power_density * ds.element_volume
+    volume_energy_flux = ds[output_names["power_density"]] * ds.element_volume
 
     # Add volume energy flux to dataset
     ds[output_names["volume_energy_flux"]] = volume_energy_flux
@@ -1202,6 +1202,7 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
 
     except Exception as e:
         print(f"Error processing file {nc_file}: {str(e)}")
+        raise e
         # Return a value indicating failure
         return -file_index
 
