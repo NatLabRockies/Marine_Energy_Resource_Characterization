@@ -983,7 +983,10 @@ def calculate_depth_statistics(ds, variable_name):
     # Position for second-highest value in a zero-indexed array is n_elements - 2
     # Second highest is at position n_elements - 1 in 1-indexed ranking
     # So its percentile is (n_elements - 1) / n_elements * 100
-    actual_percentile = (n_elements - 1) / n_elements * 100
+    # actual_percentile = (n_elements - 1) / n_elements * 100
+    actual_percentile = (
+        ((n_elements / n_elements) + ((n_elements - 1) / n_elements)) / 2
+    ) * 100
 
     depth_percentile_name = (
         f"{variable_name}_depth_{int(actual_percentile)}th_percentile"
