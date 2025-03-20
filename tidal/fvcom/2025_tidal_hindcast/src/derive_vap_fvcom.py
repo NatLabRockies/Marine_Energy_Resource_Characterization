@@ -20,7 +20,7 @@ output_names = {
     "h_center": "h_center",
     "zeta_center": "vap_zeta_center",
     "depth": "vap_sigma_depth",
-    "seafloor_depth": "vap_sea_floor_depth",
+    "sea_floor_depth": "vap_sea_floor_depth",
     "mean": "vap_water_column_mean",
     "median": "vap_water_column_median",
     "max": "vap_water_column_max",
