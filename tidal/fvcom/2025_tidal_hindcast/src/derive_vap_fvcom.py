@@ -571,18 +571,20 @@ def calculate_volume_energy_flux(ds):
     xarray.Dataset
         Original dataset with added 'volume_energy_flux' variable
     """
-    if "speed" not in ds:
+    if output_names["power_density"] not in ds:
         raise KeyError(
-            "Dataset must contain 'speed'. Please calculate sea water speed first."
+            f"Dataset must contain '{output_names['power_density']}'. Please calculate sea water power_density first."
         )
 
-    if "element_volume" not in ds:
+    if output_names["element_volume"] not in ds:
         raise KeyError(
-            "Dataset must contain 'element_volume'. Please calculate element volumes first."
+            f"Dataset must contain '{output_names['element_volume']}'. Please calculate element volumes first."
         )
 
     # Energy flux = power density * volume
-    volume_energy_flux = ds[output_names["power_density"]] * ds.element_volume
+    volume_energy_flux = (
+        ds[output_names["power_density"]] * ds[output_names["element_volume"]]
+    )
 
     # Add volume energy flux to dataset
     ds[output_names["volume_energy_flux"]] = volume_energy_flux
