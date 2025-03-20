@@ -9,6 +9,11 @@ import xarray as xr
 from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
 
 output_names = {
+    # Original Data
+    "u": "u",
+    "v": "v",
+    "h_center": "h_center",
+    # VAP Data
     "speed": "vap_sea_water_speed",
     "to_direction": "vap_sea_water_to_direction",
     "from_direction": "vap_sea_water_from_direction",
