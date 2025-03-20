@@ -16,6 +16,8 @@ output_names = {
     "element_volume": "vap_element_volume",
     "volume_energy_flux": "vap_element_volume_energy_flux",
     # "water_column_volume_average_energy_flux": "vap_water_column_mean_energy_flux",
+    # This is not a vap, it is by node in the original data
+    "h_center": "h_center",
     "zeta_center": "vap_zeta_center",
     "depth": "vap_sigma_depth",
     "seafloor_depth": "vap_sea_floor_depth",
