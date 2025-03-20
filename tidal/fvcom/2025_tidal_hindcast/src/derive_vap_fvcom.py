@@ -708,27 +708,46 @@ def calculate_zeta_center(ds):
     """
     Calculate sea surface elevation at cell centers from node values.
     """
-    # FVCOM is FORTRAN based and indexes start at 1
-    # Convert indexes to python convention and use only first timestep
-    nv = ds.nv.isel(time=0) - 1
 
-    # Reshape zeta to prepare for the operation
-    # This creates a (time, 3, face) array where each face has its 3 node values
-    zeta_at_nodes = ds.zeta.isel(node=nv)  # Should have shape (time, 3, nfaces)
+    # Get raw nv values from first timestep to avoid coordinate conflicts
+    nv_values = ds.nv.isel(time=0).values - 1  # shape (3, n_faces)
 
-    # Average along the node dimension (axis=1)
-    zeta_center = zeta_at_nodes.mean(dim="face_node_index")
+    # Get raw zeta values (all timesteps)
+    zeta_values = ds.zeta.values  # shape (n_times, n_nodes)
 
-    # Add coordinates and attributes
-    zeta_center = zeta_center.assign_coords(
-        lon_center=ds.lon_center, lat_center=ds.lat_center
+    # Create empty result array
+    n_times = zeta_values.shape[0]
+    n_faces = nv_values.shape[1]
+    result_array = np.zeros((n_times, n_faces), dtype=ds.zeta.dtype)
+
+    # For each of the 3 nodes of each face
+    for i in range(3):
+        # Get indices for the i-th node of all faces
+        node_indices = nv_values[i, :]  # shape (n_faces,)
+
+        # For all timesteps, add zeta values at these nodes to result
+        # This vectorized operation processes all timesteps at once
+        result_array += zeta_values[:, node_indices]
+
+    # Divide by 3 to get the average
+    result_array /= 3.0
+
+    # Create DataArray with the results
+    zeta_center = xr.DataArray(
+        result_array,
+        dims=("time", "face"),
+        coords={
+            "time": ds.time,
+            "lon_center": ds.lon_center,
+            "lat_center": ds.lat_center,
+        },
     )
 
     # Add attributes
     zeta_center.attrs = {
         **ds.zeta.attrs,
         "long_name": "Sea Surface Height at Cell Centers",
-        "coordinates": "time cell",
+        "coordinates": "time face",
         "mesh": "cell_centered",
         "interpolation": (
             "Computed by averaging the surface elevation values from the three "
