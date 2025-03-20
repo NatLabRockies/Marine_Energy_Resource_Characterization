@@ -1047,7 +1047,6 @@ def calculate_depth_statistics(ds, variable_name):
     depth_median_name = f"{output_names['median']}_{sanitized_this_output_name}"
     depth_max_name = f"{output_names['max']}_{sanitized_this_output_name}"
     depth_percentile_name = f"{output_names['p95'].replace('<PERCENTILE>', str(int(actual_percentile)))}_{sanitized_this_output_name}"
-    print("Depth Percential Name", depth_percentile_name)
     # depth_median_name = f"{variable_name}_depth_median"
     # depth_percentile_name = (
     #     f"{variable_name}_depth_{int(actual_percentile)}th_percentile"
@@ -1059,11 +1058,14 @@ def calculate_depth_statistics(ds, variable_name):
     orig_long_name = orig_attrs.get("long_name", this_output_name)
 
     # Calculate mean
+    print(f"\t\tCalculating {depth_avg_name}...")
     ds[depth_avg_name] = ds[this_output_name].mean(dim=dim)
 
     # Calculate median
+    print(f"\t\tCalculating {depth_median_name}...")
     ds[depth_median_name] = ds[this_output_name].median(dim=dim)
 
+    print(f"\t\tCalculating {depth_percentile_name} and {depth_max_name}...")
     # Extract the variable data as a numpy array
     var_data = ds[this_output_name].values
 
@@ -1092,8 +1094,10 @@ def calculate_depth_statistics(ds, variable_name):
     dims_without_depth = [d for d in ds[this_output_name].dims if d != dim]
 
     # Store the maximum values separately
+    print(f"\t\tAdding {depth_max_name}...")
     ds[depth_max_name] = (dims_without_depth, max_values)
 
+    print(f"\t\tAdding {depth_percentile_name}...")
     ds[depth_percentile_name] = (dims_without_depth, percentile_data)
 
     # Set attributes for mean
