@@ -469,8 +469,10 @@ def calculate_element_volume(ds):
     n_face = len(ds.face)
 
     # Get bathymetry and sea surface height
-    h_center = ds.h_center.values  # Bathymetry at element centers
-    zeta_center = ds.zeta_center.values  # Surface elevation at element centers
+    h_center = ds[output_names["h_center"]].values  # Bathymetry at element centers
+    zeta_center = ds[
+        output_names["zeta_center"]
+    ].values  # Surface elevation at element centers
 
     # Get node indices for each element (face) - first time index only
     nv = ds.nv.values[0, :, :] - 1  # Convert to 0-based indexing
@@ -758,31 +760,35 @@ def validate_depth_inputs(ds):
     ValueError
         If units or attributes are undefined or incompatible
     """
-    required_vars = ["h_center", "zeta_center"]
+    h_center = output_names["h_center"]
+    zeta_center = output_names["zeta_center"]
+
+    required_vars = [h_center, zeta_center]
+
     if not all(var in ds for var in required_vars):
         raise KeyError(
-            "Dataset must contain both 'h_center' (bathymetry) and 'zeta_center' (surface elevation)"
+            f"Dataset must contain both '{h_center}' (bathymetry) and '{zeta_center}' (surface elevation)"
         )
 
     # Verify h_center attributes
-    if "units" not in ds.h_center.attrs:
+    if "units" not in ds[h_center].attrs:
         raise ValueError("Input dataset `h_center` units must be defined!")
-    if "positive" not in ds.h_center.attrs:
+    if "positive" not in ds[h_center].attrs:
         raise ValueError("Input dataset `h_center` must define positive direction!")
-    if ds.h_center.attrs["positive"] != "down":
+    if ds[h_center].attrs["positive"] != "down":
         raise ValueError("Input dataset `h_center` positive direction must be 'down'!")
 
     # Verify zeta_center attributes
-    if "units" not in ds.zeta_center.attrs:
+    if "units" not in ds[zeta_center].attrs:
         raise ValueError("Input dataset `zeta_center` units must be defined!")
-    if "positive" not in ds.zeta_center.attrs:
+    if "positive" not in ds[zeta_center].attrs:
         raise ValueError("Input dataset `zeta_center` must define positive direction!")
-    if ds.zeta_center.attrs["positive"] != "up":
+    if ds[zeta_center].attrs["positive"] != "up":
         raise ValueError("Input dataset `zeta_center` positive direction must be 'up'!")
 
     # Verify units match
-    h_units = ds.h_center.attrs["units"]
-    z_units = ds.zeta_center.attrs["units"]
+    h_units = ds[h_center].attrs["units"]
+    z_units = ds[zeta_center].attrs["units"]
     if h_units != z_units:
         raise ValueError(f"Units mismatch: h_center: {h_units}, zeta_center: {z_units}")
 
@@ -831,7 +837,9 @@ def calculate_depth(ds):
     sigma_3d = sigma_layer.reshape(1, -1, 1)
 
     # Calculate total water depth (h + zeta) and reshape
-    total_depth = ds.h_center + ds.zeta_center  # Shape (time, face)
+    total_depth = (
+        ds[output_names["h_center"]] + ds[output_names["zeta_center"]]
+    )  # Shape (time, face)
     total_depth_3d = total_depth.expand_dims(
         dim={"sigma_layer": len(sigma_layer)}, axis=1
     )
@@ -843,7 +851,7 @@ def calculate_depth(ds):
     ds.depth.attrs = {
         "long_name": "Depth Below Sea Surface",
         "standard_name": "depth",
-        "units": ds.h_center.attrs["units"],
+        "units": ds[output_names["h_center"]].attrs["units"],
         "positive": "down",
         "coordinates": "time cell sigma",
         "description": (
@@ -899,13 +907,15 @@ def calculate_sea_floor_depth(ds):
     # Calculate total water column depth
     # Since h_center is already positive down from geoid and zeta_center is positive up,
     # the correct formula is h_center + zeta_center to get the total water depth
-    ds[output_names["sea_floor_depth"]] = ds.h_center + ds.zeta_center
+    ds[output_names["sea_floor_depth"]] = (
+        ds[output_names["h_center"]] + ds[output_names["zeta_center"]]
+    )
 
     # Add CF-compliant metadata
     ds[output_names["sea_floor_depth"]].attrs = {
         "long_name": "Sea Floor Depth Below Sea Surface",
         "standard_name": "sea_floor_depth_below_sea_surface",
-        "units": ds.h_center.attrs["units"],
+        "units": ds[output_names["h_center"]].attrs["units"],
         "positive": "down",
         "description": (
             "The vertical distance between the sea surface and the seabed as measured "
