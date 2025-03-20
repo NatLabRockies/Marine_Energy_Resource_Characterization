@@ -989,7 +989,7 @@ def calculate_depth_average(ds, variable_name):
     # depth_avg_name = f"{variable_name}_depth_avg"
     depth_avg_name = f"{output_names['mean']}_{sanitized_this_output_name}"
 
-    ds[depth_avg_name] = ds[variable_name].mean(dim="sigma_layer")
+    ds[depth_avg_name] = ds[this_output_name].mean(dim="sigma_layer")
 
     # Copy and modify attributes for averaged variable
     # Start with original attributes but remove standard_name if it exists
@@ -998,7 +998,7 @@ def calculate_depth_average(ds, variable_name):
 
     ds[depth_avg_name].attrs = {
         **attrs,
-        "long_name": f"Water column mean {ds[variable_name].attrs.get('long_name', variable_name)}",
+        "long_name": f"Water column mean {ds[this_output_name].attrs.get('long_name', this_output_name)}",
         "statistical_computation": "Mean across sigma layers",
     }
 
@@ -1032,7 +1032,7 @@ def calculate_depth_statistics(ds, variable_name):
     dim = "sigma_layer"
 
     # For the high value (average of max and second max), determine the actual percentile
-    n_elements = ds[variable_name].sizes[dim]
+    n_elements = ds[this_output_name].sizes[dim]
     # Position for second-highest value in a zero-indexed array is n_elements - 2
     # Second highest is at position n_elements - 1 in 1-indexed ranking
     # So its percentile is (n_elements - 1) / n_elements * 100
@@ -1055,19 +1055,19 @@ def calculate_depth_statistics(ds, variable_name):
 
     # Get original variable attributes
     orig_attrs = ds[this_output_name].attrs.copy()
-    orig_long_name = orig_attrs.get("long_name", variable_name)
+    orig_long_name = orig_attrs.get("long_name", this_output_name)
 
     # Calculate mean
-    ds[depth_avg_name] = ds[variable_name].mean(dim=dim)
+    ds[depth_avg_name] = ds[this_output_name].mean(dim=dim)
 
     # Calculate median
-    ds[depth_median_name] = ds[variable_name].median(dim=dim)
+    ds[depth_median_name] = ds[this_output_name].median(dim=dim)
 
     # Extract the variable data as a numpy array
-    var_data = ds[variable_name].values
+    var_data = ds[this_output_name].values
 
     # Find the axis index for the sigma_layer dimension
-    axis = ds[variable_name].dims.index(dim)
+    axis = ds[this_output_name].dims.index(dim)
 
     # Partition to get the two highest values (max and second max)
     # This is much faster than sorting the entire array
