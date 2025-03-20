@@ -1026,7 +1026,7 @@ def calculate_depth_statistics(ds, variable_name):
     this_output_name = output_names[variable_name]
     sanitized_this_output_name = this_output_name.replace("vap_", "")
 
-    if variable_name not in ds:
+    if this_output_name not in ds:
         raise KeyError(f"Dataset must contain '{this_output_name}'")
 
     dim = "sigma_layer"
@@ -1088,7 +1088,7 @@ def calculate_depth_statistics(ds, variable_name):
     percentile_data = (max_values + second_max_values) / 2.0
 
     # Create a new DataArray for the high value with proper dimensions
-    dims_without_depth = [d for d in ds[variable_name].dims if d != dim]
+    dims_without_depth = [d for d in ds[this_output_name].dims if d != dim]
 
     # Store the maximum values separately
     ds[depth_max_name] = (dims_without_depth, max_values)
