@@ -21,8 +21,6 @@ output_names = {
     "element_volume": "vap_element_volume",
     "volume_energy_flux": "vap_element_volume_energy_flux",
     # "water_column_volume_average_energy_flux": "vap_water_column_mean_energy_flux",
-    # This is not a vap, it is by node in the original data
-    "h_center": "h_center",
     "zeta_center": "vap_zeta_center",
     "depth": "vap_sigma_depth",
     "sea_floor_depth": "vap_sea_floor_depth",
@@ -981,11 +979,11 @@ def calculate_depth_average(ds, variable_name):
     xarray.Dataset
         Dataset with added depth-averaged variable
     """
-    if variable_name not in ds:
-        raise KeyError(f"Dataset must contain '{variable_name}'")
-
     this_output_name = output_names[variable_name]
     sanitized_this_output_name = this_output_name.replace("vap_", "")
+
+    if this_output_name not in ds:
+        raise KeyError(f"Dataset must contain '{this_output_name}'")
 
     # Calculate depth average
     # depth_avg_name = f"{variable_name}_depth_avg"
