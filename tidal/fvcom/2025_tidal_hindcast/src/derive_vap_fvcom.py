@@ -869,7 +869,7 @@ def calculate_depth(ds):
     ds[output_names["depth"]] = -(total_depth_3d * sigma_3d)
 
     # Add CF-compliant metadata
-    ds.depth.attrs = {
+    ds[output_names["depth"]].attrs = {
         "long_name": "Depth Below Sea Surface",
         "standard_name": "depth",
         "units": ds[output_names["h_center"]].attrs["units"],
