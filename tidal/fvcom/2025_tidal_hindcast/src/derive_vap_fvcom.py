@@ -1167,6 +1167,9 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             print(f"\t[{file_index}] Calculating zeta_center...")
             this_ds = calculate_zeta_center(this_ds)
 
+            # Clear memory
+            gc.collect()
+
             print(f"\t[{file_index}] Calculating depth...")
             this_ds = calculate_depth(this_ds)
 
@@ -1178,6 +1181,9 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
 
             print(f"\t[{file_index}] Calculating volume energy flux...")
             this_ds = calculate_volume_energy_flux(this_ds)
+
+            # Clear memory
+            gc.collect()
 
             # print(f"\t[{file_index}] Calculating vertical avg energy flux...")
             # this_ds = calculate_vertical_avg_energy_flux(this_ds)
@@ -1196,6 +1202,9 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
 
             print(f"\t[{file_index}] Calculating from_direction vertical average")
             this_ds = calculate_depth_average(this_ds, "from_direction")
+
+            # Clear memory
+            gc.collect()
 
             print(f"\t[{file_index}] Calculating speed depth average statistics")
             this_ds = calculate_depth_statistics(this_ds, "speed")
