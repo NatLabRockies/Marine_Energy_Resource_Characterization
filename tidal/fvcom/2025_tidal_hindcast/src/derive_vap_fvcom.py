@@ -1007,9 +1007,8 @@ def calculate_depth_average(ds, variable_name):
 
 def calculate_depth_statistics(ds, variable_name):
     """
-    Calculate depth statistics (mean, median, max, (max - max[i - 1]) percentile) for a given variable.
-    This function computes multiple depth-based statistics in a single pass to avoid
-    redundant data access, with optimized percentile calculation.
+    Calculate depth statistics (mean, median, max, 95th percentile) for a given variable.
+    Memory-optimized implementation that processes data in chunks along the face dimension.
 
     Parameters
     ----------
@@ -1031,85 +1030,97 @@ def calculate_depth_statistics(ds, variable_name):
 
     dim = "sigma_layer"
 
-    # For the high value (average of max and second max), determine the actual percentile
-    n_elements = ds[this_output_name].sizes[dim]
-    # Position for second-highest value in a zero-indexed array is n_elements - 2
-    # Second highest is at position n_elements - 1 in 1-indexed ranking
-    # So its percentile is (n_elements - 1) / n_elements * 100
-    # actual_percentile = (n_elements - 1) / n_elements * 100
-    actual_percentile = (
-        ((n_elements / n_elements) + ((n_elements - 1) / n_elements)) / 2
-    ) * 100
+    percentile_value = 95
 
-    # Calculate all statistics in one go
-    # depth_avg_name = f"{variable_name}_depth_avg"
+    # Define output variable names
     depth_avg_name = f"{output_names['mean']}_{sanitized_this_output_name}"
     depth_median_name = f"{output_names['median']}_{sanitized_this_output_name}"
     depth_max_name = f"{output_names['max']}_{sanitized_this_output_name}"
-    depth_percentile_name = f"{output_names['p95'].replace('<PERCENTILE>', str(int(actual_percentile)))}_{sanitized_this_output_name}"
-    # depth_median_name = f"{variable_name}_depth_median"
-    # depth_percentile_name = (
-    #     f"{variable_name}_depth_{int(actual_percentile)}th_percentile"
-    # )
-    # depth_max_name = f"{variable_name}_depth_max"
+    depth_percentile_name = f"{output_names['p95'].replace('<PERCENTILE>', str(percentile_value))}_{sanitized_this_output_name}"
 
     # Get original variable attributes
     orig_attrs = ds[this_output_name].attrs.copy()
     orig_long_name = orig_attrs.get("long_name", this_output_name)
 
-    # Calculate mean
+    # Get dimensions info
+    time_dim = ds.dims["time"]
+    face_dim = ds.dims["face"]
+
+    # Create empty arrays for results with proper dimensions
+    dims_without_depth = [d for d in ds[this_output_name].dims if d != dim]
+
+    # Calculate mean - this is usually memory efficient in xarray
     print(f"\t\tCalculating {depth_avg_name}...")
     ds[depth_avg_name] = ds[this_output_name].mean(dim=dim)
 
-    # Calculate median
-    print(f"\t\tCalculating {depth_median_name}...")
-    ds[depth_median_name] = ds[this_output_name].median(dim=dim)
+    # Initialize empty arrays for other statistics
+    median_values = np.empty((time_dim, face_dim), dtype=np.float32)
+    max_values = np.empty((time_dim, face_dim), dtype=np.float32)
+    percentile_values = np.empty((time_dim, face_dim), dtype=np.float32)
 
-    print(f"\t\tCalculating {depth_percentile_name} and {depth_max_name}...")
-    # Extract the variable data as a numpy array
-    var_data = ds[this_output_name].values
+    # Determine optimal chunk size - adjust based on available memory
+    # For systems with 128GB RAM, we can use larger chunks
+    chunk_size = 10000  # Process this many faces at a time
 
-    # Find the axis index for the sigma_layer dimension
-    axis = ds[this_output_name].dims.index(dim)
+    # Process data in chunks along face dimension
+    print(
+        f"\t\tCalculating {depth_median_name}, {depth_max_name}, and {depth_percentile_name}..."
+    )
 
-    # Partition to get the two highest values (max and second max)
-    # This is much faster than sorting the entire array
-    k1 = var_data.shape[axis] - 1  # Index of max value (0-indexed)
-    k2 = var_data.shape[axis] - 2  # Index of second max value (0-indexed)
+    for face_start in range(0, face_dim, chunk_size):
+        # Define current chunk range
+        face_end = min(face_start + chunk_size, face_dim)
 
-    # Use np.partition which partially sorts the array so elements at positions
-    # >= k are in their final sorted positions
-    partitioned = np.partition(var_data, [k2, k1], axis=axis)
+        # Extract chunk data - only for the current face slice
+        chunk = ds[this_output_name].isel(face=slice(face_start, face_end))
 
-    # Extract the max value (last element in the partitioned array)
-    max_values = np.take(partitioned, k1, axis=axis)
+        # Process median for this chunk
+        print(
+            f"\t\t\tProcessing faces {face_start}-{face_end-1} ({face_end-face_start} faces)..."
+        )
+        median_chunk = chunk.median(dim=dim).values
+        median_values[:, face_start:face_end] = median_chunk
 
-    # Extract the second max value (second-to-last element)
-    second_max_values = np.take(partitioned, k2, axis=axis)
+        # Get the raw data as numpy array
+        chunk_data = chunk.values
 
-    # Calculate the average of max and second max
-    percentile_data = (max_values + second_max_values) / 2.0
+        # Find axis index for sigma_layer
+        sigma_axis = chunk.dims.index(dim)
 
-    # Create a new DataArray for the high value with proper dimensions
-    dims_without_depth = [d for d in ds[this_output_name].dims if d != dim]
+        # Calculate max directly (very memory efficient)
+        max_chunk = np.max(chunk_data, axis=sigma_axis)
+        max_values[:, face_start:face_end] = max_chunk
 
-    # Store the maximum values separately
+        # Calculate 95th percentile directly
+        # Using numpy's percentile function with more memory-efficient approach
+        # By specifying the axis, numpy avoids creating large intermediate arrays
+        percentile_chunk = np.percentile(chunk_data, percentile_value, axis=sigma_axis)
+        percentile_values[:, face_start:face_end] = percentile_chunk
+
+        # Manual garbage collection after each chunk
+        chunk_data = None  # Explicitly release the memory
+        gc.collect()
+
+    # Create result DataArrays
+    print(f"\t\tAdding {depth_median_name}...")
+    ds[depth_median_name] = (dims_without_depth, median_values)
+
     print(f"\t\tAdding {depth_max_name}...")
     ds[depth_max_name] = (dims_without_depth, max_values)
 
     print(f"\t\tAdding {depth_percentile_name}...")
-    ds[depth_percentile_name] = (dims_without_depth, percentile_data)
+    ds[depth_percentile_name] = (dims_without_depth, percentile_values)
 
-    # Set attributes for mean
+    # Set attributes
     avg_attrs = orig_attrs.copy()
     avg_attrs.pop("standard_name", None)
+
     ds[depth_avg_name].attrs = {
         **avg_attrs,
         "long_name": f"Depth averaged {orig_long_name}",
         "statistical_computation": "Mean across sigma layers",
     }
 
-    # Set attributes for other calculations
     ds[depth_median_name].attrs = {
         **avg_attrs,
         "long_name": f"Depth median {orig_long_name}",
@@ -1118,8 +1129,8 @@ def calculate_depth_statistics(ds, variable_name):
 
     ds[depth_percentile_name].attrs = {
         **avg_attrs,
-        "long_name": f"Depth {int(actual_percentile)}th percentile {orig_long_name}",
-        "statistical_computation": f"Average of maximum and second maximum across sigma layers (approx. {int(actual_percentile)}th percentile)",
+        "long_name": f"Depth {percentile_value}th percentile {orig_long_name}",
+        "statistical_computation": f"{percentile_value}th percentile across sigma layers",
     }
 
     ds[depth_max_name].attrs = {
@@ -1127,6 +1138,9 @@ def calculate_depth_statistics(ds, variable_name):
         "long_name": f"Depth maximum {orig_long_name}",
         "statistical_computation": "Maximum value across sigma layers",
     }
+
+    # Final garbage collection
+    gc.collect()
 
     return ds
 
