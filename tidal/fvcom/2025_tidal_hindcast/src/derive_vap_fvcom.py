@@ -1075,9 +1075,6 @@ def calculate_depth_statistics(ds, variable_name):
         chunk = ds[this_output_name].isel(face=slice(face_start, face_end))
 
         # Process median for this chunk
-        print(
-            f"\t\t\tProcessing faces {face_start}-{face_end-1} ({face_end-face_start} faces)..."
-        )
         median_chunk = chunk.median(dim=dim).values
         median_values[:, face_start:face_end] = median_chunk
 
