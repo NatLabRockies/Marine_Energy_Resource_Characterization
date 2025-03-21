@@ -1043,8 +1043,8 @@ def calculate_depth_statistics(ds, variable_name):
     orig_long_name = orig_attrs.get("long_name", this_output_name)
 
     # Get dimensions info
-    time_dim = ds.dims["time"]
-    face_dim = ds.dims["face"]
+    time_dim = ds.sizes["time"]
+    face_dim = ds.sizes["face"]
 
     # Create empty arrays for results with proper dimensions
     dims_without_depth = [d for d in ds[this_output_name].dims if d != dim]
