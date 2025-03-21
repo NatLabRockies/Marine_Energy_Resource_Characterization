@@ -476,8 +476,9 @@ config = {
             "description": "",
             "summary": "",
             # "partition_frequency": "M",  # Monthly, Roughly 73GB per file, out of memory in partition step
+            "partition_frequency": "7D",  # 7 Day Chunks
             # "partition_frequency": "W",  # Weekly, Roughly ? per file
-            "partition_frequency": "12h",
+            # "partition_frequency": "12h",
         },
         "cook_inlet": {
             "output_name": "AK_cook_inlet",
@@ -494,8 +495,8 @@ config = {
             "coordinates": {"system": "latitude/longitude"},
             "description": "",
             "summary": "",
-            # "partition_frequency": "M",  # Monthly, Roughly 35GB per file
-            "partition_frequency": "12h",
+            "partition_frequency": "M",  # Monthly, Roughly 35GB per file
+            # "partition_frequency": "12h",
         },
         "piscataqua_river": {
             "output_name": "NH_piscataqua_river",
@@ -541,10 +542,10 @@ config = {
             "summary": "",
             # "partition_frequency": "D",  # Weekly, out of memory at vap step
             # "partition_frequency": "D",  # Daily
-            "partition_frequency": "12h",
+            # "partition_frequency": "12h",
             # "partition_frequency": "M", Monthly OOM at Partition Step
             # "partition_frequency": "W", This starts with 5 days
-            # "partition_frequency": "7D",
+            "partition_frequency": "7D",
         },
         "western_passage": {
             "output_name": "ME_western_passage",
@@ -563,9 +564,9 @@ config = {
             "title": "Western Passage High Fidelity Tidal Hindcast",
             "description": "",
             "summary": "",
-            # "partition_frequency": "M",  # Monthly, Roughly 50GB per file
+            "partition_frequency": "M",  # Monthly, Roughly 50GB per file
             # Trying to improve VAP compute time and find a balance between # of files and file size
-            "partition_frequency": "12h",
+            # "partition_frequency": "12h",
         },
     },
     "global_attributes": {
