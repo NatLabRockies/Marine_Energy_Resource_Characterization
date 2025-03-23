@@ -1240,15 +1240,21 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             print(f"\t[{file_index}] Calculating speed depth average statistics")
             this_ds = calculate_depth_statistics(this_ds, "speed")
 
+            gc.collect()
+
             print(
                 f"\t[{file_index}] Calculating power_density depth average statistics"
             )
             this_ds = calculate_depth_statistics(this_ds, "power_density")
 
+            gc.collect()
+
             print(
                 f"\t[{file_index}] Calculating volume_energy_flux depth average statistics"
             )
             this_ds = calculate_depth_statistics(this_ds, "volume_energy_flux")
+
+            gc.collect()
 
             expected_delta_t_seconds = location["expected_delta_t_seconds"]
             if expected_delta_t_seconds == 3600:
