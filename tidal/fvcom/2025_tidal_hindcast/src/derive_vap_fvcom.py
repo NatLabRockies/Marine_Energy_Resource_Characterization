@@ -1209,15 +1209,30 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             print(f"\t[{file_index}] Calculating volume energy flux...")
             this_ds = calculate_volume_energy_flux(this_ds)
 
-            # Clear memory
-            gc.collect()
+            # Create a temporary file name for intermediate save
+            temp_output_path = Path(output_dir, f"temp_{file_index:03d}.nc")
 
-            # print(f"\t[{file_index}] Calculating vertical avg energy flux...")
-            # this_ds = calculate_vertical_avg_energy_flux(this_ds)
+            print(
+                f"\t[{file_index}] Saving intermediate results to {temp_output_path}..."
+            )
+            this_ds.to_netcdf(
+                temp_output_path,
+                encoding=nc_manager.define_compression_encoding(
+                    this_ds,
+                    base_encoding=config["dataset"]["encoding"],
+                    compression_strategy="none",
+                ),
+            )
 
-            # print(f"\t[{file_index}] Calculating column avg energy flux...")
-            # this_ds = calculate_column_volume_avg_energy_flux(this_ds)
-            #
+        # Clear memory after closing the dataset
+        gc.collect()
+
+        # Reopen the temporary file to continue processing
+        print(
+            f"\t[{file_index}] Reopening intermediate file for statistics calculations..."
+        )
+        with xr.open_dataset(temp_output_path) as this_ds:
+            # Continue with the statistical calculations
             print(f"\t[{file_index}] Calculating u water column average")
             this_ds = calculate_depth_statistics(
                 this_ds, "u", stats_to_calculate=["mean"]
@@ -1293,8 +1308,7 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
                 f"{file_index:03d}.{data_level_file_name}",
             )
 
-            print(f"\t[{file_index}] Saving to {output_path}...")
-            # this_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+            print(f"\t[{file_index}] Saving final results to {output_path}...")
             this_ds.to_netcdf(
                 output_path,
                 encoding=nc_manager.define_compression_encoding(
@@ -1304,12 +1318,28 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
                 ),
             )
 
+        # Clean up temporary file
+        print(f"\t[{file_index}] Removing temporary file...")
+        try:
+            temp_output_path.unlink()
+        except Exception as e:
+            print(
+                f"\t[{file_index}] Warning: Could not remove temporary file: {str(e)}"
+            )
+
         gc.collect()
 
         return file_index
 
     except Exception as e:
         print(f"Error processing file {nc_file}: {str(e)}")
+        # Attempt to clean up temporary file in case of failure
+        temp_output_path = Path(output_dir, f"temp_{file_index:03d}.nc")
+        if temp_output_path.exists():
+            try:
+                temp_output_path.unlink()
+            except:
+                pass
         raise e
         # Return a value indicating failure
         return -file_index
