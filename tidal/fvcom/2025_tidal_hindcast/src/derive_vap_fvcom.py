@@ -1006,7 +1006,7 @@ def calculate_depth_average(ds, variable_name):
 
 
 def calculate_depth_statistics(
-    ds, variable_name, stats_to_calculate=None, face_chunk_size=10000
+    ds, variable_name, stats_to_calculate=None, face_chunk_size=7500
 ):
     """
     Calculate depth statistics for a given variable.
