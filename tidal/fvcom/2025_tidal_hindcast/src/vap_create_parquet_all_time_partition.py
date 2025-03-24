@@ -8,6 +8,8 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from . import file_manager, file_name_convention_manager
+
 
 class ConvertTidalNcToParquet:
     """
@@ -16,9 +18,11 @@ class ConvertTidalNcToParquet:
     stored in a partition based on its lat/lon coordinates.
     """
 
-    def __init__(self, output_dir: str):
+    def __init__(self, output_dir: str, config=None, location=None):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True, parents=True)
+        self.config = config
+        self.location = location
 
     @staticmethod
     def _get_partition_path(lat: float, lon: float) -> str:
@@ -44,6 +48,27 @@ class ConvertTidalNcToParquet:
 
         return (
             f"lat_deg={lat_deg}/lon_deg={lon_deg}/lat_dec={lat_dec}/lon_dec={lon_dec}"
+        )
+
+    def _get_partition_file_name(
+        self, index: int, lat: float, lon: float, df, index_max_digits=6
+    ) -> str:
+        expected_delta_t_seconds = self.location["expected_delta_t_seconds"]
+        if expected_delta_t_seconds == 3600:
+            temporal_string = "1h"
+        elif expected_delta_t_seconds == 1800:
+            temporal_string = "30m"
+        else:
+            raise ValueError(
+                f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
+            )
+
+        return file_name_convention_manager.generate_filename_for_data_level(
+            df,
+            f"{index:07d}_{self.location['output_name']}-lat={lat}-lon={lon}",
+            self.config["dataset"]["name"],
+            "b3",
+            temporal=temporal_string,
         )
 
     @staticmethod
@@ -296,6 +321,8 @@ class ConvertTidalNcToParquet:
 
             # Filename includes face index for uniqueness
             filename = f"face_{face_idx}.parquet"
+            if self.config is not None:
+                filename = self._get_partition_filename(face_idx, lat, lon, df)
 
             # Save to parquet with metadata
             print("Saving parquet file...")
