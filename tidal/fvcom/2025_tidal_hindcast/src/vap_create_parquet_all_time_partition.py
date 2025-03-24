@@ -155,7 +155,7 @@ class ConvertTidalNcToParquet:
                     data_dict[col_name] = var.isel(
                         face=face_idx, sigma_layer=layer_idx
                     ).values
-                    print(f"{col_name}.shape = {data_dict[var_name].shape}")
+                    print(f"{col_name}.shape = {data_dict[col_name].shape}")
 
             elif "face" in var.dims and "time" in var.dims:
                 print(f"Extracting data for {var_name}")
