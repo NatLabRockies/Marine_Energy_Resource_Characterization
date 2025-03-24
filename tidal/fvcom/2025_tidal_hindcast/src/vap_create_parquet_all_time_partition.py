@@ -130,16 +130,18 @@ class ConvertTidalNcToParquet:
                     lon_node_val, len(time_values)
                 )
 
-        vars_to_include.remove("lat_node")
-        vars_to_include.remove("lon_node")
+        # vars_to_include.remove("lat_node")
+        # vars_to_include.remove("lon_node")
+        # vars_to_include.remove("face_node_index")
+        # vars_to_include.remove("time")
 
         # Extract data for each variable
         for var_name in vars_to_include:
-            print(f"Extracting data for {var_name}")
             var = dataset[var_name]
 
             # Check variable dimensions
             if "sigma_layer" in var.dims and "face" in var.dims:
+                print(f"Extracting data for {var_name}")
                 # Handle 3D variables (time, sigma_layer, face)
                 for layer_idx in range(len(dataset.sigma_layer)):
                     # Create column name with layer information
@@ -150,14 +152,15 @@ class ConvertTidalNcToParquet:
                     ).values
 
             elif "face" in var.dims and "time" in var.dims:
+                print(f"Extracting data for {var_name}")
                 # Handle 2D variables (time, face)
                 data_dict[var_name] = var.isel(face=face_idx).values
 
-            elif "face" in var.dims and "time" not in var.dims:
-                # Handle static face variables (e.g., lat_center, lon_center)
-                # Repeat the value for each time step
-                value = var.isel(face=face_idx).values
-                data_dict[var_name] = np.repeat(value, len(time_values))
+            # elif "face" in var.dims and "time" not in var.dims:
+            #     # Handle static face variables (e.g., lat_center, lon_center)
+            #     # Repeat the value for each time step
+            #     value = var.isel(face=face_idx).values
+            #     data_dict[var_name] = np.repeat(value, len(time_values))
 
         # Create DataFrame with time as index
         df = pd.DataFrame(data_dict, index=time_values)
