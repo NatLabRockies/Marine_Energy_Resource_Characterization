@@ -1303,6 +1303,8 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
                 [str(nc_file)],
             )
 
+            gc.collect()
+
             output_path = Path(
                 output_dir,
                 f"{file_index:03d}.{data_level_file_name}",
