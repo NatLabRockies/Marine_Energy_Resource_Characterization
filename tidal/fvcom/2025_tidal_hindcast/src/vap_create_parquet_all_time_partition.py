@@ -337,6 +337,18 @@ class ConvertTidalNcToParquet:
         return stats
 
 
+def partition_vap_into_parquet_dataset(config, location_key):
+    location = config["location_specification"][location_key]
+    input_path = file_manager.get_vap_output_dir(config, location)
+    output_path = file_manager.get_vap_partition_output_dir(config, location)
+
+    vap_nc_files = sorted(list(input_path.rglob("*.nc")))
+
+    for nc_file in vap_nc_files:
+        converter = ConvertTidalNcToParquet(output_path, config, location)
+        converter.convert_dataset(nc_file)
+
+
 if __name__ == "__main__":
     converter = ConvertTidalNcToParquet("/scratch/asimms/Tidal/test_parquet")
     print("Reading dataset...")
