@@ -169,6 +169,8 @@ class ConvertTidalNcToParquet:
 
         print("===LOOPING===")
 
+        vars_to_skip = ["nv", "h_center"]
+
         # Extract data for each variable
         for var_name in vars_to_include:
             var = dataset[var_name]
