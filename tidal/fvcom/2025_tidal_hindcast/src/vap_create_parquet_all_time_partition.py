@@ -388,7 +388,7 @@ class ConvertTidalNcToParquet:
             # Filename includes face index for uniqueness
             filename = f"face_{face_idx}.parquet"
             if self.config is not None:
-                filename = self._get_partition_filename(face_idx, lat, lon, df)
+                filename = self._get_partition_file_name(face_idx, lat, lon, df)
 
             # Save to parquet with metadata
             print("Saving parquet file...")
