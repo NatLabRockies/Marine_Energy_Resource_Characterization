@@ -28,6 +28,8 @@ config = {
             "standardized_partition": "/scratch/asimms/Tidal/<location>/a2_std_partition",
             "vap": "/scratch/asimms/Tidal/<location>/b1_vap",
             "summary_vap": "/scratch/asimms/Tidal/<location>/b2_summary_vap",
+            "vap_partition": "/scratch/asimms/Tidal/<location>/b3_vap_partition",
+            "vap_summary_partition": "/scratch/asimms/Tidal/<location>/b4_vap_summary_partition",
         },
     },
     "model_specification": {
