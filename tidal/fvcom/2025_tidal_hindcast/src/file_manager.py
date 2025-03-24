@@ -38,6 +38,14 @@ def get_output_dirs(config, location):
         "summary_vap": Path(
             output_dirs["summary_vap"].replace("<location>", output_location_name)
         ),
+        "vap_partition": Path(
+            output_dirs["vap_partition"].replace("<location>", output_location_name)
+        ),
+        "vap_summary_partition": Path(
+            output_dirs["vap_summary_partition"].replace(
+                "<location>", output_location_name
+            )
+        ),
     }
     for path in paths.values():
         path.mkdir(parents=True, exist_ok=True)
@@ -63,3 +71,11 @@ def get_vap_output_dir(config, location):
 
 def get_summary_vap_output_dir(config, location):
     return get_output_dirs(config, location)["summary_vap"]
+
+
+def get_vap_partition_output_dir(config, location):
+    return get_output_dirs(config, location)["vap_partition"]
+
+
+def get_vap_summary_partition_output_dir(config, location):
+    return get_output_dirs(config, location)["vap_summary_partition"]
