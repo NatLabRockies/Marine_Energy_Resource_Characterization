@@ -97,6 +97,15 @@ def calculate_vap_average(config, location):
             f"Expecting at least 12 files in {vap_path}, found {len(vap_nc_files)}: {vap_nc_files}"
         )
 
+    output_path = file_manager.get_summary_vap_output_dir(config, location)
+    output_nc_files = list(output_path.rglob("*.nc"))
+
+    if len(output_nc_files) > 0:
+        print(
+            f"{len(output_nc_files)} summary files already exist. Skipping calculate_vap_average"
+        )
+        return
+
     # Typical year has 365 days
     days_per_year = 365
     if location["output_name"] == "WA_puget_sound":
