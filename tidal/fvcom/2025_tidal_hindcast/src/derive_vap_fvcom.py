@@ -1176,8 +1176,11 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
     """Process a single netCDF file and save the results."""
     try:
         print(f"Calculating vap for {nc_file}")
-
-        # Use context manager to ensure dataset is properly closed
+        
+        # Create temporary file path
+        temp_output_path = Path(output_dir, f"temp_{file_index:03d}.nc")
+        
+        # Part 1: Initial calculations
         with xr.open_dataset(nc_file) as this_ds:
             print(f"\t[{file_index}] Calculating speed...")
             this_ds = calculate_sea_water_speed(this_ds, config)
@@ -1208,127 +1211,129 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
 
             print(f"\t[{file_index}] Calculating volume energy flux...")
             this_ds = calculate_volume_energy_flux(this_ds)
-
-            # Create a temporary file name for intermediate save
-            temp_output_path = Path(output_dir, f"temp_{file_index:03d}.nc")
-
-            print(
-                f"\t[{file_index}] Saving intermediate results to {temp_output_path}..."
-            )
+            
+            # Save intermediate results
+            print(f"\t[{file_index}] Saving intermediate results to {temp_output_path}...")
             this_ds.to_netcdf(
                 temp_output_path,
                 encoding=nc_manager.define_compression_encoding(
                     this_ds,
                     base_encoding=config["dataset"]["encoding"],
                     compression_strategy="none",
-                ),
+                )
             )
-
+        
         # Clear memory after closing the dataset
         gc.collect()
-
-        # Reopen the temporary file to continue processing
-        print(
-            f"\t[{file_index}] Reopening intermediate file for statistics calculations..."
-        )
+        
+        # Part 2: Process statistics sequentially, one at a time
+        # Final dataset to collect all results
+        final_ds = None
+        
+        # List of statistics to calculate
+        stats_to_process = [
+            ("u", ["mean"]),
+            ("v", ["mean"]),
+            ("to_direction", ["mean"]),
+            ("from_direction", ["mean"]),
+            ("speed", ["mean", "min", "max", "std"]),  # Assuming these are the default stats
+            ("power_density", ["mean", "min", "max", "std"]),
+            ("volume_energy_flux", ["mean", "min", "max", "std"])
+        ]
+        
+        # Process each statistic separately
+        for var_name, stats in stats_to_process:
+            print(f"\t[{file_index}] Processing {var_name} statistics...")
+            
+            # Open the file for this specific calculation only
+            with xr.open_dataset(temp_output_path) as this_ds:
+                # Extract just the variable we need to reduce memory usage
+                if var_name in this_ds:
+                    var_ds = this_ds[[var_name]].copy()
+                    # Also include necessary coordinates
+                    for coord in this_ds.coords:
+                        if coord not in var_ds:
+                            var_ds[coord] = this_ds[coord]
+                            
+                    # Do the calculation
+                    if len(stats) == 1 and stats[0] == "mean":
+                        result_ds = calculate_depth_statistics(var_ds, var_name, stats_to_calculate=["mean"])
+                    else:
+                        result_ds = calculate_depth_statistics(var_ds, var_name)
+                        
+                    # If this is our first result, use it as the base
+                    if final_ds is None:
+                        # Get a minimal version of the original dataset for structure
+                        final_ds = this_ds.drop([v for v in this_ds.data_vars])
+                        
+                    # Add the new calculated variables to our final dataset
+                    for new_var in [v for v in result_ds.data_vars if v.startswith(f"{var_name}_depth_")]:
+                        final_ds[new_var] = result_ds[new_var]
+                
+                # Force garbage collection
+                gc.collect()
+        
+        # Now add back all the original variables that we need
         with xr.open_dataset(temp_output_path) as this_ds:
-            # Continue with the statistical calculations
-            print(f"\t[{file_index}] Calculating u water column average")
-            this_ds = calculate_depth_statistics(
-                this_ds, "u", stats_to_calculate=["mean"]
+            for var in this_ds.data_vars:
+                if var not in final_ds:
+                    final_ds[var] = this_ds[var]
+        
+        # Finalize the dataset
+        expected_delta_t_seconds = location["expected_delta_t_seconds"]
+        if expected_delta_t_seconds == 3600:
+            temporal_string = "1h"
+        elif expected_delta_t_seconds == 1800:
+            temporal_string = "30m"
+        else:
+            raise ValueError(
+                f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
             )
 
-            print(f"\t[{file_index}] Calculating v water column average")
-            this_ds = calculate_depth_statistics(
-                this_ds, "v", stats_to_calculate=["mean"]
-            )
-
-            print(f"\t[{file_index}] Calculating to_direction water column average")
-            this_ds = calculate_depth_statistics(
-                this_ds, "to_direction", stats_to_calculate=["mean"]
-            )
-
-            print(f"\t[{file_index}] Calculating from_direction water column average")
-            this_ds = calculate_depth_statistics(
-                this_ds, "from_direction", stats_to_calculate=["mean"]
-            )
-
-            # Clear memory
-            gc.collect()
-
-            print(f"\t[{file_index}] Calculating speed depth average statistics")
-            this_ds = calculate_depth_statistics(this_ds, "speed")
-
-            gc.collect()
-
-            print(
-                f"\t[{file_index}] Calculating power_density depth average statistics"
-            )
-            this_ds = calculate_depth_statistics(this_ds, "power_density")
-
-            gc.collect()
-
-            print(
-                f"\t[{file_index}] Calculating volume_energy_flux depth average statistics"
-            )
-            this_ds = calculate_depth_statistics(this_ds, "volume_energy_flux")
-
-            gc.collect()
-
-            expected_delta_t_seconds = location["expected_delta_t_seconds"]
-            if expected_delta_t_seconds == 3600:
-                temporal_string = "1h"
-            elif expected_delta_t_seconds == 1800:
-                temporal_string = "30m"
-            else:
-                raise ValueError(
-                    f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
-                )
-
-            data_level_file_name = (
-                file_name_convention_manager.generate_filename_for_data_level(
-                    this_ds,
-                    location["output_name"],
-                    config["dataset"]["name"],
-                    "b1",
-                    temporal=temporal_string,
-                )
-            )
-
-            this_ds = attrs_manager.standardize_dataset_global_attrs(
-                this_ds,
-                config,
-                location,
+        data_level_file_name = (
+            file_name_convention_manager.generate_filename_for_data_level(
+                final_ds,
+                location["output_name"],
+                config["dataset"]["name"],
                 "b1",
-                [str(nc_file)],
+                temporal=temporal_string,
             )
+        )
 
-            output_path = Path(
-                output_dir,
-                f"{file_index:03d}.{data_level_file_name}",
+        # Add global attributes
+        final_ds = attrs_manager.standardize_dataset_global_attrs(
+            final_ds,
+            config,
+            location,
+            "b1",
+            [str(nc_file)],
+        )
+        
+        # Generate final output path
+        output_path = Path(
+            output_dir,
+            f"{file_index:03d}.{data_level_file_name}",
+        )
+        
+        # Save final results
+        print(f"\t[{file_index}] Saving final results to {output_path}...")
+        final_ds.to_netcdf(
+            output_path,
+            encoding=nc_manager.define_compression_encoding(
+                final_ds,
+                base_encoding=config["dataset"]["encoding"],
+                compression_strategy="none",
             )
-
-            print(f"\t[{file_index}] Saving final results to {output_path}...")
-            this_ds.to_netcdf(
-                output_path,
-                encoding=nc_manager.define_compression_encoding(
-                    this_ds,
-                    base_encoding=config["dataset"]["encoding"],
-                    compression_strategy="none",
-                ),
-            )
-
-        # Clean up temporary file
+        )
+        
+        # Remove temporary file
         print(f"\t[{file_index}] Removing temporary file...")
         try:
             temp_output_path.unlink()
         except Exception as e:
-            print(
-                f"\t[{file_index}] Warning: Could not remove temporary file: {str(e)}"
-            )
-
+            print(f"\t[{file_index}] Warning: Could not remove temporary file: {str(e)}")
+        
         gc.collect()
-
         return file_index
 
     except Exception as e:
