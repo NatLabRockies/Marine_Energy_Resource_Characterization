@@ -4,9 +4,29 @@ import pandas as pd
 import xarray as xr
 
 
-def _format_datetime(ds):
-    """Extract and format date and time strings from dataset."""
-    dt = pd.Timestamp(ds.time.values[0])
+def _format_datetime(data):
+    """
+    Extract and format date and time strings from either xarray Dataset with time coordinate
+    or pandas DataFrame with datetime index.
+
+    Parameters:
+    -----------
+    data : xr.Dataset or pd.DataFrame
+        Dataset containing datetime information either as a coordinate or as an index
+
+    Returns:
+    --------
+    tuple
+        (date_string, time_string) in format (%Y%m%d, %H%M%S)
+    """
+    if isinstance(data, xr.Dataset):
+        dt = pd.Timestamp(data.time.values[0])
+    elif isinstance(data, pd.DataFrame):
+        if isinstance(data.index, pd.DatetimeIndex):
+            dt = data.index[0]
+    else:
+        raise TypeError("Input must be either xarray Dataset or pandas DataFrame")
+
     return dt.strftime("%Y%m%d"), dt.strftime("%H%M%S")
 
 
