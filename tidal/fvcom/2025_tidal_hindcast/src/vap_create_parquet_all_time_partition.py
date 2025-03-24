@@ -130,7 +130,8 @@ class ConvertTidalNcToParquet:
                     lon_node_val, len(time_values)
                 )
 
-        # vars_to_include.remove("nv")
+        vars_to_include.remove("lat_node")
+        vars_to_include.remove("lon_node")
 
         # Extract data for each variable
         for var_name in vars_to_include:
