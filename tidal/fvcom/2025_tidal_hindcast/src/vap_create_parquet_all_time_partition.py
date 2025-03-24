@@ -212,6 +212,7 @@ class ConvertTidalNcToParquet:
     ) -> None:
         """
         Save DataFrame to Parquet with metadata.
+        If files with the same face index already exist, concatenate them with the new data.
 
         Parameters
         ----------
@@ -227,6 +228,69 @@ class ConvertTidalNcToParquet:
         # Create full directory path for the partition
         full_dir = Path(self.output_dir, partition_path)
         full_dir.mkdir(exist_ok=True, parents=True)
+
+        # Extract face index from filename (assuming format like "face_X.parquet" or similar)
+        face_idx = None
+        if "face_" in filename:
+            face_idx = filename.split("face_")[1].split(".")[0]
+        elif "-" in filename and "lat=" in filename and "lon=" in filename:
+            # For format like "000001output_name-lat=X-lon=Y"
+            face_idx = filename.split("-")[0].strip()
+
+        # If we could extract a face index, check for existing files
+        if face_idx is not None:
+            # Find all parquet files in the directory
+            existing_files = list(full_dir.glob("*.parquet"))
+            matching_files = []
+            first_filename = None
+
+            # Find files with the same face index
+            for file in existing_files:
+                if f"face_{face_idx}" in file.name:
+                    matching_files.append(file)
+                    if first_filename is None:
+                        first_filename = file.name
+                elif (
+                    face_idx in file.name
+                    and "lat=" in file.name
+                    and "lon=" in file.name
+                ):
+                    # For the custom naming format
+                    file_face_idx = file.name.split("-")[0].strip()
+                    if file_face_idx == face_idx:
+                        matching_files.append(file)
+                        if first_filename is None:
+                            first_filename = file.name
+
+            # If matching files found, concatenate them with the new data
+            if matching_files:
+                # Use the first filename if available, otherwise use the provided filename
+                final_filename = first_filename if first_filename else filename
+
+                # Read and concatenate all existing files
+                dfs = [df]  # Start with the new data
+                for file in matching_files:
+                    existing_df = pd.read_parquet(file)
+                    dfs.append(existing_df)
+                    # Delete the file after reading
+                    file.unlink()
+
+                # Concatenate all dataframes
+                concatenated_df = pd.concat(dfs)
+
+                # Remove duplicates based on the index (time)
+                concatenated_df = concatenated_df[
+                    ~concatenated_df.index.duplicated(keep="last")
+                ]
+
+                # Sort by the index
+                concatenated_df = concatenated_df.sort_index()
+
+                # Update our dataframe to the concatenated one
+                df = concatenated_df
+
+                # Update the filename to use
+                filename = final_filename
 
         # Full path to parquet file
         full_path = Path(full_dir, filename)
