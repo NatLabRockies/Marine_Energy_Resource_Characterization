@@ -318,4 +318,4 @@ if __name__ == "__main__":
     )
 
     print("Starting parquet partition creation...")
-    converter.convert_dataset(ds, max_faces=5)
+    converter.convert_dataset(ds, max_faces=10)
