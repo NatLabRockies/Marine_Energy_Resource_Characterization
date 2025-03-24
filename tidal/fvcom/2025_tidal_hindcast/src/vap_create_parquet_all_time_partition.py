@@ -135,9 +135,14 @@ class ConvertTidalNcToParquet:
         # vars_to_include.remove("face_node_index")
         # vars_to_include.remove("time")
 
+        print("===LOOPING===")
+
         # Extract data for each variable
         for var_name in vars_to_include:
             var = dataset[var_name]
+
+            if var_name == "nv":
+                continue
 
             # Check variable dimensions
             if "sigma_layer" in var.dims and "face" in var.dims:
