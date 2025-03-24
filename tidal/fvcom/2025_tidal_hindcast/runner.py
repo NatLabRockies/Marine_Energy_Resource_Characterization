@@ -44,5 +44,3 @@ if __name__ == "__main__":
 
     print("Step 6: Create Parquet Partition Dataset...")
     partition_vap_into_parquet_dataset(config, args.location)
-    
-    
