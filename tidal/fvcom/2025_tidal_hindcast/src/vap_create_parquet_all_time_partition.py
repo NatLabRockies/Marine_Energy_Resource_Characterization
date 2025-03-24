@@ -175,7 +175,7 @@ class ConvertTidalNcToParquet:
         for var_name in vars_to_include:
             var = dataset[var_name]
 
-            if var_name == "nv":
+            if var_name in vars_to_skip:
                 continue
 
             # Check variable dimensions
