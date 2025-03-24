@@ -228,6 +228,7 @@ class ConvertTidalNcToParquet:
             Statistics about the conversion process
         """
         # Extract dataset attributes
+        print("Extracting attributes...")
         attributes = self._extract_attributes(dataset)
 
         # Determine variables to include
@@ -250,22 +251,30 @@ class ConvertTidalNcToParquet:
             "files_created": 0,
         }
 
+        print("Processing dataframe by face...")
+
         # Process each face
         for face_idx in range(num_faces):
+            print(f"Processing face {face_idx} of {num_faces}...")
             lat = float(lat_center[face_idx])
             lon = float(lon_center[face_idx])
 
             # Generate partition path
+            print("Generating partition path...")
             partition_path = self._get_partition_path(lat, lon)
+            print(f"Partition path is: {partition_path}...")
+
             stats["partitions_created"].add(partition_path)
 
             # Create time series DataFrame for this face
+            print("Creating time series df...")
             df = self._create_time_series_df(dataset, face_idx, vars_to_include)
 
             # Filename includes face index for uniqueness
             filename = f"face_{face_idx}.parquet"
 
             # Save to parquet with metadata
+            print("Saving parquet file...")
             self._save_parquet_with_metadata(df, attributes, partition_path, filename)
             stats["files_created"] += 1
 
@@ -279,8 +288,10 @@ class ConvertTidalNcToParquet:
 
 if __name__ == "__main__":
     converter = ConvertTidalNcToParquet("/scratch/asimms/Tidal/test_parquet")
+    print("Reading dataset...")
     ds = xr.open_dataset(
         "/scratch/asimms/Tidal/AK_cook_inlet/b1_vap/001.AK_cook_inlet.tidal_hindcast_fvcom-1h.b1.20050101.000000.nc"
     )
 
+    print("Starting parquet partition creation...")
     converter.convert_dataset(ds, max_faces=5)
