@@ -95,18 +95,23 @@ class ConvertTidalNcToParquet:
         # Dictionary to store data for DataFrame
         data_dict = {}
 
+        print(f"Vars to include are: {vars_to_include}")
+
         # Get time values for index
+        print("Extracting time values...")
         time_values = dataset.time.values
 
         # Extract triangle vertex information from nv (node vertex) variable
         # nv uses Fortran-style indexing, so we need to adjust
         # Get the first timestamp since topology doesn't change
+        print("Extracting nv values...")
         nv_data = dataset["nv"].isel(time=0, face=face_idx).values
 
         # Get node indices for the three corners of this face
         # Adjust for possible Fortran 1-based indexing by subtracting 1
         node_indices = [int(idx - 1) if idx > 0 else int(idx) for idx in nv_data]
 
+        print("Extracting data for each corner node...")
         # Extract lat/lon for each corner node
         if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
             for i, node_idx in enumerate(node_indices):
@@ -125,10 +130,11 @@ class ConvertTidalNcToParquet:
                     lon_node_val, len(time_values)
                 )
 
-        vars_to_include.remove("nv")
+        # vars_to_include.remove("nv")
 
         # Extract data for each variable
         for var_name in vars_to_include:
+            print(f"Extracting data for {var_name}")
             var = dataset[var_name]
 
             # Check variable dimensions
