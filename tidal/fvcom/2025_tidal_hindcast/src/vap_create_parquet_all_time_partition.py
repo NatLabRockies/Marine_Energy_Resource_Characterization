@@ -249,7 +249,7 @@ class ConvertTidalNcToParquet:
 
 
 if __name__ == "__main__":
-    converter = ConvertTidalNcToParquet("/scratch/asimmms/Tidal/test_parquet")
+    converter = ConvertTidalNcToParquet("/scratch/asimms/Tidal/test_parquet")
     ds = xr.open_dataset(
         "/scratch/asimms/Tidal/AK_cook_inlet/b1_vap/001.AK_cook_inlet.tidal_hindcast_fvcom-1h.b1.20050101.000000.nc"
     )
