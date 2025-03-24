@@ -98,6 +98,35 @@ class ConvertTidalNcToParquet:
         # Get time values for index
         time_values = dataset.time.values
 
+        # Extract triangle vertex information from nv (node vertex) variable
+        # nv uses Fortran-style indexing, so we need to adjust
+        # Get the first timestamp since topology doesn't change
+        nv_data = dataset["nv"].isel(time=0, face=face_idx).values
+
+        # Get node indices for the three corners of this face
+        # Adjust for possible Fortran 1-based indexing by subtracting 1
+        node_indices = [int(idx - 1) if idx > 0 else int(idx) for idx in nv_data]
+
+        # Extract lat/lon for each corner node
+        if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
+            for i, node_idx in enumerate(node_indices):
+                # Add vertex information as static columns
+                corner_num = i + 1  # 1-based for clarity
+
+                # Add corner lat/lon values
+                lat_node_val = float(dataset["lat_node"].values[node_idx])
+                lon_node_val = float(dataset["lon_node"].values[node_idx])
+
+                # Add to data dict with repeated values for each time step
+                data_dict[f"element_corner_{corner_num}_lat"] = np.repeat(
+                    lat_node_val, len(time_values)
+                )
+                data_dict[f"element_corner_{corner_num}_lon"] = np.repeat(
+                    lon_node_val, len(time_values)
+                )
+
+        vars_to_include.remove("nv")
+
         # Extract data for each variable
         for var_name in vars_to_include:
             var = dataset[var_name]
