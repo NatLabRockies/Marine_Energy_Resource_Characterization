@@ -101,6 +101,13 @@ class ConvertTidalNcToParquet:
         print("Extracting time values...")
         time_values = dataset.time.values
 
+        data_dict["lat_center"] = [dataset.lat_center.values[face_idx]] * len(
+            time_values
+        )
+        data_dict["lon_center"] = [dataset.lon_center.values[face_idx]] * len(
+            time_values
+        )
+
         # Extract triangle vertex information from nv (node vertex) variable
         # nv uses Fortran-style indexing, so we need to adjust
         # Get the first timestamp since topology doesn't change
