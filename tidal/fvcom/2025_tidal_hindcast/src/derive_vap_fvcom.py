@@ -1307,13 +1307,13 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             )
 
         # Clean up temporary file
-        print(f"\t[{file_index}] Removing temporary file...")
-        try:
-            temp_output_path.unlink()
-        except Exception as e:
-            print(
-                f"\t[{file_index}] Warning: Could not remove temporary file: {str(e)}"
-            )
+        # print(f"\t[{file_index}] Removing temporary file...")
+        # try:
+        #     temp_output_path.unlink()
+        # except Exception as e:
+        #     print(
+        #         f"\t[{file_index}] Warning: Could not remove temporary file: {str(e)}"
+        #     )
 
         gc.collect()
 
