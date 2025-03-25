@@ -1,5 +1,6 @@
-from pathlib import Path
+import re
 
+from pathlib import Path
 from typing import List, Dict, Union, Optional
 
 import numpy as np
@@ -416,6 +417,64 @@ class ConvertTidalNcToParquet:
 
         return face_dataframes
 
+    def _prepare_netcdf_compatible_metadata(self, attributes: Dict) -> Dict:
+        """
+        Process and prepare metadata to be compatible with NetCDF/xarray structure.
+
+        Parameters
+        ----------
+        attributes : Dict
+            Dictionary containing metadata to be included
+
+        Returns
+        -------
+        Dict
+            Dictionary of metadata keys and values converted to bytes
+        """
+        import json
+
+        metadata = {}
+
+        # Add variable attributes
+        # For each variable in the DataFrame, store its attributes
+        if "variable_attributes" in attributes:
+            for var_name, var_attrs in attributes["variable_attributes"].items():
+                for attr_name, attr_value in var_attrs.items():
+                    # Create keys in format: var_name:attr_name
+                    metadata[f"{var_name}:{attr_name}"] = attr_value
+
+        # Add global attributes
+        if "global_attributes" in attributes:
+            for attr_name, attr_value in attributes["global_attributes"].items():
+                # Prefix global attributes to distinguish them
+                metadata[f"global:{attr_name}"] = attr_value
+
+        # If attributes is a flat dictionary (not separated into variable/global)
+        # Store as-is, assuming they are global attributes
+        if not isinstance(attributes, dict) or (
+            "variable_attributes" not in attributes
+            and "global_attributes" not in attributes
+        ):
+            for attr_name, attr_value in attributes.items():
+                metadata[f"global:{attr_name}"] = attr_value
+
+        # Add metadata markers for parsing when reading the file back
+        metadata["_WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
+        metadata["_WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
+
+        # Convert all metadata values to strings and then to bytes (required by pyarrow)
+        metadata_bytes = {}
+        for k, v in metadata.items():
+            # Handle different types of values appropriately
+            if isinstance(v, (list, dict, tuple)):
+                # For complex types, use JSON serialization
+                metadata_bytes[k] = json.dumps(v).encode("utf-8")
+            else:
+                # For simple types, use string representation
+                metadata_bytes[k] = str(v).encode("utf-8")
+
+        return metadata_bytes
+
     def _save_parquet_with_metadata(
         self, df: pd.DataFrame, attributes: Dict, partition_path: str, filename: str
     ) -> None:
@@ -438,70 +497,50 @@ class ConvertTidalNcToParquet:
         full_dir = Path(self.output_dir, partition_path)
         full_dir.mkdir(exist_ok=True, parents=True)
 
-        # Extract face index from filename (assuming format like "face_X.parquet" or similar)
-        face_idx = None
-        if "face_" in filename:
-            face_idx = filename.split("face_")[1].split(".")[0]
-        elif "face=" in filename:
-            face_idx = filename.split("face=")[1].split(".")[0]
-        elif "-" in filename and "lat=" in filename and "lon=" in filename:
-            # For format like "000001output_name-lat=X-lon=Y"
-            face_idx = filename.split("-")[0].strip()
+        # Define the regex pattern for face index extraction once
+        # Pattern explanation:
+        # - 'face[_=]' matches either 'face_' or 'face='
+        # - '(\d+)' captures one or more digits after the prefix into group 1
+        # - This matches both 'face_000123' and 'face=000123' formats
+        # - The regex preserves leading zeros in the face index (important for 6-digit indices like '000123')
+        FACE_INDEX_PATTERN = r"face[_=](\d+)"
 
-        # If we could extract a face index, check for existing files
-        if face_idx is not None:
-            # Find all parquet files in the directory
+        # Extract face index using regex
+        face_idx = None
+        face_match = re.search(FACE_INDEX_PATTERN, filename)
+        if face_match:
+            face_idx = face_match.group(
+                1
+            )  # This will keep leading zeros intact as it returns the string match
+
+        # If we found a face index, check for existing files with the same index
+        if face_idx:
             existing_files = list(full_dir.glob("*.parquet"))
             matching_files = []
-            first_filename = None
 
-            # Find files with the same face index
             for file in existing_files:
-                if f"face_{face_idx}" in file.name:
+                # Use the same pattern to extract face index from existing files
+                # This ensures consistent matching between input and existing files
+                existing_match = re.search(FACE_INDEX_PATTERN, file.name)
+                if existing_match and existing_match.group(1) == face_idx:
                     matching_files.append(file)
-                    if first_filename is None:
-                        first_filename = file.name
-                elif (
-                    face_idx in file.name
-                    and "lat=" in file.name
-                    and "lon=" in file.name
-                ):
-                    # For the custom naming format
-                    file_face_idx = file.name.split("-")[0].strip()
-                    if file_face_idx == face_idx:
-                        matching_files.append(file)
-                        if first_filename is None:
-                            first_filename = file.name
 
             # If matching files found, concatenate them with the new data
             if matching_files:
-                # Use the first filename if available, otherwise use the provided filename
-                final_filename = first_filename if first_filename else filename
-
+                # Use the new filename as the final filename
                 # Read and concatenate all existing files
                 dfs = [df]  # Start with the new data
+
                 for file in matching_files:
                     existing_df = pd.read_parquet(file)
                     dfs.append(existing_df)
                     # Delete the file after reading
                     file.unlink()
 
-                # Concatenate all dataframes
-                concatenated_df = pd.concat(dfs)
-
-                # Remove duplicates based on the index (time)
-                concatenated_df = concatenated_df[
-                    ~concatenated_df.index.duplicated(keep="last")
-                ]
-
-                # Sort by the index
-                concatenated_df = concatenated_df.sort_index()
-
-                # Update our dataframe to the concatenated one
-                df = concatenated_df
-
-                # Update the filename to use
-                filename = final_filename
+                # Concatenate all dataframes, remove duplicates, and sort
+                df = pd.concat(dfs)
+                # df = df[~df.index.duplicated(keep="last")]
+                df = df.sort_index()
 
         # Full path to parquet file
         full_path = Path(full_dir, filename)
@@ -509,11 +548,8 @@ class ConvertTidalNcToParquet:
         # Convert DataFrame to pyarrow Table
         table = pa.Table.from_pandas(df)
 
-        # Add metadata to the table
-        metadata = {"xarray_attributes": str(attributes)}
-
-        # Convert metadata to bytes
-        metadata_bytes = {k: str(v).encode("utf-8") for k, v in metadata.items()}
+        # Process metadata using separate method
+        metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
 
         # Update table metadata
         table = table.replace_schema_metadata(
@@ -521,12 +557,7 @@ class ConvertTidalNcToParquet:
         )
 
         # Write to parquet
-        pq.write_table(
-            table,
-            full_path,
-            # compression="snappy",
-            # use_deprecated_int96_timestamps=True,  # for better compatibility
-        )
+        pq.write_table(table, full_path)
 
     def convert_dataset(
         self,
