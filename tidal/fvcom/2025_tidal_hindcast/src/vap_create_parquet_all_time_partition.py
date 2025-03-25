@@ -783,7 +783,7 @@ def partition_vap_into_parquet_dataset(config, location_key):
         # Access batch_size faces at once
         # This should be set to optimize memory usage and speed
         # A value that is too big will overflow memory, and a value that is too small will take too long
-        converter.convert_dataset_batched(ds, batch_size=1000)
+        converter.convert_dataset_batched(ds, batch_size=100000)
 
 
 if __name__ == "__main__":
