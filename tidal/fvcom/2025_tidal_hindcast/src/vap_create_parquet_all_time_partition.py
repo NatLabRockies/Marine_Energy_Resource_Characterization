@@ -1,4 +1,5 @@
 import re
+import json
 
 from pathlib import Path
 from typing import List, Dict, Union, Optional
@@ -431,7 +432,23 @@ class ConvertTidalNcToParquet:
         Dict
             Dictionary of metadata keys and values converted to bytes
         """
-        import json
+
+        # Custom JSON encoder to handle NumPy types and other special types
+        class NumpyEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8)):
+                    return int(obj)
+                elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
+                    return float(obj)
+                elif isinstance(obj, (np.ndarray,)):
+                    return obj.tolist()
+                elif isinstance(obj, (np.bool_)):
+                    return bool(obj)
+                elif np.isnan(obj):
+                    return None
+                elif hasattr(obj, "isoformat"):  # datetime objects
+                    return obj.isoformat()
+                return super(NumpyEncoder, self).default(obj)
 
         metadata = {}
 
@@ -466,9 +483,20 @@ class ConvertTidalNcToParquet:
         metadata_bytes = {}
         for k, v in metadata.items():
             # Handle different types of values appropriately
-            if isinstance(v, (list, dict, tuple)):
-                # For complex types, use JSON serialization
-                metadata_bytes[k] = json.dumps(v).encode("utf-8")
+            if (
+                isinstance(v, (list, dict, tuple))
+                or hasattr(v, "__dict__")
+                or isinstance(v, np.ndarray)
+            ):
+                # For complex types, use JSON serialization with NumPy encoder
+                try:
+                    metadata_bytes[k] = json.dumps(v, cls=NumpyEncoder).encode("utf-8")
+                except TypeError as e:
+                    # Fallback if JSON encoding fails
+                    metadata_bytes[k] = str(v).encode("utf-8")
+                    print(
+                        f"Warning: Could not JSON encode {k}, using string representation instead: {e}"
+                    )
             else:
                 # For simple types, use string representation
                 metadata_bytes[k] = str(v).encode("utf-8")
