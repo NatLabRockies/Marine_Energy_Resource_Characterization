@@ -306,6 +306,7 @@ class ConvertTidalNcToParquet:
         # Now create DataFrames using the pre-fetched data
         print("Creating dataframes from pre-fetched data...")
         for i, face_idx in enumerate(face_indices):
+            print(f"Saving face idx: {face_idx}...")
             data_dict = {}
 
             # Add center coordinates
@@ -369,6 +370,10 @@ class ConvertTidalNcToParquet:
                     else:
                         # If we have a numpy array with all faces
                         data_dict[var_name] = batch_data[var_name][i]
+                print(f"{var_name} shape: {data_dict[var_name].shape}")
+
+            for key, value in data_dict.items():
+                print(f"Data Dict Key: {key} has shape: {value.shape}")
 
             # Create DataFrame with time as index
             df = pd.DataFrame(data_dict, index=time_values)
