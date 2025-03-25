@@ -50,9 +50,20 @@ class ConvertTidalNcToParquet:
             f"lat_deg={lat_deg}/lon_deg={lon_deg}/lat_dec={lat_dec}/lon_dec={lon_dec}"
         )
 
-    def _get_partition_file_name(
-        self, index: int, lat: float, lon: float, df, index_max_digits=6
+    def get_partition_file_name(
+        self,
+        index: int,
+        lat: float,
+        lon: float,
+        df,
+        index_max_digits=6,
+        # 1.1 cm precision
+        coord_digits_max=7,
     ) -> str:
+        # Round latitude and longitude to specified decimal places
+        lat_rounded = round(lat, coord_digits_max)
+        lon_rounded = round(lon, coord_digits_max)
+
         expected_delta_t_seconds = self.location["expected_delta_t_seconds"]
         if expected_delta_t_seconds == 3600:
             temporal_string = "1h"
@@ -63,10 +74,16 @@ class ConvertTidalNcToParquet:
                 f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
             )
 
+        # Use the parameters in the format strings
+        # Create the zero-padding format for the index based on index_max_digits
+        index_format = f"0{index_max_digits}d"
+        # Create the decimal precision format for coordinates based on coord_digits_max
+        coord_format = f".{coord_digits_max}f"
+
         return file_name_convention_manager.generate_filename_for_data_level(
             df,
-            f"{index:07d}_{self.location['output_name']}-lat={lat}-lon={lon}",
-            self.config["dataset"]["name"],
+            self.location["output_name"],
+            f"{self.config['dataset']['name']}.face={index:{index_format}}.lat={lat_rounded:{coord_format}}.lon={lon_rounded:{coord_format}}",
             "b3",
             temporal=temporal_string,
         )
