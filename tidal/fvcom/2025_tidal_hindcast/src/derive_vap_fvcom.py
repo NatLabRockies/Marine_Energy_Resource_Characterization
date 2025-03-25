@@ -1209,29 +1209,9 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             print(f"\t[{file_index}] Calculating volume energy flux...")
             this_ds = calculate_volume_energy_flux(this_ds)
 
-            # Create a temporary file name for intermediate save
-            temp_output_path = Path(output_dir, f"temp_{file_index:03d}.nc")
+            # Clear memory
+            gc.collect()
 
-            print(
-                f"\t[{file_index}] Saving intermediate results to {temp_output_path}..."
-            )
-            this_ds.to_netcdf(
-                temp_output_path,
-                encoding=nc_manager.define_compression_encoding(
-                    this_ds,
-                    base_encoding=config["dataset"]["encoding"],
-                    compression_strategy="none",
-                ),
-            )
-
-        # Clear memory after closing the dataset
-        gc.collect()
-
-        # Reopen the temporary file to continue processing
-        print(
-            f"\t[{file_index}] Reopening intermediate file for statistics calculations..."
-        )
-        with xr.open_dataset(temp_output_path) as this_ds:
             # Continue with the statistical calculations
             print(f"\t[{file_index}] Calculating u water column average")
             this_ds = calculate_depth_statistics(
