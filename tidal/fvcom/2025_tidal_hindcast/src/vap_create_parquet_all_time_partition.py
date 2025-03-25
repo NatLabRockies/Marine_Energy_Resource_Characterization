@@ -245,7 +245,11 @@ class ConvertTidalNcToParquet:
         batch_data["lon_center"] = dataset.lon_center.values[face_indices]
 
         # Get nv data for all faces at once
-        batch_data["nv"] = dataset["nv"].isel(time=0).isel(face=face_indices).values
+        batch_data["nv"] = dataset["nv"].isel(time=0).isel(face=face_indices).values.T
+        print(f"nv shape: {batch_data['nv'].shape}")
+        # nv_data = batch_data["nv"][i]
+        print(f"nv data[0]: {batch_data['nv'][0]}")
+        print(f"nv data[1]: {batch_data['nv'][1]}")
 
         # Pre-fetch lat_node and lon_node if they exist
         if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
