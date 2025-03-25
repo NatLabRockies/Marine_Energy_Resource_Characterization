@@ -1291,12 +1291,18 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             )
 
             print(f"\t[{file_index}] Saving final results to {output_path}...")
+
+            compression_strategy = "none"
+
+            if location["output_name"] == "WA_puget_sound":
+                compression_strategy = "standard"
+
             this_ds.to_netcdf(
                 output_path,
                 encoding=nc_manager.define_compression_encoding(
                     this_ds,
                     base_encoding=config["dataset"]["encoding"],
-                    compression_strategy="none",
+                    compression_strategy=compression_strategy,
                 ),
             )
 
