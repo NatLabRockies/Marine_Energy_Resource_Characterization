@@ -5,8 +5,8 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=48:00:00
-#SBATCH --mem=230G
+#SBATCH --time=120:00:00 # 5 days
+#SBATCH --mem=230G # Max for non bigmem job
 ##SBATCH --partition=debug
 ##SBATCH --ntasks=12
 ##SBATCH --nodes=1
