@@ -358,6 +358,7 @@ class ConvertTidalNcToParquet:
                         else:
                             # If we have a numpy array with all faces
                             data_dict[col_name] = batch_data[var_name][layer_idx][i]
+                        print(f"{var_name} shape: {data_dict[var_name].shape}")
 
                 elif (
                     "face" in dataset[var_name].dims
@@ -370,7 +371,8 @@ class ConvertTidalNcToParquet:
                     else:
                         # If we have a numpy array with all faces
                         data_dict[var_name] = batch_data[var_name][i]
-                print(f"{var_name} shape: {data_dict[var_name].shape}")
+
+                    print(f"{var_name} shape: {data_dict[var_name].shape}")
 
             for key, value in data_dict.items():
                 print(f"Data Dict Key: {key} has shape: {value.shape}")
