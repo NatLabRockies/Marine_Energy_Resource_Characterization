@@ -442,6 +442,8 @@ class ConvertTidalNcToParquet:
         face_idx = None
         if "face_" in filename:
             face_idx = filename.split("face_")[1].split(".")[0]
+        elif "face=" in filename:
+            face_idx = filename.split("face=")[1].split(".")[0]
         elif "-" in filename and "lat=" in filename and "lon=" in filename:
             # For format like "000001output_name-lat=X-lon=Y"
             face_idx = filename.split("-")[0].strip()
