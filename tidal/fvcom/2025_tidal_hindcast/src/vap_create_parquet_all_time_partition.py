@@ -209,6 +209,172 @@ class ConvertTidalNcToParquet:
 
         return df
 
+    @staticmethod
+    def _create_time_series_dfs_batch(
+        dataset: xr.Dataset, face_indices: List[int], vars_to_include: List[str]
+    ) -> Dict[int, pd.DataFrame]:
+        """
+        Create time-indexed DataFrames for multiple faces at once with optimized batch data fetching.
+
+        Parameters
+        ----------
+        dataset : xr.Dataset
+            The input dataset
+        face_indices : List[int]
+            List of face indices to extract
+        vars_to_include : List[str]
+            List of variable names to include
+
+        Returns
+        -------
+        Dict[int, pd.DataFrame]
+            Dictionary mapping face indices to DataFrames with time as index
+        """
+        print(f"Processing {len(face_indices)} faces in batch")
+        print(f"Vars to include are: {vars_to_include}")
+
+        # Get time values for index
+        print("Extracting time values...")
+        time_values = dataset.time.values
+
+        # Dictionary to store batch data fetched from xarray
+        batch_data = {}
+
+        # Dictionary to store data for each face
+        face_dataframes = {}
+
+        # Pre-fetch static data for the batch
+        print("Pre-fetching static data...")
+        batch_data["lat_center"] = dataset.lat_center.values[face_indices]
+        batch_data["lon_center"] = dataset.lon_center.values[face_indices]
+
+        # Try to get nv data for all faces at once
+        try:
+            batch_data["nv"] = dataset["nv"].isel(time=0, face=face_indices).values
+            batch_nv_mode = "batch"
+        except Exception:
+            # Fall back to individual face extraction if batch extraction fails
+            batch_nv_mode = "individual"
+            batch_data["nv"] = [
+                dataset["nv"].isel(time=0, face=idx).values for idx in face_indices
+            ]
+
+        # Pre-fetch lat_node and lon_node if they exist
+        if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
+            batch_data["lat_node"] = dataset["lat_node"].values
+            batch_data["lon_node"] = dataset["lon_node"].values
+
+        # Pre-fetch all variable data
+        vars_to_skip = ["nv", "h_center"]
+        print("Pre-fetching variable data...")
+
+        for var_name in vars_to_include:
+            if var_name in vars_to_skip:
+                continue
+
+            var = dataset[var_name]
+
+            # Check variable dimensions and fetch accordingly
+            if "sigma_layer" in var.dims and "face" in var.dims:
+                # For 3D variables, fetch all layers for all faces in the batch
+                batch_data[var_name] = {}
+                for layer_idx in range(len(dataset.sigma_layer)):
+                    try:
+                        # Try to get all faces at once for this layer
+                        batch_data[var_name][layer_idx] = var.isel(
+                            face=face_indices, sigma_layer=layer_idx
+                        ).values
+                    except Exception:
+                        # Fall back to individual face extraction
+                        batch_data[var_name][layer_idx] = [
+                            var.isel(face=idx, sigma_layer=layer_idx).values
+                            for idx in face_indices
+                        ]
+
+            elif "face" in var.dims and "time" in var.dims:
+                # For 2D variables, fetch all faces at once
+                try:
+                    batch_data[var_name] = var.isel(face=face_indices).values
+                except Exception:
+                    # Fall back to individual face extraction
+                    batch_data[var_name] = [
+                        var.isel(face=idx).values for idx in face_indices
+                    ]
+
+        # Now create DataFrames using the pre-fetched data
+        print("Creating dataframes from pre-fetched data...")
+        for i, face_idx in enumerate(face_indices):
+            data_dict = {}
+
+            # Add center coordinates
+            data_dict["lat_center"] = [batch_data["lat_center"][i]] * len(time_values)
+            data_dict["lon_center"] = [batch_data["lon_center"][i]] * len(time_values)
+
+            # Get node vertex data
+            if batch_nv_mode == "batch":
+                nv_data = batch_data["nv"][i]
+            else:
+                nv_data = batch_data["nv"][i]
+
+            # Get node indices for the three corners of this face
+            node_indices = [int(idx - 1) if idx > 0 else int(idx) for idx in nv_data]
+
+            # Extract lat/lon for each corner node
+            if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
+                for j, node_idx in enumerate(node_indices):
+                    corner_num = j + 1  # 1-based for clarity
+
+                    # Add corner lat/lon values using pre-fetched data
+                    lat_node_val = float(batch_data["lat_node"][node_idx])
+                    lon_node_val = float(batch_data["lon_node"][node_idx])
+
+                    # Add to data dict with repeated values for each time step
+                    data_dict[f"element_corner_{corner_num}_lat"] = np.repeat(
+                        lat_node_val, len(time_values)
+                    )
+                    data_dict[f"element_corner_{corner_num}_lon"] = np.repeat(
+                        lon_node_val, len(time_values)
+                    )
+
+            # Add variable data
+            for var_name in vars_to_include:
+                if var_name in vars_to_skip:
+                    continue
+
+                # Check variable dimensions
+                if (
+                    "sigma_layer" in dataset[var_name].dims
+                    and "face" in dataset[var_name].dims
+                ):
+                    # Handle 3D variables (time, sigma_layer, face)
+                    for layer_idx in range(len(dataset.sigma_layer)):
+                        col_name = f"{var_name}_layer_{layer_idx}"
+                        if isinstance(batch_data[var_name][layer_idx], list):
+                            # If we had to fall back to individual face extraction
+                            data_dict[col_name] = batch_data[var_name][layer_idx][i]
+                        else:
+                            # If we have a numpy array with all faces
+                            data_dict[col_name] = batch_data[var_name][layer_idx][i]
+
+                elif (
+                    "face" in dataset[var_name].dims
+                    and "time" in dataset[var_name].dims
+                ):
+                    # Handle 2D variables (time, face)
+                    if isinstance(batch_data[var_name], list):
+                        # If we had to fall back to individual face extraction
+                        data_dict[var_name] = batch_data[var_name][i]
+                    else:
+                        # If we have a numpy array with all faces
+                        data_dict[var_name] = batch_data[var_name][i]
+
+            # Create DataFrame with time as index
+            df = pd.DataFrame(data_dict, index=time_values)
+            df.index.name = "time"
+            face_dataframes[face_idx] = df
+
+        return face_dataframes
+
     def _save_parquet_with_metadata(
         self, df: pd.DataFrame, attributes: Dict, partition_path: str, filename: str
     ) -> None:
@@ -396,6 +562,105 @@ class ConvertTidalNcToParquet:
             stats["files_created"] += 1
 
             print(f"Processed {face_idx}/{num_faces} faces")
+
+        # Convert set to list for easier serialization
+        stats["partitions_created"] = list(stats["partitions_created"])
+
+        return stats
+
+    def convert_dataset_batched(
+        self,
+        dataset: xr.Dataset,
+        vars_to_include: Optional[List[str]] = None,
+        max_faces: Optional[int] = None,
+        batch_size: int = 1000,
+    ) -> Dict:
+        """
+        Convert an xarray Dataset to partitioned Parquet files using batch processing.
+
+        Parameters
+        ----------
+        dataset : xr.Dataset
+            The input dataset
+        vars_to_include : List[str], optional
+            List of variable names to include. If None, includes all variables.
+        max_faces : int, optional
+            Maximum number of faces to process (for testing)
+        batch_size : int, optional
+            Number of faces to process in each batch
+
+        Returns
+        -------
+        Dict
+            Statistics about the conversion process
+        """
+        # Extract dataset attributes
+        print("Extracting attributes...")
+        attributes = self._extract_attributes(dataset)
+
+        # Determine variables to include
+        if vars_to_include is None:
+            vars_to_include = list(dataset.variables.keys())
+
+        # Get coordinates
+        lat_center = dataset.lat_center.values
+        lon_center = dataset.lon_center.values
+
+        # Determine the number of faces to process
+        num_faces = len(lat_center)
+        if max_faces is not None:
+            num_faces = min(num_faces, max_faces)
+
+        # Statistics
+        stats = {
+            "total_faces": num_faces,
+            "partitions_created": set(),
+            "files_created": 0,
+        }
+
+        print(f"Processing {num_faces} faces in batches of {batch_size}...")
+
+        # Process faces in batches
+        for batch_start in range(0, num_faces, batch_size):
+            batch_end = min(batch_start + batch_size, num_faces)
+            face_indices = list(range(batch_start, batch_end))
+
+            print(
+                f"Processing batch of faces {batch_start} to {batch_end-1} (batch size: {len(face_indices)})"
+            )
+
+            # Create time series DataFrames for all faces in this batch
+            print("Creating time series dataframes for batch...")
+            face_dfs = self._create_time_series_dfs_batch(
+                dataset, face_indices, vars_to_include
+            )
+
+            # Process and save each face's DataFrame
+            print("Saving each face...")
+            for face_idx, df in face_dfs.items():
+                lat = float(lat_center[face_idx])
+                lon = float(lon_center[face_idx])
+
+                # Generate partition path
+                partition_path = self._get_partition_path(lat, lon)
+                stats["partitions_created"].add(partition_path)
+
+                # Generate filename
+                filename = f"face_{face_idx}.parquet"
+                if self.config is not None:
+                    filename = self._get_partition_file_name(face_idx, lat, lon, df)
+
+                # Save to parquet with metadata
+                self._save_parquet_with_metadata(
+                    df, attributes, partition_path, filename
+                )
+                stats["files_created"] += 1
+
+            print(
+                f"Processed batch {batch_start}-{batch_end-1} ({stats['files_created']}/{num_faces} faces)"
+            )
+
+        print(f"Completed processing all {stats['files_created']} faces")
 
         # Convert set to list for easier serialization
         stats["partitions_created"] = list(stats["partitions_created"])
