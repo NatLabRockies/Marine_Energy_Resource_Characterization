@@ -231,33 +231,21 @@ class ConvertTidalNcToParquet:
             Dictionary mapping face indices to DataFrames with time as index
         """
         print(f"Processing {len(face_indices)} faces in batch")
-        print(f"Vars to include are: {vars_to_include}")
 
         # Get time values for index
-        print("Extracting time values...")
         time_values = dataset.time.values
+        time_dim_len = len(time_values)
+        print(f"Time dimension length: {time_dim_len}")
 
         # Dictionary to store batch data fetched from xarray
         batch_data = {}
 
-        # Dictionary to store data for each face
-        face_dataframes = {}
-
         # Pre-fetch static data for the batch
-        print("Pre-fetching static data...")
         batch_data["lat_center"] = dataset.lat_center.values[face_indices]
         batch_data["lon_center"] = dataset.lon_center.values[face_indices]
 
-        # Try to get nv data for all faces at once
-        try:
-            batch_data["nv"] = dataset["nv"].isel(time=0, face=face_indices).values
-            batch_nv_mode = "batch"
-        except Exception:
-            # Fall back to individual face extraction if batch extraction fails
-            batch_nv_mode = "individual"
-            batch_data["nv"] = [
-                dataset["nv"].isel(time=0, face=idx).values for idx in face_indices
-            ]
+        # Get nv data for all faces at once
+        batch_data["nv"] = dataset["nv"].isel(time=0).isel(face=face_indices).values
 
         # Pre-fetch lat_node and lon_node if they exist
         if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
@@ -266,58 +254,73 @@ class ConvertTidalNcToParquet:
 
         # Pre-fetch all variable data
         vars_to_skip = ["nv", "h_center"]
-        print("Pre-fetching variable data...")
 
         for var_name in vars_to_include:
             if var_name in vars_to_skip:
                 continue
 
             var = dataset[var_name]
+            print(f"Processing variable {var_name} with dims {var.dims}")
 
             # Check variable dimensions and fetch accordingly
-            if "sigma_layer" in var.dims and "face" in var.dims:
-                print(f"Pre-fetching {var_name}...")
-                # For 3D variables, fetch all layers for all faces in the batch
+            if "sigma_layer" in var.dims and "face" in var.dims and "time" in var.dims:
+                # 3D variables (time, sigma_layer, face)
+                # Select all requested faces at once for all layers
+                # This preserves all dimensions but filters to just our faces
+                selected_data = var.isel(face=face_indices)
+
                 batch_data[var_name] = {}
+
                 for layer_idx in range(len(dataset.sigma_layer)):
-                    try:
-                        # Try to get all faces at once for this layer
-                        batch_data[var_name][layer_idx] = var.isel(
-                            face=face_indices, sigma_layer=layer_idx
-                        ).values
-                    except Exception:
-                        # Fall back to individual face extraction
-                        batch_data[var_name][layer_idx] = [
-                            var.isel(face=idx, sigma_layer=layer_idx).values
-                            for idx in face_indices
-                        ]
+                    # Now extract the specific layer from our already-filtered data
+                    layer_data = selected_data.isel(sigma_layer=layer_idx)
+
+                    # At this point, we should have dimensions [time, face]
+                    # Ensure the data is in the expected shape for efficient slicing
+                    if layer_data.dims[0] == "time" and layer_data.dims[1] == "face":
+                        data_array = layer_data.values
+                    else:
+                        # Transpose to ensure [time, face] ordering
+                        data_array = layer_data.transpose("time", "face").values
+
+                    # Store the data array
+                    batch_data[var_name][layer_idx] = data_array
 
             elif "face" in var.dims and "time" in var.dims:
-                # For 2D variables, fetch all faces at once
-                print(f"Pre-fetching {var_name}...")
-                try:
-                    batch_data[var_name] = var.isel(face=face_indices).values
-                except Exception:
-                    # Fall back to individual face extraction
-                    batch_data[var_name] = [
-                        var.isel(face=idx).values for idx in face_indices
-                    ]
+                # 2D variables (time, face)
+                # Select all faces at once
+                faces_data = var.isel(face=face_indices)
+
+                # Get time dimension index (assume 0, but check)
+                time_dim_idx = 0
+                if "time" in faces_data.dims:
+                    time_dim_idx = faces_data.dims.index("time")
+
+                # Directly extract values - should be array of shape [time, num_faces]
+                data_array = faces_data.values
+
+                # Ensure time is the first dimension
+                if time_dim_idx != 0:
+                    dim_order = list(faces_data.dims)
+                    dim_order.remove("time")
+                    dim_order.insert(0, "time")
+                    faces_data = faces_data.transpose(*dim_order)
+                    data_array = faces_data.values
+
+                # Store the data array
+                batch_data[var_name] = data_array
 
         # Now create DataFrames using the pre-fetched data
-        print("Creating dataframes from pre-fetched data...")
+        face_dataframes = {}
         for i, face_idx in enumerate(face_indices):
-            print(f"Saving face idx: {face_idx}...")
             data_dict = {}
 
-            # Add center coordinates
-            data_dict["lat_center"] = [batch_data["lat_center"][i]] * len(time_values)
-            data_dict["lon_center"] = [batch_data["lon_center"][i]] * len(time_values)
+            # Add center coordinates - repeat for each time step
+            data_dict["lat_center"] = [batch_data["lat_center"][i]] * time_dim_len
+            data_dict["lon_center"] = [batch_data["lon_center"][i]] * time_dim_len
 
             # Get node vertex data
-            if batch_nv_mode == "batch":
-                nv_data = batch_data["nv"][i]
-            else:
-                nv_data = batch_data["nv"][i]
+            nv_data = batch_data["nv"][i]
 
             # Get node indices for the three corners of this face
             node_indices = [int(idx - 1) if idx > 0 else int(idx) for idx in nv_data]
@@ -333,15 +336,15 @@ class ConvertTidalNcToParquet:
 
                     # Add to data dict with repeated values for each time step
                     data_dict[f"element_corner_{corner_num}_lat"] = np.repeat(
-                        lat_node_val, len(time_values)
+                        lat_node_val, time_dim_len
                     )
                     data_dict[f"element_corner_{corner_num}_lon"] = np.repeat(
-                        lon_node_val, len(time_values)
+                        lon_node_val, time_dim_len
                     )
 
-            # Add variable data
+            # Add variable data - ensure proper time dimension
             for var_name in vars_to_include:
-                if var_name in vars_to_skip:
+                if var_name in vars_to_skip or var_name not in batch_data:
                     continue
 
                 # Check variable dimensions
@@ -352,30 +355,38 @@ class ConvertTidalNcToParquet:
                     # Handle 3D variables (time, sigma_layer, face)
                     for layer_idx in range(len(dataset.sigma_layer)):
                         col_name = f"{var_name}_layer_{layer_idx}"
-                        if isinstance(batch_data[var_name][layer_idx], list):
-                            # If we had to fall back to individual face extraction
-                            data_dict[col_name] = batch_data[var_name][layer_idx][i]
-                        else:
-                            # If we have a numpy array with all faces
-                            data_dict[col_name] = batch_data[var_name][layer_idx][i]
-                        print(f"{var_name} shape: {data_dict[var_name].shape}")
+
+                        # Get the time series for this face
+                        # This accesses the correct column from our batch data array
+                        var_data = batch_data[var_name][layer_idx][:, i]
+
+                        # Verify data length matches time dimension
+                        if len(var_data) != time_dim_len:
+                            print(
+                                f"Warning: {col_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
+                            )
+                            # Skip this variable
+                            continue
+
+                        data_dict[col_name] = var_data
 
                 elif (
                     "face" in dataset[var_name].dims
                     and "time" in dataset[var_name].dims
                 ):
                     # Handle 2D variables (time, face)
-                    if isinstance(batch_data[var_name], list):
-                        # If we had to fall back to individual face extraction
-                        data_dict[var_name] = batch_data[var_name][i]
-                    else:
-                        # If we have a numpy array with all faces
-                        data_dict[var_name] = batch_data[var_name][i]
+                    # Get the time series for this face
+                    var_data = batch_data[var_name][:, i]
 
-                    print(f"{var_name} shape: {data_dict[var_name].shape}")
+                    # Verify data length matches time dimension
+                    if len(var_data) != time_dim_len:
+                        print(
+                            f"Warning: {var_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
+                        )
+                        # Skip this variable
+                        continue
 
-            for key, value in data_dict.items():
-                print(f"Data Dict Key: {key} has shape: {value.shape}")
+                    data_dict[var_name] = var_data
 
             # Create DataFrame with time as index
             df = pd.DataFrame(data_dict, index=time_values)
