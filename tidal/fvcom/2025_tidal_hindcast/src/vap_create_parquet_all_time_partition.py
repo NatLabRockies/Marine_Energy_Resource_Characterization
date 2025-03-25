@@ -678,7 +678,7 @@ def partition_vap_into_parquet_dataset(config, location_key):
     for nc_file in vap_nc_files:
         converter = ConvertTidalNcToParquet(output_path, config, location)
         ds = xr.open_dataset(nc_file)
-        converter.convert_dataset(ds)
+        converter.convert_dataset_batched(ds)
 
 
 if __name__ == "__main__":
