@@ -276,6 +276,7 @@ class ConvertTidalNcToParquet:
 
             # Check variable dimensions and fetch accordingly
             if "sigma_layer" in var.dims and "face" in var.dims:
+                print(f"Pre-fetching {var_name}...")
                 # For 3D variables, fetch all layers for all faces in the batch
                 batch_data[var_name] = {}
                 for layer_idx in range(len(dataset.sigma_layer)):
@@ -293,6 +294,7 @@ class ConvertTidalNcToParquet:
 
             elif "face" in var.dims and "time" in var.dims:
                 # For 2D variables, fetch all faces at once
+                print(f"Pre-fetching {var_name}...")
                 try:
                     batch_data[var_name] = var.isel(face=face_indices).values
                 except Exception:
