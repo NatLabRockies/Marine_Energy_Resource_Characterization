@@ -50,7 +50,7 @@ class ConvertTidalNcToParquet:
             f"lat_deg={lat_deg}/lon_deg={lon_deg}/lat_dec={lat_dec}/lon_dec={lon_dec}"
         )
 
-    def get_partition_file_name(
+    def _get_partition_file_name(
         self,
         index: int,
         lat: float,
