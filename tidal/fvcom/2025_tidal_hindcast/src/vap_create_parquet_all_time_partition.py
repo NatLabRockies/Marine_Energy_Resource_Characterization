@@ -285,13 +285,13 @@ class ConvertTidalNcToParquet:
                 continue
 
             var = dataset[var_name]
-            print(f"Processing variable {var_name} with dims {var.dims}")
 
             # Check variable dimensions and fetch accordingly
             if "sigma_layer" in var.dims and "face" in var.dims and "time" in var.dims:
                 # 3D variables (time, sigma_layer, face)
                 # Select all requested faces at once for all layers
                 # This preserves all dimensions but filters to just our faces
+                print(f"Extracting 4D variable {var_name} with dims {var.dims}")
                 selected_data = var.isel(face=face_indices)
 
                 batch_data[var_name] = {}
@@ -314,6 +314,7 @@ class ConvertTidalNcToParquet:
             elif "face" in var.dims and "time" in var.dims:
                 # 2D variables (time, face)
                 # Select all faces at once
+                print(f"Extracting 3D variable {var_name} with dims {var.dims}")
                 faces_data = var.isel(face=face_indices)
 
                 # Get time dimension index (assume 0, but check)
