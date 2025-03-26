@@ -832,7 +832,7 @@ class ConvertTidalNcToParquet:
             print(f"face_idx: {face_idx}")
 
             output_df = None
-            full_path = None
+            output_path = None
 
             if face_idx in self.output_path_map:
                 # Concat with existing file using name from existing file
@@ -840,7 +840,9 @@ class ConvertTidalNcToParquet:
                 existing_df = pd.read_parquet(full_path)
                 concat_df = pd.concat([existing_df, df])
                 concat_df = concat_df.sort_index()
+
                 output_df = concat_df
+                output_path = full_path
             else:
                 # Create full directory path for the partition
                 full_dir = Path(self.output_dir, partition_path)
@@ -849,31 +851,9 @@ class ConvertTidalNcToParquet:
                 # Full path to parquet file
                 full_path = Path(full_dir, output_filename)
                 self.output_path_map[face_idx] = full_path
+
+                output_path = full_path
                 output_df = df
-
-            print(self.output_path_map)
-            exit()
-
-            # # Handle existing files with the same face index (still sequential for data consistency)
-            # if face_idx is not None:
-            #     existing_files = sorted(list(full_dir.glob("*.parquet")))
-            #     matching_files = []
-            #
-            #     for file in existing_files:
-            #         if f"face={face_idx}" in file.name:
-            #             matching_files.append(file)
-            #
-            #     if len(matching_files) > 0:
-            #         output_filename = matching_files[0].name
-            #         dfs = [df]
-            #
-            #         for file in matching_files:
-            #             existing_df = pd.read_parquet(file)
-            #             dfs.append(existing_df)
-            #             file.unlink()
-            #
-            #         df = pd.concat(dfs)
-            #         df = df.sort_index()
 
             # Convert DataFrame to pyarrow Table
             table = pa.Table.from_pandas(output_df)
@@ -888,7 +868,7 @@ class ConvertTidalNcToParquet:
             )
 
             # Add task to batch
-            batch_tasks.append((table, full_path))
+            batch_tasks.append((table, output_path))
 
         # Execute parallel writes
         return ConvertTidalNcToParquet._save_parquet_batch_parallel(batch_tasks)
