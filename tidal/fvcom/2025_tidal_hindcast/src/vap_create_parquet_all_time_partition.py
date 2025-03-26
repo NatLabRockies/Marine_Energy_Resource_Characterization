@@ -801,7 +801,9 @@ class ConvertTidalNcToParquet:
         # Use a ThreadPoolExecutor since the IO operations are the bottleneck
         with concurrent.futures.ThreadPoolExecutor() as executor:
             results = list(
-                executor.map(ConvertTidalNcToParquet.parallel_save_parquet, batch_tasks)
+                executor.map(
+                    ConvertTidalNcToParquet._parallel_save_parquet, batch_tasks
+                )
             )
         return results
 
