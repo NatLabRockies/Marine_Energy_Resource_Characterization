@@ -993,8 +993,11 @@ def partition_vap_into_parquet_dataset(config, location_key):
 
     vap_nc_files = sorted(list(input_path.rglob("*.nc")))
 
+    # We store the file output locations in a dict in this class
+    # so this needs to be initialized outside of the file reading loop
+    converter = ConvertTidalNcToParquet(output_path, config, location)
+
     for nc_file in vap_nc_files:
-        converter = ConvertTidalNcToParquet(output_path, config, location)
         ds = xr.open_dataset(nc_file)
         # Access batch_size faces at once
         # This should be set to optimize memory usage and speed
