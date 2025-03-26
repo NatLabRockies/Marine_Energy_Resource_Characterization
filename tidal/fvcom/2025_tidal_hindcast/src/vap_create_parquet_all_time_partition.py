@@ -929,10 +929,12 @@ class ConvertTidalNcToParquet:
         print(f"Processing {num_faces} faces in batches of {batch_size}...")
 
         # Process faces in batches
+        total_written = 0
+        last_progress = -1
+
         for batch_start in range(0, num_faces, batch_size):
             batch_end = min(batch_start + batch_size, num_faces)
             face_indices = list(range(batch_start, batch_end))
-
             print(
                 f"Processing batch of faces {batch_start} to {batch_end-1} (batch size: {len(face_indices)})"
             )
@@ -963,8 +965,18 @@ class ConvertTidalNcToParquet:
 
                 # When we've collected enough tasks or reached the end, process them in parallel
                 if len(write_tasks) >= write_batch_size or face_idx == face_indices[-1]:
-                    print(f"Writing batch of {len(write_tasks)} files in parallel...")
+                    # Calculate progress percentage
+                    progress = int((total_written / num_faces) * 100)
+
+                    # Only log when progress percentage changes significantly (every 5%)
+                    if progress // 5 > last_progress // 5 or total_written == 0:
+                        print(
+                            f"Writing files: {progress}% complete ({total_written}/{num_faces} faces)"
+                        )
+                        last_progress = progress
+
                     saved_paths = self._save_parquet_with_metadata_parallel(write_tasks)
+                    total_written += len(saved_paths)
                     stats["files_created"] += len(saved_paths)
                     write_tasks = []  # Reset for next batch
 
@@ -976,7 +988,6 @@ class ConvertTidalNcToParquet:
 
         # Convert set to list for easier serialization
         stats["partitions_created"] = list(stats["partitions_created"])
-
         return stats
 
 
