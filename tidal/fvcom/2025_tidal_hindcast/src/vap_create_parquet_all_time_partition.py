@@ -824,13 +824,15 @@ class ConvertTidalNcToParquet:
         """
         batch_tasks = []
 
+        print(write_tasks)
+
         for df, attributes, partition_path, filename, face_idx in write_tasks:
             output_df = None
             full_path = None
+
             if face_idx in self.output_path_map:
                 # Concat with existing file using name from existing file
                 full_path = self.output_path_map[face_idx]
-                pd.read_parquet(full_path)
                 existing_df = pd.read_parquet(full_path)
                 concat_df = pd.concat([existing_df, df])
                 concat_df = concat_df.sort_index()
@@ -844,6 +846,9 @@ class ConvertTidalNcToParquet:
                 full_path = Path(full_dir, output_filename)
                 self.output_path_map[face_idx] = full_path
                 output_df = df
+
+            print(self.output_path_map)
+            exit()
 
             # # Handle existing files with the same face index (still sequential for data consistency)
             # if face_idx is not None:
