@@ -1,3 +1,4 @@
+import concurrent.futures
 import re
 import json
 
@@ -763,6 +764,218 @@ class ConvertTidalNcToParquet:
 
         return stats
 
+    @staticmethod
+    def _parallel_save_parquet(args):
+        """
+        Helper function to save a DataFrame to Parquet in parallel.
+
+        Parameters
+        ----------
+        args : tuple
+            Tuple containing (table, full_path)
+
+        Returns
+        -------
+        str
+            Path where the file was saved
+        """
+        table, full_path = args
+        pq.write_table(table, full_path)
+        return str(full_path)
+
+    @staticmethod
+    def _save_parquet_batch_parallel(batch_tasks):
+        """
+        Save multiple Parquet files in parallel.
+
+        Parameters
+        ----------
+        batch_tasks : list
+            List of tuples, each containing (table, full_path)
+
+        Returns
+        -------
+        list
+            List of paths where files were saved
+        """
+        # Use a ThreadPoolExecutor since the IO operations are the bottleneck
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = list(
+                executor.map(ConvertTidalNcToParquet.parallel_save_parquet, batch_tasks)
+            )
+        return results
+
+    def _save_parquet_with_metadata_parallel(self, write_tasks):
+        """
+        Prepare and save multiple DataFrames to Parquet with metadata in parallel.
+
+        Parameters
+        ----------
+        write_tasks : list
+            List of tuples, each containing (df, attributes, partition_path, filename)
+
+        Returns
+        -------
+        list
+            Paths of saved files
+        """
+        batch_tasks = []
+
+        for df, attributes, partition_path, filename in write_tasks:
+            # Create full directory path for the partition
+            full_dir = Path(self.output_dir, partition_path)
+            full_dir.mkdir(exist_ok=True, parents=True)
+
+            face_idx = self._get_face_index_string(filename)
+            output_filename = filename
+
+            # Handle existing files with the same face index (still sequential for data consistency)
+            if face_idx is not None:
+                existing_files = sorted(list(full_dir.glob("*.parquet")))
+                matching_files = []
+
+                for file in existing_files:
+                    if f"face={face_idx}" in file.name:
+                        matching_files.append(file)
+
+                if len(matching_files) > 0:
+                    output_filename = matching_files[0].name
+                    dfs = [df]
+
+                    for file in matching_files:
+                        existing_df = pd.read_parquet(file)
+                        dfs.append(existing_df)
+                        file.unlink()
+
+                    df = pd.concat(dfs)
+                    df = df.sort_index()
+
+            # Full path to parquet file
+            full_path = Path(full_dir, output_filename)
+
+            # Convert DataFrame to pyarrow Table
+            table = pa.Table.from_pandas(df)
+
+            # Process metadata using separate method
+            metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
+
+            # Update table metadata
+            table = table.replace_schema_metadata(
+                {**table.schema.metadata, **metadata_bytes}
+            )
+
+            # Add task to batch
+            batch_tasks.append((table, full_path))
+
+        # Execute parallel writes
+        return ConvertTidalNcToParquet._save_parquet_batch_parallel(batch_tasks)
+
+    def convert_dataset_parallel(
+        self,
+        dataset,
+        vars_to_include=None,
+        max_faces=None,
+        batch_size=100000,
+        write_batch_size=64,
+    ):
+        """
+        Convert an xarray Dataset to partitioned Parquet files using parallel processing.
+
+        Parameters
+        ----------
+        dataset : xr.Dataset
+            The input dataset
+        vars_to_include : list, optional
+            List of variable names to include. If None, includes all variables.
+        max_faces : int, optional
+            Maximum number of faces to process (for testing)
+        batch_size : int, optional
+            Number of faces to process in each batch
+        write_batch_size : int, optional
+            Number of files to write in parallel
+
+        Returns
+        -------
+        dict
+            Statistics about the conversion process
+        """
+        # Extract dataset attributes
+        print("Extracting attributes...")
+        attributes = self._extract_attributes(dataset)
+
+        # Determine variables to include
+        if vars_to_include is None:
+            vars_to_include = list(dataset.variables.keys())
+
+        # Get coordinates
+        lat_center = dataset.lat_center.values
+        lon_center = dataset.lon_center.values
+
+        # Determine the number of faces to process
+        num_faces = len(lat_center)
+        if max_faces is not None:
+            num_faces = min(num_faces, max_faces)
+
+        # Statistics
+        stats = {
+            "total_faces": num_faces,
+            "partitions_created": set(),
+            "files_created": 0,
+        }
+
+        print(f"Processing {num_faces} faces in batches of {batch_size}...")
+
+        # Process faces in batches
+        for batch_start in range(0, num_faces, batch_size):
+            batch_end = min(batch_start + batch_size, num_faces)
+            face_indices = list(range(batch_start, batch_end))
+
+            print(
+                f"Processing batch of faces {batch_start} to {batch_end-1} (batch size: {len(face_indices)})"
+            )
+
+            # Create time series DataFrames for all faces in this batch
+            print("Creating time series dataframes for batch...")
+            face_dfs = self._create_time_series_dfs_batch(
+                dataset, face_indices, vars_to_include
+            )
+
+            # Prepare write tasks
+            write_tasks = []
+            for face_idx, df in face_dfs.items():
+                lat = float(lat_center[face_idx])
+                lon = float(lon_center[face_idx])
+
+                # Generate partition path
+                partition_path = self._get_partition_path(lat, lon)
+                stats["partitions_created"].add(partition_path)
+
+                # Generate filename
+                filename = f"face_{face_idx}.parquet"
+                if self.config is not None:
+                    filename = self._get_partition_file_name(face_idx, lat, lon, df)
+
+                # Collect write tasks
+                write_tasks.append((df, attributes, partition_path, filename))
+
+                # When we've collected enough tasks or reached the end, process them in parallel
+                if len(write_tasks) >= write_batch_size or face_idx == face_indices[-1]:
+                    print(f"Writing batch of {len(write_tasks)} files in parallel...")
+                    saved_paths = self._save_parquet_with_metadata_parallel(write_tasks)
+                    stats["files_created"] += len(saved_paths)
+                    write_tasks = []  # Reset for next batch
+
+            print(
+                f"Processed batch {batch_start}-{batch_end-1} ({stats['files_created']}/{num_faces} faces)"
+            )
+
+        print(f"Completed processing all {stats['files_created']} faces")
+
+        # Convert set to list for easier serialization
+        stats["partitions_created"] = list(stats["partitions_created"])
+
+        return stats
+
 
 def partition_vap_into_parquet_dataset(config, location_key):
     location = config["location_specification"][location_key]
@@ -777,7 +990,7 @@ def partition_vap_into_parquet_dataset(config, location_key):
         # Access batch_size faces at once
         # This should be set to optimize memory usage and speed
         # A value that is too big will overflow memory, and a value that is too small will take too long
-        converter.convert_dataset_batched(ds, batch_size=100000)
+        converter.convert_dataset_parallel(ds, batch_size=100000, write_batch=64)
 
 
 if __name__ == "__main__":
