@@ -508,7 +508,7 @@ class ConvertTidalNcToParquet:
 
         for part in parts:
             if "face=" in part:
-                return parts.replace("face=", "")
+                return part.replace("face=", "")
 
         return None
 
