@@ -26,6 +26,7 @@ class ConvertTidalNcToParquet:
         self.output_dir.mkdir(exist_ok=True, parents=True)
         self.config = config
         self.location = location
+        self.output_path_map = {}
 
     @staticmethod
     def _get_partition_path(lat: float, lon: float) -> str:
@@ -823,42 +824,53 @@ class ConvertTidalNcToParquet:
         """
         batch_tasks = []
 
-        for df, attributes, partition_path, filename in write_tasks:
-            # Create full directory path for the partition
-            full_dir = Path(self.output_dir, partition_path)
-            full_dir.mkdir(exist_ok=True, parents=True)
+        for df, attributes, partition_path, filename, face_idx in write_tasks:
+            output_df = None
+            full_path = None
+            if face_idx in self.output_path_map:
+                # Concat with existing file using name from existing file
+                full_path = self.output_path_map[face_idx]
+                pd.read_parquet(full_path)
+                existing_df = pd.read_parquet(full_path)
+                concat_df = pd.concat([existing_df, df])
+                concat_df = concat_df.sort_index()
+                output_df = concat_df
+            else:
+                # Create full directory path for the partition
+                full_dir = Path(self.output_dir, partition_path)
+                full_dir.mkdir(exist_ok=True, parents=True)
+                output_filename = filename
+                # Full path to parquet file
+                full_path = Path(full_dir, output_filename)
+                self.output_path_map[face_idx] = full_path
+                output_df = df
 
-            face_idx = self._get_face_index_string(filename)
-            output_filename = filename
-
-            # Handle existing files with the same face index (still sequential for data consistency)
-            if face_idx is not None:
-                existing_files = sorted(list(full_dir.glob("*.parquet")))
-                matching_files = []
-
-                for file in existing_files:
-                    if f"face={face_idx}" in file.name:
-                        matching_files.append(file)
-
-                if len(matching_files) > 0:
-                    output_filename = matching_files[0].name
-                    dfs = [df]
-
-                    for file in matching_files:
-                        existing_df = pd.read_parquet(file)
-                        dfs.append(existing_df)
-                        file.unlink()
-
-                    df = pd.concat(dfs)
-                    df = df.sort_index()
-
-            # Full path to parquet file
-            full_path = Path(full_dir, output_filename)
+            # # Handle existing files with the same face index (still sequential for data consistency)
+            # if face_idx is not None:
+            #     existing_files = sorted(list(full_dir.glob("*.parquet")))
+            #     matching_files = []
+            #
+            #     for file in existing_files:
+            #         if f"face={face_idx}" in file.name:
+            #             matching_files.append(file)
+            #
+            #     if len(matching_files) > 0:
+            #         output_filename = matching_files[0].name
+            #         dfs = [df]
+            #
+            #         for file in matching_files:
+            #             existing_df = pd.read_parquet(file)
+            #             dfs.append(existing_df)
+            #             file.unlink()
+            #
+            #         df = pd.concat(dfs)
+            #         df = df.sort_index()
 
             # Convert DataFrame to pyarrow Table
-            table = pa.Table.from_pandas(df)
+            table = pa.Table.from_pandas(output_df)
 
             # Process metadata using separate method
+            # TODO: Make sure this is correct if we always use the most recent dataset
             metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
 
             # Update table metadata
@@ -958,7 +970,7 @@ class ConvertTidalNcToParquet:
                     filename = self._get_partition_file_name(face_idx, lat, lon, df)
 
                 # Collect write tasks
-                write_tasks.append((df, attributes, partition_path, filename))
+                write_tasks.append((df, attributes, partition_path, filename, face_idx))
 
                 # When we've collected enough tasks or reached the end, process them in parallel
                 if len(write_tasks) >= write_batch_size or face_idx == face_indices[-1]:
