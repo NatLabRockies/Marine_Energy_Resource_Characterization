@@ -826,11 +826,6 @@ class ConvertTidalNcToParquet:
         batch_tasks = []
 
         for df, attributes, partition_path, filename, face_idx in write_tasks:
-            print("df info", df.info())
-            print(f"partition_path: {partition_path}")
-            print(f"filename: {filename}")
-            print(f"face_idx: {face_idx}")
-
             output_df = None
             output_path = None
 
