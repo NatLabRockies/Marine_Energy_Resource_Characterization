@@ -503,6 +503,15 @@ class ConvertTidalNcToParquet:
 
         return metadata_bytes
 
+    def _get_face_index_string(self, filename):
+        parts = str(filename).split(".")
+
+        for part in parts:
+            if "face=" in part:
+                return parts.replace("face=", "")
+
+        return None
+
     def _save_parquet_with_metadata(
         self, df: pd.DataFrame, attributes: Dict, partition_path: str, filename: str
     ) -> None:
@@ -525,36 +534,21 @@ class ConvertTidalNcToParquet:
         full_dir = Path(self.output_dir, partition_path)
         full_dir.mkdir(exist_ok=True, parents=True)
 
-        # Define the regex pattern for face index extraction once
-        # Pattern explanation:
-        # - 'face[_=]' matches either 'face_' or 'face='
-        # - '(\d+)' captures one or more digits after the prefix into group 1
-        # - This matches both 'face_000123' and 'face=000123' formats
-        # - The regex preserves leading zeros in the face index (important for 6-digit indices like '000123')
-        FACE_INDEX_PATTERN = r"face[_=](\d+)"
+        face_idx = self._get_face_index_string(filename)
 
-        # Extract face index using regex
-        face_idx = None
-        face_match = re.search(FACE_INDEX_PATTERN, filename)
-        if face_match:
-            face_idx = face_match.group(
-                1
-            )  # This will keep leading zeros intact as it returns the string match
-
+        output_filename = filename
         # If we found a face index, check for existing files with the same index
-        if face_idx:
-            existing_files = list(full_dir.glob("*.parquet"))
+        if face_idx is not None:
+            existing_files = sorted(list(full_dir.glob("*.parquet")))
             matching_files = []
 
             for file in existing_files:
-                # Use the same pattern to extract face index from existing files
-                # This ensures consistent matching between input and existing files
-                existing_match = re.search(FACE_INDEX_PATTERN, file.name)
-                if existing_match and existing_match.group(1) == face_idx:
+                if f"face={face_idx}" in file.name:
                     matching_files.append(file)
 
             # If matching files found, concatenate them with the new data
-            if matching_files:
+            if len(matching_files) > 0:
+                output_filename = matching_files[0].name
                 # Use the new filename as the final filename
                 # Read and concatenate all existing files
                 dfs = [df]  # Start with the new data
@@ -571,7 +565,7 @@ class ConvertTidalNcToParquet:
                 df = df.sort_index()
 
         # Full path to parquet file
-        full_path = Path(full_dir, filename)
+        full_path = Path(full_dir, output_filename)
 
         # Convert DataFrame to pyarrow Table
         table = pa.Table.from_pandas(df)
