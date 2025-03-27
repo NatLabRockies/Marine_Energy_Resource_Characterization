@@ -8,6 +8,7 @@ from src.partition_by_time import partition_by_time
 from src.derive_vap_fvcom import derive_vap
 from src.calculate_vap_average import calculate_vap_average
 from src.vap_create_parquet_all_time_partition import partition_vap_into_parquet_dataset
+from src.vap_create_parquet_summary import convert_nc_summary_to_parquet
 
 
 if __name__ == "__main__":
@@ -44,3 +45,6 @@ if __name__ == "__main__":
 
     print("Step 6: Create Parquet Partition Dataset...")
     partition_vap_into_parquet_dataset(config, args.location)
+
+    print("Step 7: Create Summary Parquet Dataset...")
+    convert_nc_summary_to_parquet(config, args.location)
