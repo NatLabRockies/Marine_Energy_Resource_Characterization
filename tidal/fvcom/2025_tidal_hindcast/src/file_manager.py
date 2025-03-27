@@ -41,8 +41,13 @@ def get_output_dirs(config, location):
         "vap_partition": Path(
             output_dirs["vap_partition"].replace("<location>", output_location_name)
         ),
-        "vap_summary_partition": Path(
-            output_dirs["vap_summary_partition"].replace(
+        "vap_summary_parquet": Path(
+            output_dirs["vap_summary_parquet"].replace(
+                "<location>", output_location_name
+            )
+        ),
+        "vap_atlas_summary_parquet": Path(
+            output_dirs["vap_atlas_summary_parquet"].replace(
                 "<location>", output_location_name
             )
         ),
@@ -77,5 +82,9 @@ def get_vap_partition_output_dir(config, location):
     return get_output_dirs(config, location)["vap_partition"]
 
 
-def get_vap_summary_partition_output_dir(config, location):
-    return get_output_dirs(config, location)["vap_summary_partition"]
+def get_vap_summary_parquet_dir(config, location):
+    return get_output_dirs(config, location)["vap_summary_parquet"]
+
+
+def get_vap_atlas_summary_parquet_dir(config, location):
+    return get_output_dirs(config, location)["vap_atlas_summary_parquet"]
