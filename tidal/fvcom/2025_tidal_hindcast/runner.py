@@ -43,8 +43,8 @@ if __name__ == "__main__":
     print("Step 5: Calculating Yearly Averages...")
     calculate_vap_average(config, args.location)
 
-    print("Step 6: Create Parquet Partition Dataset...")
-    partition_vap_into_parquet_dataset(config, args.location)
+    # print("Step 6: Create Parquet Partition Dataset...")
+    # partition_vap_into_parquet_dataset(config, args.location)
 
     print("Step 7: Create Summary Parquet Dataset...")
     convert_nc_summary_to_parquet(config, args.location)
