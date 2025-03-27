@@ -87,6 +87,9 @@ def convert_nc_summary_to_parquet(config, location_key):
         output_df = convert_tidal_summary_nc_to_dataframe(ds)
 
         time = ds["time"].values[0]
+        print(time)
+
+        print(ds.info())
 
         output_filename = file_name_convention_manager.generate_filename_for_data_level(
             output_df,

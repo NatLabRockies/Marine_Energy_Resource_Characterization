@@ -19,6 +19,7 @@ def _format_datetime(data, is_singular=False):
     tuple
         (date_string, time_string) in format (%Y%m%d, %H%M%S)
     """
+    print(data)
     if is_singular is False:
         if isinstance(data, xr.Dataset):
             dt = pd.Timestamp(data.time.values[0])
@@ -29,6 +30,8 @@ def _format_datetime(data, is_singular=False):
             raise TypeError("Input must be either xarray Dataset or pandas DataFrame")
     else:
         dt = pd.Timestamp(data)
+    print(dt)
+    print(type(dt))
 
     return dt.strftime("%Y%m%d"), dt.strftime("%H%M%S")
 
