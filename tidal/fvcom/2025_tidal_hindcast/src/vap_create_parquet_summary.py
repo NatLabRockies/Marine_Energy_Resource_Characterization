@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -66,6 +67,8 @@ def convert_tidal_summary_nc_to_dataframe(ds):
 
     # Create dataframe all at once
     result_df = pd.DataFrame(data_dict)
+    result_df["time"] = np.repeat(ds.isel(time=0).values, len(result_df))
+    result_df = result_df.set_index("time")
 
     print(f"Created dataframe with {result_df.shape[1]} columns")
 
