@@ -86,12 +86,15 @@ def convert_nc_summary_to_parquet(config, location_key):
         ds = xr.open_dataset(nc_file)
         output_df = convert_tidal_summary_nc_to_dataframe(ds)
 
+        time = ds["time"].values[0]
+
         output_filename = file_name_convention_manager.generate_filename_for_data_level(
             output_df,
             location["output_name"],
             config["dataset"]["name"],
             "b4",
             temporal="yearly-average",
+            ext="parquet",
         )
 
         output_df.to_parquet(Path(output_path, output_filename))
@@ -119,6 +122,8 @@ def convert_nc_summary_to_parquet(config, location_key):
             config["dataset"]["name"],
             "b5",
             temporal="yearly-average",
+            ext="parquet",
+            specific_time=time,
         )
 
         atlas_df.to_parquet(Path(output_path, output_filename))
