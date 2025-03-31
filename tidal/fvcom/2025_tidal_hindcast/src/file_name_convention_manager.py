@@ -4,7 +4,7 @@ import pandas as pd
 import xarray as xr
 
 
-def _format_datetime(data, is_singular=False):
+def _format_datetime(data):
     """
     Extract and format date and time strings from either xarray Dataset with time coordinate
     or pandas DataFrame with datetime index.
@@ -19,19 +19,18 @@ def _format_datetime(data, is_singular=False):
     tuple
         (date_string, time_string) in format (%Y%m%d, %H%M%S)
     """
-    print(data)
-    if is_singular is False:
-        if isinstance(data, xr.Dataset):
-            dt = pd.Timestamp(data.time.values[0])
-        elif isinstance(data, pd.DataFrame):
-            if isinstance(data.index, pd.DatetimeIndex):
-                dt = data.index[0]
-        else:
-            raise TypeError("Input must be either xarray Dataset or pandas DataFrame")
-    else:
-        dt = pd.Timestamp(data)
-    print(dt)
-    print(type(dt))
+
+    dt = None
+
+    if isinstance(data, xr.Dataset):
+        dt = pd.Timestamp(data.time.values[0])
+    elif isinstance(data, pd.DataFrame):
+        if isinstance(data.index, pd.DatetimeIndex):
+            dt = data.index[0]
+            dt = pd.Timestamp(data)
+
+    if dt is None:
+        raise TypeError("Input must be either xarray Dataset or pandas DataFrame")
 
     return dt.strftime("%Y%m%d"), dt.strftime("%H%M%S")
 
@@ -44,7 +43,7 @@ def generate_filename_for_data_level(
     qualifier=None,
     temporal=None,
     ext="nc",
-    specific_time=None,
+    static_time=None,
 ):
     """Generate filename for processed data following ME naming convention.
 
@@ -61,10 +60,10 @@ def generate_filename_for_data_level(
     Returns:
         Formatted filename string: location_id.dataset_name[-qualifier][-temporal].data_level.date.time.ext
     """
-    if specific_time is None:
+    if static_time is None:
         date_str, time_str = _format_datetime(ds)
     else:
-        date_str, time_str = _format_datetime(specific_time)
+        date_str, time_str = static_time[0], static_time[1]
 
     components = [location_id, dataset_name]
 
