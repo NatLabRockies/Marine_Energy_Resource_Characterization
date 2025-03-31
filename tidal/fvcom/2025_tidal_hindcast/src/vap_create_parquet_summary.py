@@ -99,12 +99,6 @@ def convert_nc_summary_to_parquet(config, location_key):
             ext="parquet",
             static_time=date_time_parts,
         )
-        print(
-            "planning to write complete summary ds to:",
-            Path(output_path, output_filename),
-        )
-        print("complete summary type is ", type(output_df))
-        print(output_df.info())
 
         output_df.to_parquet(Path(output_path, output_filename))
 
