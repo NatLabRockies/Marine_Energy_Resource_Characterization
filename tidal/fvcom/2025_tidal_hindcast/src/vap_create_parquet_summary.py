@@ -102,7 +102,14 @@ def convert_nc_summary_to_parquet(config, location_key):
 
         output_df.to_parquet(Path(output_path, output_filename))
 
-        # Create atlas output
+        # Temp rename puget sound cols for atlas
+        if location_key == "puget_sound":
+            rename_map = {
+                "speed_depth_avg": "vap_water_column_mean_sea_water_speed",
+                "power_density_depth_avg": "vap_water_column_mean_sea_water_power_density",
+            }
+            output_df = output_df.rename(rename_map)
+
         cols_for_atlas = [
             "lat_center",
             "lon_center",
