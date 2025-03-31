@@ -108,7 +108,7 @@ def convert_nc_summary_to_parquet(config, location_key):
                 "speed_depth_avg": "vap_water_column_mean_sea_water_speed",
                 "power_density_depth_avg": "vap_water_column_mean_sea_water_power_density",
             }
-            output_df = output_df.rename(rename_map)
+            output_df = output_df.rename(rename_map, axis="columns")
 
         cols_for_atlas = [
             "lat_center",
