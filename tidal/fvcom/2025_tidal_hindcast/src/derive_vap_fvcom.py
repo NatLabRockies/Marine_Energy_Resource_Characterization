@@ -558,7 +558,7 @@ def calculate_element_volume(ds):
     return ds
 
 
-def compute_volume_flux(ds):
+def calculate_volume_flux(ds):
     """
     Calculate volume flux by multiplying velocity components by cell volume.
 
@@ -597,7 +597,7 @@ def compute_volume_flux(ds):
     return ds
 
 
-def compute_volume_flux_water_column_volume_average(ds):
+def calculate_volume_flux_water_column_volume_average(ds):
     """
     Calculate volume-weighted average velocity magnitude across all sigma layers.
 
