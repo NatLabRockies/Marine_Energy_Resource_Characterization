@@ -1149,8 +1149,11 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             print(f"\t[{file_index}] Calculating element volumes...")
             this_ds = calculate_element_volume(this_ds)
 
-            print(f"\t[{file_index}] Calculating volume energy flux...")
-            this_ds = calculate_volume_energy_flux(this_ds)
+            print(f"\t[{file_index}] Calculating volume flux...")
+            this_ds = calculate_volume_flux(this_ds)
+
+            print(f"\t[{file_index}] Calculating volume average flux...")
+            this_ds = calculate_volume_flux_water_column_volume_average(this_ds)
 
             # Clear memory
             gc.collect()
@@ -1188,13 +1191,6 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
                 f"\t[{file_index}] Calculating power_density depth average statistics"
             )
             this_ds = calculate_depth_statistics(this_ds, "power_density")
-
-            gc.collect()
-
-            print(
-                f"\t[{file_index}] Calculating volume_energy_flux depth average statistics"
-            )
-            this_ds = calculate_depth_statistics(this_ds, "volume_energy_flux")
 
             gc.collect()
 
