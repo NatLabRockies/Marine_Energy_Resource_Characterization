@@ -982,7 +982,7 @@ def calculate_depth_statistics(
 
     # Default to calculating all statistics if not specified
     if stats_to_calculate is None:
-        stats_to_calculate = valid_stats
+        stats_to_calculate = ["mean", "max", "p95"]
 
     # Validate stats_to_calculate
     for stat in stats_to_calculate:
