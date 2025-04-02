@@ -20,7 +20,7 @@ output_names = {
     "power_density": "vap_sea_water_power_density",
     "element_volume": "vap_element_volume",
     "volume_flux": "vap_volumetric_flux",
-    "volume_flux_average": "vap_water_column_mean_volumetric_flux",
+    "volume_flux_average": "vap_water_column_volume_mean_flux",
     "zeta_center": "vap_zeta_center",
     "depth": "vap_sigma_depth",
     "sea_floor_depth": "vap_sea_floor_depth",
