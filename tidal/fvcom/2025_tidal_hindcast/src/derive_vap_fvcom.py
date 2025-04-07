@@ -617,12 +617,12 @@ def calculate_volume_flux_water_column_volume_average(ds):
 
     if ds[output_names["volume_flux"]] not in ds:
         raise KeyError(
-            f"Dataset must contain {ds[output_names['volume_flux']]} to compute {ds[output_names['volume_average_flux']]}"
+            f"Dataset must contain {output_names['volume_flux']} to compute {output_names['volume_average_flux']}"
         )
 
     if ds[output_names["element_volume"]] not in ds:
         raise KeyError(
-            f"Dataset must contain {ds[output_names['element_volume']]} to compute {ds[output_names['volume_average_flux']]}"
+            f"Dataset must contain {output_names['element_volume']} to compute {output_names['volume_average_flux']}"
         )
 
     # Sum the flux across all sigma levels
