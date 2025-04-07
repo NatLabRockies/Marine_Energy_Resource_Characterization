@@ -1128,8 +1128,8 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             print(f"\t[{file_index}] Calculating to direction...")
             this_ds = calculate_sea_water_to_direction(this_ds, config)
 
-            print(f"\t[{file_index}] Calculating from direction...")
-            this_ds = calculate_sea_water_from_direction(this_ds, config)
+            # print(f"\t[{file_index}] Calculating from direction...")
+            # this_ds = calculate_sea_water_from_direction(this_ds, config)
 
             print(f"\t[{file_index}] Calculating power density...")
             this_ds = calculate_sea_water_power_density(this_ds, config)
@@ -1174,10 +1174,10 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
                 this_ds, "to_direction", stats_to_calculate=["mean"]
             )
 
-            print(f"\t[{file_index}] Calculating from_direction water column average")
-            this_ds = calculate_depth_statistics(
-                this_ds, "from_direction", stats_to_calculate=["mean"]
-            )
+            # print(f"\t[{file_index}] Calculating from_direction water column average")
+            # this_ds = calculate_depth_statistics(
+            #     this_ds, "from_direction", stats_to_calculate=["mean"]
+            # )
 
             # Clear memory
             gc.collect()
