@@ -615,12 +615,12 @@ def calculate_volume_flux_water_column_volume_average(ds):
         Dataset containing velocity components and volume
     """
 
-    if ds[output_names["volume_flux"]] not in ds.variables:
+    if output_names["volume_flux"] not in ds.variables:
         raise KeyError(
             f"Dataset must contain {output_names['volume_flux']} to compute {output_names['volume_average_flux']}"
         )
 
-    if ds[output_names["element_volume"]] not in ds.variables:
+    if output_names["element_volume"] not in ds.variables:
         raise KeyError(
             f"Dataset must contain {output_names['element_volume']} to compute {output_names['volume_average_flux']}"
         )
