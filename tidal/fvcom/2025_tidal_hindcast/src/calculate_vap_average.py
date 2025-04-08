@@ -140,7 +140,7 @@ def principal_flow_directions(
 
 
 def calculate_vap_average(
-    config, location, skip_if_exists=True, verify_timestamps=True
+    config, location, skip_if_exists=True, should_verify_timestamps=True
 ):
     """
     Calculate average values across VAP NC files using rolling average computation.
@@ -195,10 +195,11 @@ def calculate_vap_average(
     seconds_per_year = days_per_year * 24 * 60 * 60
     expected_timestamps = int(seconds_per_year / location["expected_delta_t_seconds"])
 
-    print("Verifying timestamps across all files...")
-    verify_timestamps(
-        vap_nc_files, expected_timestamps, location["expected_delta_t_seconds"]
-    )
+    if should_verify_timestamps is True:
+        print("Verifying timestamps across all files...")
+        verify_timestamps(
+            vap_nc_files, expected_timestamps, location["expected_delta_t_seconds"]
+        )
 
     # Initialize template using the first file
     print(f"Starting averaging of {len(vap_nc_files)} vap files...")
