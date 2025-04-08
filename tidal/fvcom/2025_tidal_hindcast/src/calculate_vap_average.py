@@ -155,7 +155,7 @@ def calculate_vap_average(config, location, skip_if_exists=True):
     constant_variables = ["nv"]
 
     # Flow direction variable name
-    direction_var = "vap_sea_water_speed_to_direction"
+    direction_var = "vap_sea_water_to_direction"
 
     # Output variable names for principal directions
     principal_dir1_var = "vap_sea_water_primary_to_direction"
