@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     print("Step 5: Calculating Yearly Averages...")
     calculate_vap_average(
-        config, args.location, skip_if_exists=False, verify_timestamps=False
+        config, args.location, skip_if_exists=False, should_verify_timestamps=False
     )
 
     # print("Step 6: Create Parquet Partition Dataset...")
