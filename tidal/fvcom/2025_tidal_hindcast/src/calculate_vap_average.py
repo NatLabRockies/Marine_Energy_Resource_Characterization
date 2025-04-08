@@ -138,7 +138,7 @@ def verify_constant_variables(ds1, ds2, constant_vars):
     return results
 
 
-def calculate_vap_average(config, location):
+def calculate_vap_average(config, location, skip_if_exists=True):
     """
     Calculate average values across VAP NC files using rolling average computation.
     Only variables are averaged, preserving original dimensions and coordinates.
@@ -176,7 +176,7 @@ def calculate_vap_average(config, location):
     output_path = file_manager.get_summary_vap_output_dir(config, location)
     output_nc_files = list(output_path.rglob("*.nc"))
 
-    if len(output_nc_files) > 0:
+    if len(output_nc_files) > 0 and skip_if_exists is True:
         print(
             f"{len(output_nc_files)} summary files already exist. Skipping calculate_vap_average"
         )
