@@ -41,7 +41,9 @@ if __name__ == "__main__":
     derive_vap(config, args.location)
 
     print("Step 5: Calculating Yearly Averages...")
-    calculate_vap_average(config, args.location, skip_if_exists=False)
+    calculate_vap_average(
+        config, args.location, skip_if_exists=False, verify_timestamps=False
+    )
 
     # print("Step 6: Create Parquet Partition Dataset...")
     # partition_vap_into_parquet_dataset(config, args.location)

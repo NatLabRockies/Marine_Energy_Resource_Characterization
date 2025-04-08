@@ -139,7 +139,9 @@ def principal_flow_directions(
     return peak1_value, peak2_value
 
 
-def calculate_vap_average(config, location, skip_if_exists=True):
+def calculate_vap_average(
+    config, location, skip_if_exists=True, verify_timestamps=True
+):
     """
     Calculate average values across VAP NC files using rolling average computation.
     Only variables are averaged, preserving original dimensions and coordinates.
