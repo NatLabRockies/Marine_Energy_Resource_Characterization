@@ -626,10 +626,10 @@ def calculate_volume_flux_water_column_volume_average(ds):
         )
 
     # Sum the flux across all sigma levels
-    total_flux = ds[output_names["volume_flux"]].sum(dim="sigma")
+    total_flux = ds[output_names["volume_flux"]].sum(dim="sigma_layer")
 
     # Sum the volumes across all sigma levels
-    total_volume = ds[output_names["element_volume"]].sum(dim="sigma")
+    total_volume = ds[output_names["element_volume"]].sum(dim="sigma_layer")
 
     # Calculate the volume-weighted average
     ds[output_names["volume_flux_average"]] = total_flux / total_volume
