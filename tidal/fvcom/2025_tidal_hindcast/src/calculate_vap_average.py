@@ -7,72 +7,6 @@ import xarray as xr
 from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
 
 
-def principal_flow_directions(
-    directions, direction_bin_width_degrees=1, excluded_angle_range=180
-):
-    """
-    Find the two most prominent directional peaks in flow data.
-
-    Parameters
-    ----------
-    directions: array-like
-        Flow direction in degrees (0-360)
-    direction_bin_width_degrees: float, optional
-        Width of directional bins in degrees, default is 1
-    excluded_angle_range: float, optional
-        Range of angles to exclude around each detected peak when searching for the second peak.
-        The exclusion is centered on the peak, extending excluded_angle_range/2 in each direction.
-        Default is 180 degrees.
-
-    Returns
-    -------
-    tuple(float, float)
-        The two principal flow directions in degrees, with NaN for direction 2 if not found
-    """
-    # Filter out NaN values
-    valid_directions = np.array(directions)[~np.isnan(np.array(directions))]
-
-    if len(valid_directions) == 0:
-        return np.nan, np.nan
-
-    # Create histogram with the specified bin width
-    n_bins = int(360 / direction_bin_width_degrees)
-    hist, bin_edges = np.histogram(valid_directions, bins=n_bins, range=[0, 360])
-    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-
-    # Find the most prominent peak
-    peak1_idx = np.argmax(hist)
-    peak1_value = bin_centers[peak1_idx]
-
-    # Calculate how many bins to exclude on each side of the peak
-    half_window_bins = int((excluded_angle_range / 2) / direction_bin_width_degrees)
-
-    # Create mask to exclude the first peak and a window around it
-    mask = np.ones_like(hist, dtype=bool)
-    for i in range(-half_window_bins, half_window_bins + 1):
-        # Exclude around first peak
-        idx1 = (peak1_idx + i) % n_bins
-        mask[idx1] = False
-
-        # Exclude around opposite direction
-        idx2 = (peak1_idx + i + n_bins // 2) % n_bins
-        mask[idx2] = False
-
-    # Find the second peak in the remaining data
-    if np.any(mask) and np.max(hist * mask) > 0:
-        peak2_idx = np.argmax(hist * mask)
-        peak2_value = bin_centers[peak2_idx]
-    else:
-        # If everything was excluded or no second peak, return NaN
-        peak2_value = np.nan
-
-    # Make first peak the smaller angle if both exist
-    if not np.isnan(peak2_value) and peak1_value > peak2_value:
-        peak1_value, peak2_value = peak2_value, peak1_value
-
-    return peak1_value, peak2_value
-
-
 def verify_timestamps(nc_files, expected_timestamps, expected_delta_t_seconds):
     """Verify timestamp integrity across all files before processing."""
 
@@ -138,6 +72,73 @@ def verify_constant_variables(ds1, ds2, constant_vars):
     return results
 
 
+def principal_flow_directions(
+    directions, direction_bin_width_degrees=1, excluded_angle_range=180
+):
+    """
+    Find the two most prominent directional peaks in flow data.
+
+    Parameters
+    ----------
+    directions: array-like
+        Flow direction in degrees (0-360)
+    direction_bin_width_degrees: float, optional
+        Width of directional bins for histogram in degrees, default is 1
+    excluded_angle_range: float, optional
+        Range of angles to exclude around each detected peak when searching for the second peak.
+        The exclusion is centered on the peak, extending excluded_angle_range/2 in each direction.
+        Default is 180 degrees.
+
+    Returns
+    -------
+    tuple(float, float)
+        The two principal flow directions in degrees, with NaN for direction 2 if not found
+    """
+
+    # Filter out NaN values
+    valid_directions = np.array(directions)[~np.isnan(np.array(directions))]
+
+    if len(valid_directions) == 0:
+        return np.nan, np.nan
+
+    # Create histogram with the specified bin width
+    n_bins = int(360 / direction_bin_width_degrees)
+    hist, bin_edges = np.histogram(valid_directions, bins=n_bins, range=[0, 360])
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+    # Find the most prominent peak
+    peak1_idx = np.argmax(hist)
+    peak1_value = bin_centers[peak1_idx]
+
+    # Calculate how many bins to exclude on each side of the peak
+    half_window_bins = int((excluded_angle_range / 2) / direction_bin_width_degrees)
+
+    # Create mask to exclude the first peak and a window around it
+    mask = np.ones_like(hist, dtype=bool)
+    for i in range(-half_window_bins, half_window_bins + 1):
+        # Exclude around first peak
+        idx1 = (peak1_idx + i) % n_bins
+        mask[idx1] = False
+
+        # Exclude around opposite direction
+        idx2 = (peak1_idx + i + n_bins // 2) % n_bins
+        mask[idx2] = False
+
+    # Find the second peak in the remaining data
+    if np.any(mask) and np.max(hist * mask) > 0:
+        peak2_idx = np.argmax(hist * mask)
+        peak2_value = bin_centers[peak2_idx]
+    else:
+        # If everything was excluded or no second peak, return NaN
+        peak2_value = np.nan
+
+    # Make first peak the smaller angle if both exist
+    if not np.isnan(peak2_value) and peak1_value > peak2_value:
+        peak1_value, peak2_value = peak2_value, peak1_value
+
+    return peak1_value, peak2_value
+
+
 def calculate_vap_average(config, location, skip_if_exists=True):
     """
     Calculate average values across VAP NC files using rolling average computation.
@@ -150,7 +151,9 @@ def calculate_vap_average(config, location, skip_if_exists=True):
     Args:
         config: Configuration dictionary
         location: Location dictionary containing site-specific parameters
+        skip_if_exists: Whether to skip processing if output files already exist
     """
+
     # List of variables that should remain constant (not averaged)
     constant_variables = ["nv"]
 
@@ -158,12 +161,12 @@ def calculate_vap_average(config, location, skip_if_exists=True):
     direction_var = "vap_sea_water_to_direction"
 
     # Output variable names for principal directions
-    principal_dir1_var = "vap_sea_water_primary_to_direction"
-    principal_dir2_var = "vap_sea_water_secondary_to_direcion"
+    primary_dir_var = "vap_sea_water_primary_to_direction"
+    secondary_dir_var = "vap_sea_water_secondary_to_direction"
 
     # Configuration for principal flow direction calculation
     direction_bin_width_degrees = 1
-    direction_excluded_angle_range = 180
+    excluded_angle_range = 180
 
     location = config["location_specification"][location]
     vap_path = file_manager.get_vap_output_dir(config, location)
@@ -205,46 +208,52 @@ def calculate_vap_average(config, location, skip_if_exists=True):
     var_attrs = {}  # Dictionary to store variable attributes
     first_ds = None  # Store the first dataset for constant variable verification
 
-    # Create a full timeseries xarray dataset to store directions
-    # First, let's open the first file to get structure
+    # First, check if the direction variable exists in the first file
     sample_ds = xr.open_dataset(vap_nc_files[0])
 
-    # If direction variable exists, prepare a dataset to hold the full timeseries
-    full_timeseries = None
-    if direction_var in sample_ds:
-        # Get the structure of the direction variable
-        dims = sample_ds[direction_var].dims
-        coords = {dim: sample_ds[dim] for dim in dims}
+    # Arrays to hold all direction data for each point
+    all_directions = None
+    direction_dims = None
+    direction_shape = None
 
-        # Initialize empty array - we'll fill this with all files
-        full_timeseries = xr.Dataset()
+    # Get the dimensions and shape for the direction variable
+    direction_dims = [dim for dim in sample_ds[direction_var].dims if dim != "time"]
+    direction_shape = tuple(len(sample_ds[dim]) for dim in direction_dims)
 
-        # Close sample dataset
-        sample_ds.close()
+    # Initialize a list of lists to hold direction data for each point
+    # This is more memory efficient than storing full arrays
+    all_directions = np.empty(direction_shape, dtype=object)
+    for idx in np.ndindex(direction_shape):
+        all_directions[idx] = []
 
-        # Load the complete timeseries into memory
-        print("Loading complete direction timeseries into memory...")
-        all_ds = []
-        for nc_file in vap_nc_files:
-            ds = xr.open_dataset(nc_file)
-            if direction_var in ds:
-                all_ds.append(ds[[direction_var]])
-            ds.close()
+    print(f"Initialized direction collection for shape {direction_shape}")
 
-        if all_ds:
-            full_timeseries = xr.concat(all_ds, dim="time")
-            print(
-                f"Loaded direction timeseries with shape: {full_timeseries[direction_var].shape}"
-            )
-    else:
-        sample_ds.close()
-        print(f"Warning: Direction variable '{direction_var}' not found in dataset")
+    sample_ds.close()
 
-    # Process each file for regular averaging
+    # Process each file
     for i, nc_file in enumerate(vap_nc_files):
-        print(f"Processing File {i}: {nc_file}")
+        print(f"Processing File {i+1}/{len(vap_nc_files)}: {nc_file}")
         ds = xr.open_dataset(nc_file)
         current_times = len(ds.time)
+
+        # Collect direction data if available
+        if direction_var in ds and all_directions is not None:
+            for t in range(len(ds.time)):
+                # Get direction data for this timestep
+                time_data = ds[direction_var].isel(time=t).values
+
+                # Add non-NaN values to the appropriate lists
+                for idx in np.ndindex(direction_shape):
+                    val = time_data[idx]
+                    if not np.isnan(val):
+                        all_directions[idx].append(val)
+
+            if (i + 1) % 5 == 0:  # Status update every 5 files
+                # Pick a random point to check collection size
+                sample_idx = np.unravel_index(0, direction_shape)
+                print(
+                    f"  Sample point has {len(all_directions[sample_idx])} direction values so far"
+                )
 
         # Initialize running average and save first timestamp if needed
         if running_avg is None:
@@ -307,79 +316,76 @@ def calculate_vap_average(config, location, skip_if_exists=True):
 
     print("Completing final average calculation...")
 
-    # Calculate principal flow directions if we have direction data
-    if full_timeseries is not None and direction_var in full_timeseries:
+    # Calculate principal directions if we have direction data
+    if all_directions is not None and direction_dims is not None:
         print("Calculating principal flow directions...")
-        # Get spatial dimensions (all dimensions except time)
-        spatial_dims = [
-            dim for dim in full_timeseries[direction_var].dims if dim != "time"
-        ]
 
-        # If there are spatial dimensions, we need to loop through each point
-        if spatial_dims:
-            # Create arrays to store the principal directions
-            shape = tuple(len(full_timeseries[dim]) for dim in spatial_dims)
-            principal_dir1_array = np.full(shape, np.nan)
-            principal_dir2_array = np.full(shape, np.nan)
+        # Create arrays to hold the principal directions
+        primary_dir_array = np.full(direction_shape, np.nan)
+        secondary_dir_array = np.full(direction_shape, np.nan)
 
-            # Use numpy's ndindex to iterate through all combinations of indices
-            total_points = np.prod(shape)
+        # Calculate principal directions for each point
+        total_points = np.prod(direction_shape)
+        print(f"Processing {total_points} spatial points...")
+
+        # Set up chunking for large arrays (process in batches of 10000)
+        chunk_size = min(10000, total_points)
+        n_chunks = (total_points + chunk_size - 1) // chunk_size
+
+        # Flatten the indices for easier processing
+        flat_indices = list(np.ndindex(direction_shape))
+
+        for chunk in range(n_chunks):
+            start_idx = chunk * chunk_size
+            end_idx = min((chunk + 1) * chunk_size, total_points)
+
             print(
-                f"Processing principal directions for {total_points} spatial points..."
+                f"Processing chunk {chunk+1}/{n_chunks} (points {start_idx}-{end_idx})"
             )
 
-            for idx_count, idx in enumerate(np.ndindex(shape)):
-                if idx_count % 100 == 0:  # Progress update
-                    print(f"  Processed {idx_count}/{total_points} points...")
+            for flat_idx in range(start_idx, end_idx):
+                idx = flat_indices[flat_idx]
 
-                # Create the selection dictionary
-                sel_dict = {
-                    dim: full_timeseries[dim][i] for dim, i in zip(spatial_dims, idx)
-                }
+                # Calculate principal directions for this point
+                directions = all_directions[idx]
 
-                # Extract direction timeseries at this point
-                point_directions = full_timeseries[direction_var].sel(sel_dict).values
+                if directions:
+                    dir1, dir2 = principal_flow_directions(
+                        directions,
+                        direction_bin_width_degrees=direction_bin_width_degrees,
+                        excluded_angle_range=excluded_angle_range,
+                    )
 
-                # Calculate principal directions
-                dir1, dir2 = principal_flow_directions(
-                    point_directions,
-                    direction_bin_width_degrees=direction_bin_width_degrees,
-                    excluded_angle_range=direction_excluded_angle_range,
-                )
+                    # Store in arrays
+                    primary_dir_array[idx] = dir1
+                    secondary_dir_array[idx] = dir2
 
-                # Store results
-                principal_dir1_array[idx] = dir1
-                principal_dir2_array[idx] = dir2
+            # Clear some memory after each chunk
+            if chunk < n_chunks - 1:
+                # Clear processed data to free memory
+                for flat_idx in range(start_idx, end_idx):
+                    idx = flat_indices[flat_idx]
+                    all_directions[idx] = []
 
-            # Add to dataset with proper dimensions
-            running_avg[principal_dir1_var] = (spatial_dims, principal_dir1_array)
-            running_avg[principal_dir2_var] = (spatial_dims, principal_dir2_array)
-        else:
-            # Single point case - no spatial dimensions
-            dir1, dir2 = principal_flow_directions(
-                full_timeseries[direction_var].values,
-                direction_bin_width_degrees=direction_bin_width_degrees,
-                excluded_angle_range=direction_excluded_angle_range,
-            )
-            running_avg[principal_dir1_var] = ((), dir1)
-            running_avg[principal_dir2_var] = ((), dir2)
+        # Add to dataset
+        running_avg[primary_dir_var] = (direction_dims, primary_dir_array)
+        running_avg[secondary_dir_var] = (direction_dims, secondary_dir_array)
 
-        # Add CF-compliant attributes based on the to_direction attributes
-        # Get original direction attributes if available
+        # Add CF-compliant attributes
         dir_attrs = {}
         if direction_var in first_ds and hasattr(first_ds[direction_var], "attrs"):
             dir_attrs = first_ds[direction_var].attrs.copy()
 
-        # Define principal direction 1 attributes
-        running_avg[principal_dir1_var].attrs = {
-            "standard_name": "sea_water_to_principal_direction_1",
-            "long_name": "Primary principal direction of sea water flow",
+        # Define primary flow direction attributes
+        running_avg[primary_dir_var].attrs = {
+            "standard_name": "sea_water_primary_to_direction",
+            "long_name": "Primary flow direction of sea water",
             "units": "degree",
             "valid_min": 0.0,
             "valid_max": 360.0,
             "coverage_content_type": "physicalMeasurement",
             "computation": (
-                "Principal direction calculated from histogram analysis of flow directions "
+                "Primary flow direction calculated from histogram analysis of flow directions "
                 f"using bin width of {direction_bin_width_degrees} degrees. "
                 f"Represents the dominant flow direction over the entire timeseries."
             ),
@@ -389,24 +395,24 @@ def calculate_vap_average(config, location, skip_if_exists=True):
             ),
             "source_variable": direction_var,
             "method": (
-                "Histogram analysis of to_direction values to identify primary peak. "
-                f"Bin width: {direction_bin_width_degrees}°, Exclusion window: {direction_excluded_angle_range}°"
+                "Histogram analysis of to_direction values to identify the most frequent flow direction. "
+                f"Bin width: {direction_bin_width_degrees}°"
             ),
         }
 
-        # Define principal direction 2 attributes
-        running_avg[principal_dir2_var].attrs = {
-            "standard_name": "sea_water_to_principal_direction_2",
-            "long_name": "Secondary principal direction of sea water flow",
+        # Define secondary flow direction attributes
+        running_avg[secondary_dir_var].attrs = {
+            "standard_name": "sea_water_secondary_to_direction",
+            "long_name": "Secondary flow direction of sea water",
             "units": "degree",
             "valid_min": 0.0,
             "valid_max": 360.0,
             "coverage_content_type": "physicalMeasurement",
             "computation": (
-                "Secondary principal direction calculated from histogram analysis of flow directions "
+                "Secondary flow direction calculated from histogram analysis of flow directions "
                 f"using bin width of {direction_bin_width_degrees} degrees. "
-                f"Represents the secondary dominant flow direction over the entire timeseries, "
-                f"typically in the opposite direction of the primary flow."
+                f"Represents the secondary dominant flow direction over the entire timeseries. "
+                f"Set to NaN if no significant secondary direction is found."
             ),
             "direction_reference": dir_attrs.get(
                 "direction_reference",
@@ -414,14 +420,17 @@ def calculate_vap_average(config, location, skip_if_exists=True):
             ),
             "source_variable": direction_var,
             "method": (
-                "Histogram analysis of to_direction values to identify secondary peak. "
-                f"First peak and surrounding angles (±{direction_excluded_angle_range/2}°) are excluded. "
-                f"Bin width: {direction_bin_width_degrees}°"
+                "Histogram analysis of to_direction values to identify the second most frequent flow direction. "
+                f"The primary flow direction and surrounding angles (±{excluded_angle_range/2}°) are excluded from consideration. "
+                f"Bin width: {direction_bin_width_degrees}°. Returns NaN if no significant secondary peak is identified."
+            ),
+            "missing_value": (
+                "NaN values indicate either insufficient data or no significant secondary flow direction was found"
             ),
         }
 
-        # Clean up full timeseries dataset to free memory
-        del full_timeseries
+        # Clear memory
+        del all_directions
 
     # Restore variable attributes and potentially convert back to original types
     for var in running_avg.data_vars:
@@ -429,10 +438,9 @@ def calculate_vap_average(config, location, skip_if_exists=True):
             var not in running_avg.dims
             and var not in running_avg.coords
             and var not in constant_variables
+            and var != primary_dir_var  # Don't overwrite primary direction attributes
             and var
-            != principal_dir1_var  # Don't overwrite principal direction attributes
-            and var
-            != principal_dir2_var  # Don't overwrite principal direction attributes
+            != secondary_dir_var  # Don't overwrite secondary direction attributes
         ):
             # Restore variable attributes
             if var in var_attrs:
