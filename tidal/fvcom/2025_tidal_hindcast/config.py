@@ -18,19 +18,19 @@ config = {
         # Input and Output Directories
         # Input Data Directories
         "input": {
-            "original": "/projects/hindcastra/Tidal",
+            "original": "/projects/hindcastra/Tidal/datasets/tidal_hindcast_fvcom/<location>/00_raw",
         },
         # Output Data Directories
         "output": {
-            "tracking": "/scratch/asimms/Tidal/<location>/z99_tracking",
             # Standardized data with qc
-            "standardized": "/scratch/asimms/Tidal/<location>/a1_std",
-            "standardized_partition": "/scratch/asimms/Tidal/<location>/a2_std_partition",
-            "vap": "/scratch/asimms/Tidal/<location>/b1_vap",
-            "summary_vap": "/scratch/asimms/Tidal/<location>/b2_summary_vap",
-            "vap_partition": "/scratch/asimms/Tidal/<location>/b3_vap_partition",
-            "vap_summary_parquet": "/scratch/asimms/Tidal/<location>/b5_vap_summary_parquet",
-            "vap_atlas_summary_parquet": "/scratch/asimms/Tidal/<location>/b6_vap_atlas_summary_parquet",
+            "standardized": "/projects/hindcastra/Tidal/datasets/<location>/a1_std",
+            "standardized_partition": "/projects/hindcastra/Tidal/datasets/<location>/a2_std_partition",
+            "vap": "/projects/hindcastra/Tidal/datasets/<location>/b1_vap",
+            "summary_vap": "/projects/hindcastra/Tidal/datasets/<location>/b2_summary_vap",
+            "vap_partition": "/projects/hindcastra/Tidal/datasets/<location>/b3_vap_partition",
+            "vap_summary_parquet": "/projects/hindcastra/Tidal/datasets/<location>/b4_vap_summary_parquet",
+            "vap_atlas_summary_parquet": "/projects/hindcastra/Tidal/datasets/<location>/b5_vap_atlas_summary_parquet",
+            "tracking": "/projects/hindcastra/Tidal/datasets/<location>/z99_tracking",
         },
     },
     "model_specification": {
