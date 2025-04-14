@@ -1,7 +1,7 @@
 config = {
     "dataset": {
         "name": "tidal_hindcast_fvcom",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "issue_date": "2025-02-01",
         "encoding": {
             "time": {
@@ -12,7 +12,7 @@ config = {
         },
     },
     "code": {
-        "version": "0.1.0",
+        "version": "0.2.0",
     },
     "dir": {
         # Input and Output Directories
