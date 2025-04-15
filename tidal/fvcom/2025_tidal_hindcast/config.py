@@ -518,8 +518,7 @@ config = {
         "puget_sound": {
             "label": "Puget Sound, Washington",
             "output_name": "WA_puget_sound",
-            # "base_dir": "Puget_Sound_corrected",
-            "base_dir": "Puget_Sound",
+            "base_dir": "Puget_Sound_corrected",
             "files": [
                 "02012015/*.nc",
                 "03012015/*.nc",
