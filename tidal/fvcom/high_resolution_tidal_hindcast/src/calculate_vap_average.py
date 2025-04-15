@@ -72,112 +72,103 @@ def verify_constant_variables(ds1, ds2, constant_vars):
     return results
 
 
-def calculate_vap_average(config, location):
+class VAPAverager:
     """
-    Calculate average values across VAP NC files using rolling average computation.
-    Only variables are averaged, preserving original dimensions and coordinates.
-    Time dimension will use the first timestamp from the dataset.
-    All variable attributes are preserved in the output dataset.
-
-    Certain variables specified in constant_variables will not be averaged,
-    but will be verified to be identical across all files.
-
-    Args:
-        config: Configuration dictionary
-        location: Location dictionary containing site-specific parameters
+    Class for calculating averages across VAP NetCDF files.
+    Handles both yearly and monthly averaging with a unified approach.
     """
-    # List of variables that should remain constant (not averaged)
-    constant_variables = ["nv"]
 
-    location = config["location_specification"][location]
-    vap_path = file_manager.get_vap_output_dir(config, location)
-    vap_nc_files = sorted(list(vap_path.rglob("*.nc")))
-    if len(vap_nc_files) < 12:
-        raise ValueError(
-            f"Expecting at least 12 files in {vap_path}, found {len(vap_nc_files)}: {vap_nc_files}"
+    def __init__(self, config, location_name):
+        self.config = config
+        self.location_name = location_name
+        self.location = config["location_specification"][location_name]
+        self.constant_variables = ["nv"]  # Variables that should remain constant
+
+        # Common paths
+        self.vap_path = file_manager.get_vap_output_dir(config, self.location)
+        self.vap_nc_files = sorted(list(self.vap_path.rglob("*.nc")))
+
+        # Verify minimum files
+        if len(self.vap_nc_files) < 12:
+            raise ValueError(
+                f"Expecting at least 12 files in {self.vap_path}, found {len(self.vap_nc_files)}"
+            )
+
+        # Calculate expected timestamps
+        self.days_per_year = 365
+        if self.location["output_name"] == "WA_puget_sound":
+            # Puget sound is missing one day
+            self.days_per_year = 364
+
+        self.seconds_per_year = self.days_per_year * 24 * 60 * 60
+        self.expected_timestamps = int(
+            self.seconds_per_year / self.location["expected_delta_t_seconds"]
         )
 
-    output_path = file_manager.get_summary_vap_output_dir(config, location)
-    output_nc_files = list(output_path.rglob("*.nc"))
-
-    if len(output_nc_files) > 0:
-        print(
-            f"{len(output_nc_files)} summary files already exist. Skipping calculate_vap_average"
+    def _verify_timestamps(self):
+        print("Verifying timestamps across all files...")
+        verify_timestamps(
+            self.vap_nc_files,
+            self.expected_timestamps,
+            self.location["expected_delta_t_seconds"],
         )
-        return
 
-    # Typical year has 365 days
-    days_per_year = 365
-    if location["output_name"] == "WA_puget_sound":
-        # Puget sound is missing one day
-        days_per_year = 364
-    seconds_per_year = days_per_year * 24 * 60 * 60
-    expected_timestamps = int(seconds_per_year / location["expected_delta_t_seconds"])
+    def _initialize_average(self, dataset, constant_variables):
+        """
+        Initialize an average template from a dataset.
 
-    print("Verifying timestamps across all files...")
-    verify_timestamps(
-        vap_nc_files, expected_timestamps, location["expected_delta_t_seconds"]
-    )
+        Args:
+            dataset: xarray Dataset to initialize from
+            constant_variables: List of variables that should not be averaged
 
-    # Initialize template using the first file
-    print(f"Starting averaging of {len(vap_nc_files)} vap files...")
-    running_avg = None
-    count = 0
-    source_files = []
-    first_timestamp = None
-    time_attrs = None  # Store time attributes
-    var_attrs = {}  # Dictionary to store variable attributes
-    first_ds = None  # Store the first dataset for constant variable verification
+        Returns:
+            tuple: (average_template, first_timestamp, time_attributes, variable_attributes)
+        """
+        # Initialize with the first timestep
+        avg_template = dataset.isel(time=0).copy(deep=True)
+        first_timestamp = dataset.time.isel(time=0).values
+        time_attrs = dataset.time.attrs.copy()
 
-    # Process each file
-    for i, nc_file in enumerate(vap_nc_files):
-        print(f"Processing File {i}: {nc_file}")
-        ds = xr.open_dataset(nc_file)
-        current_times = len(ds.time)
+        # Store all variable attributes
+        var_attrs = {}
+        for var in dataset.data_vars:
+            var_attrs[var] = dataset[var].attrs.copy()
 
-        # Initialize running average and save first timestamp if needed
-        if running_avg is None:
-            running_avg = ds.isel(time=0).copy(deep=True)
-            first_timestamp = ds.time.isel(time=0).values
-            time_attrs = ds.time.attrs.copy()  # Save time attributes
-            first_ds = (
-                ds.copy()
-            )  # Store first dataset for constant variable verification
+        # Initialize variables that need averaging
+        for var in avg_template.data_vars:
+            if "time" in dataset[var].dims and var not in constant_variables:
+                # Use float64 for better numerical stability
+                if np.issubdtype(avg_template[var].dtype, np.integer):
+                    avg_template[var] = avg_template[var].astype(np.float64)
+                elif np.issubdtype(avg_template[var].dtype, np.floating):
+                    avg_template[var] = avg_template[var].astype(np.float64)
 
-            # Store all variable attributes
-            for var in ds.data_vars:
-                var_attrs[var] = ds[var].attrs.copy()
+                # Initialize to zero (will be properly set in the first iteration)
+                avg_template[var].values.fill(0)
 
-            # Only initialize variables that need averaging
-            for var in running_avg.data_vars:
-                if "time" in ds[var].dims and var not in constant_variables:
-                    # Use float64 for better numerical stability
-                    if np.issubdtype(running_avg[var].dtype, np.integer):
-                        running_avg[var] = running_avg[var].astype(np.float64)
-                    elif np.issubdtype(running_avg[var].dtype, np.floating):
-                        running_avg[var] = running_avg[var].astype(np.float64)
+        return avg_template, first_timestamp, time_attrs, var_attrs
 
-                    # Initialize to zero (will be properly set in the first iteration)
-                    running_avg[var].values.fill(0)
-        else:
-            # Verify constant variables
-            for var in constant_variables:
-                if var in list(ds.keys()) and var in list(first_ds.keys()):
-                    # Check if values are identical
-                    if not np.array_equal(ds[var].values, first_ds[var].values):
-                        print(
-                            f"WARNING: Variable '{var}' differs between files. Using value from first file."
-                        )
+    def _verify_constant_vars(self, ds, first_ds):
+        """Verify constant variables haven't changed."""
+        for var in self.constant_variables:
+            if var in list(ds.keys()) and var in list(first_ds.keys()):
+                if not np.array_equal(ds[var].values, first_ds[var].values):
+                    print(
+                        f"WARNING: Variable '{var}' differs between files. Using value from first file."
+                    )
+
+    def _update_running_average(self, running_avg, dataset, count, constant_variables):
+        current_times = len(dataset.time)
 
         # Update running average for variables - using rolling average formula
-        for var in ds.data_vars:
-            if "time" in ds[var].dims and var not in constant_variables:
-                # Calculate mean for this file
-                if np.issubdtype(ds[var].dtype, np.integer):
+        for var in dataset.data_vars:
+            if "time" in dataset[var].dims and var not in constant_variables:
+                # Calculate mean for this dataset
+                if np.issubdtype(dataset[var].dtype, np.integer):
                     # Safely convert integers to float64 first
-                    file_avg = ds[var].astype(np.float64).mean(dim="time")
+                    file_avg = dataset[var].astype(np.float64).mean(dim="time")
                 else:
-                    file_avg = ds[var].mean(dim="time")
+                    file_avg = dataset[var].mean(dim="time")
 
                 # Update the rolling average using the formula:
                 # new_avg = old_avg + (new_value - old_avg) / new_count
@@ -190,81 +181,320 @@ def calculate_vap_average(config, location):
                         running_avg[var] + (file_avg - running_avg[var]) * weight
                     )
 
-        count += current_times
-        source_files.append(str(nc_file))
-        ds.close()
+        return count + current_times
 
-    print("Completing final average calculation...")
-    # The running_avg already contains the final average values
+    def _finalize_dataset(self, running_avg, first_timestamp, time_attrs, var_attrs):
+        """
+        Finalize the averaged dataset by restoring attributes and metadata.
 
-    # Restore variable attributes and potentially convert back to original types
-    for var in running_avg.data_vars:
-        if (
-            var not in running_avg.dims
-            and var not in running_avg.coords
-            and var not in constant_variables
-        ):
-            # Restore variable attributes
-            if var in var_attrs:
-                running_avg[var].attrs = var_attrs[var]
+        Args:
+            running_avg: Running average dataset
+            first_timestamp: First timestamp for time coordinate
+            time_attrs: Time dimension attributes
+            var_attrs: Variable attributes dictionary
 
-                # Optionally convert back to original type if safe and configured
-                original_dtype = var_attrs[var].get("_original_dtype")
-                if original_dtype and config.get("preserve_dtypes", False):
-                    try:
-                        # Test conversion for safety
-                        test_conversion = running_avg[var].values.astype(original_dtype)
-                        running_avg[var] = running_avg[var].astype(original_dtype)
-                    except (OverflowError, ValueError):
-                        print(
-                            f"WARNING: Cannot safely convert {var} back to {original_dtype}. Keeping higher precision."
-                        )
+        Returns:
+            xarray.Dataset: Finalized dataset with restored attributes
+        """
+        # Restore variable attributes and potentially convert back to original types
+        for var in running_avg.data_vars:
+            if (
+                var not in running_avg.dims
+                and var not in running_avg.coords
+                and var not in self.constant_variables
+            ):
+                # Restore variable attributes
+                if var in var_attrs:
+                    running_avg[var].attrs = var_attrs[var]
 
-    # Restore the time coordinate with its attributes
-    running_avg = running_avg.assign_coords(time=("time", [first_timestamp]))
-    running_avg["time"].attrs = time_attrs  # Restore time attributes
+                    # Optionally convert back to original type if safe and configured
+                    original_dtype = var_attrs[var].get("_original_dtype")
+                    if original_dtype and self.config.get("preserve_dtypes", False):
+                        try:
+                            # Test conversion for safety
+                            test_conversion = running_avg[var].values.astype(
+                                original_dtype
+                            )
+                            running_avg[var] = running_avg[var].astype(original_dtype)
+                        except (OverflowError, ValueError):
+                            print(
+                                f"WARNING: Cannot safely convert {var} back to {original_dtype}. Keeping higher precision."
+                            )
 
-    # Set up output dataset
-    averaged_ds = running_avg
+        # Restore the time coordinate with its attributes
+        running_avg = running_avg.assign_coords(time=("time", [first_timestamp]))
+        running_avg["time"].attrs = time_attrs  # Restore time attributes
 
-    print(averaged_ds.info())
-    print(averaged_ds.time)
+        return running_avg
 
-    print("Generating data level file name...")
-    # Generate output filename
-    data_level_file_name = (
-        file_name_convention_manager.generate_filename_for_data_level(
+    def _save_dataset(
+        self,
+        dataset,
+        output_path,
+        filename,
+        source_files,
+        data_level,
+        temporal="average",
+    ):
+        """
+        Save the dataset to a NetCDF file with proper attributes and encoding.
+
+        Args:
+            dataset: xarray Dataset to save
+            output_path: Directory path to save to
+            filename: Base filename
+            source_files: List of source files used to create this dataset
+            data_level: Data level identifier
+            temporal: Temporal specification for filename
+
+        Returns:
+            Path: Path to the saved file
+        """
+        # Generate output filename
+        data_level_file_name = (
+            file_name_convention_manager.generate_filename_for_data_level(
+                dataset,
+                self.location["output_name"],
+                self.config["dataset"]["name"],
+                data_level,
+                temporal=temporal,
+            )
+        )
+
+        # Add standard attributes
+        dataset = attrs_manager.standardize_dataset_global_attrs(
+            dataset,
+            self.config,
+            self.location,
+            data_level,
+            source_files,
+        )
+
+        file_path = Path(output_path, filename.format(data_level_file_name))
+        print(f"Saving to {file_path}...")
+
+        dataset.to_netcdf(
+            file_path,
+            encoding=nc_manager.define_compression_encoding(
+                dataset,
+                base_encoding=self.config["dataset"]["encoding"],
+                compression_strategy="none",
+            ),
+        )
+
+        return file_path
+
+    def calculate_yearly_average(self):
+        """
+        Calculate yearly average values across VAP NC files.
+
+        Returns:
+            Path: Path to the output file, or None if skipped
+        """
+        output_path = file_manager.get_yearly_summary_vap_output_dir(
+            self.config, self.location
+        )
+        output_nc_files = list(output_path.rglob("*.nc"))
+
+        if len(output_nc_files) > 0:
+            print(
+                f"{len(output_nc_files)} summary files already exist. Skipping yearly averaging."
+            )
+            return None
+
+        # Verify timestamps
+        self._verify_timestamps()
+
+        # Initialize for yearly average
+        print(f"Starting yearly averaging of {len(self.vap_nc_files)} vap files...")
+        running_avg = None
+        count = 0
+        source_files = []
+        first_timestamp = None
+        time_attrs = None
+        var_attrs = {}
+        first_ds = None
+
+        # Process each file
+        for i, nc_file in enumerate(self.vap_nc_files):
+            print(f"Processing File {i}: {nc_file}")
+            ds = xr.open_dataset(nc_file)
+
+            # Initialize if needed
+            if running_avg is None:
+                running_avg, first_timestamp, time_attrs, var_attrs = (
+                    self._initialize_average(ds, self.constant_variables)
+                )
+                first_ds = ds.copy()
+            else:
+                self._verify_constant_vars(ds, first_ds)
+
+            # Update running average
+            count = self._update_running_average(
+                running_avg, ds, count, self.constant_variables
+            )
+            source_files.append(str(nc_file))
+            ds.close()
+
+        print("Completing final yearly average calculation...")
+        # Finalize the dataset
+        averaged_ds = self._finalize_dataset(
+            running_avg, first_timestamp, time_attrs, var_attrs
+        )
+
+        print(averaged_ds.info())
+        print(averaged_ds.time)
+
+        # Save the yearly average
+        return self._save_dataset(
             averaged_ds,
-            location["output_name"],
-            config["dataset"]["name"],
-            "b2",
+            output_path,
+            "001.{}",
+            source_files,
+            "b3",
             temporal="1_year_average",
         )
-    )
 
-    print("Adding standard attributes...")
-    # Add standard attributes
-    averaged_ds = attrs_manager.standardize_dataset_global_attrs(
-        averaged_ds,
-        config,
-        location,
-        "b2",
-        source_files,
-    )
+    def calculate_monthly_averages(self):
+        """
+        Calculate monthly average values across VAP NC files.
+        Handles datasets that may not align perfectly with calendar months.
+        Creates one NC file per month with averages of the variables.
 
-    output_path = Path(
-        file_manager.get_summary_vap_output_dir(config, location),
-        f"001.{data_level_file_name}",
-    )
-    print(f"\tSaving to {output_path}...")
-    # averaged_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
+        Returns:
+            Path: Path to the output directory
+        """
+        output_path = file_manager.get_monthly_summary_vap_output_dir(
+            self.config, self.location
+        )
+        # Create the output directory if it doesn't exist
+        output_path.mkdir(parents=True, exist_ok=True)
 
-    averaged_ds.to_netcdf(
-        output_path,
-        encoding=nc_manager.define_compression_encoding(
-            averaged_ds,
-            base_encoding=config["dataset"]["encoding"],
-            compression_strategy="none",
-        ),
-    )
-    return output_path
+        # Check if monthly files already exist
+        output_nc_files = list(output_path.rglob("*.nc"))
+        if len(output_nc_files) >= 12:
+            print(
+                f"{len(output_nc_files)} monthly summary files already exist. Skipping monthly averaging."
+            )
+            return output_path
+
+        # Verify timestamps
+        self._verify_timestamps()
+
+        # Load all datasets to get the full time dimension
+        print("Loading all datasets to extract timestamps...")
+        all_times = []
+        for nc_file in self.vap_nc_files:
+            ds = xr.open_dataset(nc_file)
+            all_times.append(ds.time.values)
+            ds.close()
+
+        # Flatten the list of arrays into a single array and convert to pandas for easier handling
+        all_timestamps = pd.to_datetime(np.concatenate(all_times))
+
+        # Group timestamps by month
+        months = {}
+        for timestamp in all_timestamps:
+            month_key = (timestamp.year, timestamp.month)
+            if month_key not in months:
+                months[month_key] = []
+            months[month_key].append(timestamp)
+
+        print(f"Found data for {len(months)} distinct months")
+
+        # Process each month separately
+        for month_key, month_timestamps in months.items():
+            year, month = month_key
+            month_name = pd.Timestamp(year=year, month=month, day=1).strftime("%B")
+            print(
+                f"Processing {month_name} {year} with {len(month_timestamps)} timestamps"
+            )
+
+            # Convert back to numpy datetime64 for comparison with xarray
+            month_timestamps_np = np.array(
+                [np.datetime64(ts) for ts in month_timestamps]
+            )
+
+            # Initialize for this month
+            monthly_avg = None
+            count = 0
+            source_files = []
+            first_timestamp = None
+            time_attrs = None
+            var_attrs = {}
+            first_ds = None
+
+            # Process each file for this month
+            for i, nc_file in enumerate(self.vap_nc_files):
+                ds = xr.open_dataset(nc_file)
+
+                # Select only times within this month
+                month_mask = np.isin(ds.time.values, month_timestamps_np)
+                if not any(month_mask):
+                    ds.close()
+                    continue  # Skip if no data for this month
+
+                ds_month = ds.isel(time=month_mask)
+                if len(ds_month.time) == 0:
+                    ds.close()
+                    continue  # Skip if no data for this month after filtering
+
+                print(
+                    f"  File {i}: {nc_file.name} - {len(ds_month.time)} timestamps for this month"
+                )
+
+                # Initialize if needed
+                if monthly_avg is None:
+                    monthly_avg, first_timestamp, time_attrs, var_attrs = (
+                        self._initialize_average(ds_month, self.constant_variables)
+                    )
+                    first_ds = ds_month.copy()
+                else:
+                    self._verify_constant_vars(ds_month, first_ds)
+
+                # Update running average
+                count = self._update_running_average(
+                    monthly_avg, ds_month, count, self.constant_variables
+                )
+
+                if str(nc_file) not in source_files:
+                    source_files.append(str(nc_file))
+                ds.close()
+
+            # Skip if no data was found for this month
+            if monthly_avg is None:
+                print(f"No data found for {month_name} {year}, skipping")
+                continue
+
+            # Finalize the dataset
+            monthly_avg = self._finalize_dataset(
+                monthly_avg, first_timestamp, time_attrs, var_attrs
+            )
+
+            # Additional monthly metadata
+            monthly_avg.attrs["month"] = month
+            monthly_avg.attrs["year"] = year
+            monthly_avg.attrs["month_name"] = month_name
+
+            # Save the monthly average
+            month_str = f"{year}_{month:02d}"
+            self._save_dataset(
+                monthly_avg,
+                output_path,
+                f"{month:02d}.{{}}",
+                source_files,
+                "b2",
+                temporal=f"{month_str}_average",
+            )
+
+        return output_path
+
+
+def calculate_vap_yearly_average(config, location):
+    averager = VAPAverager(config, location)
+    return averager.calculate_yearly_average()
+
+
+def calculate_vap_monthly_average(config, location):
+    averager = VAPAverager(config, location)
+    return averager.calculate_monthly_averages()
