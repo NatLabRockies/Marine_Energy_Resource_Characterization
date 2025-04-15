@@ -1,5 +1,6 @@
 config = {
     "dataset": {
+        "label": "High Resolution Tidal Hindcast",
         "name": "tidal_hindcast_fvcom",
         "version": "0.2.0",
         "issue_date": "2025-02-01",
