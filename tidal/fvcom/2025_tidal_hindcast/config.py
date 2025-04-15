@@ -478,7 +478,7 @@ config = {
             "temporal_resolution": "hourly",
             "coordinates": {"system": "latitude/longitude"},
             # "partition_frequency": "M",  # Monthly, Roughly 73GB per file, out of memory in partition step
-            "partition_frequency": "7D",  # 7 Day Chunks
+            "partition_frequency": "5D",  # 7 Day Chunks
             # "partition_frequency": "W",  # Weekly, Roughly ? per file
             # "partition_frequency": "12h",
         },
