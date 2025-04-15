@@ -1212,8 +1212,8 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
 
             compression_strategy = "none"
 
-            if location["output_name"] == "WA_puget_sound":
-                compression_strategy = "standard"
+            # if location["output_name"] == "WA_puget_sound":
+            #     compression_strategy = "standard"
 
             this_ds.to_netcdf(
                 output_path,
