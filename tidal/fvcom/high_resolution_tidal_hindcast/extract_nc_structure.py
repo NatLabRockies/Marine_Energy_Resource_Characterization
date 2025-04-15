@@ -1,140 +1,104 @@
-import os
-
 from datetime import datetime
 from pathlib import Path
-
-import xarray as xr
 import json
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import xarray as xr
 
 from config import config
 
 
 def parse_nc_structure(nc_path, output_dir=None):
-    """
-    Parse an nc file using xarray and output its structure as JSON and parquet files.
+    nc_path = Path(nc_path)
+    if not nc_path.exists():
+        raise FileNotFoundError(f"The file {nc_path} does not exist.")
 
-    Parameters:
-    -----------
-    nc_path : str
-        Path to the nc file
-    output_dir : str, optional
-        Directory to save the output files. If None, saves in the current directory.
+    print(f"Opening dataset from {nc_path}")
+    ds = xr.open_dataset(nc_path)
 
-    Returns:
-    --------
-    tuple
-        Paths to the output JSON and parquet files
-    """
-    try:
-        # Check if file exists
-        if not os.path.exists(nc_path):
-            raise FileNotFoundError(f"The file {nc_path} does not exist.")
+    dimensions = {name: size for name, size in ds.dims.items()}
+    print(f"Found {len(dimensions)} dimensions")
 
-        print(f"Opening dataset from {nc_path}")
-        # Open the dataset
-        ds = xr.open_dataset(nc_path)
+    coordinates = {}
+    for name, var in ds.coords.items():
+        coordinates[name] = {
+            "shape": list(var.shape),
+            "dtype": str(var.dtype),
+            "dims": list(var.dims),
+        }
+    print(f"Found {len(coordinates)} coordinates")
 
-        # Extract dimensions
-        dimensions = {name: size for name, size in ds.dims.items()}
-        print(f"Found {len(dimensions)} dimensions")
-
-        # Extract coordinates
-        coordinates = {}
-        for name, var in ds.coords.items():
-            coordinates[name] = {
+    variables = {}
+    for name, var in ds.variables.items():
+        if name not in ds.coords:
+            variables[name] = {
                 "shape": list(var.shape),
                 "dtype": str(var.dtype),
                 "dims": list(var.dims),
+                "attrs": {k: _serialize_attr_value(v) for k, v in var.attrs.items()},
             }
-        print(f"Found {len(coordinates)} coordinates")
+    print(f"Found {len(variables)} variables")
 
-        # Extract variables
-        variables = {}
-        for name, var in ds.variables.items():
-            if name not in ds.coords:
-                variables[name] = {
-                    "shape": list(var.shape),
-                    "dtype": str(var.dtype),
-                    "dims": list(var.dims),
-                    "attrs": {
-                        k: _serialize_attr_value(v) for k, v in var.attrs.items()
-                    },
-                }
-        print(f"Found {len(variables)} variables")
+    attributes = {k: _serialize_attr_value(v) for k, v in ds.attrs.items()}
+    print(f"Found {len(attributes)} global attributes")
 
-        # Extract global attributes
-        attributes = {k: _serialize_attr_value(v) for k, v in ds.attrs.items()}
-        print(f"Found {len(attributes)} global attributes")
+    structure = {
+        "dimensions": dimensions,
+        "coordinates": coordinates,
+        "variables": variables,
+        "attributes": attributes,
+    }
 
-        # Create the structure dictionary
-        structure = {
-            "dimensions": dimensions,
-            "coordinates": coordinates,
-            "variables": variables,
-            "attributes": attributes,
+    datastream = ds.attrs.get("datastream", nc_path.stem)
+    print(f"Using datastream identifier: {datastream}")
+
+    variables_data = []
+
+    for name, var in ds.variables.items():
+        var_data = {
+            "name": name,
+            "is_coordinate": name in ds.coords,
+            "dtype": str(var.dtype),
+            "shape": str(list(var.shape)),
+            "dimensions": str(list(var.dims)),
+            "size": var.size,
+            "ndim": var.ndim,
         }
 
-        # Get the datastream attribute for naming the output files
-        datastream = ds.attrs.get("datastream", os.path.basename(nc_path).split(".")[0])
-        print(f"Using datastream identifier: {datastream}")
+        for k, v in var.attrs.items():
+            attr_key = f"attr_{k}"
+            var_data[attr_key] = _serialize_attr_value(v)
 
-        # Create a DataFrame for variables (for parquet output)
-        variables_data = []
+        variables_data.append(var_data)
 
-        for name, var in ds.variables.items():
-            var_data = {
-                "name": name,
-                "is_coordinate": name in ds.coords,
-                "dtype": str(var.dtype),
-                "shape": str(list(var.shape)),
-                "dimensions": str(list(var.dims)),
-                "size": var.size,
-                "ndim": var.ndim,
-            }
+    variables_df = pd.DataFrame(variables_data)
 
-            # Add all attributes as columns
-            for k, v in var.attrs.items():
-                attr_key = f"attr_{k}"
-                var_data[attr_key] = _serialize_attr_value(v)
+    ds.close()
 
-            variables_data.append(var_data)
+    if output_dir is None:
+        output_dir = Path.cwd()
+    else:
+        output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-        variables_df = pd.DataFrame(variables_data)
+    json_filename = f"{datastream}_structure.json"
+    parquet_filename = f"{datastream}_variables.parquet"
 
-        # Close the dataset
-        ds.close()
+    json_path = output_dir / json_filename
+    parquet_path = output_dir / parquet_filename
 
-        # Set output directory
-        if output_dir is None:
-            output_dir = os.getcwd()
-        os.makedirs(output_dir, exist_ok=True)
+    print(f"Writing JSON structure to {json_path}")
+    with open(json_path, "w") as f:
+        json.dump(structure, f, indent=2)
 
-        # Create output filenames
-        json_filename = f"{datastream}_structure.json"
-        parquet_filename = f"{datastream}_variables.parquet"
+    print(f"Writing columnar data to {parquet_path}")
+    variables_df.to_parquet(parquet_path, index=False)
 
-        json_path = os.path.join(output_dir, json_filename)
-        parquet_path = os.path.join(output_dir, parquet_filename)
-
-        # Write to JSON file
-        print(f"Writing JSON structure to {json_path}")
-        with open(json_path, "w") as f:
-            json.dump(structure, f, indent=2)
-
-        # Write to parquet file
-        print(f"Writing columnar data to {parquet_path}")
-        variables_df.to_parquet(parquet_path, index=False)
-
-        return json_path, parquet_path
-
-    except Exception as e:
-        print(f"Error processing {nc_path}: {str(e)}")
+    return json_path, parquet_path
 
 
 def _serialize_attr_value(v):
-    """Helper function to serialize attribute values."""
     if isinstance(v, (bytes, bytearray)):
         return v.decode("utf-8", errors="replace")
     elif isinstance(v, datetime):
@@ -160,11 +124,8 @@ if __name__ == "__main__":
     ]
 
     for dir in vap_directories:
-        try:
-            this_path = Path(dir)
-            nc_files = sorted(list(this_path.glob("*.nc")))
-            nc_file = nc_files[0]
-            output_dir = "schema"  # Replace with your desired output directory
-            parse_nc_structure(nc_file, output_dir)
-        except:
-            print("Error processing directory:", dir)
+        this_path = Path(dir)
+        nc_files = sorted(list(this_path.glob("*.nc")))
+        nc_file = nc_files[0]
+        output_dir = "schema"  # Replace with your desired output directory
+        parse_nc_structure(nc_file, output_dir)
