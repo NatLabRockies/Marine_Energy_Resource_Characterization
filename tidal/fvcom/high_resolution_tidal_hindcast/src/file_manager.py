@@ -38,8 +38,15 @@ def get_output_dirs(config, location):
             )
         ),
         "vap": Path(output_dirs["vap"].replace("<location>", output_location_name)),
-        "summary_vap": Path(
-            output_dirs["summary_vap"].replace("<location>", output_location_name)
+        "monthly_summary_vap": Path(
+            output_dirs["monthly_summary_vap"].replace(
+                "<location>", output_location_name
+            )
+        ),
+        "yearly_summary_vap": Path(
+            output_dirs["yearly_summary_vap"].replace(
+                "<location>", output_location_name
+            )
         ),
         "vap_partition": Path(
             output_dirs["vap_partition"].replace("<location>", output_location_name)
@@ -77,8 +84,12 @@ def get_vap_output_dir(config, location):
     return get_output_dirs(config, location)["vap"]
 
 
-def get_summary_vap_output_dir(config, location):
-    return get_output_dirs(config, location)["summary_vap"]
+def get_monthly_summary_vap_output_dir(config, location):
+    return get_output_dirs(config, location)["monthly_summary_vap"]
+
+
+def get_yearly_summary_vap_output_dir(config, location):
+    return get_output_dirs(config, location)["yearly_summary_vap"]
 
 
 def get_vap_partition_output_dir(config, location):
