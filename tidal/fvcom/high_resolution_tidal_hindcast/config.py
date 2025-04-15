@@ -480,8 +480,6 @@ config = {
             "coordinates": {"system": "latitude/longitude"},
             # "partition_frequency": "M",  # Monthly, Roughly 73GB per file, out of memory in partition step
             "partition_frequency": "5D",  # 7 Day Chunks
-            # "partition_frequency": "W",  # Weekly, Roughly ? per file
-            # "partition_frequency": "12h",
         },
         "cook_inlet": {
             "label": "Cook Inlet, Alaska",
@@ -540,9 +538,6 @@ config = {
             "expected_delta_t_seconds": 1800,  # 30 min
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 10},
-            # "partition_frequency": "D",  # Weekly, out of memory at vap step
-            # "partition_frequency": "D",  # Daily
-            # "partition_frequency": "12h",
             # "partition_frequency": "M", Monthly OOM at Partition Step
             # "partition_frequency": "W", This starts with 5 days
             "partition_frequency": "5D",
