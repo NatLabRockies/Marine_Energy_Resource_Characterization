@@ -21,8 +21,8 @@
   Code](#running-standardization-code)
 - [<span class="toc-section-number">11</span> Included
   Metadata](#included-metadata)
-- [<span class="toc-section-number">12</span>
-  Visualization](#visualization)
+- [<span class="toc-section-number">12</span> Visualization
+  Specification](#visualization-specification)
 - [<span class="toc-section-number">13</span>
   Acknowledgement](#acknowledgement)
 - [<span class="toc-section-number">14</span> Citation](#citation)
@@ -89,11 +89,20 @@ Average
 
 </div>
 
+<div id="fig-ak-aleutian-speed">
+
+![](./docs/img/ak_aleutian_islands_speed.png)
+
+Figure 2: Aleutian Islands - Sea Water Speed, Yearly Average, Depth
+Average
+
+</div>
+
 <div id="fig-me-west-speed-speed">
 
 ![](./docs/img/ak_cook_inlet_speed.png)
 
-Figure 2: Western Passage, Maine - Sea Water Speed, Yearly Average,
+Figure 3: Western Passage, Maine - Sea Water Speed, Yearly Average,
 Depth Average
 
 </div>
@@ -102,7 +111,7 @@ Depth Average
 
 ![](./docs/img/nh_piscataqua_river_speed.png)
 
-Figure 3: Piscataqua River New Hampshire - Sea Water Speed, Yearly
+Figure 4: Piscataqua River New Hampshire - Sea Water Speed, Yearly
 Average, Depth Average
 
 </div>
@@ -111,7 +120,7 @@ Average, Depth Average
 
 ![](./docs/img/wa_puget_sound_speed.png)
 
-Figure 4: Puget Sound, Washington - Sea Water Speed, Yearly Average,
+Figure 5: Puget Sound, Washington - Sea Water Speed, Yearly Average,
 Depth Average
 
 </div>
@@ -1133,7 +1142,29 @@ Table 9: Included Metadata
 
 </div>
 
-# Visualization
+# Visualization Specification
+
+## Locations
+
+Base Path: `/projects/hindcastra/Tidal/datasets/<location>/`
+
+| Name | File Location | Format | Type |
+|----|----|----|----|
+| Aleutian Islands, Alaska | `/b5_vap_atlas_summary_parquet/AK_aleutian_islands.tidal_hindcast_fvcom-year_average.b5.20100603.000000.parquet` | Parquet | Yearly Average Depth Average |
+| Cook Inlet, Alaska | `/b5_vap_atlas_summary_parquet/AK_cook_inlet.tidal_hindcast_fvcom-year_average.b5.20050101.000000.parquet` | Parquet | Yearly Average Depth Average |
+| Western Passage, Maine | `/b5_vap_atlas_summary_parquet/ME_western_passage.tidal_hindcast_fvcom-year_average.b5.20170101.000000.parquet` | Parquet | Yearly Average Depth Average |
+| Piscataqua River, New Hampshire | `/b5_vap_atlas_summary_parquet/NH_piscataqua_river.tidal_hindcast_fvcom-year_average.b5.20070101.000000.parquet` | Parquet | Yearly Average Depth Average |
+
+## Output Variables
+
+## Output Variable Color Bar Range
+
+| Atlas Label | Units | Variable | Color Bar Min | Color Bar Max | Discrete Steps |
+|----|----|----|----|----|----|
+| Mean Sea Water Speed | meters per second, \[m s-1\] | `vap_water_column_mean_sea_water_speed` | 0 | 2 | 256 |
+| Max Sea Water Speed | meters per second, \[m s-1\] | `vap_water_column_max_sea_water_speed` | 0 | 2 | 256 |
+| Mean Sea Water Power Density | watts per meter squared, \[W m-2\] | `vap_water_column_mean_sea_water_power_density` | 0 | 8000 | 256 |
+| Max Sea Water Power Density | watts per meter squared, \[W m-2\] | `vap_water_column_max_sea_water_speed` | 0 | 8000 | 256 |
 
 # Acknowledgement
 
