@@ -6,7 +6,10 @@ from src.verify import verify_dataset
 from src.standardize import standardize_dataset
 from src.partition_by_time import partition_by_time
 from src.derive_vap_fvcom import derive_vap
-from src.calculate_vap_average import calculate_vap_average
+from src.calculate_vap_average import (
+    calculate_vap_monthly_average,
+    calculate_vap_yearly_average,
+)
 from src.vap_create_parquet_all_time_partition import partition_vap_into_parquet_dataset
 from src.vap_create_parquet_summary import convert_nc_summary_to_parquet
 
@@ -40,14 +43,14 @@ if __name__ == "__main__":
     print("Step 4: Calculating Derived Value Added Products...")
     derive_vap(config, args.location)
 
-    print("Step 5: Calculating Yearly Averages...")
-    # calculate_vap_average(
-    #     config, args.location, skip_if_exists=False, should_verify_timestamps=False
-    # )
-    calculate_vap_average(config, args.location)
+    print("Step 5: Calculating Monthly Averages...")
+    calculate_vap_monthly_average(config, args.location)
 
-    # print("Step 6: Create Parquet Partition Dataset...")
+    print("Step 6: Calculating Yearly Average...")
+    calculate_vap_yearly_average(config, args.location)
+
+    # print("Step 7: Create Parquet Partition Dataset...")
     # partition_vap_into_parquet_dataset(config, args.location)
 
-    print("Step 7: Create Summary Parquet Dataset...")
+    print("Step 8: Create Summary Parquet Dataset...")
     convert_nc_summary_to_parquet(config, args.location)
