@@ -477,8 +477,6 @@ config = {
             "expected_delta_t_seconds": 3600,  # 60 min
             "temporal_resolution": "hourly",
             "coordinates": {"system": "latitude/longitude"},
-            "description": "",
-            "summary": "",
             # "partition_frequency": "M",  # Monthly, Roughly 73GB per file, out of memory in partition step
             "partition_frequency": "7D",  # 7 Day Chunks
             # "partition_frequency": "W",  # Weekly, Roughly ? per file
@@ -498,8 +496,6 @@ config = {
             "expected_delta_t_seconds": 3600,  # 60 min
             "temporal_resolution": "hourly",
             "coordinates": {"system": "latitude/longitude"},
-            "description": "",
-            "summary": "",
             "partition_frequency": "M",  # Monthly, Roughly 35GB per file
             # "partition_frequency": "12h",
         },
@@ -516,8 +512,6 @@ config = {
             "expected_delta_t_seconds": 1800,  # 30 min
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 19},
-            "description": "",
-            "summary": "",
             "partition_frequency": "M",  # Monthly, Roughly 67GB per file
             # "partition_frequency": "12h",
         },
@@ -545,8 +539,6 @@ config = {
             "expected_delta_t_seconds": 1800,  # 30 min
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 10},
-            "description": "",
-            "summary": "",
             # "partition_frequency": "D",  # Weekly, out of memory at vap step
             # "partition_frequency": "D",  # Daily
             # "partition_frequency": "12h",
@@ -570,8 +562,6 @@ config = {
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 19},
             "title": "Western Passage High Fidelity Tidal Hindcast",
-            "description": "",
-            "summary": "",
             "partition_frequency": "M",  # Monthly, Roughly 50GB per file
             # Trying to improve VAP compute time and find a balance between # of files and file size
             # "partition_frequency": "12h",
