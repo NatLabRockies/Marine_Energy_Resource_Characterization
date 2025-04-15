@@ -1137,8 +1137,8 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             print(f"\t[{file_index}] Calculating zeta_center...")
             this_ds = calculate_zeta_center(this_ds)
 
-            # Clear memory
-            gc.collect()
+            # # Clear memory
+            # gc.collect()
 
             print(f"\t[{file_index}] Calculating depth...")
             this_ds = calculate_depth(this_ds)
@@ -1146,17 +1146,17 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             print(f"\t[{file_index}] Calculating sea_floor_depth...")
             this_ds = calculate_sea_floor_depth(this_ds)
 
-            print(f"\t[{file_index}] Calculating element volumes...")
-            this_ds = calculate_element_volume(this_ds)
+            # print(f"\t[{file_index}] Calculating element volumes...")
+            # this_ds = calculate_element_volume(this_ds)
+            #
+            # print(f"\t[{file_index}] Calculating volume flux...")
+            # this_ds = calculate_volume_flux(this_ds)
+            #
+            # print(f"\t[{file_index}] Calculating volume average flux...")
+            # this_ds = calculate_volume_flux_water_column_volume_average(this_ds)
 
-            print(f"\t[{file_index}] Calculating volume flux...")
-            this_ds = calculate_volume_flux(this_ds)
-
-            print(f"\t[{file_index}] Calculating volume average flux...")
-            this_ds = calculate_volume_flux_water_column_volume_average(this_ds)
-
-            # Clear memory
-            gc.collect()
+            # # Clear memory
+            # gc.collect()
 
             # Continue with the statistical calculations
             print(f"\t[{file_index}] Calculating u water column average")
