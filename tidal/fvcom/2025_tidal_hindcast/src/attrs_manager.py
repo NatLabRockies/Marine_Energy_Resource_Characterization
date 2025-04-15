@@ -722,7 +722,7 @@ def standardize_dataset_global_attrs(
         # Source: Global, ACDD
         # A user-friendly description of the dataset. It should provide enough context
         # about the data for new users to quickly understand how the data can be used.
-        "description": location["description"],
+        "description": f"This dataset provides detailed tidal current information for {location['label']} specifically designed for tidal energy resource characterization and to de-risk project development. It contains {location['temporal_resolution']} predictions of water velocities, as u (`eastward_sea_water_velocity`), and v (`northward_seawater_velocity`) and calculated speed, to direction, and power density, that developers can use for site selection, device positioning, and energy production estimates. Created using the {config['model_specification']['model_version']} ocean model, the data covers the period from {location['start_date_utc']} to {location['end_date_utc']} and includes 3D current velocities at multiple depths, allowing developers to better understand the resource and de-risk deployments.",
         # Source: Global
         # The DOI that has been registered for this dataset, if applicable.
         "doi": config_global_attrs["doi"],
@@ -902,7 +902,7 @@ def standardize_dataset_global_attrs(
         "project": config_global_attrs["project"],
         # Source: ACDD
         # A paragraph describing the dataset, analogous to an abstract for a paper.
-        "summary": location["summary"],
+        "summary": f"This dataset is a high resolution tidal hindcast of {location['label']} intended for use by tidal energy developers for resource characterization, site selection, energy production estimation, and de-risking device deployments. The simulation employs the {config['model_specification']['model_version']} (FVCOM) with unstructured grid finite-volume methods to accurately resolve complex coastal geometries and bathymetric features critical for tidal energy assessment. The model provides {location['temporal_resolution']} outputs covering {location['start_date_utc']} to {location['end_date_utc']}, including three-dimensional velocity components (eastward and northward), free surface elevation, and derived parameters essential for resource characterization: current speed, directional metrics, and power density (W/m²). 10 uniform sigma layers provide a representation of the water column at potential deployment depths. The high spatial resolution  allows developers to identify and characterize optimal deployment locations where tidal energy extraction potential is maximized while accounting for site-specific flow characteristics and temporal variability.",
         # Source: IOOS
         # Country of the person or organization that distributes the data.
         "publisher_country": config_global_attrs["publisher_country"],
