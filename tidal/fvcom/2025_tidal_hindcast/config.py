@@ -465,6 +465,7 @@ config = {
     },
     "location_specification": {
         "aleutian_islands": {
+            "label": "Aleutian Islands, Alaska",
             "output_name": "AK_aleutian_islands",
             "base_dir": "Aleutian_Islands_year",
             "files": ["*.nc"],
@@ -484,6 +485,7 @@ config = {
             # "partition_frequency": "12h",
         },
         "cook_inlet": {
+            "label": "Cook Inlet, Alaska",
             "output_name": "AK_cook_inlet",
             "base_dir": "Cook_Inlet_PNNL",
             "files": ["*.nc"],
@@ -502,6 +504,7 @@ config = {
             # "partition_frequency": "12h",
         },
         "piscataqua_river": {
+            "label": "Piscataqua River, New Hampshire",
             "output_name": "NH_piscataqua_river",
             "base_dir": "PIR_full_year",
             "files": ["*.nc"],
@@ -519,6 +522,7 @@ config = {
             # "partition_frequency": "12h",
         },
         "puget_sound": {
+            "label": "Puget Sound, Washington",
             "output_name": "WA_puget_sound",
             "base_dir": "Puget_Sound_corrected",
             "files": [
@@ -551,6 +555,7 @@ config = {
             "partition_frequency": "5D",
         },
         "western_passage": {
+            "label": "Western Passage, Maine",
             "output_name": "ME_western_passage",
             "base_dir": "Western_Passage_corrected",
             "files": [
