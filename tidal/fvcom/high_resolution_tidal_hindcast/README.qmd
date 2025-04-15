@@ -1098,12 +1098,12 @@ Base Path: `/projects/hindcastra/Tidal/datasets/<location>/`
 
 ## Output Variable Color Bar Range
 
-| Atlas Label                  | Units                            | Averaging                       | Variable                                        | Color Bar Min | Color Bar Max | Discrete Steps |
-| ---                          |                                  |                                 | ---                                             | ---           | ---           | ---            |
-| Mean Sea Water Speed         | meters per second, [m s-1]       | Yearly Average of Depth Average | `vap_water_column_mean_sea_water_speed`         | 0             | 2             | 256            |
-| Max Sea Water Speed          | meters per second, [m s-1]       | Yearly Average of Depth Average | `vap_water_column_max_sea_water_speed`          | 0             | 2             | 256            |
-| Mean Sea Water Power Density | watts per meter squared, [W m-2] | Yearly Average of Depth Average | `vap_water_column_mean_sea_water_power_density` | 0             | 8000          | 256            |
-| Max Sea Water Power Density  | watts per meter squared, [W m-2] | Yearly Average of Depth Average | `vap_water_column_max_sea_water_speed`          | 0             | 8000          | 256            |
+| Atlas Label                  | Units                            | Variable                                        | Color Bar Min | Color Bar Max | Discrete Steps |
+| ---                          | ---                              | ---                                             | ---           | ---           | ---            |
+| Mean Sea Water Speed         | meters per second, [m s-1]       | `vap_water_column_mean_sea_water_speed`         | 0             | 2             | 256            |
+| Max Sea Water Speed          | meters per second, [m s-1]       | `vap_water_column_max_sea_water_speed`          | 0             | 2             | 256            |
+| Mean Sea Water Power Density | watts per meter squared, [W m-2] | `vap_water_column_mean_sea_water_power_density` | 0             | 8000          | 256            |
+| Max Sea Water Power Density  | watts per meter squared, [W m-2] | `vap_water_column_max_sea_water_speed`          | 0             | 8000          | 256            |
 
 
 # Acknowledgement
