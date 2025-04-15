@@ -15,7 +15,7 @@ conda init
 conda activate tidal_fvcom
 
 # Change to the directory containing the script
-cd /home/asimms/marine_energy_resource_characterization/tidal/fvcom/2025_tidal_hindcast
+cd /home/asimms/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast
 
 # Force Python to flush print statements immediately rather than buffering them
 # This ensures real-time output of print statements
