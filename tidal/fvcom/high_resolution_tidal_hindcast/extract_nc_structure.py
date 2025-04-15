@@ -17,7 +17,7 @@ def parse_nc_structure(nc_path, output_dir=None):
     print(f"Opening dataset from {nc_path}")
     ds = xr.open_dataset(nc_path)
 
-    dimensions = {name: size for name, size in ds.dims.items()}
+    dimensions = {name: size for name, size in ds.sizes.items()}
     print(f"Found {len(dimensions)} dimensions")
 
     coordinates = {}
@@ -93,6 +93,9 @@ def parse_nc_structure(nc_path, output_dir=None):
         json.dump(structure, f, indent=2)
 
     print(f"Writing columnar data to {parquet_path}")
+    for col in variables_df.columns:
+        if variables_df[col].dtype == "object":
+            variables_df[col] = variables_df[col].astype(str)
     variables_df.to_parquet(parquet_path, index=False)
 
     return json_path, parquet_path
@@ -105,10 +108,10 @@ def _serialize_attr_value(v):
         return v.isoformat()
     elif isinstance(v, (np.ndarray, list, tuple)):
         return str(v)
-    elif isinstance(v, (np.integer, np.floating)):
+    elif isinstance(v, (np.integer, np.floating, np.bool_)):
         return v.item()
     else:
-        return v
+        return str(v) if v is not None else None
 
 
 if __name__ == "__main__":
