@@ -421,6 +421,7 @@ class ConvertTidalNcToParquet:
 
         return face_dataframes
 
+    @staticmethod
     def _prepare_netcdf_compatible_metadata(self, attributes: Dict) -> Dict:
         """
         Process and prepare metadata to be compatible with NetCDF/xarray structure.
@@ -574,7 +575,9 @@ class ConvertTidalNcToParquet:
         table = pa.Table.from_pandas(df)
 
         # Process metadata using separate method
-        metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
+        metadata_bytes = ConvertTidalNcToParquet._prepare_netcdf_compatible_metadata(
+            attributes
+        )
 
         # Update table metadata
         table = table.replace_schema_metadata(
@@ -847,8 +850,8 @@ class ConvertTidalNcToParquet:
                 full_path = Path(full_dir, output_filename)
                 self.output_path_map[face_idx] = full_path
 
-                output_path = full_path
                 output_df = df
+                output_path = full_path
 
             # Convert DataFrame to pyarrow Table
             table = pa.Table.from_pandas(output_df)
