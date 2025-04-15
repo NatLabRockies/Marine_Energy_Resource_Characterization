@@ -1069,9 +1069,6 @@ def calculate_depth_statistics(
             # Explicitly release memory
             chunk_data = None
 
-        # Manual garbage collection after each chunk
-        gc.collect()
-
     # Create the DataArrays and set attributes for each statistic
     if "mean" in stats_to_calculate:
         print(f"\t\tAdding {depth_avg_name}...")
@@ -1109,9 +1106,6 @@ def calculate_depth_statistics(
             "statistical_computation": f"{percentile_value}th percentile across sigma layers",
         }
 
-    # Final garbage collection
-    gc.collect()
-
     return ds
 
 
@@ -1137,9 +1131,6 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             print(f"\t[{file_index}] Calculating zeta_center...")
             this_ds = calculate_zeta_center(this_ds)
 
-            # # Clear memory
-            # gc.collect()
-
             print(f"\t[{file_index}] Calculating depth...")
             this_ds = calculate_depth(this_ds)
 
@@ -1154,9 +1145,6 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             #
             # print(f"\t[{file_index}] Calculating volume average flux...")
             # this_ds = calculate_volume_flux_water_column_volume_average(this_ds)
-
-            # # Clear memory
-            # gc.collect()
 
             # Continue with the statistical calculations
             print(f"\t[{file_index}] Calculating u water column average")
@@ -1179,20 +1167,13 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             #     this_ds, "from_direction", stats_to_calculate=["mean"]
             # )
 
-            # Clear memory
-            gc.collect()
-
             print(f"\t[{file_index}] Calculating speed depth average statistics")
             this_ds = calculate_depth_statistics(this_ds, "speed")
-
-            gc.collect()
 
             print(
                 f"\t[{file_index}] Calculating power_density depth average statistics"
             )
             this_ds = calculate_depth_statistics(this_ds, "power_density")
-
-            gc.collect()
 
             expected_delta_t_seconds = location["expected_delta_t_seconds"]
             if expected_delta_t_seconds == 3600:
@@ -1221,8 +1202,6 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
                 "b1",
                 [str(nc_file)],
             )
-
-            gc.collect()
 
             output_path = Path(
                 output_dir,
@@ -1253,8 +1232,6 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
         #     print(
         #         f"\t[{file_index}] Warning: Could not remove temporary file: {str(e)}"
         #     )
-
-        gc.collect()
 
         return file_index
 
