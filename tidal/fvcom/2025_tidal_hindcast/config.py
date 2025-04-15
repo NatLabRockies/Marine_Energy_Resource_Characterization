@@ -18,19 +18,19 @@ config = {
         # Input and Output Directories
         # Input Data Directories
         "input": {
-            "original": "/projects/hindcastra/Tidal/datasets/tidal_hindcast_fvcom/<location>/00_raw",
+            "original": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/00_raw",
         },
         # Output Data Directories
         "output": {
             # Standardized data with qc
-            "standardized": "/projects/hindcastra/Tidal/datasets/<location>/a1_std",
-            "standardized_partition": "/projects/hindcastra/Tidal/datasets/<location>/a2_std_partition",
-            "vap": "/projects/hindcastra/Tidal/datasets/<location>/b1_vap",
-            "summary_vap": "/projects/hindcastra/Tidal/datasets/<location>/b2_summary_vap",
-            "vap_partition": "/projects/hindcastra/Tidal/datasets/<location>/b3_vap_partition",
-            "vap_summary_parquet": "/projects/hindcastra/Tidal/datasets/<location>/b4_vap_summary_parquet",
-            "vap_atlas_summary_parquet": "/projects/hindcastra/Tidal/datasets/<location>/b5_vap_atlas_summary_parquet",
-            "tracking": "/projects/hindcastra/Tidal/datasets/<location>/z99_tracking",
+            "standardized": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/a1_std",
+            "standardized_partition": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/a2_std_partition",
+            "vap": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b1_vap",
+            "summary_vap": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b2_summary_vap",
+            "vap_partition": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b3_vap_partition",
+            "vap_summary_parquet": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b4_vap_summary_parquet",
+            "vap_atlas_summary_parquet": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b5_vap_atlas_summary_parquet",
+            "tracking": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/z99_tracking",
         },
     },
     "model_specification": {
