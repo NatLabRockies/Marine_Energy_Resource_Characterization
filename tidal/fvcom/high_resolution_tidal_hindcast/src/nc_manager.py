@@ -1,3 +1,22 @@
+import xarray as xr
+
+
+def nc_open(path, config):
+    return xr.open_dataset(path, engine=config["dataset"]["xarray_netcdf4_engine"])
+
+
+def nc_write(ds, output_path, config, compression_strategy="none"):
+    ds.to_netcdf(
+        output_path,
+        engine=config["dataset"]["xarray_netcdf4_engine"],
+        encoding=define_compression_encoding(
+            ds,
+            base_encoding=config["dataset"]["encoding"],
+            compression_strategy="none",
+        ),
+    )
+
+
 def define_compression_encoding(
     this_ds, base_encoding=None, compression_strategy="standard", exclude_vars=None
 ):
