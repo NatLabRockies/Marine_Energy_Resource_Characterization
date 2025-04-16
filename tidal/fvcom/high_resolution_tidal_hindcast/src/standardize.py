@@ -653,7 +653,7 @@ class FVCOMStandardizer:
         xarray.Dataset
             Dataset with standardized names and UGRID attributes
         """
-        ds = nc_manager.nc_open(ds_path, config, decode_times=False)
+        ds = xr.open_dataset(ds_path, decode_times=False)
 
         if location["base_dir"] == "PIR_full_year":
             print("Adding siglay to PIR...")
