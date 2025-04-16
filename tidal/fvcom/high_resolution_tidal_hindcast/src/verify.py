@@ -3,6 +3,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import xarray as xr
+
 from . import coord_manager, file_manager, time_manager, nc_manager
 
 
@@ -324,7 +326,8 @@ def verify_dataset(config, location, nc_files):
 
     for nc_file in nc_files:
         print(f"\tVerifying {nc_file.name}...")
-        ds = nc_manager.nc_open(nc_file, config, decode_times=False)
+        # ds = nc_manager.nc_open(nc_file, config, decode_times=False)
+        ds = xr.open_dataset(nc_file, decoode_times=False)
 
         model_specification_verifier(config, ds, nc_file)
         time_verifier.verify_individual_dataset(
