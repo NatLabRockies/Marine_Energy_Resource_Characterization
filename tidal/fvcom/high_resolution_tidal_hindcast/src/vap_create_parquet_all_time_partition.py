@@ -88,7 +88,7 @@ class ConvertTidalNcToParquet:
             df,
             self.location["output_name"],
             f"{self.config['dataset']['name']}.face={index:{index_format}}.lat={lat_rounded:{coord_format}}.lon={lon_rounded:{coord_format}}",
-            "b3",
+            "b4",
             temporal=temporal_string,
         )
 
