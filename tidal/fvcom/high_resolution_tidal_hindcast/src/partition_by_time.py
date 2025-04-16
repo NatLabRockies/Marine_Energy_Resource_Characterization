@@ -38,7 +38,7 @@ def process_single_period(period_data, config, location, output_dir, count):
 
             print(f"[{count}] Opening dataset...")
 
-            ds = xr.open_dataset(std_file)
+            ds = nc_manager.nc_read(std_file, config)
 
             # Track source filenames
             if "source_files" in ds.attrs:
@@ -87,16 +87,7 @@ def process_single_period(period_data, config, location, output_dir, count):
             output_path = Path(output_dir, f"{count:03d}.{data_level_file_name}")
 
             print(f"[{count}] Saving partition file: {output_path}...")
-            # Save the file and sync to ensure it's written to disk
-            # combined_ds.to_netcdf(output_path, encoding=config["dataset"]["encoding"])
-            combined_ds.to_netcdf(
-                output_path,
-                encoding=nc_manager.define_compression_encoding(
-                    combined_ds,
-                    base_encoding=config["dataset"]["encoding"],
-                    compression_strategy="none",
-                ),
-            )
+            nc_manager.nc_write(combined_ds, output_path, config)
 
             # Verify the file exists before continuing
             wait_count = 0

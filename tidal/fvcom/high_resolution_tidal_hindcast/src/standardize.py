@@ -653,7 +653,7 @@ class FVCOMStandardizer:
         xarray.Dataset
             Dataset with standardized names and UGRID attributes
         """
-        ds = xr.open_dataset(ds_path, decode_times=False)
+        ds = nc_manager.nc_open(ds_path, config, decode_times=False)
 
         if location["base_dir"] == "PIR_full_year":
             print("Adding siglay to PIR...")
@@ -798,14 +798,7 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
         )
         std_files.extend([output_path] * len(output_ds.time))
 
-        output_ds.to_netcdf(
-            output_path,
-            encoding=nc_manager.define_compression_encoding(
-                output_ds,
-                base_encoding=config["dataset"]["encoding"],
-                compression_strategy="none",
-            ),
-        )
+        nc_manager.nc_write(output_ds, output_path, config)
 
         print(f"Saving standardized dataframe to {output_path}...")
         count += 1

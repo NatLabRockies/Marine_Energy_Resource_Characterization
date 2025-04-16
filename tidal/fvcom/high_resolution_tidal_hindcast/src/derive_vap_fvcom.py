@@ -1189,15 +1189,7 @@ def process_single_file(
 
         print(f"\t[{file_index}] Saving final results to {output_path}...")
 
-        this_ds.to_netcdf(
-            output_path,
-            engine=config["dataset"]["xarray_netcdf4_engine"],
-            encoding=nc_manager.define_compression_encoding(
-                this_ds,
-                base_encoding=config["dataset"]["encoding"],
-                compression_strategy="none",
-            ),
-        )
+        nc_manager.nc_write(this_ds, output_path, config)
 
         # Calculate time elapsed for this file
         file_elapsed_time = time.time() - file_start_time

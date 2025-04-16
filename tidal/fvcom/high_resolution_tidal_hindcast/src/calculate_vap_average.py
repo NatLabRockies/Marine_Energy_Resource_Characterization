@@ -2,12 +2,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import xarray as xr
 
 from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
 
 
-def verify_timestamps(nc_files, expected_timestamps, expected_delta_t_seconds):
+def verify_timestamps(nc_files, expected_timestamps, expected_delta_t_seconds, config):
     """Verify timestamp integrity across all files before processing."""
 
     total_timestamps = 0
@@ -16,7 +15,7 @@ def verify_timestamps(nc_files, expected_timestamps, expected_delta_t_seconds):
 
     for nc_file in nc_files:
         # Open dataset with minimal loading
-        ds = xr.open_dataset(nc_file, decode_times=True)
+        ds = nc_manager.nc_open(nc_file, config, decode_times=True)
         times = ds.time.values
 
         # Check count
@@ -111,6 +110,7 @@ class VAPAverager:
             self.vap_nc_files,
             self.expected_timestamps,
             self.location["expected_delta_t_seconds"],
+            self.config,
         )
 
     def _initialize_average(self, dataset, constant_variables):
@@ -273,14 +273,7 @@ class VAPAverager:
         file_path = Path(output_path, filename.format(data_level_file_name))
         print(f"Saving to {file_path}...")
 
-        dataset.to_netcdf(
-            file_path,
-            encoding=nc_manager.define_compression_encoding(
-                dataset,
-                base_encoding=self.config["dataset"]["encoding"],
-                compression_strategy="none",
-            ),
-        )
+        nc_manager.nc_write(dataset, file_path, self.config)
 
         return file_path
 
@@ -318,7 +311,7 @@ class VAPAverager:
         # Process each file
         for i, nc_file in enumerate(self.vap_nc_files):
             print(f"Processing File {i}: {nc_file}")
-            ds = xr.open_dataset(nc_file)
+            ds = nc_manager.nc_read(nc_file, self.config)
 
             # Initialize if needed
             if running_avg is None:
@@ -385,7 +378,7 @@ class VAPAverager:
         print("Loading all datasets to extract timestamps...")
         all_times = []
         for nc_file in self.vap_nc_files:
-            ds = xr.open_dataset(nc_file)
+            ds = nc_manager.nc_open(nc_file, self.config)
             all_times.append(ds.time.values)
             ds.close()
 
@@ -426,7 +419,7 @@ class VAPAverager:
 
             # Process each file for this month
             for i, nc_file in enumerate(self.vap_nc_files):
-                ds = xr.open_dataset(nc_file)
+                ds = nc_manager.nc_open(nc_file, self.config)
 
                 # Select only times within this month
                 month_mask = np.isin(ds.time.values, month_timestamps_np)
