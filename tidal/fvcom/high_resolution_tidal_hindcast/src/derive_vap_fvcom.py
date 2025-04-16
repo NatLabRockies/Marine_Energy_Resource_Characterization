@@ -1,6 +1,8 @@
 import gc
 import multiprocessing as mp
+import time
 
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -1105,10 +1107,14 @@ def calculate_depth_statistics(
     return ds
 
 
-def process_single_file(nc_file, config, location, output_dir, file_index):
+def process_single_file(
+    nc_file, config, location, output_dir, file_index, total_files=None, start_time=None
+):
     """Process a single netCDF file and save the results."""
 
+    file_start_time = time.time()
     print(f"Calculating vap for {nc_file}")
+
     # Use context manager to ensure dataset is properly closed
     with xr.open_dataset(
         nc_file, engine=config["dataset"]["xarray_netcdf4_engine"]
@@ -1193,6 +1199,49 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
             ),
         )
 
+        # Calculate time elapsed for this file
+        file_elapsed_time = time.time() - file_start_time
+        elapsed_hours, remainder = divmod(file_elapsed_time, 3600)
+        elapsed_minutes, elapsed_seconds = divmod(remainder, 60)
+
+        print(
+            f"\t[{file_index}] File processed in {int(elapsed_hours):02d}:{int(elapsed_minutes):02d}:{int(elapsed_seconds):02d}"
+        )
+
+        # Calculate and display estimated time to completion if we have the total files info
+        if (
+            total_files is not None
+            and start_time is not None
+            and file_index < total_files
+        ):
+            files_completed = file_index
+            files_remaining = total_files - files_completed
+
+            # Calculate average time per file based on completed files
+            total_elapsed_time = time.time() - start_time
+            avg_time_per_file = total_elapsed_time / files_completed
+
+            # Estimate time remaining
+            est_time_remaining = avg_time_per_file * files_remaining
+            est_hours, remainder = divmod(est_time_remaining, 3600)
+            est_minutes, est_seconds = divmod(remainder, 60)
+
+            # Calculate estimated completion time
+            est_completion_time = datetime.now() + timedelta(seconds=est_time_remaining)
+
+            print(
+                f"\t[{file_index}] Progress: {files_completed}/{total_files} files ({files_completed/total_files*100:.1f}%)"
+            )
+            print(
+                f"\t[{file_index}] Average time per file: {int(avg_time_per_file//60):02d}:{int(avg_time_per_file%60):02d} (mm:ss)"
+            )
+            print(
+                f"\t[{file_index}] Estimated time remaining: {int(est_hours):02d}:{int(est_minutes):02d}:{int(est_seconds):02d} (hh:mm:ss)"
+            )
+            print(
+                f"\t[{file_index}] Estimated completion time: {est_completion_time.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+
         return file_index
 
 
@@ -1235,7 +1284,6 @@ def derive_vap(config, location_key, use_multiprocessing=False):
     use_multiprocessing = False
 
     if use_multiprocessing is True:
-        # Multiprocessing approach
         # Determine a reasonable number of processes
         # Use a smaller fraction of available CPUs to avoid memory issues
         cpu_count = mp.cpu_count()
@@ -1276,18 +1324,39 @@ def derive_vap(config, location_key, use_multiprocessing=False):
         except Exception as e:
             print(f"ERROR during multiprocessing: {str(e)}")
     else:
-        # Sequential processing approach
-        print(f"Processing {len(files_to_process)} vap data files sequentially")
+        # Sequential processing approach with timing
+        total_files = len(files_to_process)
+        print(f"Processing {total_files} vap data files sequentially")
 
-        for nc_file, idx in files_to_process:
-            print(f"Processing file {idx}/{len(files_to_process)}: {nc_file}")
-            result = process_single_file(nc_file, config, location, vap_output_dir, idx)
+        # Record start time for overall processing
+        overall_start_time = time.time()
+
+        for i, (nc_file, idx) in enumerate(files_to_process, 1):
+            print(f"Processing file {idx}/{total_files}: {nc_file}")
+            result = process_single_file(
+                nc_file,
+                config,
+                location,
+                vap_output_dir,
+                idx,
+                total_files=total_files,
+                start_time=overall_start_time,
+            )
             results.append(result)
 
             # Force garbage collection after each file
             gc.collect()
 
+        # Calculate total elapsed time
+        total_elapsed_time = time.time() - overall_start_time
+        total_hours, remainder = divmod(total_elapsed_time, 3600)
+        total_minutes, total_seconds = divmod(remainder, 60)
+
         print(f"Completed processing {len(results)} files sequentially.")
+        print(
+            f"Total processing time: {int(total_hours):02d}:{int(total_minutes):02d}:{int(total_seconds):02d} (hh:mm:ss)"
+        )
+        print(f"Average time per file: {total_elapsed_time/len(results):.2f} seconds")
 
     # Check for any errors in processing (for both approaches)
     failed_files = [i for i in results if i < 0]
