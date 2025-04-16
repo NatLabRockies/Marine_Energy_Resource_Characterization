@@ -835,12 +835,22 @@ class ConvertTidalNcToParquet:
             if face_idx in self.output_path_map:
                 # Concat with existing file using name from existing file
                 full_path = self.output_path_map[face_idx]
+                print(f"Found full path: {full_path}")
                 existing_df = pd.read_parquet(full_path)
+                print("existing df has info")
+                print(existing_df.info())
+                print("Concatenating full path with input_df...")
                 concat_df = pd.concat([existing_df, df])
                 concat_df = concat_df.sort_index()
+                print("concat df has info")
+                print(concat_df.info())
 
                 output_df = concat_df
                 output_path = full_path
+                print("output df has info")
+                print(output_df.info())
+                print("Output path is:", output_path)
+                exit()
             else:
                 # Create full directory path for the partition
                 full_dir = Path(self.output_dir, partition_path)
