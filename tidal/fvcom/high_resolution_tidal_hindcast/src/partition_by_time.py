@@ -38,7 +38,7 @@ def process_single_period(period_data, config, location, output_dir, count):
 
             print(f"[{count}] Opening dataset...")
 
-            ds = nc_manager.nc_read(std_file, config)
+            ds = nc_manager.nc_open(std_file, config)
 
             # Track source filenames
             if "source_files" in ds.attrs:
