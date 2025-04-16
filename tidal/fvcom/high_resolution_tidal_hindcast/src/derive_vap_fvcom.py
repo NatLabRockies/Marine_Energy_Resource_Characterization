@@ -1018,16 +1018,12 @@ def calculate_depth_statistics(
     # Initialize arrays for the requested statistics
     result_arrays = {}
     if "mean" in stats_to_calculate:
-        print("Initializing mean result array...")
         result_arrays["mean"] = np.zeros((time_dim, face_dim), dtype=np.float32)
     if "median" in stats_to_calculate:
-        print("Initializing median result array...")
         result_arrays["median"] = np.zeros((time_dim, face_dim), dtype=np.float32)
     if "max" in stats_to_calculate:
-        print("Initializing max result array...")
         result_arrays["max"] = np.zeros((time_dim, face_dim), dtype=np.float32)
     if "p95" in stats_to_calculate:
-        print("Initializing p95 result array...")
         result_arrays["p95"] = np.zeros((time_dim, face_dim), dtype=np.float32)
 
     print(
