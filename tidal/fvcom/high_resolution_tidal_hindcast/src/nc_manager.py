@@ -41,13 +41,3 @@ def define_compression_encoding(
             encoding[var_name]["complevel"] = complevel
 
     return encoding
-
-
-# Example usage:
-# # Standard compression for public-facing files
-# encoding = define_compression_encoding(combined_ds, config["this_ds"]["encoding"])
-# combined_ds.to_netcdf(output_path, encoding=encoding)
-#
-# # No compression for intermediate processing
-# encoding = define_compression_encoding(combined_ds, config["this_ds"]["encoding"], "none")
-# combined_ds.to_netcdf(temp_path, encoding=encoding)
