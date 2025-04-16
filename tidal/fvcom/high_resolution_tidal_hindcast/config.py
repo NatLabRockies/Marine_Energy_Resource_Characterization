@@ -11,6 +11,8 @@ config = {
                 "dtype": "int64",
             }
         },
+        "xarray_netcdf4_engine": "h5netcdf",
+        # "xarray_netcdf4_engine": "netcdf4"
     },
     "code": {
         "version": "0.2.0",

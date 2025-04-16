@@ -1115,7 +1115,9 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
         print(f"Calculating vap for {nc_file}")
 
         # Use context manager to ensure dataset is properly closed
-        with xr.open_dataset(nc_file) as this_ds:
+        with xr.open_dataset(
+            nc_file, engine=config["dataset"]["xarray_netcdf4_engine"]
+        ) as this_ds:
             print(f"\t[{file_index}] Calculating speed...")
             this_ds = calculate_sea_water_speed(this_ds, config)
 
@@ -1217,6 +1219,7 @@ def process_single_file(nc_file, config, location, output_dir, file_index):
 
             this_ds.to_netcdf(
                 output_path,
+                engine=config["dataset"]["xarray_netcdf4_engine"],
                 encoding=nc_manager.define_compression_encoding(
                     this_ds,
                     base_encoding=config["dataset"]["encoding"],
