@@ -1107,145 +1107,93 @@ def calculate_depth_statistics(
 
 def process_single_file(nc_file, config, location, output_dir, file_index):
     """Process a single netCDF file and save the results."""
-    try:
-        print(f"Calculating vap for {nc_file}")
 
-        # Use context manager to ensure dataset is properly closed
-        with xr.open_dataset(
-            nc_file, engine=config["dataset"]["xarray_netcdf4_engine"]
-        ) as this_ds:
-            print(f"\t[{file_index}] Calculating speed...")
-            this_ds = calculate_sea_water_speed(this_ds, config)
+    print(f"Calculating vap for {nc_file}")
+    # Use context manager to ensure dataset is properly closed
+    with xr.open_dataset(
+        nc_file, engine=config["dataset"]["xarray_netcdf4_engine"]
+    ) as this_ds:
+        print(f"\t[{file_index}] Calculating speed...")
+        this_ds = calculate_sea_water_speed(this_ds, config)
 
-            print(f"\t[{file_index}] Calculating to direction...")
-            this_ds = calculate_sea_water_to_direction(this_ds, config)
+        print(f"\t[{file_index}] Calculating to direction...")
+        this_ds = calculate_sea_water_to_direction(this_ds, config)
 
-            # print(f"\t[{file_index}] Calculating from direction...")
-            # this_ds = calculate_sea_water_from_direction(this_ds, config)
+        print(f"\t[{file_index}] Calculating power density...")
+        this_ds = calculate_sea_water_power_density(this_ds, config)
 
-            print(f"\t[{file_index}] Calculating power density...")
-            this_ds = calculate_sea_water_power_density(this_ds, config)
+        print(f"\t[{file_index}] Calculating zeta_center...")
+        this_ds = calculate_zeta_center(this_ds)
 
-            print(f"\t[{file_index}] Calculating zeta_center...")
-            this_ds = calculate_zeta_center(this_ds)
+        print(f"\t[{file_index}] Calculating depth...")
+        this_ds = calculate_depth(this_ds)
 
-            print(f"\t[{file_index}] Calculating depth...")
-            this_ds = calculate_depth(this_ds)
+        print(f"\t[{file_index}] Calculating sea_floor_depth...")
+        this_ds = calculate_sea_floor_depth(this_ds)
 
-            print(f"\t[{file_index}] Calculating sea_floor_depth...")
-            this_ds = calculate_sea_floor_depth(this_ds)
+        print(f"\t[{file_index}] Calculating u water column average")
+        this_ds = calculate_depth_statistics(this_ds, "u", stats_to_calculate=["mean"])
 
-            # print(f"\t[{file_index}] Calculating element volumes...")
-            # this_ds = calculate_element_volume(this_ds)
-            #
-            # print(f"\t[{file_index}] Calculating volume flux...")
-            # this_ds = calculate_volume_flux(this_ds)
-            #
-            # print(f"\t[{file_index}] Calculating volume average flux...")
-            # this_ds = calculate_volume_flux_water_column_volume_average(this_ds)
+        print(f"\t[{file_index}] Calculating v water column average")
+        this_ds = calculate_depth_statistics(this_ds, "v", stats_to_calculate=["mean"])
 
-            # Continue with the statistical calculations
-            print(f"\t[{file_index}] Calculating u water column average")
-            this_ds = calculate_depth_statistics(
-                this_ds, "u", stats_to_calculate=["mean"]
+        print(f"\t[{file_index}] Calculating to_direction water column average")
+        this_ds = calculate_depth_statistics(
+            this_ds, "to_direction", stats_to_calculate=["mean"]
+        )
+
+        print(f"\t[{file_index}] Calculating speed depth average statistics")
+        this_ds = calculate_depth_statistics(this_ds, "speed")
+
+        print(f"\t[{file_index}] Calculating power_density depth average statistics")
+        this_ds = calculate_depth_statistics(this_ds, "power_density")
+
+        expected_delta_t_seconds = location["expected_delta_t_seconds"]
+        if expected_delta_t_seconds == 3600:
+            temporal_string = "1h"
+        elif expected_delta_t_seconds == 1800:
+            temporal_string = "30m"
+        else:
+            raise ValueError(
+                f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
             )
 
-            print(f"\t[{file_index}] Calculating v water column average")
-            this_ds = calculate_depth_statistics(
-                this_ds, "v", stats_to_calculate=["mean"]
-            )
-
-            print(f"\t[{file_index}] Calculating to_direction water column average")
-            this_ds = calculate_depth_statistics(
-                this_ds, "to_direction", stats_to_calculate=["mean"]
-            )
-
-            # print(f"\t[{file_index}] Calculating from_direction water column average")
-            # this_ds = calculate_depth_statistics(
-            #     this_ds, "from_direction", stats_to_calculate=["mean"]
-            # )
-
-            print(f"\t[{file_index}] Calculating speed depth average statistics")
-            this_ds = calculate_depth_statistics(this_ds, "speed")
-
-            print(
-                f"\t[{file_index}] Calculating power_density depth average statistics"
-            )
-            this_ds = calculate_depth_statistics(this_ds, "power_density")
-
-            expected_delta_t_seconds = location["expected_delta_t_seconds"]
-            if expected_delta_t_seconds == 3600:
-                temporal_string = "1h"
-            elif expected_delta_t_seconds == 1800:
-                temporal_string = "30m"
-            else:
-                raise ValueError(
-                    f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
-                )
-
-            data_level_file_name = (
-                file_name_convention_manager.generate_filename_for_data_level(
-                    this_ds,
-                    location["output_name"],
-                    config["dataset"]["name"],
-                    "b1",
-                    temporal=temporal_string,
-                )
-            )
-
-            this_ds = attrs_manager.standardize_dataset_global_attrs(
+        data_level_file_name = (
+            file_name_convention_manager.generate_filename_for_data_level(
                 this_ds,
-                config,
-                location,
+                location["output_name"],
+                config["dataset"]["name"],
                 "b1",
-                [str(nc_file)],
+                temporal=temporal_string,
             )
+        )
 
-            output_path = Path(
-                output_dir,
-                f"{file_index:03d}.{data_level_file_name}",
-            )
+        this_ds = attrs_manager.standardize_dataset_global_attrs(
+            this_ds,
+            config,
+            location,
+            "b1",
+            [str(nc_file)],
+        )
 
-            print(f"\t[{file_index}] Saving final results to {output_path}...")
+        output_path = Path(
+            output_dir,
+            f"{file_index:03d}.{data_level_file_name}",
+        )
 
-            compression_strategy = "none"
+        print(f"\t[{file_index}] Saving final results to {output_path}...")
 
-            # if location["output_name"] == "WA_puget_sound":
-            #     compression_strategy = "standard"
-
-            this_ds.to_netcdf(
-                output_path,
-                engine=config["dataset"]["xarray_netcdf4_engine"],
-                encoding=nc_manager.define_compression_encoding(
-                    this_ds,
-                    base_encoding=config["dataset"]["encoding"],
-                    compression_strategy=compression_strategy,
-                ),
-            )
-
-        # Clean up temporary file
-        # print(f"\t[{file_index}] Removing temporary file...")
-        # try:
-        #     temp_output_path.unlink()
-        # except Exception as e:
-        #     print(
-        #         f"\t[{file_index}] Warning: Could not remove temporary file: {str(e)}"
-        #     )
+        this_ds.to_netcdf(
+            output_path,
+            engine=config["dataset"]["xarray_netcdf4_engine"],
+            encoding=nc_manager.define_compression_encoding(
+                this_ds,
+                base_encoding=config["dataset"]["encoding"],
+                compression_strategy="none",
+            ),
+        )
 
         return file_index
-
-    except Exception as e:
-        print(f"Error processing file {nc_file}: {str(e)}")
-        # Attempt to clean up temporary file in case of failure
-        temp_output_path = Path(output_dir, f"temp_{file_index:03d}.nc")
-        if temp_output_path.exists():
-            try:
-                temp_output_path.unlink()
-            except:
-                pass
-        raise e
-        # Return a value indicating failure
-        return -file_index
 
 
 def derive_vap(config, location_key, use_multiprocessing=False):
