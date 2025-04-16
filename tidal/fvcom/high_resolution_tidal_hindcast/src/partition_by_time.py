@@ -37,38 +37,28 @@ def process_single_period(period_data, config, location, output_dir, count):
             print(f"[{count}] Adding {std_file} to {period_start} output dataset")
 
             print(f"[{count}] Opening dataset...")
-            ds = None
-            try:
-                ds = xr.open_dataset(std_file)
 
-                # Track source filenames
-                if "source_files" in ds.attrs:
-                    filenames = [Path(f).name for f in ds.attrs["source_files"]]
-                    source_filenames.update(filenames)
+            ds = xr.open_dataset(std_file)
 
-                # Get timestamps for this file and period
-                file_timestamps = period_df[period_df["std_files"] == std_file][
-                    "timestamp"
-                ].values
-                print(f"[{count}] file_timestamps:", file_timestamps)
+            # Track source filenames
+            if "source_files" in ds.attrs:
+                filenames = [Path(f).name for f in ds.attrs["source_files"]]
+                source_filenames.update(filenames)
 
-                # Subset the dataset
-                time_indices = np.isin(ds.time.values, file_timestamps)
-                print(f"[{count}] Subsetting dataset by time_indicies...")
-                ds_subset = ds.isel(time=time_indices)
+            # Get timestamps for this file and period
+            file_timestamps = period_df[period_df["std_files"] == std_file][
+                "timestamp"
+            ].values
+            print(f"[{count}] file_timestamps:", file_timestamps)
 
-                if ds_subset.time.size > 0:
-                    print(f"[{count}] Appending dataset...")
-                    datasets.append(ds_subset)
+            # Subset the dataset
+            time_indices = np.isin(ds.time.values, file_timestamps)
+            print(f"[{count}] Subsetting dataset by time_indicies...")
+            ds_subset = ds.isel(time=time_indices)
 
-            except Exception as e:
-                print(f"[{count}] Error processing file {std_file}: {e}")
-            finally:
-                # Ensure dataset is closed even if an error occurs
-                if ds is not None:
-                    ds.close()
-                    ds = None
-                gc.collect()
+            if ds_subset.time.size > 0:
+                print(f"[{count}] Appending dataset...")
+                datasets.append(ds_subset)
 
         if len(datasets) > 0:
             # Concatenate datasets
