@@ -1,8 +1,10 @@
 import xarray as xr
 
 
-def nc_open(path, config):
-    return xr.open_dataset(path, engine=config["dataset"]["xarray_netcdf4_engine"])
+def nc_open(path, config, **kwargs):
+    return xr.open_dataset(
+        path, engine=config["dataset"]["xarray_netcdf4_engine"], **kwargs
+    )
 
 
 def nc_write(ds, output_path, config, compression_strategy="none"):
