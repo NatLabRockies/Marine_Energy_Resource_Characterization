@@ -11,7 +11,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from . import file_manager, file_name_convention_manager
+from . import file_manager, file_name_convention_manager, nc_manager
 
 
 class ConvertTidalNcToParquet:
@@ -1001,7 +1001,7 @@ def partition_vap_into_parquet_dataset(config, location_key):
     converter = ConvertTidalNcToParquet(output_path, config, location)
 
     for nc_file in vap_nc_files:
-        ds = xr.open_dataset(nc_file)
+        ds = nc_manager.nc_read(nc_file, config)
         # Access batch_size faces at once
         # This should be set to optimize memory usage and speed
         # A value that is too big will overflow memory, and a value that is too small will take too long
