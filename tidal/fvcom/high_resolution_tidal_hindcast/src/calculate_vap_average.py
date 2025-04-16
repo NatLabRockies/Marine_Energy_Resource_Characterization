@@ -311,7 +311,7 @@ class VAPAverager:
         # Process each file
         for i, nc_file in enumerate(self.vap_nc_files):
             print(f"Processing File {i}: {nc_file}")
-            ds = nc_manager.nc_read(nc_file, self.config)
+            ds = nc_manager.nc_open(nc_file, self.config)
 
             # Initialize if needed
             if running_avg is None:

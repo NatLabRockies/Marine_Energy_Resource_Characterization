@@ -1011,7 +1011,7 @@ def partition_vap_into_parquet_dataset(config, location_key):
     converter = ConvertTidalNcToParquet(output_path, config, location)
 
     for nc_file in vap_nc_files:
-        ds = nc_manager.nc_read(nc_file, config)
+        ds = nc_manager.nc_open(nc_file, config)
         # Access batch_size faces at once
         # This should be set to optimize memory usage and speed
         # A value that is too big will overflow memory, and a value that is too small will take too long
