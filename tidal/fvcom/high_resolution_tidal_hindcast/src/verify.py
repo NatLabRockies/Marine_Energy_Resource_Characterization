@@ -327,7 +327,7 @@ def verify_dataset(config, location, nc_files):
     for nc_file in nc_files:
         print(f"\tVerifying {nc_file.name}...")
         # ds = nc_manager.nc_open(nc_file, config, decode_times=False)
-        ds = xr.open_dataset(nc_file, decoode_times=False)
+        ds = xr.open_dataset(nc_file, decode_times=False)
 
         model_specification_verifier(config, ds, nc_file)
         time_verifier.verify_individual_dataset(
