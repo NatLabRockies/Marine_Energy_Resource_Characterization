@@ -26,8 +26,7 @@ def _format_datetime(data):
         dt = pd.Timestamp(data.time.values[0])
     elif isinstance(data, pd.DataFrame):
         if isinstance(data.index, pd.DatetimeIndex):
-            dt = data.index[0]
-            dt = pd.Timestamp(data)
+            dt = pd.Timestamp(data.index[0])
 
     if dt is None:
         raise TypeError("Input must be either xarray Dataset or pandas DataFrame")
