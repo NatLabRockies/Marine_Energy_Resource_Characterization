@@ -422,7 +422,7 @@ class ConvertTidalNcToParquet:
         return face_dataframes
 
     @staticmethod
-    def _prepare_netcdf_compatible_metadata(self, attributes: Dict) -> Dict:
+    def _prepare_netcdf_compatible_metadata(attributes: Dict) -> Dict:
         """
         Process and prepare metadata to be compatible with NetCDF/xarray structure.
 
@@ -868,7 +868,9 @@ class ConvertTidalNcToParquet:
 
             # Process metadata using separate method
             # TODO: Make sure this is correct if we always use the most recent dataset
-            metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
+            metadata_bytes = (
+                ConvertTidalNcToParquet._prepare_netcdf_compatible_metadata(attributes)
+            )
 
             # Update table metadata
             table = table.replace_schema_metadata(
