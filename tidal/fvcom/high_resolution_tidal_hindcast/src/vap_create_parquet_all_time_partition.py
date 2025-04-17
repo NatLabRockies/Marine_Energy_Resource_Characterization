@@ -336,6 +336,7 @@ class ConvertTidalNcToParquet:
                 # Store the data array
                 batch_data[var_name] = data_array
 
+        print("Creating DataFrames for each face...")
         # Now create DataFrames using the pre-fetched data
         face_dataframes = {}
         for i, face_idx in enumerate(face_indices):
@@ -418,6 +419,9 @@ class ConvertTidalNcToParquet:
             df = pd.DataFrame(data_dict, index=time_values)
             df.index.name = "time"
             face_dataframes[face_idx] = df
+
+        print(f"Successfully created DataFrames for {len(face_dataframes)} faces...")
+        print(f"The first 3 keys are: {list(face_dataframes.keys())[:3]}")
 
         return face_dataframes
 
