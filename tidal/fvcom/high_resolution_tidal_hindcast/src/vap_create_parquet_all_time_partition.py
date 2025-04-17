@@ -90,6 +90,7 @@ class ConvertTidalNcToParquet:
             f"{self.config['dataset']['name']}.face={index:{index_format}}.lat={lat_rounded:{coord_format}}.lon={lon_rounded:{coord_format}}",
             "b4",
             temporal=temporal_string,
+            ext="parquet",
         )
 
     @staticmethod
