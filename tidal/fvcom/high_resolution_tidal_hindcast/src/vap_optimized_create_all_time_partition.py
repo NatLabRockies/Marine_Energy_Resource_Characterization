@@ -494,10 +494,13 @@ class ConvertTidalNcToParquet:
         self, dataset: xr.Dataset, face_indices: list, vars_to_include: list
     ) -> dict:
         """
-        Unified method to extract data for one or multiple faces.
-        Replaces _create_time_series_df and _create_time_series_dfs_batch
+        Unified method to extract data for one or multiple faces with cleaner progress reporting.
         """
-        print(f"Processing {len(face_indices)} faces")
+        # Only show detailed variable logging when sampling for memory estimation (small batch)
+        verbose_logging = len(face_indices) <= 25
+
+        if verbose_logging:
+            print(f"Processing {len(face_indices)} faces")
 
         # Common variables needed for all faces
         time_values = dataset.time.values
@@ -518,17 +521,38 @@ class ConvertTidalNcToParquet:
         # Variables to skip in extraction
         vars_to_skip = ["nv", "h_center"]
 
+        # Track progress for variables
+        total_vars = sum(1 for var in vars_to_include if var not in vars_to_skip)
+        processed_vars = 0
+
         # Pre-fetch all variable data
         for var_name in vars_to_include:
             if var_name in vars_to_skip:
                 continue
 
             var = dataset[var_name]
+            processed_vars += 1
+
+            # Only show detailed variable logging in verbose mode
+            if verbose_logging:
+                if (
+                    "sigma_layer" in var.dims
+                    and "face" in var.dims
+                    and "time" in var.dims
+                ):
+                    print(f"Extracting 4D variable {var_name} with dims {var.dims}")
+                elif "face" in var.dims and "time" in var.dims:
+                    print(f"Extracting 3D variable {var_name} with dims {var.dims}")
+            elif processed_vars % 5 == 0 or processed_vars == total_vars:
+                # Show simplified progress update every 5 variables
+                print(
+                    f"\rExtracting variables: {processed_vars}/{total_vars} ({(processed_vars/total_vars)*100:.0f}%)...",
+                    end="" if processed_vars < total_vars else "\n",
+                )
 
             # Extract data based on variable dimensions
             if "sigma_layer" in var.dims and "face" in var.dims and "time" in var.dims:
                 # 3D variables (time, sigma_layer, face)
-                print(f"Extracting 4D variable {var_name} with dims {var.dims}")
                 selected_data = var.isel(face=face_indices)
 
                 batch_data[var_name] = {}
@@ -545,7 +569,6 @@ class ConvertTidalNcToParquet:
 
             elif "face" in var.dims and "time" in var.dims:
                 # 2D variables (time, face)
-                print(f"Extracting 3D variable {var_name} with dims {var.dims}")
                 faces_data = var.isel(face=face_indices)
 
                 # Ensure time dimension is first
@@ -559,9 +582,24 @@ class ConvertTidalNcToParquet:
 
                 batch_data[var_name] = faces_data.values
 
-        # Create DataFrames for each face
+        # Create DataFrames with progress reporting
         face_dataframes = {}
+        total_faces = len(face_indices)
+
+        print(f"Creating DataFrames for {total_faces} faces...")
+        progress_interval = max(
+            1, min(total_faces // 10, 1000)
+        )  # Update every 10% or every 1000 faces
+
         for i, face_idx in enumerate(face_indices):
+            # Show progress updates
+            if (i + 1) % progress_interval == 0 or i + 1 == total_faces:
+                progress = ((i + 1) / total_faces) * 100
+                print(
+                    f"\rCreating DataFrames: {i+1}/{total_faces} ({progress:.1f}%)...",
+                    end="" if i + 1 < total_faces else "\n",
+                )
+
             data_dict = {}
 
             # Add center coordinates
@@ -602,9 +640,10 @@ class ConvertTidalNcToParquet:
 
                         # Verify data length
                         if len(var_data) != time_dim_len:
-                            print(
-                                f"Warning: {col_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
-                            )
+                            if verbose_logging:
+                                print(
+                                    f"Warning: {col_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
+                                )
                             continue
 
                         data_dict[col_name] = var_data
@@ -618,9 +657,10 @@ class ConvertTidalNcToParquet:
 
                     # Verify data length
                     if len(var_data) != time_dim_len:
-                        print(
-                            f"Warning: {var_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
-                        )
+                        if verbose_logging:
+                            print(
+                                f"Warning: {var_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
+                            )
                         continue
 
                     data_dict[var_name] = var_data
