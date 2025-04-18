@@ -30,37 +30,70 @@ class OptimizedTidalConverter:
             "total": mem.total,
             "available": mem.available,
             "percent": mem.percent,
-            "safe_limit": mem.total * 0.8,
+            "safe_limit": mem.total * 0.85,  # Increased to 85% of total memory
         }
 
-    def _estimate_face_memory_usage(self, dataset, sample_size=10):
+    def _estimate_face_memory_usage(self, dataset, sample_size=25):
+        """Estimate average memory usage per face with a larger sample size"""
         face_indices = np.random.choice(
             len(dataset.face.values),
             min(sample_size, len(dataset.face.values)),
             replace=False,
         )
 
+        # Run garbage collection before measurement to get cleaner baseline
+        gc.collect()
         start_mem = psutil.Process().memory_info().rss
         face_dfs = self.converter._extract_face_data(
             dataset, face_indices.tolist(), list(dataset.variables.keys())
         )
         end_mem = psutil.Process().memory_info().rss
 
-        avg_face_size = (end_mem - start_mem) / len(face_indices)
+        # Add 10% buffer to the estimate for safety
+        avg_face_size = ((end_mem - start_mem) / len(face_indices)) * 1.1
         return avg_face_size
 
     def _optimize_batch_size(self, dataset):
+        """Calculate optimal batch size and worker counts based on system resources"""
+        # Get memory usage estimate with better precision
         avg_face_mem = self._estimate_face_memory_usage(dataset)
         total_faces = len(dataset.face.values)
 
-        available_mem = self.memory_info["safe_limit"] / 2
+        # More aggressive memory utilization (70% of safe limit instead of 50%)
+        available_mem = self.memory_info["safe_limit"] * 0.7
+
+        # Calculate batch size based on available memory
         max_faces_per_batch = int(available_mem / avg_face_mem)
 
-        max_faces_per_batch = min(max_faces_per_batch, 50000)
+        # Apply reasonable limits to batch size
+        if self.num_cores >= 64:  # For high-core systems
+            max_faces_per_batch = min(
+                max_faces_per_batch, 150000
+            )  # Higher limit for large systems
+        else:
+            max_faces_per_batch = min(
+                max_faces_per_batch, 75000
+            )  # Moderate limit for smaller systems
+
         max_faces_per_batch = max(max_faces_per_batch, 1000)  # Minimum batch size
 
-        cpu_workers = min(max(1, self.num_cores // 2), 24)
-        io_workers = min(max(1, self.num_cores // 4), 32)
+        # Worker counts scale with core count, with reasonable limits
+        if self.num_cores >= 64:  # For systems with many cores like Kestrel
+            # More aggressive worker counts for high-core systems
+            cpu_workers = min(
+                max(1, int(self.num_cores * 0.75)), 64
+            )  # Use 75% of cores, max 64
+            io_workers = min(
+                max(1, int(self.num_cores * 0.5)), 96
+            )  # Use 50% of cores, max 96
+        else:
+            # More conservative for smaller systems
+            cpu_workers = min(
+                max(1, int(self.num_cores * 0.6)), 32
+            )  # Use 60% of cores, max 32
+            io_workers = min(
+                max(1, int(self.num_cores * 0.4)), 48
+            )  # Use 40% of cores, max 48
 
         return {
             "batch_size": max_faces_per_batch,
