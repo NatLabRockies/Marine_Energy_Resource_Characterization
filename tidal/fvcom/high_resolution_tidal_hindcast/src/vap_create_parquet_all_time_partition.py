@@ -1023,14 +1023,3 @@ def partition_vap_into_parquet_dataset(config, location_key):
         # This should be set to optimize memory usage and speed
         # A value that is too big will overflow memory, and a value that is too small will take too long
         converter.convert_dataset_parallel(ds, batch_size=100000, write_batch_size=64)
-
-
-if __name__ == "__main__":
-    converter = ConvertTidalNcToParquet("/scratch/asimms/Tidal/test_parquet")
-    print("Reading dataset...")
-    ds = xr.open_dataset(
-        "/scratch/asimms/Tidal/AK_cook_inlet/b1_vap/001.AK_cook_inlet.tidal_hindcast_fvcom-1h.b1.20050101.000000.nc"
-    )
-
-    print("Starting parquet partition creation...")
-    converter.convert_dataset(ds, max_faces=10)
