@@ -538,6 +538,7 @@ class ConvertTidalNcToParquet:
         self.config = config
         self.location = location
         self.output_path_map = {}
+        self.verbose_logging = False
 
     @staticmethod
     def _get_partition_path(lat: float, lon: float) -> str:
@@ -611,7 +612,12 @@ class ConvertTidalNcToParquet:
         """
         Unified method to extract data for one or multiple faces with cleaner progress reporting.
         """
-        verbose_mode = self.verbose_logging
+        if not hasattr(self, "verbose_logging"):
+            # For compatibility with the original converter
+            verbose_mode = len(face_indices) <= 25
+        else:
+            # Use class variable for the optimized converter
+            verbose_mode = self.verbose_logging
 
         if verbose_mode:
             print(f"Processing {len(face_indices)} faces")
@@ -639,6 +645,9 @@ class ConvertTidalNcToParquet:
         total_vars = sum(1 for var in vars_to_include if var not in vars_to_skip)
         processed_vars = 0
 
+        # Used to ensure we only print a single progress line
+        last_progress_msg = None
+
         # Pre-fetch all variable data
         for var_name in vars_to_include:
             if var_name in vars_to_skip:
@@ -659,10 +668,11 @@ class ConvertTidalNcToParquet:
                     print(f"Extracting 3D variable {var_name} with dims {var.dims}")
             elif processed_vars % 5 == 0 or processed_vars == total_vars:
                 # Show simplified progress update every 5 variables
-                print(
-                    f"\rExtracting variables: {processed_vars}/{total_vars} ({(processed_vars/total_vars)*100:.0f}%)...",
-                    end="" if processed_vars < total_vars else "\n",
-                )
+                # Ensure we only print a unique progress message once
+                progress_msg = f"\rExtracting variables: {processed_vars}/{total_vars} ({(processed_vars/total_vars)*100:.0f}%)..."
+                if progress_msg != last_progress_msg:
+                    print(progress_msg, end="" if processed_vars < total_vars else "\n")
+                    last_progress_msg = progress_msg
 
             # Extract data based on variable dimensions
             if "sigma_layer" in var.dims and "face" in var.dims and "time" in var.dims:
@@ -700,19 +710,26 @@ class ConvertTidalNcToParquet:
         face_dataframes = {}
         total_faces = len(face_indices)
 
-        print(f"Creating DataFrames for {total_faces} faces...")
+        # Only generate one "Creating DataFrames" message per process
+        print(f"Creating DataFrames for {total_faces} faces...", flush=True)
         progress_interval = max(
             1, min(total_faces // 10, 1000)
         )  # Update every 10% or every 1000 faces
 
+        last_progress_pct = -1  # Track last percentage to avoid duplicate messages
+
         for i, face_idx in enumerate(face_indices):
             # Show progress updates
             if (i + 1) % progress_interval == 0 or i + 1 == total_faces:
-                progress = ((i + 1) / total_faces) * 100
-                print(
-                    f"\rCreating DataFrames: {i+1}/{total_faces} ({progress:.1f}%)...",
-                    end="" if i + 1 < total_faces else "\n",
-                )
+                progress = int((i + 1) / total_faces * 100)
+                # Only print if percentage changed to minimize duplicate messages
+                if progress != last_progress_pct:
+                    print(
+                        f"\rCreating DataFrames: {i+1}/{total_faces} ({progress}%)...",
+                        end="" if i + 1 < total_faces else "\n",
+                        flush=True,
+                    )
+                    last_progress_pct = progress
 
             data_dict = {}
 
