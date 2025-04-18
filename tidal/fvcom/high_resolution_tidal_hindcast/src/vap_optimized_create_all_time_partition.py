@@ -448,6 +448,7 @@ class ConvertTidalNcToParquet:
         self.config = config
         self.location = location
         self.output_path_map = {}
+        self.verbose_logging = False
 
     @staticmethod
     def _get_partition_path(lat: float, lon: float) -> str:
