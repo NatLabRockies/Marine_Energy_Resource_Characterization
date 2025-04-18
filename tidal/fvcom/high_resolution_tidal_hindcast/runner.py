@@ -10,7 +10,11 @@ from src.calculate_vap_average import (
     calculate_vap_monthly_average,
     calculate_vap_yearly_average,
 )
-from src.vap_create_parquet_all_time_partition import partition_vap_into_parquet_dataset
+
+# from src.vap_create_parquet_all_time_partition import partition_vap_into_parquet_dataset
+from src.vap_optimized_create_all_time_partition import (
+    partition_vap_into_parquet_dataset,
+)
 from src.vap_create_parquet_summary import convert_nc_summary_to_parquet
 
 
