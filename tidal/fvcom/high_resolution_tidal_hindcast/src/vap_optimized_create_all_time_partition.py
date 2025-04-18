@@ -80,6 +80,10 @@ class OptimizedTidalConverter:
         temp_output.mkdir(exist_ok=True, parents=True)
         return temp_output
 
+    def _process_chunk(self, chunk_faces, dataset, vars_to_include, temp_converter):
+        """Separate method for processing a chunk of faces to avoid pickling issues"""
+        return temp_converter._extract_face_data(dataset, chunk_faces, vars_to_include)
+
     def _process_in_chunks(
         self,
         dataset,
@@ -97,20 +101,28 @@ class OptimizedTidalConverter:
 
         all_face_dfs = {}
 
-        def process_chunk(chunk_faces):
-            return temp_converter._extract_face_data(
-                dataset, chunk_faces, vars_to_include
-            )
-
         with concurrent.futures.ProcessPoolExecutor(
             max_workers=cpu_workers
         ) as executor:
-            chunk_results = list(executor.map(process_chunk, chunks))
+            # Using a class method instead of a local function to avoid pickling issues
+            futures = []
+            for chunk in chunks:
+                future = executor.submit(
+                    self._process_chunk, chunk, dataset, vars_to_include, temp_converter
+                )
+                futures.append(future)
 
-        for result in chunk_results:
-            all_face_dfs.update(result)
+            # Get results as they complete
+            for future in concurrent.futures.as_completed(futures):
+                chunk_result = future.result()
+                all_face_dfs.update(chunk_result)
 
         return all_face_dfs
+
+    def _write_task(self, args):
+        """Separate method for writing a task to avoid pickling issues"""
+        df, attrs, lat, lon, face_idx = args
+        return self.converter._save_dataframe_to_parquet(df, attrs, lat, lon, face_idx)
 
     def _parallel_write(
         self, all_face_dfs, dataset, temp_converter, attributes, io_workers
@@ -125,14 +137,14 @@ class OptimizedTidalConverter:
             write_tasks.append((df, attributes, lat, lon, face_idx))
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=io_workers) as executor:
+            futures = []
+            for task in write_tasks:
+                future = executor.submit(self._write_task, task)
+                futures.append(future)
 
-            def write_task(args):
-                df, attrs, lat, lon, face_idx = args
-                return temp_converter._save_dataframe_to_parquet(
-                    df, attrs, lat, lon, face_idx
-                )
-
-            saved_paths = list(executor.map(write_task, write_tasks))
+            saved_paths = []
+            for future in concurrent.futures.as_completed(futures):
+                saved_paths.append(future.result())
 
         return saved_paths
 
