@@ -23,6 +23,10 @@ class OptimizedTidalConverter:
         self.memory_info = self._get_system_memory()
         self.num_cores = os.cpu_count()
         self.using_nvme = "TMPDIR" in os.environ
+        # Flag to control verbose logging globally
+        self.verbose_logging = False
+        # Track if we already did memory estimation
+        self.memory_estimation_done = False
 
     def _get_system_memory(self):
         mem = psutil.virtual_memory()
@@ -35,6 +39,9 @@ class OptimizedTidalConverter:
 
     def _estimate_face_memory_usage(self, dataset, sample_size=25):
         """Estimate average memory usage per face with a larger sample size"""
+        # Enable verbose logging during memory estimation
+        self.verbose_logging = True
+
         face_indices = np.random.choice(
             len(dataset.face.values),
             min(sample_size, len(dataset.face.values)),
@@ -51,6 +58,11 @@ class OptimizedTidalConverter:
 
         # Add 10% buffer to the estimate for safety
         avg_face_size = ((end_mem - start_mem) / len(face_indices)) * 1.1
+
+        # Disable verbose logging after memory estimation
+        self.verbose_logging = False
+        self.memory_estimation_done = True
+
         return avg_face_size
 
     def _optimize_batch_size(self, dataset):
@@ -115,6 +127,19 @@ class OptimizedTidalConverter:
 
     def _process_chunk(self, chunk_faces, dataset, vars_to_include, temp_converter):
         """Separate method for processing a chunk of faces to avoid pickling issues"""
+        # Ensure we're using the correct verbose setting in subprocesses
+        if hasattr(self, "verbose_logging"):
+            # If we have a memory_estimation_done attribute, use that to determine verbosity
+            if hasattr(self, "memory_estimation_done") and self.memory_estimation_done:
+                # We're past memory estimation, force quiet mode
+                temp_verbose = False
+            else:
+                temp_verbose = self.verbose_logging
+
+            # Transfer the verbose setting to the converter if it has that attribute
+            if hasattr(temp_converter, "verbose_logging"):
+                temp_converter.verbose_logging = temp_verbose
+
         return temp_converter._extract_face_data(dataset, chunk_faces, vars_to_include)
 
     def _process_in_chunks(
@@ -496,10 +521,9 @@ class ConvertTidalNcToParquet:
         """
         Unified method to extract data for one or multiple faces with cleaner progress reporting.
         """
-        # Only show detailed variable logging when sampling for memory estimation (small batch)
-        verbose_logging = len(face_indices) <= 25
+        verbose_mode = self.verbose_logging
 
-        if verbose_logging:
+        if verbose_mode:
             print(f"Processing {len(face_indices)} faces")
 
         # Common variables needed for all faces
@@ -534,7 +558,7 @@ class ConvertTidalNcToParquet:
             processed_vars += 1
 
             # Only show detailed variable logging in verbose mode
-            if verbose_logging:
+            if verbose_mode:
                 if (
                     "sigma_layer" in var.dims
                     and "face" in var.dims
@@ -640,7 +664,7 @@ class ConvertTidalNcToParquet:
 
                         # Verify data length
                         if len(var_data) != time_dim_len:
-                            if verbose_logging:
+                            if verbose_mode:
                                 print(
                                     f"Warning: {col_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
                                 )
@@ -657,7 +681,7 @@ class ConvertTidalNcToParquet:
 
                     # Verify data length
                     if len(var_data) != time_dim_len:
-                        if verbose_logging:
+                        if verbose_mode:
                             print(
                                 f"Warning: {var_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
                             )
