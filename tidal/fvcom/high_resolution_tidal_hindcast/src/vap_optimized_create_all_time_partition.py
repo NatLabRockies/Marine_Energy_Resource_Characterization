@@ -28,6 +28,51 @@ class OptimizedTidalConverter:
         # Track if we already did memory estimation
         self.memory_estimation_done = False
 
+    def _calculate_theoretical_face_memory(self, dataset, vars_to_include):
+        """Calculate a theoretical estimate of memory per face based on data types and dimensions"""
+        # Get time dimension length
+        time_len = len(dataset.time.values)
+
+        # Start with basic memory for lat/lon and other metadata
+        # DataFrame overhead, index, and basic columns estimate
+        base_memory = 1024 * 1024  # 1MB base overhead
+
+        # Add memory for each variable based on data type
+        total_memory = base_memory
+
+        for var_name in vars_to_include:
+            if var_name in ["nv", "h_center"]:
+                continue
+
+            if var_name not in dataset.variables:
+                continue
+
+            var = dataset[var_name]
+            dtype_size = var.dtype.itemsize
+
+            if "sigma_layer" in var.dims and "face" in var.dims and "time" in var.dims:
+                # 3D variables (time, sigma_layer, face)
+                num_layers = len(dataset.sigma_layer)
+                # Memory for each time series across all layers
+                var_memory = time_len * num_layers * dtype_size
+                total_memory += var_memory
+            elif "face" in var.dims and "time" in var.dims:
+                # 2D variables (time, face)
+                var_memory = time_len * dtype_size
+                total_memory += var_memory
+
+        # Add memory for corner nodes if they exist
+        if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
+            # Typically 3 corner nodes per face
+            corner_nodes = 3
+            # Each corner has lat and lon
+            total_memory += corner_nodes * 2 * time_len * 8  # 8 bytes for float64
+
+        # Add 50% buffer for pandas DataFrame overhead, indices, etc.
+        total_memory = total_memory * 1.5
+
+        return total_memory
+
     def _get_system_memory(self):
         mem = psutil.virtual_memory()
         return {
@@ -38,10 +83,11 @@ class OptimizedTidalConverter:
         }
 
     def _estimate_face_memory_usage(self, dataset, sample_size=25):
-        """Estimate average memory usage per face with a larger sample size"""
+        """Estimate average memory usage per face with multiple methods for reliability"""
         # Enable verbose logging during memory estimation
         self.verbose_logging = True
 
+        # Method 1: Empirical measurement
         face_indices = np.random.choice(
             len(dataset.face.values),
             min(sample_size, len(dataset.face.values)),
@@ -50,14 +96,58 @@ class OptimizedTidalConverter:
 
         # Run garbage collection before measurement to get cleaner baseline
         gc.collect()
-        start_mem = psutil.Process().memory_info().rss
-        face_dfs = self.converter._extract_face_data(
-            dataset, face_indices.tolist(), list(dataset.variables.keys())
-        )
-        end_mem = psutil.Process().memory_info().rss
 
-        # Add 10% buffer to the estimate for safety
-        avg_face_size = ((end_mem - start_mem) / len(face_indices)) * 1.1
+        # Take multiple measurements to get a reliable estimate
+        measurements = []
+        for _ in range(2):  # Try twice to get more reliable results
+            start_mem = psutil.Process().memory_info().rss
+            face_dfs = self.converter._extract_face_data(
+                dataset, face_indices.tolist(), list(dataset.variables.keys())
+            )
+            end_mem = psutil.Process().memory_info().rss
+            mem_diff = end_mem - start_mem
+            if mem_diff > 0:  # Only include positive measurements
+                measurements.append(mem_diff / len(face_indices))
+
+            # Force garbage collection between measurements
+            del face_dfs
+            gc.collect()
+            time.sleep(0.5)  # Short pause to let the OS catch up
+
+        # Method 2: Theoretical calculation
+        theoretical_mem = self._calculate_theoretical_face_memory(
+            dataset, list(dataset.variables.keys())
+        )
+        theoretical_mem_per_face = theoretical_mem / 1
+
+        # Combine the estimates
+        if measurements:
+            empirical_mem = max(
+                sum(measurements) / len(measurements), 1024 * 1024
+            )  # At least 1MB
+            print(
+                f"Empirical memory estimate: {empirical_mem / (1024*1024):.2f} MB per face"
+            )
+        else:
+            empirical_mem = None
+            print("Empirical memory estimation failed, using theoretical only")
+
+        print(
+            f"Theoretical memory estimate: {theoretical_mem_per_face / (1024*1024):.2f} MB per face"
+        )
+
+        # Choose the larger of the two estimates with a safety buffer
+        if empirical_mem is not None:
+            avg_face_size = (
+                max(empirical_mem, theoretical_mem_per_face) * 1.2
+            )  # 20% safety buffer
+        else:
+            avg_face_size = (
+                theoretical_mem_per_face * 1.5
+            )  # Larger buffer for theoretical only
+
+        # Ensure minimum reasonable size (5MB) to avoid too-small estimates
+        avg_face_size = max(avg_face_size, 5 * 1024 * 1024)
 
         # Disable verbose logging after memory estimation
         self.verbose_logging = False
@@ -448,7 +538,6 @@ class ConvertTidalNcToParquet:
         self.config = config
         self.location = location
         self.output_path_map = {}
-        self.verbose_logging = False
 
     @staticmethod
     def _get_partition_path(lat: float, lon: float) -> str:
