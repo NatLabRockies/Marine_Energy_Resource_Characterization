@@ -182,22 +182,66 @@ class OptimizedTidalConverter:
         return saved_paths
 
     def _copy_results(self, temp_dir):
+        """Copy results from temporary storage to final destination with proper error handling"""
         final_dir = self.converter.output_dir
 
-        total_files = sum(1 for _ in temp_dir.glob("**/*.parquet"))
-        copied = 0
+        try:
+            # Get list of all parquet files
+            all_files = list(temp_dir.glob("**/*.parquet"))
+            total_files = len(all_files)
 
-        for src_path in temp_dir.glob("**/*.parquet"):
-            rel_path = src_path.relative_to(temp_dir)
-            dst_path = final_dir / rel_path
-            dst_path.parent.mkdir(exist_ok=True, parents=True)
-            shutil.copy2(src_path, dst_path)
+            if total_files == 0:
+                print("Warning: No parquet files found in temporary directory")
+                return
 
-            copied += 1
-            if copied % 1000 == 0:
-                print(
-                    f"Copied {copied}/{total_files} files ({(copied/total_files)*100:.1f}%)"
-                )
+            copied = 0
+
+            for src_path in all_files:
+                try:
+                    # Extract partition pattern (lat_deg=XX/lon_deg=XX/etc)
+                    partition_pattern = None
+                    path_str = str(src_path)
+                    if "lat_deg=" in path_str:
+                        # Find the partition pattern in the path
+                        idx = path_str.find("lat_deg=")
+                        end_idx = path_str.rfind("/")
+                        if end_idx > idx:
+                            partition_pattern = path_str[idx:end_idx]
+                        else:
+                            partition_pattern = path_str[idx:]
+
+                    if partition_pattern:
+                        # Construct destination path using extracted pattern
+                        dst_path = final_dir / partition_pattern / src_path.name
+                    else:
+                        # Fallback: try to preserve directory structure relative to temp_dir
+                        try:
+                            rel_path = src_path.relative_to(temp_dir)
+                            dst_path = final_dir / rel_path
+                        except ValueError:
+                            # Last resort: just use the filename
+                            dst_path = final_dir / src_path.name
+
+                    # Ensure destination directory exists
+                    dst_path.parent.mkdir(exist_ok=True, parents=True)
+
+                    # Copy the file
+                    shutil.copy2(src_path, dst_path)
+
+                    copied += 1
+                    if copied % 1000 == 0 or copied == total_files:
+                        print(
+                            f"Copied {copied}/{total_files} files ({(copied/total_files)*100:.1f}%)"
+                        )
+
+                except Exception as e:
+                    print(
+                        f"Warning: Error copying {src_path} to final destination: {e}"
+                    )
+
+        except Exception as e:
+            print(f"Error during copy operation: {e}")
+            # Continue with what we have to avoid losing all processed data
 
     def convert_file(self, nc_file):
         temp_dir = self._setup_local_storage()
@@ -229,6 +273,85 @@ class OptimizedTidalConverter:
             "partitions_created": set(),
             "files_created": 0,
         }
+
+        for batch_idx, batch_start in enumerate(range(0, num_faces, batch_size)):
+            batch_end = min(batch_start + batch_size, num_faces)
+            face_indices = list(range(batch_start, batch_end))
+
+            print(
+                f"Processing batch {batch_idx+1}/{total_batches}: faces {batch_start}-{batch_end-1}"
+            )
+
+            start_time = time.time()
+            all_face_dfs = self._process_in_chunks(
+                ds,
+                face_indices,
+                vars_to_include,
+                temp_converter,
+                attributes,
+                cpu_workers,
+            )
+            process_time = time.time() - start_time
+
+            write_start = time.time()
+            saved_paths = self._parallel_write(
+                all_face_dfs, ds, temp_converter, attributes, io_workers
+            )
+            write_time = time.time() - write_start
+
+            stats["files_created"] += len(saved_paths)
+
+            # Handle paths correctly to avoid relative_to errors
+            for path in saved_paths:
+                path_obj = Path(path)
+                if path_obj.exists():
+                    if self.using_nvme:
+                        # For temporary storage, we track only the partition pattern
+                        # Extract the lat/lon partition pattern (lat_deg=XX/lon_deg=XX/etc)
+                        try:
+                            partition_pattern = str(path_obj.parent)
+                            # Find the lat_deg part in the path
+                            if "lat_deg=" in partition_pattern:
+                                # Extract just the partition pattern
+                                idx = partition_pattern.find("lat_deg=")
+                                stats["partitions_created"].add(partition_pattern[idx:])
+                        except Exception as e:
+                            print(
+                                f"Warning: Could not extract partition pattern from {path_obj}: {e}"
+                            )
+                    else:
+                        # For direct storage, use relative path
+                        try:
+                            rel_path = path_obj.parent.relative_to(
+                                self.converter.output_dir
+                            )
+                            stats["partitions_created"].add(str(rel_path))
+                        except ValueError:
+                            # If relative_to fails, just store the full path
+                            stats["partitions_created"].add(str(path_obj.parent))
+
+            del all_face_dfs
+            gc.collect()
+
+            current_mem = psutil.Process().memory_info().rss / (1024 * 1024 * 1024)
+            progress = (batch_end / num_faces) * 100
+
+            print(
+                f"Batch {batch_idx+1} complete. Files: {len(saved_paths)}, "
+                f"Process time: {process_time:.2f}s, Write time: {write_time:.2f}s, "
+                f"Current memory: {current_mem:.2f} GB, Progress: {progress:.1f}%"
+            )
+
+        if self.using_nvme:
+            print("Copying results from temporary storage to final destination")
+            self._copy_results(temp_dir)
+            shutil.rmtree(temp_dir)
+
+        # Ensure partitions_created is a list of strings for serialization
+        stats["partitions_created"] = [str(p) for p in stats["partitions_created"]]
+
+        print(f"Conversion complete for {nc_file}")
+        return stats
 
         for batch_idx, batch_start in enumerate(range(0, num_faces, batch_size)):
             batch_end = min(batch_start + batch_size, num_faces)
