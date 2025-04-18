@@ -50,9 +50,7 @@ class ConvertTidalNcToParquet:
         lat_dec = int(abs(lat * 100) % 100)
         lon_dec = int(abs(lon * 100) % 100)
 
-        return (
-            f"lat_deg={lat_deg}/lon_deg={lon_deg}/lat_dec={lat_dec}/lon_dec={lon_dec}"
-        )
+        return f"lat_deg={lat_deg:02d}/lon_deg={lon_deg:02d}/lat_dec={lat_dec:02d}/lon_dec={lon_dec:02d}"
 
     def _get_partition_file_name(
         self,
