@@ -6,6 +6,8 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 #SBATCH --time=12:00:00
+#SBATCH --partition=nvme
+
 
 # Load necessary modules (if any)
 module load anaconda3/2023.07-2
