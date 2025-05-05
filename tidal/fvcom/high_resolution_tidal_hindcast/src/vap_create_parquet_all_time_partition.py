@@ -3,7 +3,7 @@ import re
 import json
 
 from pathlib import Path
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, Tuple, Callable
 
 import numpy as np
 import xarray as xr
@@ -11,7 +11,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from . import file_manager, file_name_convention_manager, nc_manager
+from . import copy_manager, file_manager, file_name_convention_manager, nc_manager
 
 
 class ConvertTidalNcToParquet:
@@ -26,24 +26,12 @@ class ConvertTidalNcToParquet:
         self.output_dir.mkdir(exist_ok=True, parents=True)
         self.config = config
         self.location = location
-        self.output_path_map = {}
+        self.output_path_map: dict[int, Path] = {}
 
     @staticmethod
     def _get_partition_path(lat: float, lon: float) -> str:
         """
         Generate the partition path based on lat/lon coordinates.
-
-        Parameters
-        ----------
-        lat : float
-            Latitude value
-        lon : float
-            Longitude value
-
-        Returns
-        -------
-        str
-            Partition path in the format: lat_deg=XX/lon_deg=YY/lat_dec=ZZ/lon_dec=WW
         """
         lat_deg = int(lat)
         lon_deg = int(lon)
@@ -59,29 +47,29 @@ class ConvertTidalNcToParquet:
         lon: float,
         df,
         index_max_digits=6,
-        # 1.1 cm precision
         coord_digits_max=7,
     ) -> str:
+        """
+        Generate standardized filename for partition files.
+        """
         # Round latitude and longitude to specified decimal places
         lat_rounded = round(lat, coord_digits_max)
         lon_rounded = round(lon, coord_digits_max)
 
+        # Determine temporal string based on expected_delta_t_seconds
         expected_delta_t_seconds = self.location["expected_delta_t_seconds"]
-        if expected_delta_t_seconds == 3600:
-            temporal_string = "1h"
-        elif expected_delta_t_seconds == 1800:
-            temporal_string = "30m"
-        else:
+        temporal_mapping = {3600: "1h", 1800: "30m"}
+        if expected_delta_t_seconds not in temporal_mapping:
             raise ValueError(
                 f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
             )
+        temporal_string = temporal_mapping[expected_delta_t_seconds]
 
-        # Use the parameters in the format strings
-        # Create the zero-padding format for the index based on index_max_digits
+        # Format strings for padding and precision
         index_format = f"0{index_max_digits}d"
-        # Create the decimal precision format for coordinates based on coord_digits_max
         coord_format = f".{coord_digits_max}f"
 
+        # Use file name convention manager to generate standard filename
         return file_name_convention_manager.generate_filename_for_data_level(
             df,
             self.location["output_name"],
@@ -95,16 +83,6 @@ class ConvertTidalNcToParquet:
     def _extract_attributes(dataset: xr.Dataset) -> Dict:
         """
         Extract global and variable attributes from the dataset.
-
-        Parameters
-        ----------
-        dataset : xr.Dataset
-            The input dataset
-
-        Returns
-        -------
-        Dict
-            Dictionary containing global and variable attributes
         """
         # Get global attributes
         global_attrs = dict(dataset.attrs)
@@ -116,251 +94,95 @@ class ConvertTidalNcToParquet:
 
         return {"global_attrs": global_attrs, "variable_attrs": var_attrs}
 
-    @staticmethod
-    def _create_time_series_df(
-        dataset: xr.Dataset, face_idx: int, vars_to_include: List[str]
-    ) -> pd.DataFrame:
-        """
-        Create a time-indexed DataFrame for a specific face.
-
-        Parameters
-        ----------
-        dataset : xr.Dataset
-            The input dataset
-        face_idx : int
-            The face index to extract
-        vars_to_include : List[str]
-            List of variable names to include
-
-        Returns
-        -------
-        pd.DataFrame
-            DataFrame with time as index and variables as columns
-        """
-        # Dictionary to store data for DataFrame
-        data_dict = {}
-
-        print(f"Vars to include are: {vars_to_include}")
-
-        # Get time values for index
-        print("Extracting time values...")
-        time_values = dataset.time.values
-
-        data_dict["lat_center"] = [dataset.lat_center.values[face_idx]] * len(
-            time_values
-        )
-        data_dict["lon_center"] = [dataset.lon_center.values[face_idx]] * len(
-            time_values
-        )
-
-        # Extract triangle vertex information from nv (node vertex) variable
-        # nv uses Fortran-style indexing, so we need to adjust
-        # Get the first timestamp since topology doesn't change
-        print("Extracting nv values...")
-        nv_data = dataset["nv"].isel(time=0, face=face_idx).values
-
-        # Get node indices for the three corners of this face
-        # Adjust for possible Fortran 1-based indexing by subtracting 1
-        node_indices = [int(idx - 1) if idx > 0 else int(idx) for idx in nv_data]
-
-        print("Extracting data for each corner node...")
-        # Extract lat/lon for each corner node
-        if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
-            for i, node_idx in enumerate(node_indices):
-                # Add vertex information as static columns
-                corner_num = i + 1  # 1-based for clarity
-
-                # Add corner lat/lon values
-                lat_node_val = float(dataset["lat_node"].values[node_idx])
-                lon_node_val = float(dataset["lon_node"].values[node_idx])
-
-                # Add to data dict with repeated values for each time step
-                data_dict[f"element_corner_{corner_num}_lat"] = np.repeat(
-                    lat_node_val, len(time_values)
-                )
-                data_dict[f"element_corner_{corner_num}_lon"] = np.repeat(
-                    lon_node_val, len(time_values)
-                )
-
-        # vars_to_include.remove("lat_node")
-        # vars_to_include.remove("lon_node")
-        # vars_to_include.remove("face_node_index")
-        # vars_to_include.remove("time")
-
-        print("===LOOPING===")
-
-        vars_to_skip = ["nv", "h_center"]
-
-        # Extract data for each variable
-        for var_name in vars_to_include:
-            var = dataset[var_name]
-
-            if var_name in vars_to_skip:
-                continue
-
-            # Check variable dimensions
-            if "sigma_layer" in var.dims and "face" in var.dims:
-                print(f"Extracting data for {var_name}")
-                # Handle 3D variables (time, sigma_layer, face)
-                for layer_idx in range(len(dataset.sigma_layer)):
-                    # Create column name with layer information
-                    col_name = f"{var_name}_layer_{layer_idx}"
-                    # Extract data for specific face and layer across all times
-                    data_dict[col_name] = var.isel(
-                        face=face_idx, sigma_layer=layer_idx
-                    ).values
-                    print(f"{col_name}.shape = {data_dict[col_name].shape}")
-
-            elif "face" in var.dims and "time" in var.dims:
-                print(f"Extracting data for {var_name}")
-                # Handle 2D variables (time, face)
-                data_dict[var_name] = var.isel(face=face_idx).values
-                print(f"{var_name}.shape = {data_dict[var_name].shape}")
-
-            # elif "face" in var.dims and "time" not in var.dims:
-            #     # Handle static face variables (e.g., lat_center, lon_center)
-            #     # Repeat the value for each time step
-            #     value = var.isel(face=face_idx).values
-            #     data_dict[var_name] = np.repeat(value, len(time_values))
-
-        # Create DataFrame with time as index
-        df = pd.DataFrame(data_dict, index=time_values)
-        df.index.name = "time"
-
-        return df
-
-    @staticmethod
-    def _create_time_series_dfs_batch(
-        dataset: xr.Dataset, face_indices: List[int], vars_to_include: List[str]
+    def _extract_face_data(
+        self, dataset: xr.Dataset, face_indices: List[int], vars_to_include: List[str]
     ) -> Dict[int, pd.DataFrame]:
         """
-        Create time-indexed DataFrames for multiple faces at once with optimized batch data fetching.
-
-        Parameters
-        ----------
-        dataset : xr.Dataset
-            The input dataset
-        face_indices : List[int]
-            List of face indices to extract
-        vars_to_include : List[str]
-            List of variable names to include
-
-        Returns
-        -------
-        Dict[int, pd.DataFrame]
-            Dictionary mapping face indices to DataFrames with time as index
+        Unified method to extract data for one or multiple faces.
+        Replaces _create_time_series_df and _create_time_series_dfs_batch
         """
-        print(f"Processing {len(face_indices)} faces in batch")
+        print(f"Processing {len(face_indices)} faces")
 
-        # Get time values for index
+        # Common variables needed for all faces
         time_values = dataset.time.values
         time_dim_len = len(time_values)
-        print(f"Time dimension length: {time_dim_len}")
 
-        # Dictionary to store batch data fetched from xarray
-        batch_data = {}
-
-        # Pre-fetch static data for the batch
-        batch_data["lat_center"] = dataset.lat_center.values[face_indices]
-        batch_data["lon_center"] = dataset.lon_center.values[face_indices]
-
-        # Get nv data for all faces at once
-        batch_data["nv"] = dataset["nv"].isel(time=0).isel(face=face_indices).values.T
-        print(f"nv shape: {batch_data['nv'].shape}")
-        # nv_data = batch_data["nv"][i]
-        print(f"nv data[0]: {batch_data['nv'][0]}")
-        print(f"nv data[1]: {batch_data['nv'][1]}")
+        # Pre-fetch static data for all faces
+        batch_data = {
+            "lat_center": dataset.lat_center.values[face_indices],
+            "lon_center": dataset.lon_center.values[face_indices],
+            "nv": dataset["nv"].isel(time=0).isel(face=face_indices).values.T,
+        }
 
         # Pre-fetch lat_node and lon_node if they exist
         if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
             batch_data["lat_node"] = dataset["lat_node"].values
             batch_data["lon_node"] = dataset["lon_node"].values
 
-        # Pre-fetch all variable data
+        # Variables to skip in extraction
         vars_to_skip = ["nv", "h_center"]
 
+        # Pre-fetch all variable data
         for var_name in vars_to_include:
             if var_name in vars_to_skip:
                 continue
 
             var = dataset[var_name]
 
-            # Check variable dimensions and fetch accordingly
+            # Extract data based on variable dimensions
             if "sigma_layer" in var.dims and "face" in var.dims and "time" in var.dims:
                 # 3D variables (time, sigma_layer, face)
-                # Select all requested faces at once for all layers
-                # This preserves all dimensions but filters to just our faces
                 print(f"Extracting 4D variable {var_name} with dims {var.dims}")
                 selected_data = var.isel(face=face_indices)
 
                 batch_data[var_name] = {}
-
                 for layer_idx in range(len(dataset.sigma_layer)):
-                    # Now extract the specific layer from our already-filtered data
                     layer_data = selected_data.isel(sigma_layer=layer_idx)
 
-                    # At this point, we should have dimensions [time, face]
-                    # Ensure the data is in the expected shape for efficient slicing
+                    # Ensure time dimension is first
                     if layer_data.dims[0] == "time" and layer_data.dims[1] == "face":
                         data_array = layer_data.values
                     else:
-                        # Transpose to ensure [time, face] ordering
                         data_array = layer_data.transpose("time", "face").values
 
-                    # Store the data array
                     batch_data[var_name][layer_idx] = data_array
 
             elif "face" in var.dims and "time" in var.dims:
                 # 2D variables (time, face)
-                # Select all faces at once
                 print(f"Extracting 3D variable {var_name} with dims {var.dims}")
                 faces_data = var.isel(face=face_indices)
 
-                # Get time dimension index (assume 0, but check)
-                time_dim_idx = 0
+                # Ensure time dimension is first
                 if "time" in faces_data.dims:
                     time_dim_idx = faces_data.dims.index("time")
+                    if time_dim_idx != 0:
+                        dim_order = list(faces_data.dims)
+                        dim_order.remove("time")
+                        dim_order.insert(0, "time")
+                        faces_data = faces_data.transpose(*dim_order)
 
-                # Directly extract values - should be array of shape [time, num_faces]
-                data_array = faces_data.values
+                batch_data[var_name] = faces_data.values
 
-                # Ensure time is the first dimension
-                if time_dim_idx != 0:
-                    dim_order = list(faces_data.dims)
-                    dim_order.remove("time")
-                    dim_order.insert(0, "time")
-                    faces_data = faces_data.transpose(*dim_order)
-                    data_array = faces_data.values
-
-                # Store the data array
-                batch_data[var_name] = data_array
-
-        print("Creating DataFrames for each face...")
-        # Now create DataFrames using the pre-fetched data
+        # Create DataFrames for each face
         face_dataframes = {}
         for i, face_idx in enumerate(face_indices):
             data_dict = {}
 
-            # Add center coordinates - repeat for each time step
+            # Add center coordinates
             data_dict["lat_center"] = [batch_data["lat_center"][i]] * time_dim_len
             data_dict["lon_center"] = [batch_data["lon_center"][i]] * time_dim_len
 
-            # Get node vertex data
+            # Process node vertex data
             nv_data = batch_data["nv"][i]
-
-            # Get node indices for the three corners of this face
             node_indices = [int(idx - 1) if idx > 0 else int(idx) for idx in nv_data]
 
-            # Extract lat/lon for each corner node
+            # Add corner node data if available
             if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
                 for j, node_idx in enumerate(node_indices):
-                    corner_num = j + 1  # 1-based for clarity
-
-                    # Add corner lat/lon values using pre-fetched data
+                    corner_num = j + 1
                     lat_node_val = float(batch_data["lat_node"][node_idx])
                     lon_node_val = float(batch_data["lon_node"][node_idx])
 
-                    # Add to data dict with repeated values for each time step
                     data_dict[f"element_corner_{corner_num}_lat"] = np.repeat(
                         lat_node_val, time_dim_len
                     )
@@ -368,30 +190,25 @@ class ConvertTidalNcToParquet:
                         lon_node_val, time_dim_len
                     )
 
-            # Add variable data - ensure proper time dimension
+            # Add variable data for this face
             for var_name in vars_to_include:
                 if var_name in vars_to_skip or var_name not in batch_data:
                     continue
 
-                # Check variable dimensions
                 if (
                     "sigma_layer" in dataset[var_name].dims
                     and "face" in dataset[var_name].dims
                 ):
-                    # Handle 3D variables (time, sigma_layer, face)
+                    # Handle layered variables
                     for layer_idx in range(len(dataset.sigma_layer)):
                         col_name = f"{var_name}_layer_{layer_idx}"
-
-                        # Get the time series for this face
-                        # This accesses the correct column from our batch data array
                         var_data = batch_data[var_name][layer_idx][:, i]
 
-                        # Verify data length matches time dimension
+                        # Verify data length
                         if len(var_data) != time_dim_len:
                             print(
                                 f"Warning: {col_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
                             )
-                            # Skip this variable
                             continue
 
                         data_dict[col_name] = var_data
@@ -400,27 +217,22 @@ class ConvertTidalNcToParquet:
                     "face" in dataset[var_name].dims
                     and "time" in dataset[var_name].dims
                 ):
-                    # Handle 2D variables (time, face)
-                    # Get the time series for this face
+                    # Handle 2D variables
                     var_data = batch_data[var_name][:, i]
 
-                    # Verify data length matches time dimension
+                    # Verify data length
                     if len(var_data) != time_dim_len:
                         print(
                             f"Warning: {var_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
                         )
-                        # Skip this variable
                         continue
 
                     data_dict[var_name] = var_data
 
-            # Create DataFrame with time as index
+            # Create DataFrame with time index
             df = pd.DataFrame(data_dict, index=time_values)
             df.index.name = "time"
             face_dataframes[face_idx] = df
-
-        print(f"Successfully created DataFrames for {len(face_dataframes)} faces...")
-        print(f"The first 3 keys are: {list(face_dataframes.keys())[:3]}")
 
         return face_dataframes
 
@@ -428,19 +240,9 @@ class ConvertTidalNcToParquet:
     def _prepare_netcdf_compatible_metadata(attributes: Dict) -> Dict:
         """
         Process and prepare metadata to be compatible with NetCDF/xarray structure.
-
-        Parameters
-        ----------
-        attributes : Dict
-            Dictionary containing metadata to be included
-
-        Returns
-        -------
-        Dict
-            Dictionary of metadata keys and values converted to bytes
         """
 
-        # Custom JSON encoder to handle NumPy types and other special types
+        # Custom JSON encoder for NumPy types
         class NumpyEncoder(json.JSONEncoder):
             def default(self, obj):
                 if isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8)):
@@ -459,22 +261,17 @@ class ConvertTidalNcToParquet:
 
         metadata = {}
 
-        # Add variable attributes
-        # For each variable in the DataFrame, store its attributes
+        # Process attributes based on structure
         if "variable_attributes" in attributes:
             for var_name, var_attrs in attributes["variable_attributes"].items():
                 for attr_name, attr_value in var_attrs.items():
-                    # Create keys in format: var_name:attr_name
                     metadata[f"{var_name}:{attr_name}"] = attr_value
 
-        # Add global attributes
         if "global_attributes" in attributes:
             for attr_name, attr_value in attributes["global_attributes"].items():
-                # Prefix global attributes to distinguish them
                 metadata[f"global:{attr_name}"] = attr_value
 
-        # If attributes is a flat dictionary (not separated into variable/global)
-        # Store as-is, assuming they are global attributes
+        # Handle flat dictionary case
         if not isinstance(attributes, dict) or (
             "variable_attributes" not in attributes
             and "global_attributes" not in attributes
@@ -482,122 +279,138 @@ class ConvertTidalNcToParquet:
             for attr_name, attr_value in attributes.items():
                 metadata[f"global:{attr_name}"] = attr_value
 
-        # Add metadata markers for parsing when reading the file back
+        # Add metadata markers
         metadata["_WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
         metadata["_WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
 
-        # Convert all metadata values to strings and then to bytes (required by pyarrow)
+        # Convert all metadata values to bytes
         metadata_bytes = {}
         for k, v in metadata.items():
-            # Handle different types of values appropriately
-            if (
-                isinstance(v, (list, dict, tuple))
-                or hasattr(v, "__dict__")
-                or isinstance(v, np.ndarray)
-            ):
-                # For complex types, use JSON serialization with NumPy encoder
-                try:
+            try:
+                if (
+                    isinstance(v, (list, dict, tuple))
+                    or hasattr(v, "__dict__")
+                    or isinstance(v, np.ndarray)
+                ):
                     metadata_bytes[k] = json.dumps(v, cls=NumpyEncoder).encode("utf-8")
-                except TypeError as e:
-                    # Fallback if JSON encoding fails
+                else:
                     metadata_bytes[k] = str(v).encode("utf-8")
-                    print(
-                        f"Warning: Could not JSON encode {k}, using string representation instead: {e}"
-                    )
-            else:
-                # For simple types, use string representation
+            except TypeError as e:
                 metadata_bytes[k] = str(v).encode("utf-8")
+                print(f"Warning: Could not JSON encode {k}: {e}")
 
         return metadata_bytes
 
     def _get_face_index_string(self, filename):
+        """Extract face index from filename."""
         parts = str(filename).split(".")
-
         for part in parts:
             if "face=" in part:
                 return part.replace("face=", "")
-
         return None
 
-    def _save_parquet_with_metadata(
-        self, df: pd.DataFrame, attributes: Dict, partition_path: str, filename: str
-    ) -> None:
+    def _save_dataframe_to_parquet(
+        self, df: pd.DataFrame, attributes: Dict, lat: float, lon: float, face_idx: int
+    ) -> str:
         """
-        Save DataFrame to Parquet with metadata.
-        If files with the same face index already exist, concatenate them with the new data.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            DataFrame to save
-        attributes : Dict
-            Dictionary containing metadata to be included
-        partition_path : str
-            Path for partitioning
-        filename : str
-            Output filename
+        Unified method to save DataFrame to Parquet with proper partitioning and metadata.
         """
-        # Create full directory path for the partition
+        # Generate partition path and create directory
+        partition_path = self._get_partition_path(lat, lon)
         full_dir = Path(self.output_dir, partition_path)
         full_dir.mkdir(exist_ok=True, parents=True)
 
-        face_idx = self._get_face_index_string(filename)
+        # Generate filename
+        filename = f"face_{face_idx}.parquet"
+        if self.config is not None:
+            filename = self._get_partition_file_name(face_idx, lat, lon, df)
 
+        # Check for existing files with same face index
         output_filename = filename
-        # If we found a face index, check for existing files with the same index
         if face_idx is not None:
             existing_files = sorted(list(full_dir.glob("*.parquet")))
-            matching_files = []
+            matching_files = [
+                file for file in existing_files if f"face={face_idx}" in file.name
+            ]
 
-            for file in existing_files:
-                if f"face={face_idx}" in file.name:
-                    matching_files.append(file)
-
-            # If matching files found, concatenate them with the new data
-            if len(matching_files) > 0:
+            # Handle existing files
+            if matching_files:
                 output_filename = matching_files[0].name
-                # Use the new filename as the final filename
-                # Read and concatenate all existing files
-                dfs = [df]  # Start with the new data
+                # Concatenate all existing files with new data
+                dfs = [df]
 
                 for file in matching_files:
                     existing_df = pd.read_parquet(file)
                     dfs.append(existing_df)
-                    # Delete the file after reading
-                    file.unlink()
+                    file.unlink()  # Delete after reading
 
-                # Concatenate all dataframes, remove duplicates, and sort
-                df = pd.concat(dfs)
-                # df = df[~df.index.duplicated(keep="last")]
-                df = df.sort_index()
+                # Combine, deduplicate, and sort
+                df = pd.concat(dfs).sort_index()
 
-        # Full path to parquet file
+        # Full path to output file
         full_path = Path(full_dir, output_filename)
 
-        # Convert DataFrame to pyarrow Table
+        # Convert to PyArrow table with metadata
         table = pa.Table.from_pandas(df)
-
-        # Process metadata using separate method
-        metadata_bytes = ConvertTidalNcToParquet._prepare_netcdf_compatible_metadata(
-            attributes
-        )
-
-        # Update table metadata
+        metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
         table = table.replace_schema_metadata(
             {**table.schema.metadata, **metadata_bytes}
         )
 
         # Write to parquet
         pq.write_table(table, full_path)
+        return str(full_path)
+
+    def _process_batch(
+        self,
+        dataset: xr.Dataset,
+        face_indices: List[int],
+        vars_to_include: List[str],
+        attributes: Dict,
+    ) -> Dict:
+        """
+        Process a batch of faces - extract data and save to Parquet files.
+        """
+        # Extract data for all faces in batch
+        face_dfs = self._extract_face_data(dataset, face_indices, vars_to_include)
+
+        # Get coordinates for all faces
+        lat_center = dataset.lat_center.values
+        lon_center = dataset.lon_center.values
+
+        # Prepare write tasks
+        write_tasks = []
+        for face_idx, df in face_dfs.items():
+            lat = float(lat_center[face_idx])
+            lon = float(lon_center[face_idx])
+            write_tasks.append((df, attributes, lat, lon, face_idx))
+
+        # Process write tasks
+        saved_files = []
+        for df, attrs, lat, lon, face_idx in write_tasks:
+            saved_path = self._save_dataframe_to_parquet(df, attrs, lat, lon, face_idx)
+            saved_files.append(saved_path)
+
+        # Return statistics for this batch
+        return {
+            "files_created": len(saved_files),
+            "partitions_created": set(
+                Path(p).parent.relative_to(self.output_dir) for p in saved_files
+            ),
+        }
 
     def convert_dataset(
         self,
         dataset: xr.Dataset,
         vars_to_include: Optional[List[str]] = None,
         max_faces: Optional[int] = None,
+        batch_size: int = 1000,
+        parallel: bool = False,
+        write_batch_size: int = 64,
     ) -> Dict:
         """
-        Convert an xarray Dataset to partitioned Parquet files.
+        Unified method to convert an xarray Dataset to partitioned Parquet files.
+        Combines functionality of convert_dataset, convert_dataset_batched, and convert_dataset_parallel
 
         Parameters
         ----------
@@ -606,418 +419,194 @@ class ConvertTidalNcToParquet:
         vars_to_include : List[str], optional
             List of variable names to include. If None, includes all variables.
         max_faces : int, optional
-            Maximum number of faces to process (for testing)
+            Maximum number of faces to process
+        batch_size : int, optional
+            Number of faces to process in each batch
+        parallel : bool, optional
+            Whether to use parallel processing
+        write_batch_size : int, optional
+            Number of files to write in parallel (only used if parallel=True)
 
         Returns
         -------
         Dict
             Statistics about the conversion process
         """
-        # Extract dataset attributes
-        print("Extracting attributes...")
+        # Extract attributes and determine variables to include
         attributes = self._extract_attributes(dataset)
-
-        # Determine variables to include
         if vars_to_include is None:
             vars_to_include = list(dataset.variables.keys())
 
-        # Get coordinates
-        lat_center = dataset.lat_center.values
-        lon_center = dataset.lon_center.values
-
-        # Determine the number of faces to process
-        num_faces = len(lat_center)
+        # Determine number of faces to process
+        num_faces = len(dataset.lat_center.values)
         if max_faces is not None:
             num_faces = min(num_faces, max_faces)
 
-        # Statistics
+        # Initialize statistics
         stats = {
             "total_faces": num_faces,
             "partitions_created": set(),
             "files_created": 0,
         }
 
-        print("Processing dataframe by face...")
+        # Process faces in batches
+        for batch_start in range(0, num_faces, batch_size):
+            batch_end = min(batch_start + batch_size, num_faces)
+            face_indices = list(range(batch_start, batch_end))
 
-        # Process each face
-        for face_idx in range(num_faces):
-            print(f"Processing face {face_idx} of {num_faces}...")
+            print(
+                f"Processing batch of faces {batch_start} to {batch_end-1} (batch size: {len(face_indices)})"
+            )
+
+            if parallel:
+                # Use parallel processing for this batch
+                batch_stats = self._process_batch_parallel(
+                    dataset, face_indices, vars_to_include, attributes, write_batch_size
+                )
+            else:
+                # Use sequential processing for this batch
+                batch_stats = self._process_batch(
+                    dataset, face_indices, vars_to_include, attributes
+                )
+
+            # Update overall statistics
+            stats["files_created"] += batch_stats["files_created"]
+            stats["partitions_created"].update(batch_stats["partitions_created"])
+
+            # Report progress
+            progress = int((batch_end / num_faces) * 100)
+            print(f"Progress: {progress}% ({batch_end}/{num_faces} faces processed)")
+
+        # Convert set to list for serialization
+        stats["partitions_created"] = list(stats["partitions_created"])
+        return stats
+
+    def _process_batch_parallel(
+        self,
+        dataset: xr.Dataset,
+        face_indices: List[int],
+        vars_to_include: List[str],
+        attributes: Dict,
+        write_batch_size: int,
+    ) -> Dict:
+        """
+        Process a batch of faces using parallel I/O operations.
+        """
+        # Extract data for all faces in batch
+        face_dfs = self._extract_face_data(dataset, face_indices, vars_to_include)
+
+        # Get coordinates for all faces
+        lat_center = dataset.lat_center.values
+        lon_center = dataset.lon_center.values
+
+        # Prepare write tasks
+        all_write_tasks = []
+        for face_idx, df in face_dfs.items():
             lat = float(lat_center[face_idx])
             lon = float(lon_center[face_idx])
 
-            # Generate partition path
-            print("Generating partition path...")
+            # Generate partition path and create directory
             partition_path = self._get_partition_path(lat, lon)
-            print(f"Partition path is: {partition_path}...")
+            full_dir = Path(self.output_dir, partition_path)
+            full_dir.mkdir(exist_ok=True, parents=True)
 
-            stats["partitions_created"].add(partition_path)
-
-            # Create time series DataFrame for this face
-            print("Creating time series df...")
-            df = self._create_time_series_df(dataset, face_idx, vars_to_include)
-
-            # Filename includes face index for uniqueness
+            # Generate filename
             filename = f"face_{face_idx}.parquet"
             if self.config is not None:
                 filename = self._get_partition_file_name(face_idx, lat, lon, df)
 
-            # Save to parquet with metadata
-            print("Saving parquet file...")
-            self._save_parquet_with_metadata(df, attributes, partition_path, filename)
-            stats["files_created"] += 1
+            all_write_tasks.append((df, attributes, partition_path, filename, face_idx))
 
-            print(f"Processed {face_idx}/{num_faces} faces")
+        # Process write tasks in parallel batches
+        saved_paths = []
+        partitions_created = set()
 
-        # Convert set to list for easier serialization
-        stats["partitions_created"] = list(stats["partitions_created"])
+        for i in range(0, len(all_write_tasks), write_batch_size):
+            batch_tasks = all_write_tasks[i : i + write_batch_size]
+            batch_paths = self._save_parquet_with_metadata_parallel(batch_tasks)
+            saved_paths.extend(batch_paths)
 
-        return stats
+            # Track partitions created
+            for path_str in batch_paths:
+                path = Path(path_str)
+                partitions_created.add(path.parent.relative_to(self.output_dir))
 
-    def convert_dataset_batched(
-        self,
-        dataset: xr.Dataset,
-        vars_to_include: Optional[List[str]] = None,
-        max_faces: Optional[int] = None,
-        batch_size: int = 1000,
-    ) -> Dict:
-        """
-        Convert an xarray Dataset to partitioned Parquet files using batch processing.
-
-        Parameters
-        ----------
-        dataset : xr.Dataset
-            The input dataset
-        vars_to_include : List[str], optional
-            List of variable names to include. If None, includes all variables.
-        max_faces : int, optional
-            Maximum number of faces to process (for testing)
-        batch_size : int, optional
-            Number of faces to process in each batch
-
-        Returns
-        -------
-        Dict
-            Statistics about the conversion process
-        """
-        # Extract dataset attributes
-        print("Extracting attributes...")
-        attributes = self._extract_attributes(dataset)
-
-        # Determine variables to include
-        if vars_to_include is None:
-            vars_to_include = list(dataset.variables.keys())
-
-        # Get coordinates
-        lat_center = dataset.lat_center.values
-        lon_center = dataset.lon_center.values
-
-        # Determine the number of faces to process
-        num_faces = len(lat_center)
-        if max_faces is not None:
-            num_faces = min(num_faces, max_faces)
-
-        # Statistics
-        stats = {
-            "total_faces": num_faces,
-            "partitions_created": set(),
-            "files_created": 0,
+        return {
+            "files_created": len(saved_paths),
+            "partitions_created": partitions_created,
         }
-
-        print(f"Processing {num_faces} faces in batches of {batch_size}...")
-
-        # Process faces in batches
-        for batch_start in range(0, num_faces, batch_size):
-            batch_end = min(batch_start + batch_size, num_faces)
-            face_indices = list(range(batch_start, batch_end))
-
-            print(
-                f"Processing batch of faces {batch_start} to {batch_end-1} (batch size: {len(face_indices)})"
-            )
-
-            # Create time series DataFrames for all faces in this batch
-            print("Creating time series dataframes for batch...")
-            face_dfs = self._create_time_series_dfs_batch(
-                dataset, face_indices, vars_to_include
-            )
-
-            # Process and save each face's DataFrame
-            print("Saving each face...")
-            for face_idx, df in face_dfs.items():
-                lat = float(lat_center[face_idx])
-                lon = float(lon_center[face_idx])
-
-                # Generate partition path
-                partition_path = self._get_partition_path(lat, lon)
-                stats["partitions_created"].add(partition_path)
-
-                # Generate filename
-                filename = f"face_{face_idx}.parquet"
-                if self.config is not None:
-                    filename = self._get_partition_file_name(face_idx, lat, lon, df)
-
-                # Save to parquet with metadata
-                self._save_parquet_with_metadata(
-                    df, attributes, partition_path, filename
-                )
-                stats["files_created"] += 1
-
-            print(
-                f"Processed batch {batch_start}-{batch_end-1} ({stats['files_created']}/{num_faces} faces)"
-            )
-
-        print(f"Completed processing all {stats['files_created']} faces")
-
-        # Convert set to list for easier serialization
-        stats["partitions_created"] = list(stats["partitions_created"])
-
-        return stats
 
     @staticmethod
     def _parallel_save_parquet(args):
-        """
-        Helper function to save a DataFrame to Parquet in parallel.
-
-        Parameters
-        ----------
-        args : tuple
-            Tuple containing (table, full_path)
-
-        Returns
-        -------
-        str
-            Path where the file was saved
-        """
+        """Helper function to save a DataFrame to Parquet in parallel."""
         table, full_path = args
         pq.write_table(table, full_path)
         return str(full_path)
 
-    @staticmethod
-    def _save_parquet_batch_parallel(batch_tasks):
-        """
-        Save multiple Parquet files in parallel.
-
-        Parameters
-        ----------
-        batch_tasks : list
-            List of tuples, each containing (table, full_path)
-
-        Returns
-        -------
-        list
-            List of paths where files were saved
-        """
-        # Use a ThreadPoolExecutor since the IO operations are the bottleneck
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            results = list(
-                executor.map(
-                    ConvertTidalNcToParquet._parallel_save_parquet, batch_tasks
-                )
-            )
-        return results
-
     def _save_parquet_with_metadata_parallel(self, write_tasks):
-        """
-        Prepare and save multiple DataFrames to Parquet with metadata in parallel.
-
-        Parameters
-        ----------
-        write_tasks : list
-            List of tuples, each containing (df, attributes, partition_path, filename)
-
-        Returns
-        -------
-        list
-            Paths of saved files
-        """
+        """Prepare and save multiple DataFrames to Parquet with metadata in parallel."""
         batch_tasks = []
 
         for df, attributes, partition_path, filename, face_idx in write_tasks:
-            output_df = None
-            output_path = None
-
+            # Handle existing files
             if face_idx in self.output_path_map:
-                # Concat with existing file using name from existing file
+                # Concat with existing file
                 full_path = self.output_path_map[face_idx]
-                # print(f"Found full path: {full_path}")
                 existing_df = pd.read_parquet(full_path)
-                # print("existing df has info")
-                # print(existing_df.info())
-                # print("Concatenating full path with input_df...")
-                concat_df = pd.concat([existing_df, df])
-                concat_df = concat_df.sort_index()
-                # print("concat df has info")
-                # print(concat_df.info())
-
-                output_df = concat_df
+                output_df = pd.concat([existing_df, df]).sort_index()
                 output_path = full_path
-                # print("output df has info")
-                # print(output_df.info())
-                # print("Output path is:", output_path)
-                # exit()
             else:
-                # Create full directory path for the partition
+                # Create new file
                 full_dir = Path(self.output_dir, partition_path)
                 full_dir.mkdir(exist_ok=True, parents=True)
-                output_filename = filename
-                # Full path to parquet file
-                full_path = Path(full_dir, output_filename)
+                full_path = Path(full_dir, filename)
                 self.output_path_map[face_idx] = full_path
-
                 output_df = df
                 output_path = full_path
 
-            # Convert DataFrame to pyarrow Table
+            # Convert to PyArrow table with metadata
             table = pa.Table.from_pandas(output_df)
-
-            # Process metadata using separate method
-            # TODO: Make sure this is correct if we always use the most recent dataset
-            metadata_bytes = (
-                ConvertTidalNcToParquet._prepare_netcdf_compatible_metadata(attributes)
-            )
-
-            # Update table metadata
+            metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
             table = table.replace_schema_metadata(
                 {**table.schema.metadata, **metadata_bytes}
             )
-
-            # Add task to batch
             batch_tasks.append((table, output_path))
 
         # Execute parallel writes
-        return ConvertTidalNcToParquet._save_parquet_batch_parallel(batch_tasks)
-
-    def convert_dataset_parallel(
-        self,
-        dataset,
-        vars_to_include=None,
-        max_faces=None,
-        batch_size=100000,
-        write_batch_size=64,
-    ):
-        """
-        Convert an xarray Dataset to partitioned Parquet files using parallel processing.
-
-        Parameters
-        ----------
-        dataset : xr.Dataset
-            The input dataset
-        vars_to_include : list, optional
-            List of variable names to include. If None, includes all variables.
-        max_faces : int, optional
-            Maximum number of faces to process (for testing)
-        batch_size : int, optional
-            Number of faces to process in each batch
-        write_batch_size : int, optional
-            Number of files to write in parallel
-
-        Returns
-        -------
-        dict
-            Statistics about the conversion process
-        """
-        # Extract dataset attributes
-        print("Extracting attributes...")
-        attributes = self._extract_attributes(dataset)
-
-        # Determine variables to include
-        if vars_to_include is None:
-            vars_to_include = list(dataset.variables.keys())
-
-        # Get coordinates
-        lat_center = dataset.lat_center.values
-        lon_center = dataset.lon_center.values
-
-        # Determine the number of faces to process
-        num_faces = len(lat_center)
-        if max_faces is not None:
-            num_faces = min(num_faces, max_faces)
-
-        # Statistics
-        stats = {
-            "total_faces": num_faces,
-            "partitions_created": set(),
-            "files_created": 0,
-        }
-
-        print(f"Processing {num_faces} faces in batches of {batch_size}...")
-
-        # Process faces in batches
-        total_written = 0
-        last_progress = -1
-
-        for batch_start in range(0, num_faces, batch_size):
-            batch_end = min(batch_start + batch_size, num_faces)
-            face_indices = list(range(batch_start, batch_end))
-            print(
-                f"Processing batch of faces {batch_start} to {batch_end-1} (batch size: {len(face_indices)})"
-            )
-
-            # Create time series DataFrames for all faces in this batch
-            print("Creating time series dataframes for batch...")
-            face_dfs = self._create_time_series_dfs_batch(
-                dataset, face_indices, vars_to_include
-            )
-
-            # Prepare write tasks
-            write_tasks = []
-            for face_idx, df in face_dfs.items():
-                lat = float(lat_center[face_idx])
-                lon = float(lon_center[face_idx])
-
-                # Generate partition path
-                partition_path = self._get_partition_path(lat, lon)
-                stats["partitions_created"].add(partition_path)
-
-                # Generate filename
-                filename = f"face_{face_idx}.parquet"
-                if self.config is not None:
-                    filename = self._get_partition_file_name(face_idx, lat, lon, df)
-
-                # Collect write tasks
-                write_tasks.append((df, attributes, partition_path, filename, face_idx))
-
-                # When we've collected enough tasks or reached the end, process them in parallel
-                if len(write_tasks) >= write_batch_size or face_idx == face_indices[-1]:
-                    # Calculate progress percentage
-                    progress = int((total_written / num_faces) * 100)
-
-                    # Only log when progress percentage changes significantly (every 5%)
-                    if progress // 5 > last_progress // 5 or total_written == 0:
-                        print(
-                            f"Writing files: {progress}% complete ({total_written}/{num_faces} faces)"
-                        )
-                        last_progress = progress
-
-                    saved_paths = self._save_parquet_with_metadata_parallel(write_tasks)
-                    total_written += len(saved_paths)
-                    stats["files_created"] += len(saved_paths)
-                    write_tasks = []  # Reset for next batch
-
-            print(
-                f"Processed batch {batch_start}-{batch_end-1} ({stats['files_created']}/{num_faces} faces)"
-            )
-
-        print(f"Completed processing all {stats['files_created']} faces")
-
-        # Convert set to list for easier serialization
-        stats["partitions_created"] = list(stats["partitions_created"])
-        return stats
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = list(executor.map(self._parallel_save_parquet, batch_tasks))
+        return results
 
 
 def partition_vap_into_parquet_dataset(config, location_key):
+    """
+    Process VAP data and convert to partitioned Parquet files.
+    """
     location = config["location_specification"][location_key]
     input_path = file_manager.get_vap_output_dir(config, location)
-    output_path = file_manager.get_vap_partition_output_dir(config, location)
+    output_path = file_manager.get_vap_partition_output_dir(
+        config, location, use_temp_base_path=True
+    )
 
-    vap_nc_files = sorted(list(input_path.rglob("*.nc")))
-
-    # We store the file output locations in a dict in this class
-    # so this needs to be initialized outside of the file reading loop
+    # Initialize the converter
     converter = ConvertTidalNcToParquet(output_path, config, location)
 
-    for nc_file in vap_nc_files:
+    # Process each NetCDF file
+    for nc_file in sorted(list(input_path.rglob("*.nc"))):
+        print(f"Processing file: {nc_file}")
         ds = nc_manager.nc_open(nc_file, config)
-        # Access batch_size faces at once
-        # This should be set to optimize memory usage and speed
-        # A value that is too big will overflow memory, and a value that is too small will take too long
-        converter.convert_dataset_parallel(ds, batch_size=100000, write_batch_size=64)
+
+        # Use the unified conversion method with parallel processing
+        converter.convert_dataset(
+            dataset=ds, batch_size=100000, parallel=True, write_batch_size=64
+        )
+    final_output_path = file_manager.get_vap_partition_output_dir(
+        config, location, use_temp_base_path=False
+    )
+
+    if output_path != final_output_path:
+        print(f"Copying output files from {output_path} to {final_output_path}...")
+
+        copy_manager.copy_directory(output_path, final_output_path)
+
+        print(f"Copy complete! Output files are in {final_output_path}")
