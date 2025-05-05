@@ -4,7 +4,8 @@ from pathlib import Path
 
 
 def get_specified_nc_files(config, location):
-    original_data_dir = Path(config["dir"]["input"]["original"]).resolve()
+    base_path = Path(config["dir"]["base"]).resolve()
+    original_data_dir = Path(base_path, config["dir"]["input"]["original"]).resolve()
     original_data_dir = str(original_data_dir).replace(
         "<location>", location["output_name"]
     )
@@ -121,8 +122,8 @@ def get_yearly_summary_vap_output_dir(config, location):
     return get_output_dirs(config, location)["yearly_summary_vap"]
 
 
-def get_vap_partition_output_dir(config, location):
-    return get_output_dirs(config, location)["vap_partition"]
+def get_vap_partition_output_dir(config, location, use_temp_base_path=False):
+    return get_output_dirs(config, location, use_temp_base_path)["vap_partition"]
 
 
 def get_vap_summary_parquet_dir(config, location):
