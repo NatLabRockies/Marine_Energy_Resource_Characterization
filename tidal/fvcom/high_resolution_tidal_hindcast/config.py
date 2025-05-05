@@ -18,23 +18,27 @@ config = {
         "version": "0.2.0",
     },
     "dir": {
-        # Input and Output Directories
-        # Input Data Directories
+        # Data Input and Output Directories
+        # Starting point for all files
+        "base": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast",
+        # Input directory relative to base_dir
         "input": {
-            "original": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/00_raw",
+            "original": "<location>/00_raw",
         },
-        # Output Data Directories
+        # Output Data Directories relative to base_dir
         "output": {
             # Standardized data with qc
-            "standardized": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/a1_std",
-            "standardized_partition": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/a2_std_partition",
-            "vap": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b1_vap",
-            "monthly_summary_vap": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b2_monthly_mean_vap",
-            "yearly_summary_vap": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b3_yearly_mean_vap",
-            "vap_partition": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b4_vap_partition",
-            "vap_summary_parquet": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b5_vap_summary_parquet",
-            "vap_atlas_summary_parquet": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/b6_vap_atlas_summary_parquet",
-            "tracking": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/z99_tracking",
+            "standardized": "<location>/a1_std",
+            "standardized_partition": "<location>/a2_std_partition",
+            "vap": "<location>/b1_vap",
+            "monthly_summary_vap": "<location>/b2_monthly_mean_vap",
+            "yearly_summary_vap": "<location>/b3_yearly_mean_vap",
+            "vap_partition": "<location>/b4_vap_partition",
+            "vap_summary_parquet": "<location>/b5_vap_summary_parquet",
+            "vap_atlas_summary_parquet": "<location>/b6_vap_atlas_summary_parquet",
+            "tracking": "<location>/metadata/time_validation_and_tracking",
+            "attributes": "<location>/metadata/dataset_attributes",
+            "sha_256": "<location>/metadata/sha_256",
         },
     },
     "model_specification": {
