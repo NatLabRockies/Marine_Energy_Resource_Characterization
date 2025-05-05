@@ -26,7 +26,11 @@ def get_specified_nc_files(config, location):
 
 def get_output_dirs(config, location, use_temp_base_path=False):
     output_location_name = location["output_name"]
-    base_path = Path(config["dir"]["base"]).resolve()
+    if use_temp_base_path:
+        kestrel_tmp_dir = os.getenv("TMPDIR")
+        base_path = Path(kestrel_tmp_dir).resolve()
+    else:
+        base_path = Path(config["dir"]["base"]).resolve()
     output_dirs = config["dir"]["output"]
     paths = {
         "tracking": Path(
