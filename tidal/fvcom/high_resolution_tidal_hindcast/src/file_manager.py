@@ -1,3 +1,5 @@
+import os
+
 from pathlib import Path
 
 
@@ -22,44 +24,55 @@ def get_specified_nc_files(config, location):
     return result
 
 
-def get_output_dirs(config, location):
+def get_output_dirs(config, location, use_temp_base_path=False):
     output_location_name = location["output_name"]
+    base_path = Path(config["dir"]["base"]).resolve()
     output_dirs = config["dir"]["output"]
     paths = {
         "tracking": Path(
-            output_dirs["tracking"].replace("<location>", output_location_name)
+            base_path,
+            output_dirs["tracking"].replace("<location>", output_location_name),
         ),
         "standardized": Path(
-            output_dirs["standardized"].replace("<location>", output_location_name)
+            base_path,
+            output_dirs["standardized"].replace("<location>", output_location_name),
         ),
         "standardized_partition": Path(
+            base_path,
             output_dirs["standardized_partition"].replace(
                 "<location>", output_location_name
-            )
+            ),
         ),
-        "vap": Path(output_dirs["vap"].replace("<location>", output_location_name)),
+        "vap": Path(
+            base_path, output_dirs["vap"].replace("<location>", output_location_name)
+        ),
         "monthly_summary_vap": Path(
+            base_path,
             output_dirs["monthly_summary_vap"].replace(
                 "<location>", output_location_name
-            )
+            ),
         ),
         "yearly_summary_vap": Path(
+            base_path,
             output_dirs["yearly_summary_vap"].replace(
                 "<location>", output_location_name
-            )
+            ),
         ),
         "vap_partition": Path(
-            output_dirs["vap_partition"].replace("<location>", output_location_name)
+            base_path,
+            output_dirs["vap_partition"].replace("<location>", output_location_name),
         ),
         "vap_summary_parquet": Path(
+            base_path,
             output_dirs["vap_summary_parquet"].replace(
                 "<location>", output_location_name
-            )
+            ),
         ),
         "vap_atlas_summary_parquet": Path(
+            base_path,
             output_dirs["vap_atlas_summary_parquet"].replace(
                 "<location>", output_location_name
-            )
+            ),
         ),
     }
     for path in paths.values():
