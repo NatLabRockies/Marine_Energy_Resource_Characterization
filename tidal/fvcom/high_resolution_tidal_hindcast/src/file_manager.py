@@ -26,11 +26,23 @@ def get_specified_nc_files(config, location):
 
 def get_output_dirs(config, location, use_temp_base_path=False):
     output_location_name = location["output_name"]
+    base_path = Path(config["dir"]["base"]).resolve()
+
     if use_temp_base_path:
+        # https://nrel.github.io/HPC/Documentation/Systems/Kestrel/Running/example_sbatch/
         kestrel_tmp_dir = os.getenv("TMPDIR")
-        base_path = Path(kestrel_tmp_dir).resolve()
-    else:
-        base_path = Path(config["dir"]["base"]).resolve()
+        temp_dir = Path(kestrel_tmp_dir).resolve()
+        print(f"Temporary directory resolved to: {temp_dir}...")
+
+        if base_path.exists() is False:
+            print(
+                f"Temporary directory {temp_dir} does not exist! "
+                "Please check your environment variables."
+                "Using default base path instead."
+            )
+        else:
+            base_path = temp_dir
+
     output_dirs = config["dir"]["output"]
     paths = {
         "tracking": Path(
