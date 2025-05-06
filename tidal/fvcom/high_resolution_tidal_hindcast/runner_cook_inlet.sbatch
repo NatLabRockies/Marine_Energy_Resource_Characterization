@@ -6,7 +6,9 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 #SBATCH --time=47:00:00
-#SBATCH --partition=nvme
+##SBATCH --partition=nvme
+#SBATCH --partition=standard
+#SBATCH --tmp=1600000 # Limit is 1700000
 
 
 # Load necessary modules (if any)
