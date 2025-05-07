@@ -6,6 +6,8 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 #SBATCH --time=12:00:00
+#SBATCH --partition=standard
+#SBATCH --tmp=1600000 # Limit is 1700000
 
 # Load necessary modules (if any)
 module load anaconda3/2023.07-2
