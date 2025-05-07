@@ -690,7 +690,10 @@ def partition_vap_into_parquet_dataset(config, location_key, max_workers=96):
         # Use the optimized method
         stats = converter.convert_dataset(
             dataset_path=nc_file,
-            write_batch_size=64,
+            # Multiply this by the number of workers to get the total number of files written.
+            # 64 * 96 = 6144 # Original Setting
+            # 8 * 96 = 768
+            write_batch_size=8,
             main_batch_size=50000,  # Adjust based on available memory
         )
 
