@@ -691,7 +691,7 @@ def partition_vap_into_parquet_dataset(config, location_key, max_workers=96):
         stats = converter.convert_dataset(
             dataset_path=nc_file,
             write_batch_size=64,
-            main_batch_size=5000,  # Adjust based on available memory
+            main_batch_size=50000,  # Adjust based on available memory
         )
 
         print(f"\nFile processed: {nc_file}")
