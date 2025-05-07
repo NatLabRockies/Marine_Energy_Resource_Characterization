@@ -183,10 +183,10 @@ class ConvertTidalNcToParquet:
                     lat_node_val = float(batch_data["lat_node"][node_idx])
                     lon_node_val = float(batch_data["lon_node"][node_idx])
 
-                    data_dict[f"element_corner_{corner_num}_lat"] = np.repeat(
+                    data_dict[f"element_corner_{corner_num}_lat"] = np.repeat(  # type: ignore
                         lat_node_val, time_dim_len
                     )
-                    data_dict[f"element_corner_{corner_num}_lon"] = np.repeat(
+                    data_dict[f"element_corner_{corner_num}_lon"] = np.repeat(  # type: ignore
                         lon_node_val, time_dim_len
                     )
 
@@ -435,7 +435,7 @@ class ConvertTidalNcToParquet:
         # Extract attributes and determine variables to include
         attributes = self._extract_attributes(dataset)
         if vars_to_include is None:
-            vars_to_include = list(dataset.variables.keys())
+            vars_to_include = list(dataset.variables.keys())  # type: ignore
 
         # Determine number of faces to process
         num_faces = len(dataset.lat_center.values)
@@ -471,14 +471,14 @@ class ConvertTidalNcToParquet:
 
             # Update overall statistics
             stats["files_created"] += batch_stats["files_created"]
-            stats["partitions_created"].update(batch_stats["partitions_created"])
+            stats["partitions_created"].update(batch_stats["partitions_created"]) # type: ignore
 
             # Report progress
             progress = int((batch_end / num_faces) * 100)
             print(f"Progress: {progress}% ({batch_end}/{num_faces} faces processed)")
 
         # Convert set to list for serialization
-        stats["partitions_created"] = list(stats["partitions_created"])
+        stats["partitions_created"] = list(stats["partitions_created"]) #type: ignore
         return stats
 
     def _process_batch_parallel(
