@@ -144,9 +144,8 @@ def scan_directory(input_dir, show_progress=True):
 def copy_directory(
     input_dir,
     output_dir,
-    method="direct",
+    method="rsync",
     compression_level=1,
-    chunk_size=8192,
     show_progress=True,
 ):
     """
