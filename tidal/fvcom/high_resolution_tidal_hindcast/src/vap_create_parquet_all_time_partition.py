@@ -1,9 +1,12 @@
 import concurrent.futures
-import re
+import multiprocessing as mp
 import json
+import os
+import math
+from functools import partial
 
 from pathlib import Path
-from typing import List, Dict, Union, Optional, Tuple, Callable
+from typing import List, Dict, Optional
 
 import numpy as np
 import xarray as xr
@@ -19,14 +22,32 @@ class ConvertTidalNcToParquet:
     Converts an xarray Dataset with FVCOM structure to partitioned Parquet files.
     Each face in the dataset will be converted to a time-indexed Parquet file
     stored in a partition based on its lat/lon coordinates.
+
+    Optimized for HPC environments with many cores and large memory.
     """
 
-    def __init__(self, output_dir: str, config=None, location=None):
+    def __init__(self, output_dir: str, config=None, location=None, max_workers=96):
+        """
+        Initialize the converter with optimized parallelism settings.
+
+        Parameters
+        ----------
+        output_dir : str
+            Directory where the output files will be stored
+        config : dict, optional
+            Configuration dictionary
+        location : dict, optional
+            Location specification from the config
+        max_workers : int, optional
+            Maximum number of parallel processes to use (default: 96)
+        """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True, parents=True)
         self.config = config
         self.location = location
-        self.output_path_map: dict[int, Path] = {}
+        self.max_workers = max_workers
+        self.output_path_map = mp.Manager().dict()  # Shared dictionary for output paths
+        self.lock = mp.Manager().Lock()  # Lock for thread-safe operations
 
     @staticmethod
     def _get_partition_path(lat: float, lon: float) -> str:
@@ -98,10 +119,9 @@ class ConvertTidalNcToParquet:
         self, dataset: xr.Dataset, face_indices: List[int], vars_to_include: List[str]
     ) -> Dict[int, pd.DataFrame]:
         """
-        Unified method to extract data for one or multiple faces.
-        Replaces _create_time_series_df and _create_time_series_dfs_batch
+        Extract data for multiple faces.
         """
-        print(f"Processing {len(face_indices)} faces")
+        print(f"Process {os.getpid()}: Processing {len(face_indices)} faces")
 
         # Common variables needed for all faces
         time_values = dataset.time.values
@@ -309,190 +329,59 @@ class ConvertTidalNcToParquet:
                 return part.replace("face=", "")
         return None
 
-    def _save_dataframe_to_parquet(
-        self, df: pd.DataFrame, attributes: Dict, lat: float, lon: float, face_idx: int
-    ) -> str:
-        """
-        Unified method to save DataFrame to Parquet with proper partitioning and metadata.
-        """
-        # Generate partition path and create directory
-        partition_path = self._get_partition_path(lat, lon)
-        full_dir = Path(self.output_dir, partition_path)
-        full_dir.mkdir(exist_ok=True, parents=True)
-
-        # Generate filename
-        filename = f"face_{face_idx}.parquet"
-        if self.config is not None:
-            filename = self._get_partition_file_name(face_idx, lat, lon, df)
-
-        # Check for existing files with same face index
-        output_filename = filename
-        if face_idx is not None:
-            existing_files = sorted(list(full_dir.glob("*.parquet")))
-            matching_files = [
-                file for file in existing_files if f"face={face_idx}" in file.name
-            ]
-
-            # Handle existing files
-            if matching_files:
-                output_filename = matching_files[0].name
-                # Concatenate all existing files with new data
-                dfs = [df]
-
-                for file in matching_files:
-                    existing_df = pd.read_parquet(file)
-                    dfs.append(existing_df)
-                    file.unlink()  # Delete after reading
-
-                # Combine, deduplicate, and sort
-                df = pd.concat(dfs).sort_index()
-
-        # Full path to output file
-        full_path = Path(full_dir, output_filename)
-
-        # Convert to PyArrow table with metadata
-        table = pa.Table.from_pandas(df)
-        metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
-        table = table.replace_schema_metadata(
-            {**table.schema.metadata, **metadata_bytes}
-        )
-
-        # Write to parquet
-        pq.write_table(table, full_path)
-        return str(full_path)
-
-    def _process_batch(
+    def _process_faces_worker(
         self,
-        dataset: xr.Dataset,
+        dataset_path: Path,
         face_indices: List[int],
         vars_to_include: List[str],
         attributes: Dict,
+        config: Dict,
+        location: Dict,
+        output_dir: Path,
+        write_batch_size: int,
     ) -> Dict:
         """
-        Process a batch of faces - extract data and save to Parquet files.
-        """
-        # Extract data for all faces in batch
-        face_dfs = self._extract_face_data(dataset, face_indices, vars_to_include)
-
-        # Get coordinates for all faces
-        lat_center = dataset.lat_center.values
-        lon_center = dataset.lon_center.values
-
-        # Prepare write tasks
-        write_tasks = []
-        for face_idx, df in face_dfs.items():
-            lat = float(lat_center[face_idx])
-            lon = float(lon_center[face_idx])
-            write_tasks.append((df, attributes, lat, lon, face_idx))
-
-        # Process write tasks
-        saved_files = []
-        for df, attrs, lat, lon, face_idx in write_tasks:
-            saved_path = self._save_dataframe_to_parquet(df, attrs, lat, lon, face_idx)
-            saved_files.append(saved_path)
-
-        # Return statistics for this batch
-        return {
-            "files_created": len(saved_files),
-            "partitions_created": set(
-                Path(p).parent.relative_to(self.output_dir) for p in saved_files
-            ),
-        }
-
-    def convert_dataset(
-        self,
-        dataset: xr.Dataset,
-        vars_to_include: Optional[List[str]] = None,
-        max_faces: Optional[int] = None,
-        batch_size: int = 1000,
-        parallel: bool = False,
-        write_batch_size: int = 64,
-    ) -> Dict:
-        """
-        Unified method to convert an xarray Dataset to partitioned Parquet files.
-        Combines functionality of convert_dataset, convert_dataset_batched, and convert_dataset_parallel
+        Worker function for processing a subset of faces in a separate process.
 
         Parameters
         ----------
-        dataset : xr.Dataset
-            The input dataset
-        vars_to_include : List[str], optional
-            List of variable names to include. If None, includes all variables.
-        max_faces : int, optional
-            Maximum number of faces to process
-        batch_size : int, optional
-            Number of faces to process in each batch
-        parallel : bool, optional
-            Whether to use parallel processing
-        write_batch_size : int, optional
-            Number of files to write in parallel (only used if parallel=True)
+        dataset_path : Path
+            Path to the NetCDF dataset
+        face_indices : List[int]
+            List of face indices to process
+        vars_to_include : List[str]
+            List of variable names to include
+        attributes : Dict
+            Dataset attributes
+        config : Dict
+            Configuration dictionary
+        location : Dict
+            Location specification
+        output_dir : Path
+            Output directory
+        write_batch_size : int
+            Number of files to write in parallel
 
         Returns
         -------
         Dict
-            Statistics about the conversion process
+            Statistics about the processed faces
         """
-        # Extract attributes and determine variables to include
-        attributes = self._extract_attributes(dataset)
-        if vars_to_include is None:
-            vars_to_include = list(dataset.variables.keys())  # type: ignore
+        worker_id = os.getpid()
+        print(f"Worker {worker_id} starting to process {len(face_indices)} faces")
 
-        # Determine number of faces to process
-        num_faces = len(dataset.lat_center.values)
-        if max_faces is not None:
-            num_faces = min(num_faces, max_faces)
+        # Open the dataset in this process
+        dataset = nc_manager.nc_open(dataset_path, config)
 
         # Initialize statistics
         stats = {
-            "total_faces": num_faces,
+            "worker_id": worker_id,
+            "faces_processed": len(face_indices),
             "partitions_created": set(),
             "files_created": 0,
         }
 
-        # Process faces in batches
-        for batch_start in range(0, num_faces, batch_size):
-            batch_end = min(batch_start + batch_size, num_faces)
-            face_indices = list(range(batch_start, batch_end))
-
-            print(
-                f"Processing batch of faces {batch_start} to {batch_end-1} (batch size: {len(face_indices)})"
-            )
-
-            if parallel:
-                # Use parallel processing for this batch
-                batch_stats = self._process_batch_parallel(
-                    dataset, face_indices, vars_to_include, attributes, write_batch_size
-                )
-            else:
-                # Use sequential processing for this batch
-                batch_stats = self._process_batch(
-                    dataset, face_indices, vars_to_include, attributes
-                )
-
-            # Update overall statistics
-            stats["files_created"] += batch_stats["files_created"]
-            stats["partitions_created"].update(batch_stats["partitions_created"]) # type: ignore
-
-            # Report progress
-            progress = int((batch_end / num_faces) * 100)
-            print(f"Progress: {progress}% ({batch_end}/{num_faces} faces processed)")
-
-        # Convert set to list for serialization
-        stats["partitions_created"] = list(stats["partitions_created"]) #type: ignore
-        return stats
-
-    def _process_batch_parallel(
-        self,
-        dataset: xr.Dataset,
-        face_indices: List[int],
-        vars_to_include: List[str],
-        attributes: Dict,
-        write_batch_size: int,
-    ) -> Dict:
-        """
-        Process a batch of faces using parallel I/O operations.
-        """
-        # Extract data for all faces in batch
+        # Extract data for all assigned faces
         face_dfs = self._extract_face_data(dataset, face_indices, vars_to_include)
 
         # Get coordinates for all faces
@@ -507,80 +396,199 @@ class ConvertTidalNcToParquet:
 
             # Generate partition path and create directory
             partition_path = self._get_partition_path(lat, lon)
-            full_dir = Path(self.output_dir, partition_path)
-            full_dir.mkdir(exist_ok=True, parents=True)
+            full_dir = Path(output_dir, partition_path)
+            with self.lock:
+                full_dir.mkdir(exist_ok=True, parents=True)
 
             # Generate filename
             filename = f"face_{face_idx}.parquet"
-            if self.config is not None:
+            if config is not None:
                 filename = self._get_partition_file_name(face_idx, lat, lon, df)
 
             all_write_tasks.append((df, attributes, partition_path, filename, face_idx))
 
         # Process write tasks in parallel batches
         saved_paths = []
-        partitions_created = set()
 
         for i in range(0, len(all_write_tasks), write_batch_size):
             batch_tasks = all_write_tasks[i : i + write_batch_size]
-            batch_paths = self._save_parquet_with_metadata_parallel(batch_tasks)
+            batch_paths = self._save_parquet_with_metadata_parallel(
+                batch_tasks, output_dir
+            )
             saved_paths.extend(batch_paths)
 
             # Track partitions created
             for path_str in batch_paths:
                 path = Path(path_str)
-                partitions_created.add(path.parent.relative_to(self.output_dir))
+                stats["partitions_created"].add(  # type: ignore
+                    str(path.parent.relative_to(output_dir))
+                )
 
-        return {
-            "files_created": len(saved_paths),
-            "partitions_created": partitions_created,
-        }
+        stats["files_created"] = len(saved_paths)
+        stats["partitions_created"] = list(stats["partitions_created"])  # type: ignore
 
-    @staticmethod
-    def _parallel_save_parquet(args):
-        """Helper function to save a DataFrame to Parquet in parallel."""
-        table, full_path = args
-        pq.write_table(table, full_path)
-        return str(full_path)
+        print(f"Worker {worker_id} completed processing {len(face_indices)} faces")
+        return stats
 
-    def _save_parquet_with_metadata_parallel(self, write_tasks):
-        """Prepare and save multiple DataFrames to Parquet with metadata in parallel."""
-        batch_tasks = []
+    def _save_parquet_single(self, args):
+        """Helper function to save a DataFrame to Parquet."""
+        df, attributes, partition_path, filename, face_idx, output_dir = args
 
-        for df, attributes, partition_path, filename, face_idx in write_tasks:
-            # Handle existing files
+        # Handle existing files
+        with self.lock:
             if face_idx in self.output_path_map:
                 # Concat with existing file
-                full_path = self.output_path_map[face_idx]
+                full_path = Path(self.output_path_map[face_idx])
                 existing_df = pd.read_parquet(full_path)
                 output_df = pd.concat([existing_df, df]).sort_index()
                 output_path = full_path
             else:
                 # Create new file
-                full_dir = Path(self.output_dir, partition_path)
+                full_dir = Path(output_dir, partition_path)
                 full_dir.mkdir(exist_ok=True, parents=True)
                 full_path = Path(full_dir, filename)
-                self.output_path_map[face_idx] = full_path
+                self.output_path_map[face_idx] = str(full_path)
                 output_df = df
                 output_path = full_path
 
-            # Convert to PyArrow table with metadata
-            table = pa.Table.from_pandas(output_df)
-            metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
-            table = table.replace_schema_metadata(
-                {**table.schema.metadata, **metadata_bytes}
-            )
-            batch_tasks.append((table, output_path))
+        # Convert to PyArrow table with metadata
+        table = pa.Table.from_pandas(output_df)
+        metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
+        table = table.replace_schema_metadata(
+            {**table.schema.metadata, **metadata_bytes}
+        )
 
-        # Execute parallel writes
+        # Write the file
+        pq.write_table(table, output_path)
+        return str(output_path)
+
+    def _save_parquet_with_metadata_parallel(self, write_tasks, output_dir):
+        """Prepare and save multiple DataFrames to Parquet with metadata in parallel."""
+        # Prepare tasks for parallel execution
+        batch_tasks = [
+            (df, attrs, path, filename, face_idx, output_dir)
+            for df, attrs, path, filename, face_idx in write_tasks
+        ]
+
+        # Execute parallel writes using ThreadPoolExecutor (I/O bound)
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            results = list(executor.map(self._parallel_save_parquet, batch_tasks))
+            results = list(executor.map(self._save_parquet_single, batch_tasks))
         return results
 
+    def convert_dataset(
+        self,
+        dataset_path: Path,
+        vars_to_include: Optional[List[str]] = None,
+        max_faces: Optional[int] = None,
+        write_batch_size: int = 64,
+    ) -> Dict:
+        """
+        Convert an xarray Dataset to partitioned Parquet files using full multiprocessing.
 
-def partition_vap_into_parquet_dataset(config, location_key):
+        Parameters
+        ----------
+        dataset_path : Path
+            Path to the NetCDF dataset
+        vars_to_include : List[str], optional
+            List of variable names to include. If None, includes all variables.
+        max_faces : int, optional
+            Maximum number of faces to process
+        write_batch_size : int, optional
+            Number of files to write in parallel within each process
+
+        Returns
+        -------
+        Dict
+            Statistics about the conversion process
+        """
+        # First, get basic dataset info to plan the parallel processing
+        dataset = nc_manager.nc_open(dataset_path, self.config)
+
+        # Extract attributes and determine variables to include
+        attributes = self._extract_attributes(dataset)
+        if vars_to_include is None:
+            vars_to_include = list(dataset.variables.keys())
+
+        # Determine number of faces to process
+        num_faces = len(dataset.lat_center.values)
+        if max_faces is not None:
+            num_faces = min(num_faces, max_faces)
+
+        # Close the dataset in the main process to avoid issues with multiple processes
+        dataset.close()
+
+        # Determine how many faces each worker will process
+        num_workers = min(self.max_workers, num_faces)
+        faces_per_worker = math.ceil(num_faces / num_workers)
+
+        print(f"Processing {num_faces} faces using {num_workers} parallel workers")
+        print(f"Each worker will process approximately {faces_per_worker} faces")
+
+        # Create face index chunks for each worker
+        worker_face_chunks = []
+        for i in range(0, num_faces, faces_per_worker):
+            end_idx = min(i + faces_per_worker, num_faces)
+            worker_face_chunks.append(list(range(i, end_idx)))
+
+        # Create a copy of necessary parameters for each worker
+        worker_args = [
+            (
+                dataset_path,
+                chunk,
+                vars_to_include,
+                attributes,
+                self.config,
+                self.location,
+                self.output_dir,
+                write_batch_size,
+            )
+            for chunk in worker_face_chunks
+        ]
+
+        # Initialize stats
+        combined_stats = {
+            "total_faces": num_faces,
+            "workers_used": len(worker_face_chunks),
+            "partitions_created": set(),
+            "files_created": 0,
+        }
+
+        # Process all chunks in parallel using a ProcessPoolExecutor
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=num_workers
+        ) as executor:
+            # Use functools.partial to create a worker function with the self parameter
+            worker_func = partial(self._process_faces_worker)
+            results = list(executor.map(worker_func, *zip(*worker_args)))
+
+        # Combine statistics from all workers
+        for worker_stat in results:
+            combined_stats["files_created"] += worker_stat["files_created"]
+            combined_stats["partitions_created"].update(  # type: ignore
+                worker_stat["partitions_created"]
+            )
+
+        # Convert set to list for serialization
+        combined_stats["partitions_created"] = list(  # type: ignore
+            combined_stats["partitions_created"]
+        )
+
+        return combined_stats
+
+
+def partition_vap_into_parquet_dataset(config, location_key, max_workers=96):
     """
     Process VAP data and convert to partitioned Parquet files.
+    Utilizes multiprocessing for optimal performance on HPC systems.
+
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary
+    location_key : str
+        Key for location in the configuration
+    max_workers : int, optional
+        Maximum number of parallel processes to use (default: 96)
     """
     location = config["location_specification"][location_key]
     input_path = file_manager.get_vap_output_dir(config, location)
@@ -588,18 +596,21 @@ def partition_vap_into_parquet_dataset(config, location_key):
         config, location, use_temp_base_path=True
     )
 
-    # Initialize the converter
-    converter = ConvertTidalNcToParquet(output_path, config, location)
+    # Initialize the multiprocessing-optimized converter
+    converter = ConvertTidalNcToParquet(
+        output_path, config, location, max_workers=max_workers
+    )
 
-    # Process each NetCDF file
-    for nc_file in sorted(list(input_path.rglob("*.nc"))):
+    # Process each NetCDF file with multiprocessing
+    for nc_file in sorted(list(input_path.rglob("*.nc")))[:1]:
         print(f"Processing file: {nc_file}")
-        ds = nc_manager.nc_open(nc_file, config)
 
-        # Use the unified conversion method with parallel processing
-        converter.convert_dataset(
-            dataset=ds, batch_size=100000, parallel=True, write_batch_size=64
-        )
+        # Use the new optimized method that accepts a file path
+        stats = converter.convert_dataset(dataset_path=nc_file, write_batch_size=64)
+
+        print(f"File processed: {nc_file}")
+        print(f"Statistics: {stats}")
+
     final_output_path = file_manager.get_vap_partition_output_dir(
         config, location, use_temp_base_path=False
     )
