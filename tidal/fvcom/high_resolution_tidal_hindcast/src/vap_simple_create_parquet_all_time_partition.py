@@ -365,6 +365,7 @@ def convert_h5_to_parquet_batched(
                     if dataset_name in f and dataset_name not in [
                         "lat_center",
                         "lon_center",
+                        "nv",
                     ]:
                         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         print(
