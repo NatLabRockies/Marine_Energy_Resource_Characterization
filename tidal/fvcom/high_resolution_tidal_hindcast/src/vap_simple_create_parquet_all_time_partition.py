@@ -288,8 +288,11 @@ def convert_h5_to_parquet_simple(
 
             with h5py.File(h5_file, "r") as f:
                 # Get time values
+                print("Reading time values...")
                 time_values = f["time"][:]
+                print(f"Found f{len(time_values)} time values")
 
+                print("Reading lat/lon values...")
                 # Get lat/lon for all faces in this batch (only from first file)
                 if file_idx == 0:
                     if "lat_center" in f:
@@ -302,6 +305,10 @@ def convert_h5_to_parquet_simple(
                         for i, face_id in enumerate(range(start_face, end_face)):
                             face_data[face_id]["lon"] = lon_values[i]
 
+                print(f"Found f{len(lat_values)} lat values")
+                print(f"Found f{len(lon_values)} lon values")
+
+                print("Reading lat/lon values...")
                 # For each face, extract all data from this file
                 for face_id in range(start_face, end_face):
                     # Add time values for this file
@@ -313,9 +320,11 @@ def convert_h5_to_parquet_simple(
                             "lat_center",
                             "lon_center",
                         ]:
+                            print(f"Reading {dataset_name} values...")
                             # Extract data for this face across all time points in this file
                             data = f[dataset_name][:, face_id]
                             face_data[face_id][dataset_name].extend(data)
+                            print(f"Found f{len(data)} {dataset_name} values")
 
                     # Process 3D datasets (time, layer, face)
                     for dataset_name, num_layers in dataset_info["3d_datasets"]:
@@ -324,8 +333,14 @@ def convert_h5_to_parquet_simple(
                                 col_name = f"{dataset_name}_layer_{layer_idx}"
 
                                 # Extract data for this face and layer across all time points
+                                print(
+                                    f"Reading {dataset_name} layer {layer_idx} values..."
+                                )
                                 data = f[dataset_name][:, layer_idx, face_id]
                                 face_data[face_id][col_name].extend(data)
+                                print(
+                                    f"Found f{len(data)} {dataset_name} layer {layer_idx} values"
+                                )
 
         # Now write one parquet file per face with the complete time series
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
