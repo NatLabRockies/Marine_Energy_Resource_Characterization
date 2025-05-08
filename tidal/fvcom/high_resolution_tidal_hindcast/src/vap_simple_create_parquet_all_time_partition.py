@@ -483,10 +483,11 @@ def convert_h5_to_parquet_batched(
                     df_data[key] = np.array(value)
 
             for key, value in df_data.items():
-                print(f"{key}: {value.shape}")
+                print(f"{key}: {value.shape}, type: {type(value)}")
 
             # Create DataFrame and write to parquet
             df = pd.DataFrame(df_data)
+            df = df.set_index("time")
 
             # Create partitioned directory structure and filename
             partition_dir = Path(output_dir, get_partition_path(df))
