@@ -6,7 +6,7 @@ import math
 import time
 
 from pathlib import Path
-from typing import List, Dict, Union, Optional, Tuple, Callable
+from typing import List, Dict, Optional
 
 import numpy as np
 import xarray as xr
@@ -14,8 +14,244 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-# Assuming these imports work as in your original code
 from . import copy_manager, file_manager, file_name_convention_manager, nc_manager
+
+
+def standalone_save_parquet_batch(args, safe_config, safe_location):
+    """
+    Standalone function to process and save a batch of face data to Parquet files.
+
+    Parameters
+    ----------
+    args : tuple
+        Tuple containing batch processing arguments
+    safe_config : dict
+        Simplified config dictionary with only serializable objects
+    safe_location : dict
+        Simplified location dictionary with only serializable objects
+
+    Returns
+    -------
+    dict
+        Statistics about the processed batch
+    """
+    (
+        face_data_batch,
+        face_indices,
+        vars_to_include,
+        attributes,
+        output_dir,
+        write_batch_size,
+    ) = args
+
+    worker_id = os.getpid()
+    print(f"Worker {worker_id}: Processing batch of {len(face_indices)} faces")
+
+    # Convert output_dir back to Path if it's a string
+    if isinstance(output_dir, str):
+        output_dir = Path(output_dir)
+
+    # Extract face data into DataFrames
+    face_dfs = {}
+    time_values = face_data_batch["time_values"]
+    time_dim_len = len(time_values)
+
+    # Variables to skip in extraction
+    vars_to_skip = ["nv", "h_center"]
+
+    # Process each face
+    for i, face_idx in enumerate(face_indices):
+        local_idx = face_indices.index(face_idx) if face_idx in face_indices else i
+        data_dict = {}
+
+        # Add center coordinates
+        data_dict["lat_center"] = [
+            face_data_batch["lat_center"][local_idx]
+        ] * time_dim_len
+        data_dict["lon_center"] = [
+            face_data_batch["lon_center"][local_idx]
+        ] * time_dim_len
+
+        # Process node vertex data
+        nv_data = face_data_batch["nv"][local_idx]
+        node_indices = [int(idx - 1) if idx > 0 else int(idx) for idx in nv_data]
+
+        # Add corner node data if available
+        if "lat_node" in face_data_batch and "lon_node" in face_data_batch:
+            for j, node_idx in enumerate(node_indices):
+                corner_num = j + 1
+                lat_node_val = float(face_data_batch["lat_node"][node_idx])
+                lon_node_val = float(face_data_batch["lon_node"][node_idx])
+
+                data_dict[f"element_corner_{corner_num}_lat"] = np.repeat(
+                    lat_node_val, time_dim_len
+                )
+                data_dict[f"element_corner_{corner_num}_lon"] = np.repeat(
+                    lon_node_val, time_dim_len
+                )
+
+        # Add variable data for this face
+        for var_name in vars_to_include:
+            if var_name in vars_to_skip or var_name not in face_data_batch:
+                continue
+
+            if f"{var_name}_has_layers" in face_data_batch:
+                # Handle layered variables
+                for layer_idx in range(face_data_batch[f"{var_name}_num_layers"]):
+                    col_name = f"{var_name}_layer_{layer_idx}"
+                    var_data = face_data_batch[f"{var_name}_layer_{layer_idx}"][
+                        :, local_idx
+                    ]
+
+                    # Verify data length
+                    if len(var_data) != time_dim_len:
+                        print(
+                            f"Warning: {col_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
+                        )
+                        continue
+
+                    data_dict[col_name] = var_data
+
+            elif var_name in face_data_batch:
+                # Handle 2D variables
+                var_data = face_data_batch[var_name][:, local_idx]
+
+                # Verify data length
+                if len(var_data) != time_dim_len:
+                    print(
+                        f"Warning: {var_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
+                    )
+                    continue
+
+                data_dict[var_name] = var_data
+
+        # Create DataFrame with time index
+        df = pd.DataFrame(data_dict, index=time_values)
+        df.index.name = "time"
+        face_dfs[face_idx] = df
+
+    # Prepare write tasks
+    all_write_tasks = []
+    for face_idx, df in face_dfs.items():
+        lat = float(face_data_batch["lat_center_all"][face_idx])
+        lon = float(face_data_batch["lon_center_all"][face_idx])
+
+        # Generate partition path and create directory
+        lat_deg = int(lat)
+        lon_deg = int(lon)
+        lat_dec = int(abs(lat * 100) % 100)
+        lon_dec = int(abs(lon * 100) % 100)
+
+        partition_path = f"lat_deg={lat_deg:02d}/lon_deg={lon_deg:02d}/lat_dec={lat_dec:02d}/lon_dec={lon_dec:02d}"
+        full_dir = Path(output_dir, partition_path)
+        full_dir.mkdir(exist_ok=True, parents=True)
+
+        # Generate filename
+        if safe_config is not None and safe_location is not None:
+            # Use simplified logic to generate filename
+            filename = f"face_{face_idx}.parquet"
+
+            # If config contains necessary info for custom filename
+            if (
+                "dataset" in safe_config
+                and "name" in safe_config["dataset"]
+                and "output_name" in safe_location
+            ):
+                # Format a simplified filename
+                dataset_name = safe_config["dataset"]["name"]
+                lat_rounded = round(lat, 7)
+                lon_rounded = round(lon, 7)
+                filename = f"{dataset_name}.face={face_idx:06d}.lat={lat_rounded:.7f}.lon={lon_rounded:.7f}.parquet"
+        else:
+            filename = f"face_{face_idx}.parquet"
+
+        all_write_tasks.append((df, attributes, partition_path, filename, face_idx))
+
+    # Process write tasks in smaller parallel batches
+    saved_paths = []
+    partitions_created = set()
+
+    # Report progress at regular intervals
+    total_batches = (len(all_write_tasks) + write_batch_size - 1) // write_batch_size
+    report_every = max(1, total_batches // 5)  # Report ~5 times during processing
+
+    for i in range(0, len(all_write_tasks), write_batch_size):
+        batch_num = i // write_batch_size + 1
+        batch_tasks = all_write_tasks[i : i + write_batch_size]
+
+        # Process each task in this batch
+        batch_paths = []
+        for df, attributes, partition_path, filename, face_idx in batch_tasks:
+            # Prepare file path
+            full_dir = Path(output_dir, partition_path)
+            full_path = Path(full_dir, filename)
+
+            # Convert to PyArrow table with metadata
+            table = pa.Table.from_pandas(df)
+
+            # Prepare metadata
+            metadata = {}
+            if "variable_attributes" in attributes:
+                for var_name, var_attrs in attributes["variable_attributes"].items():
+                    for attr_name, attr_value in var_attrs.items():
+                        metadata[f"{var_name}:{attr_name}"] = attr_value
+
+            if "global_attributes" in attributes:
+                for attr_name, attr_value in attributes["global_attributes"].items():
+                    metadata[f"global:{attr_name}"] = attr_value
+
+            # Add metadata markers
+            metadata["_WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
+            metadata["_WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
+
+            # Convert all metadata values to bytes
+            metadata_bytes = {}
+            for k, v in metadata.items():
+                try:
+                    if (
+                        isinstance(v, (list, dict, tuple))
+                        or hasattr(v, "__dict__")
+                        or isinstance(v, np.ndarray)
+                    ):
+                        metadata_bytes[k] = json.dumps(v, cls=json.JSONEncoder).encode(
+                            "utf-8"
+                        )
+                    else:
+                        metadata_bytes[k] = str(v).encode("utf-8")
+                except TypeError:
+                    metadata_bytes[k] = str(v).encode("utf-8")
+
+            # Apply metadata
+            table = table.replace_schema_metadata(
+                {**table.schema.metadata, **metadata_bytes}
+            )
+
+            # Write the file
+            pq.write_table(table, full_path)
+            batch_paths.append(str(full_path))
+
+            # Track partitions created
+            partitions_created.add(str(Path(partition_path)))
+
+        saved_paths.extend(batch_paths)
+
+        # Report progress only at specific intervals
+        if batch_num % report_every == 0 or batch_num == total_batches:
+            progress = int((batch_num / total_batches) * 100)
+            print(
+                f"Worker {worker_id}: {progress}% complete ({batch_num}/{total_batches} batches)"
+            )
+
+    print(
+        f"Worker {worker_id}: Completed {len(face_indices)} faces, created {len(saved_paths)} files"
+    )
+
+    return {
+        "worker_id": worker_id,
+        "faces_processed": len(face_indices),
+        "files_created": len(saved_paths),
+        "partitions_created": list(partitions_created),
+    }
 
 
 class ConvertTidalNcToParquet:
@@ -183,239 +419,6 @@ class ConvertTidalNcToParquet:
 
         return metadata_bytes
 
-    def _extract_face_data_batch(
-        self, face_data_batch: Dict, face_indices: List[int], vars_to_include: List[str]
-    ) -> Dict[int, pd.DataFrame]:
-        """
-        Process pre-loaded face data into DataFrames.
-        This function runs in worker processes and doesn't access the NetCDF file directly.
-
-        Parameters
-        ----------
-        face_data_batch : Dict
-            Pre-loaded data for the batch of faces
-        face_indices : List[int]
-            Indices of faces to process in this batch
-        vars_to_include : List[str]
-            Variables to include in the output
-
-        Returns
-        -------
-        Dict[int, pd.DataFrame]
-            Dictionary mapping face indices to pandas DataFrames
-        """
-        time_values = face_data_batch["time_values"]
-        time_dim_len = len(time_values)
-
-        # Variables to skip in extraction
-        vars_to_skip = ["nv", "h_center"]
-
-        # Create DataFrames for each face
-        face_dataframes = {}
-        for i, face_idx in enumerate(face_indices):
-            data_dict = {}
-
-            # Add center coordinates
-            data_dict["lat_center"] = [face_data_batch["lat_center"][i]] * time_dim_len
-            data_dict["lon_center"] = [face_data_batch["lon_center"][i]] * time_dim_len
-
-            # Process node vertex data
-            nv_data = face_data_batch["nv"][i]
-            node_indices = [int(idx - 1) if idx > 0 else int(idx) for idx in nv_data]
-
-            # Add corner node data if available
-            if "lat_node" in face_data_batch and "lon_node" in face_data_batch:
-                for j, node_idx in enumerate(node_indices):
-                    corner_num = j + 1
-                    lat_node_val = float(face_data_batch["lat_node"][node_idx])
-                    lon_node_val = float(face_data_batch["lon_node"][node_idx])
-
-                    data_dict[f"element_corner_{corner_num}_lat"] = np.repeat(  # type: ignore
-                        lat_node_val, time_dim_len
-                    )
-                    data_dict[f"element_corner_{corner_num}_lon"] = np.repeat(  # type: ignore
-                        lon_node_val, time_dim_len
-                    )
-
-            # Add variable data for this face
-            for var_name in vars_to_include:
-                if var_name in vars_to_skip or var_name not in face_data_batch:
-                    continue
-
-                if "sigma_layer" in face_data_batch.get(f"{var_name}_has_layers", []):
-                    # Handle layered variables
-                    for layer_idx in range(face_data_batch[f"{var_name}_num_layers"]):
-                        col_name = f"{var_name}_layer_{layer_idx}"
-                        var_data = face_data_batch[f"{var_name}_layer_{layer_idx}"][
-                            :, i
-                        ]
-
-                        # Verify data length
-                        if len(var_data) != time_dim_len:
-                            print(
-                                f"Warning: {col_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
-                            )
-                            continue
-
-                        data_dict[col_name] = var_data
-
-                elif var_name in face_data_batch:
-                    # Handle 2D variables
-                    var_data = face_data_batch[var_name][:, i]
-
-                    # Verify data length
-                    if len(var_data) != time_dim_len:
-                        print(
-                            f"Warning: {var_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
-                        )
-                        continue
-
-                    data_dict[var_name] = var_data
-
-            # Create DataFrame with time index
-            df = pd.DataFrame(data_dict, index=time_values)
-            df.index.name = "time"
-            face_dataframes[face_idx] = df
-
-        return face_dataframes
-
-    def _save_parquet_batch(self, args) -> dict[str, object]:
-        """
-        Process and save a batch of face data to Parquet files.
-
-        Parameters
-        ----------
-        args : tuple
-            Tuple containing:
-            - face_data_batch: Dict with pre-loaded data
-            - face_indices: List of face indices to process
-            - vars_to_include: List of variables to include
-            - attributes: Dataset attributes
-            - output_dir: Output directory path
-            - write_batch_size: Number of files to write in parallel
-
-        Returns
-        -------
-        List[str]
-            List of paths to saved files
-        """
-        (
-            face_data_batch,
-            face_indices,
-            vars_to_include,
-            attributes,
-            output_dir,
-            write_batch_size,
-        ) = args
-
-        worker_id = os.getpid()
-        print(f"Worker {worker_id}: Processing batch of {len(face_indices)} faces")
-
-        # Process face data into DataFrames
-        face_dfs = self._extract_face_data_batch(
-            face_data_batch, face_indices, vars_to_include
-        )
-
-        # Prepare write tasks
-        all_write_tasks = []
-        for face_idx, df in face_dfs.items():
-            lat = float(face_data_batch["lat_center_all"][face_idx])
-            lon = float(face_data_batch["lon_center_all"][face_idx])
-
-            # Generate partition path and create directory
-            partition_path = self._get_partition_path(lat, lon)
-            full_dir = Path(output_dir, partition_path)
-            with self.lock:
-                full_dir.mkdir(exist_ok=True, parents=True)
-
-            # Generate filename
-            filename = f"face_{face_idx}.parquet"
-            if self.config is not None:
-                filename = self._get_partition_file_name(face_idx, lat, lon, df)
-
-            all_write_tasks.append((df, attributes, partition_path, filename, face_idx))
-
-        # Process write tasks in smaller parallel batches
-        saved_paths = []
-        partitions_created = set()
-
-        # Report progress at regular intervals
-        total_batches = (
-            len(all_write_tasks) + write_batch_size - 1
-        ) // write_batch_size
-        report_every = max(1, total_batches // 5)  # Report ~5 times during processing
-
-        for i in range(0, len(all_write_tasks), write_batch_size):
-            batch_num = i // write_batch_size + 1
-            batch_tasks = all_write_tasks[i : i + write_batch_size]
-
-            # Prepare tasks for parallel execution
-            batch_args = [
-                (df, attrs, path, filename, face_idx, output_dir)
-                for df, attrs, path, filename, face_idx in batch_tasks
-            ]
-
-            # Execute parallel writes using ThreadPoolExecutor (I/O bound)
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                batch_paths = list(executor.map(self._save_parquet_single, batch_args))
-
-            saved_paths.extend(batch_paths)
-
-            # Track partitions created
-            for path_str in batch_paths:
-                path = Path(path_str)
-                partitions_created.add(str(path.parent.relative_to(output_dir)))
-
-            # Report progress only at specific intervals
-            if batch_num % report_every == 0 or batch_num == total_batches:
-                progress = int((batch_num / total_batches) * 100)
-                print(
-                    f"Worker {worker_id}: {progress}% complete ({batch_num}/{total_batches} batches)"
-                )
-
-        print(
-            f"Worker {worker_id}: Completed {len(face_indices)} faces, created {len(saved_paths)} files"
-        )
-
-        return {
-            "worker_id": worker_id,
-            "faces_processed": len(face_indices),
-            "files_created": len(saved_paths),
-            "partitions_created": list(partitions_created),
-        }
-
-    def _save_parquet_single(self, args):
-        """Helper function to save a DataFrame to Parquet."""
-        df, attributes, partition_path, filename, face_idx, output_dir = args
-
-        # Handle existing files
-        with self.lock:
-            if face_idx in self.output_path_map:
-                # Concat with existing file
-                full_path = Path(self.output_path_map[face_idx])
-                existing_df = pd.read_parquet(full_path)
-                output_df = pd.concat([existing_df, df]).sort_index()
-                output_path = full_path
-            else:
-                # Create new file
-                full_dir = Path(output_dir, partition_path)
-                full_dir.mkdir(exist_ok=True, parents=True)
-                full_path = Path(full_dir, filename)
-                self.output_path_map[face_idx] = str(full_path)
-                output_df = df
-                output_path = full_path
-
-        # Convert to PyArrow table with metadata
-        table = pa.Table.from_pandas(output_df)
-        metadata_bytes = self._prepare_netcdf_compatible_metadata(attributes)
-        table = table.replace_schema_metadata(
-            {**table.schema.metadata, **metadata_bytes}
-        )
-
-        # Write the file
-        pq.write_table(table, output_path)
-        return str(output_path)
-
     def _load_face_data(
         self, dataset: xr.Dataset, face_indices: List[int], vars_to_include: List[str]
     ) -> Dict:
@@ -504,8 +507,8 @@ class ConvertTidalNcToParquet:
         dataset_path: Path,
         vars_to_include: Optional[List[str]] = None,
         max_faces: Optional[int] = None,
-        write_batch_size: int = 64,
-        main_batch_size: int = 5000,  # Number of faces to load at once in main process
+        write_batch_size: int = 16,
+        main_batch_size: int = 100000,
     ) -> Dict:
         """
         Convert an xarray Dataset to partitioned Parquet files.
@@ -555,6 +558,9 @@ class ConvertTidalNcToParquet:
         worker_batch_size = min(500, math.ceil(num_faces / num_workers))
         num_batches = math.ceil(num_faces / main_batch_size)
 
+        # Get output_dir as a string to avoid serialization issues
+        output_dir_str = str(self.output_dir)
+
         print("CONVERSION PLAN:")
         print(f"- Total faces: {num_faces}")
         print(f"- Main process batch size: {main_batch_size}")
@@ -587,6 +593,36 @@ class ConvertTidalNcToParquet:
                 dataset, batch_faces, vars_to_include
             )
 
+            # Clean the config and location dictionaries to remove any unpicklable objects
+            # This creates simplified versions that can be safely passed to worker processes
+            safe_config = {}  # type: ignore
+            if self.config is not None:
+                for key, value in self.config.items():
+                    if (
+                        isinstance(value, (str, int, float, bool, list, dict))
+                        or value is None
+                    ):
+                        if isinstance(value, dict):
+                            # Recursively clean nested dictionaries
+                            safe_config[key] = {}
+                            for k, v in value.items():
+                                if (
+                                    isinstance(v, (str, int, float, bool, list, dict))
+                                    or v is None
+                                ):
+                                    safe_config[key][k] = v
+                        else:
+                            safe_config[key] = value
+
+            safe_location = {}
+            if self.location is not None:
+                for key, value in self.location.items():
+                    if (
+                        isinstance(value, (str, int, float, bool, list, dict))
+                        or value is None
+                    ):
+                        safe_location[key] = value
+
             # Divide the loaded batch into worker sub-batches
             worker_batches = []
             for i in range(0, batch_size, worker_batch_size):
@@ -599,7 +635,7 @@ class ConvertTidalNcToParquet:
                         ],  # Each worker gets a different subset of faces
                         vars_to_include,
                         attributes,
-                        self.output_dir,
+                        output_dir_str,  # Use string instead of Path
                         write_batch_size,
                     )
                 )
@@ -608,8 +644,14 @@ class ConvertTidalNcToParquet:
             with concurrent.futures.ProcessPoolExecutor(
                 max_workers=num_workers
             ) as executor:
+                # Use a standalone function that doesn't depend on self
                 batch_results = list(
-                    executor.map(self._save_parquet_batch, worker_batches)
+                    executor.map(
+                        standalone_save_parquet_batch,
+                        worker_batches,
+                        [safe_config] * len(worker_batches),
+                        [safe_location] * len(worker_batches),
+                    )
                 )
 
             # Update combined statistics
@@ -684,17 +726,14 @@ def partition_vap_into_parquet_dataset(config, location_key, max_workers=96):
     )
 
     # Process each NetCDF file
-    for nc_file in sorted(list(input_path.rglob("*.nc")))[:1]:
+    for nc_file in sorted(list(input_path.rglob("*.nc"))):
         print(f"\n{'='*80}\nProcessing file: {nc_file}\n{'='*80}")
 
-        # Use the optimized method
+        # Use the optimized method with increased main_batch_size and reduced write_batch_size
         stats = converter.convert_dataset(
             dataset_path=nc_file,
-            # Multiply this by the number of workers to get the total number of files written.
-            # 64 * 96 = 6144 # Original Setting
-            # 8 * 96 = 768
-            write_batch_size=8,
-            main_batch_size=50000,  # Adjust based on available memory
+            write_batch_size=16,
+            main_batch_size=100000,
         )
 
         print(f"\nFile processed: {nc_file}")
