@@ -376,7 +376,7 @@ def convert_h5_to_parquet_simple(
     )
 
 
-def partition_vap_into_parquet_dataset(config, location_key, batch_size=20000):
+def partition_vap_into_parquet_dataset(config, location_key):
     """
     Process VAP data and convert to partitioned Parquet files using a simple sequential approach.
 
@@ -397,7 +397,7 @@ def partition_vap_into_parquet_dataset(config, location_key, batch_size=20000):
 
     # Use simple batch approach
     convert_h5_to_parquet_simple(
-        input_path, output_path, config, location, batch_size=batch_size
+        input_path, output_path, config, location, batch_size=1000
     )
 
     # final_output_path = file_manager.get_vap_partition_output_dir(
