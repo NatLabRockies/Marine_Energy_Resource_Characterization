@@ -546,5 +546,5 @@ def partition_vap_into_parquet_dataset(config, location_key, batch_size=20000):
     )
 
     convert_h5_to_parquet_batched(
-        input_path, output_path, config, location, batch_size=20000
+        input_path, output_path, config, location, batch_size=15000
     )
