@@ -400,7 +400,7 @@ def convert_h5_to_parquet_batched(
 
                 # Efficiently read 3D datasets in batches
                 for dataset_name, num_layers in dataset_info["3d_datasets"]:
-                    if dataset_name in f:
+                    if dataset_name in f and dataset_name not in ["nv"]:
                         for layer_idx in range(num_layers):
                             col_name = f"{dataset_name}_layer_{layer_idx}"
                             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
