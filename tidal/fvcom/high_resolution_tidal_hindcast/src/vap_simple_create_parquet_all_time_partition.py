@@ -339,17 +339,17 @@ def partition_vap_into_parquet_dataset(config, location_key, batch_size=20000):
     location = config["location_specification"][location_key]
     input_path = file_manager.get_vap_output_dir(config, location)
     output_path = file_manager.get_vap_partition_output_dir(
-        config, location, use_temp_base_path=True
+        config, location, use_temp_base_path=False
     )
 
     # Use simple batch approach
     convert_h5_to_parquet_simple(input_path, output_path, batch_size=batch_size)
 
-    final_output_path = file_manager.get_vap_partition_output_dir(
-        config, location, use_temp_base_path=False
-    )
-
-    if output_path != final_output_path:
-        print(f"Copying output files from {output_path} to {final_output_path}...")
-        copy_manager.copy_directory(output_path, final_output_path)
-        print(f"Copy complete! Output files are in {final_output_path}")
+    # final_output_path = file_manager.get_vap_partition_output_dir(
+    #     config, location, use_temp_base_path=False
+    # )
+    #
+    # if output_path != final_output_path:
+    #     print(f"Copying output files from {output_path} to {final_output_path}...")
+    #     copy_manager.copy_directory(output_path, final_output_path)
+    #     print(f"Copy complete! Output files are in {final_output_path}")
