@@ -16,7 +16,11 @@ from src.calculate_vap_average import (
 #     partition_vap_into_parquet_dataset,
 # )
 
-from src.vap_h5_create_parquet_all_time_partition import (
+# from src.vap_h5_create_parquet_all_time_partition import (
+#     partition_vap_into_parquet_dataset,
+# )
+
+from src.vap_simple_create_parquet_all_time_partition import (
     partition_vap_into_parquet_dataset,
 )
 
