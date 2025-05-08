@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import time
 from datetime import datetime
@@ -6,10 +5,61 @@ from datetime import datetime
 import h5py
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
-# Import modules from the main project
-from . import copy_manager, file_manager, file_name_convention_manager
+from . import file_manager, file_name_convention_manager
+
+
+def get_partition_path(df) -> str:
+    """
+    Generate the partition path based on lat/lon coordinates.
+    """
+    lat = df["lat"].iloc[0]
+    lon = df["lon"].iloc[0]
+    lat_deg = int(lat)
+    lon_deg = int(lon)
+    lat_dec = int(abs(lat * 100) % 100)
+    lon_dec = int(abs(lon * 100) % 100)
+
+    return f"lat_deg={lat_deg:02d}/lon_deg={lon_deg:02d}/lat_dec={lat_dec:02d}/lon_dec={lon_dec:02d}"
+
+
+def get_partition_file_name(
+    index: int,
+    df,
+    config,
+    location,
+    index_max_digits=6,
+    coord_digits_max=7,
+) -> str:
+    """
+    Generate standardized filename for partition files.
+    """
+    # Round latitude and longitude to specified decimal places
+    lat_rounded = round(df["lat"].iloc[0], coord_digits_max)
+    lon_rounded = round(df["lon"].iloc[0], coord_digits_max)
+
+    # Determine temporal string based on expected_delta_t_seconds
+    expected_delta_t_seconds = location["expected_delta_t_seconds"]
+    temporal_mapping = {3600: "1h", 1800: "30m"}
+    if expected_delta_t_seconds not in temporal_mapping:
+        raise ValueError(
+            f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
+        )
+    temporal_string = temporal_mapping[expected_delta_t_seconds]
+
+    # Format strings for padding and precision
+    index_format = f"0{index_max_digits}d"
+    coord_format = f".{coord_digits_max}f"
+
+    # Use file name convention manager to generate standard filename
+    return file_name_convention_manager.generate_filename_for_data_level(
+        df,
+        location["output_name"],
+        f"{config['dataset']['name']}.face={index:{index_format}}.lat={lat_rounded:{coord_format}}.lon={lon_rounded:{coord_format}}",
+        "b4",
+        temporal=temporal_string,
+        ext="parquet",
+    )
 
 
 def get_dataset_info(h5_file_path):
@@ -93,7 +143,9 @@ def get_dataset_info(h5_file_path):
     return dataset_info
 
 
-def convert_h5_to_parquet_simple(input_dir, output_dir, batch_size=20000):
+def convert_h5_to_parquet_simple(
+    input_dir, output_dir, config, location, batch_size=20000
+):
     """
     Convert h5 files to individual parquet files for each face using a simple sequential approach.
 
@@ -118,9 +170,6 @@ def convert_h5_to_parquet_simple(input_dir, output_dir, batch_size=20000):
     print(
         f"{timestamp} - INFO - Starting h5 to parquet conversion with simple batch approach"
     )
-
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
 
     # Get all h5 files and sort them by name (assumes chronological ordering)
     h5_files = sorted(list(Path(input_dir).glob("*.nc")))
@@ -309,8 +358,12 @@ def convert_h5_to_parquet_simple(input_dir, output_dir, batch_size=20000):
             # Create DataFrame and write to parquet
             df = pd.DataFrame(df_data)
 
-            output_file = os.path.join(output_dir, f"face_{face_id}.parquet")
-            df.to_parquet(output_file)
+            output_path = Path(
+                output_dir,
+                get_partition_path(df),
+                get_partition_file_name(face_id, df, config, location),
+            )
+            df.to_parquet(output_path)
 
         batch_time = time.time() - batch_start_time
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -343,7 +396,9 @@ def partition_vap_into_parquet_dataset(config, location_key, batch_size=20000):
     )
 
     # Use simple batch approach
-    convert_h5_to_parquet_simple(input_path, output_path, batch_size=batch_size)
+    convert_h5_to_parquet_simple(
+        input_path, output_path, config, location, batch_size=batch_size
+    )
 
     # final_output_path = file_manager.get_vap_partition_output_dir(
     #     config, location, use_temp_base_path=False
