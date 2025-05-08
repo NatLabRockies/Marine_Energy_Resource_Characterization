@@ -483,7 +483,9 @@ def convert_h5_to_parquet_batched(
                     df_data[key] = np.array(value)
 
             for key, value in df_data.items():
-                print(f"{key}: {value.shape}, type: {type(value)}")
+                print(
+                    f"{key}: {value.shape}, type: {type(value)}, first five: {value[:5]}"
+                )
 
             # Create DataFrame and write to parquet
             df = pd.DataFrame(df_data)
