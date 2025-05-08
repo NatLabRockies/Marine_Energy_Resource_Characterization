@@ -231,7 +231,7 @@ def convert_h5_to_parquet(
     os.makedirs(output_dir, exist_ok=True)
 
     # Get all h5 files
-    h5_files = sorted(list(Path(input_dir).glob("*.h5")))
+    h5_files = sorted(list(Path(input_dir).glob("*.nc")))
     if not h5_files:
         print(f"{timestamp} - ERROR - No h5 files found in {input_dir}")
         return
