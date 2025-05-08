@@ -689,38 +689,50 @@ class ConvertTidalNcToParquet:
                         ):
                             layer_key = f"{var_name}_layer_{layer_idx}"
                             if layer_key in face_data_batch:
-                                # Only get the data slice this worker needs for this layer
-                                try:
-                                    data_slice = face_data_batch[layer_key][
-                                        :, local_start:local_end
-                                    ]
-                                    worker_data_batch[layer_key] = data_slice
-                                except (IndexError, ValueError) as e:
-                                    print(f"Warning: Error slicing {layer_key}: {e}")
-                                    # If slicing fails, include the whole data
-                                    worker_data_batch[layer_key] = face_data_batch[
-                                        layer_key
-                                    ]
+                                # Check dimensionality before slicing
+                                data = face_data_batch[layer_key]
+                                if isinstance(data, np.ndarray):
+                                    if len(data.shape) > 1:
+                                        # 2D+ array - slice both dimensions
+                                        worker_data_batch[layer_key] = data[
+                                            :, local_start:local_end
+                                        ]
+                                    elif (
+                                        len(data.shape) == 1
+                                        and data.shape[0] == batch_size
+                                    ):
+                                        # 1D array matching the batch size - slice only the relevant portion
+                                        worker_data_batch[layer_key] = data[
+                                            local_start:local_end
+                                        ]
+                                    else:
+                                        # Other array - copy as is
+                                        worker_data_batch[layer_key] = data
+                                else:
+                                    # Non-array data - copy as is
+                                    worker_data_batch[layer_key] = data
 
-                    # Handle regular 2D variables
+                    # Handle regular variables
                     elif var_name in face_data_batch:
-                        # Only get the data slice this worker needs
-                        try:
-                            if (
-                                isinstance(face_data_batch[var_name], np.ndarray)
-                                and len(face_data_batch[var_name].shape) > 1
-                            ):
-                                data_slice = face_data_batch[var_name][
+                        # Check dimensionality before slicing
+                        data = face_data_batch[var_name]
+                        if isinstance(data, np.ndarray):
+                            if len(data.shape) > 1:
+                                # 2D+ array - slice both dimensions
+                                worker_data_batch[var_name] = data[
                                     :, local_start:local_end
                                 ]
-                                worker_data_batch[var_name] = data_slice
+                            elif len(data.shape) == 1 and data.shape[0] == batch_size:
+                                # 1D array matching the batch size - slice only the relevant portion
+                                worker_data_batch[var_name] = data[
+                                    local_start:local_end
+                                ]
                             else:
-                                # If it's not a 2D array, just copy it (probably metadata)
-                                worker_data_batch[var_name] = face_data_batch[var_name]
-                        except (IndexError, ValueError) as e:
-                            print(f"Warning: Error slicing {var_name}: {e}")
-                            # If slicing fails, include the whole data
-                            worker_data_batch[var_name] = face_data_batch[var_name]
+                                # Other array - copy as is
+                                worker_data_batch[var_name] = data
+                        else:
+                            # Non-array data - copy as is
+                            worker_data_batch[var_name] = data
 
                 # Create the worker batch with this optimized data subset
                 worker_batches.append(
