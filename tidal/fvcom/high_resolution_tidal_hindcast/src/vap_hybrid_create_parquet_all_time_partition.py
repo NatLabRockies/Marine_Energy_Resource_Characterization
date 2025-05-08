@@ -35,6 +35,7 @@ def standalone_save_parquet_batch(args, safe_config, safe_location):
     dict
         Statistics about the processed batch
     """
+    start_time = time.time()
     (
         face_data_batch,
         face_indices,
@@ -45,7 +46,9 @@ def standalone_save_parquet_batch(args, safe_config, safe_location):
     ) = args
 
     worker_id = os.getpid()
-    print(f"Worker {worker_id}: Processing batch of {len(face_indices)} faces")
+    print(
+        f"Worker {worker_id}: Starting at {time.strftime('%H:%M:%S')} - Processing batch of {len(face_indices)} faces"
+    )
 
     # Convert output_dir back to Path if it's a string
     if isinstance(output_dir, str):
@@ -61,7 +64,7 @@ def standalone_save_parquet_batch(args, safe_config, safe_location):
 
     # Process each face
     for i, face_idx in enumerate(face_indices):
-        local_idx = face_indices.index(face_idx) if face_idx in face_indices else i
+        local_idx = i  # Use index in the provided subset data
         data_dict = {}
 
         # Add center coordinates
@@ -242,8 +245,9 @@ def standalone_save_parquet_batch(args, safe_config, safe_location):
                 f"Worker {worker_id}: {progress}% complete ({batch_num}/{total_batches} batches)"
             )
 
+    elapsed_time = time.time() - start_time
     print(
-        f"Worker {worker_id}: Completed {len(face_indices)} faces, created {len(saved_paths)} files"
+        f"Worker {worker_id}: Completed at {time.strftime('%H:%M:%S')} - Processed {len(face_indices)} faces in {elapsed_time:.2f} seconds"
     )
 
     return {
@@ -251,6 +255,7 @@ def standalone_save_parquet_batch(args, safe_config, safe_location):
         "faces_processed": len(face_indices),
         "files_created": len(saved_paths),
         "partitions_created": list(partitions_created),
+        "elapsed_time": elapsed_time,
     }
 
 
@@ -588,10 +593,14 @@ class ConvertTidalNcToParquet:
                 f"\nProcessing main batch {batch_idx + 1}/{num_batches} ({batch_size} faces)"
             )
 
+            print("Loading face data...")
+            face_load_start = time.time()
             # Load this batch of data in the main process
             face_data_batch = self._load_face_data(
                 dataset, batch_faces, vars_to_include
             )
+
+            print(f"Face data loaded in {time.time() - face_load_start:.2f} seconds")
 
             # Clean the config and location dictionaries to remove any unpicklable objects
             # This creates simplified versions that can be safely passed to worker processes
@@ -623,16 +632,101 @@ class ConvertTidalNcToParquet:
                     ):
                         safe_location[key] = value
 
-            # Divide the loaded batch into worker sub-batches
+            # Divide the loaded batch into worker sub-batches with optimized data transfer
+            print("Creating optimized data subsets for each worker...")
             worker_batches = []
             for i in range(0, batch_size, worker_batch_size):
                 end_idx = min(i + worker_batch_size, batch_size)
+
+                # Get the actual face indices this worker will process
+                sub_batch_indices = batch_faces[i:end_idx]
+
+                # Calculate local indices within the current main batch
+                local_start = i
+                local_end = end_idx
+                local_size = local_end - local_start
+
+                # Create a subset of the data just for this worker's faces
+                worker_data_batch = {
+                    "time_values": face_data_batch[
+                        "time_values"
+                    ],  # All workers need time values
+                    # Only get the slice of coordinates this worker needs
+                    "lat_center": face_data_batch["lat_center"][local_start:local_end],
+                    "lon_center": face_data_batch["lon_center"][local_start:local_end],
+                    # Everyone needs all coordinates for partitioning
+                    "lat_center_all": face_data_batch["lat_center_all"],
+                    "lon_center_all": face_data_batch["lon_center_all"],
+                    # Only get the slice of node connectivity this worker needs
+                    "nv": face_data_batch["nv"][local_start:local_end],
+                }
+
+                # Only include node data if present (all workers need all nodes)
+                if "lat_node" in face_data_batch and "lon_node" in face_data_batch:
+                    worker_data_batch["lat_node"] = face_data_batch["lat_node"]
+                    worker_data_batch["lon_node"] = face_data_batch["lon_node"]
+
+                # For each variable, include only the data needed by this worker
+                for var_name in vars_to_include:
+                    # Skip variables we've already handled or don't exist
+                    if (
+                        var_name in ["nv", "lat_center", "lon_center"]
+                        or var_name not in face_data_batch
+                    ):
+                        continue
+
+                    # Handle layered variables
+                    if f"{var_name}_has_layers" in face_data_batch:
+                        worker_data_batch[f"{var_name}_has_layers"] = face_data_batch[
+                            f"{var_name}_has_layers"
+                        ]
+                        worker_data_batch[f"{var_name}_num_layers"] = face_data_batch[
+                            f"{var_name}_num_layers"
+                        ]
+
+                        for layer_idx in range(
+                            face_data_batch[f"{var_name}_num_layers"]
+                        ):
+                            layer_key = f"{var_name}_layer_{layer_idx}"
+                            if layer_key in face_data_batch:
+                                # Only get the data slice this worker needs for this layer
+                                try:
+                                    data_slice = face_data_batch[layer_key][
+                                        :, local_start:local_end
+                                    ]
+                                    worker_data_batch[layer_key] = data_slice
+                                except (IndexError, ValueError) as e:
+                                    print(f"Warning: Error slicing {layer_key}: {e}")
+                                    # If slicing fails, include the whole data
+                                    worker_data_batch[layer_key] = face_data_batch[
+                                        layer_key
+                                    ]
+
+                    # Handle regular 2D variables
+                    elif var_name in face_data_batch:
+                        # Only get the data slice this worker needs
+                        try:
+                            if (
+                                isinstance(face_data_batch[var_name], np.ndarray)
+                                and len(face_data_batch[var_name].shape) > 1
+                            ):
+                                data_slice = face_data_batch[var_name][
+                                    :, local_start:local_end
+                                ]
+                                worker_data_batch[var_name] = data_slice
+                            else:
+                                # If it's not a 2D array, just copy it (probably metadata)
+                                worker_data_batch[var_name] = face_data_batch[var_name]
+                        except (IndexError, ValueError) as e:
+                            print(f"Warning: Error slicing {var_name}: {e}")
+                            # If slicing fails, include the whole data
+                            worker_data_batch[var_name] = face_data_batch[var_name]
+
+                # Create the worker batch with this optimized data subset
                 worker_batches.append(
                     (
-                        face_data_batch,  # Same data for all workers, they'll extract their subset
-                        batch_faces[
-                            i:end_idx
-                        ],  # Each worker gets a different subset of faces
+                        worker_data_batch,  # Custom optimized subset for this worker
+                        sub_batch_indices,  # Actual face indices this worker should process
                         vars_to_include,
                         attributes,
                         output_dir_str,  # Use string instead of Path
@@ -640,26 +734,50 @@ class ConvertTidalNcToParquet:
                     )
                 )
 
-            # Process worker batches in parallel
+            # Process worker batches in parallel with improved concurrency
+            print(f"Starting {len(worker_batches)} worker processes in parallel...")
+            worker_start_time = time.time()
+
             with concurrent.futures.ProcessPoolExecutor(
                 max_workers=num_workers
             ) as executor:
-                # Use a standalone function that doesn't depend on self
-                batch_results = list(
-                    executor.map(
-                        standalone_save_parquet_batch,
-                        worker_batches,
-                        [safe_config] * len(worker_batches),
-                        [safe_location] * len(worker_batches),
+                # Submit all jobs immediately using submit() instead of map()
+                futures = []
+                for worker_idx, batch in enumerate(worker_batches):
+                    # Submit each job and keep track of its future
+                    future = executor.submit(
+                        standalone_save_parquet_batch, batch, safe_config, safe_location
                     )
-                )
+                    futures.append((worker_idx, future))
 
-            # Update combined statistics
-            for result in batch_results:
-                combined_stats["files_created"] += result["files_created"]
-                combined_stats["partitions_created"].update(
-                    result["partitions_created"]
-                )
+                # Process results as they complete using as_completed()
+                total_workers = len(futures)
+                completed = 0
+
+                for completed_future in concurrent.futures.as_completed(
+                    [f[1] for f in futures]
+                ):
+                    try:
+                        # Get result and update statistics
+                        result = completed_future.result()
+                        combined_stats["files_created"] += result["files_created"]
+                        combined_stats["partitions_created"].update(
+                            result["partitions_created"]
+                        )
+
+                        # Update completion counter and provide progress updates
+                        completed += 1
+                        if completed % 10 == 0 or completed == total_workers:
+                            print(
+                                f"Completed {completed}/{total_workers} worker processes"
+                            )
+
+                    except Exception as exc:
+                        print(f"Worker process failed with error: {exc}")
+
+            print(
+                f"All worker processes completed in {time.time() - worker_start_time:.2f} seconds"
+            )
 
             # Report progress for this main batch
             progress = int((batch_idx + 1) / num_batches * 100)
@@ -733,7 +851,7 @@ def partition_vap_into_parquet_dataset(config, location_key, max_workers=96):
         stats = converter.convert_dataset(
             dataset_path=nc_file,
             write_batch_size=16,
-            main_batch_size=100000,
+            main_batch_size=20000,
         )
 
         print(f"\nFile processed: {nc_file}")
