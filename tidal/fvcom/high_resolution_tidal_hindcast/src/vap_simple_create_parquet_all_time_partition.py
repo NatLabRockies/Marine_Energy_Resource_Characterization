@@ -482,18 +482,16 @@ def convert_h5_to_parquet_batched(
                 else:
                     df_data[key] = np.array(value)
 
-            for key, value in df_data.items():
-                print(
-                    f"{key}: {value.shape}, type: {type(value)}, first five: {value[:5]}"
-                )
+            # for key, value in df_data.items():
+            #     print(
+            #         f"{key}: {value.shape}, type: {type(value)}, first five: {value[:5]}"
+            #     )
 
             # Create DataFrame and write to parquet
             df = pd.DataFrame(df_data)
             df["time"] = pd.to_datetime(df["time"], unit="s", origin="unix")
             df = df.set_index("time")
             df = df.sort_index()
-
-            print(df.info())
 
             # Create partitioned directory structure and filename
             partition_dir = Path(output_dir, get_partition_path(df))
@@ -502,6 +500,8 @@ def convert_h5_to_parquet_batched(
             output_file = Path(
                 partition_dir, get_partition_file_name(face_id, df, config, location)
             )
+
+            print(f"Writing {output_file}...")
 
             df.to_parquet(output_file)
 
