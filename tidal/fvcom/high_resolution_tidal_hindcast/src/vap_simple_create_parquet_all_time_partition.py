@@ -182,7 +182,7 @@ def convert_h5_to_parquet_batched(
     os.makedirs(output_dir, exist_ok=True)
 
     # Get all h5 files and sort them by name (assumes chronological ordering)
-    h5_files = sorted(list(Path(input_dir).glob("*.nc")))[:1]
+    h5_files = sorted(list(Path(input_dir).glob("*.nc")))
     if not h5_files:
         h5_files = sorted(list(Path(input_dir).glob("*.h5")))
         if not h5_files:
@@ -501,8 +501,6 @@ def convert_h5_to_parquet_batched(
                 partition_dir, get_partition_file_name(face_id, df, config, location)
             )
 
-            print(f"Writing {output_file}...")
-
             df.to_parquet(output_file)
 
         writing_time = time.time() - writing_start
@@ -548,5 +546,5 @@ def partition_vap_into_parquet_dataset(config, location_key, batch_size=20000):
     )
 
     convert_h5_to_parquet_batched(
-        input_path, output_path, config, location, batch_size=50000
+        input_path, output_path, config, location, batch_size=200000
     )
