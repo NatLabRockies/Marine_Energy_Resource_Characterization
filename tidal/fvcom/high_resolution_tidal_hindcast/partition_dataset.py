@@ -14,7 +14,7 @@ if __name__ == "__main__":
     location = config["location_specification"][args.location]
 
     batch_size = args.batch_size
-    batch_number = args.batch_number
+    batch_number = args.batch_num
 
     print(f"Create Parquet Partition Dataset for {args.location}...")
     partition_vap_into_parquet_dataset(
