@@ -9,7 +9,7 @@
 ##SBATCH --partition=nvme
 ##SBATCH --partition=standard
 #SBATCH --partition=debug
-## SBATCH --time=59:00
+# SBATCH --time=59:00
 ##SBATCH --tmp=1600000 # Limit is 1700000
 
 
