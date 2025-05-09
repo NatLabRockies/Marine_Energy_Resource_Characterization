@@ -12,7 +12,6 @@ if __name__ == "__main__":
 
     # Access the location config
     location = config["location_specification"][args.location]
-    output_type = args.output_type
 
     batch_size = args.batch_size
     batch_number = args.batch_number
