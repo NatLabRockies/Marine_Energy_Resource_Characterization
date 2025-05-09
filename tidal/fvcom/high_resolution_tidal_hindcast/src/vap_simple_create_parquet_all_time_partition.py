@@ -501,7 +501,7 @@ def convert_h5_to_parquet_batched(
             with counter_lock:
                 nonlocal processed_count
                 processed_count += 1
-                if processed_count % 1000 == 0:
+                if processed_count % 10 == 0:
                     current_time = time.time()
                     elapsed = current_time - writing_start
                     remaining = (elapsed / processed_count) * (
@@ -513,7 +513,7 @@ def convert_h5_to_parquet_batched(
                     )
 
         # Use ThreadPoolExecutor to parallelize the writing process
-        with ThreadPoolExecutor(max_workers=96) as executor:
+        with ThreadPoolExecutor(max_workers=32) as executor:
             # Submit all face processing tasks
             future_to_face = {
                 executor.submit(process_and_write_face, face_id): face_id
