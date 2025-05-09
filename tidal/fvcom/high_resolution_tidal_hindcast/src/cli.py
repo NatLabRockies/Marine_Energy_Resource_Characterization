@@ -63,3 +63,28 @@ def parse_args(config):
     )
 
     return parser.parse_args()
+
+
+def parse_partition_args(config):
+    """Parse command line arguments using provided config."""
+    parser = argparse.ArgumentParser(
+        description="Process FVCOM data for specified location and output type."
+    )
+    parser.add_argument(
+        "location",
+        type=validate_location(config),
+        help="Location to process (e.g., aleutian_islands, cook_inlet)",
+    )
+    # Add batch size argument
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=100,
+        help="Number of items to process in each batch (default: 100)",
+    )
+    # Add batch number argument
+    parser.add_argument(
+        "--batch-num", type=int, default=1, help="Batch number to process (default: 1)"
+    )
+
+    return parser.parse_args()
