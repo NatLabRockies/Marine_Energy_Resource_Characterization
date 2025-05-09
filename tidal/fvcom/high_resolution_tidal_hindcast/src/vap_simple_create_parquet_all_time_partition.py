@@ -148,7 +148,7 @@ def get_dataset_info(h5_file_path):
 
 
 def convert_h5_to_parquet_batched(
-    input_dir, output_dir, config, location, batch_size=20000
+    input_dir, output_dir, config, location, batch_size=20000, batch_number=0
 ):
     """
     Convert h5 files to individual parquet files for each face using an optimized batch approach.
@@ -255,297 +255,279 @@ def convert_h5_to_parquet_batched(
         )
 
     # Process faces in batches
-    total_batches = (total_faces + batch_size - 1) // batch_size
+    # total_batches = (total_faces + batch_size - 1) // batch_size
+    # total_batches = (total_faces + batch_size - 1) // batch_size
+    start_index = batch_number * batch_size
+    # end_index = start_index + batch_size
+    start_face = start_index
+    print(f"{timestamp} - INFO - Processing {batch_size} faces in batch {batch_number}")
+
+    # for batch_idx, start_face in enumerate(range(0, total_faces, batch_size)):
+    batch_start_time = time.time()
+    end_face = min(start_face + batch_size, total_faces)
+    faces_to_process = end_face - start_face
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Data structure to store all time series for each face
+    all_face_data = {}
+
+    # Initialize the data structure for each face
     print(
-        f"{timestamp} - INFO - Will process faces in {total_batches} batches of up to {batch_size} faces each"
+        f"{timestamp} - INFO - Initializing data structure for {faces_to_process} faces"
     )
+    for face_id in range(start_face, end_face):
+        all_face_data[face_id] = {
+            "time": [],
+            "lat": None,
+            "lon": None,
+            # Element corner coordinates (constant)
+            "element_corner_1_lat": element_corners[face_id]["element_corner_1_lat"],
+            "element_corner_1_lon": element_corners[face_id]["element_corner_1_lon"],
+            "element_corner_2_lat": element_corners[face_id]["element_corner_2_lat"],
+            "element_corner_2_lon": element_corners[face_id]["element_corner_2_lon"],
+            "element_corner_3_lat": element_corners[face_id]["element_corner_3_lat"],
+            "element_corner_3_lon": element_corners[face_id]["element_corner_3_lon"],
+        }
 
-    for batch_idx, start_face in enumerate(range(0, total_faces, batch_size)):
-        batch_start_time = time.time()
-        end_face = min(start_face + batch_size, total_faces)
-        faces_to_process = end_face - start_face
+        # Initialize dataset arrays
+        for dataset_name in dataset_info["2d_datasets"]:
+            if dataset_name not in ["lat_center", "lon_center"]:
+                all_face_data[face_id][dataset_name] = []
 
+        for dataset_name, num_layers in dataset_info["3d_datasets"]:
+            for layer_idx in range(num_layers):
+                col_name = f"{dataset_name}_layer_{layer_idx}"
+                all_face_data[face_id][col_name] = []
+
+    # Process each file sequentially
+    for file_idx, h5_file in enumerate(h5_files):
+        file_start_time = time.time()
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(
-            f"{timestamp} - INFO - Batch {batch_idx+1}/{total_batches}: Processing faces {start_face} to {end_face-1} ({faces_to_process} faces)"
+            f"{timestamp} - INFO - File {file_idx+1}/{len(h5_files)}: Reading {h5_file}"
         )
 
-        # Data structure to store all time series for each face
-        all_face_data = {}
-
-        # Initialize the data structure for each face
-        print(
-            f"{timestamp} - INFO - Initializing data structure for {faces_to_process} faces"
-        )
-        for face_id in range(start_face, end_face):
-            all_face_data[face_id] = {
-                "time": [],
-                "lat": None,
-                "lon": None,
-                # Element corner coordinates (constant)
-                "element_corner_1_lat": element_corners[face_id][
-                    "element_corner_1_lat"
-                ],
-                "element_corner_1_lon": element_corners[face_id][
-                    "element_corner_1_lon"
-                ],
-                "element_corner_2_lat": element_corners[face_id][
-                    "element_corner_2_lat"
-                ],
-                "element_corner_2_lon": element_corners[face_id][
-                    "element_corner_2_lon"
-                ],
-                "element_corner_3_lat": element_corners[face_id][
-                    "element_corner_3_lat"
-                ],
-                "element_corner_3_lon": element_corners[face_id][
-                    "element_corner_3_lon"
-                ],
-            }
-
-            # Initialize dataset arrays
-            for dataset_name in dataset_info["2d_datasets"]:
-                if dataset_name not in ["lat_center", "lon_center"]:
-                    all_face_data[face_id][dataset_name] = []
-
-            for dataset_name, num_layers in dataset_info["3d_datasets"]:
-                for layer_idx in range(num_layers):
-                    col_name = f"{dataset_name}_layer_{layer_idx}"
-                    all_face_data[face_id][col_name] = []
-
-        # Process each file sequentially
-        for file_idx, h5_file in enumerate(h5_files):
-            file_start_time = time.time()
+        with h5py.File(h5_file, "r") as f:
+            # Get time values once
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(
-                f"{timestamp} - INFO - File {file_idx+1}/{len(h5_files)}: Reading {h5_file}"
-            )
+            print(f"{timestamp} - INFO - Reading time values")
+            time_values = f["time"][:]
+            time_length = len(time_values)
+            print(f"{timestamp} - INFO - Found {time_length} time values")
 
-            with h5py.File(h5_file, "r") as f:
-                # Get time values once
+            # Get lat/lon for all faces in this batch (only from first file)
+            if file_idx == 0:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                print(f"{timestamp} - INFO - Reading time values")
-                time_values = f["time"][:]
-                time_length = len(time_values)
-                print(f"{timestamp} - INFO - Found {time_length} time values")
+                print(f"{timestamp} - INFO - Reading lat/lon center values")
 
-                # Get lat/lon for all faces in this batch (only from first file)
-                if file_idx == 0:
+                if "lat_center" in f:
+                    print(
+                        f"{timestamp} - INFO - Reading lat_center[{start_face}:{end_face}]"
+                    )
+                    lat_values = f["lat_center"][start_face:end_face]
+                    print(
+                        f"{timestamp} - INFO - Read {len(lat_values)} lat_center values"
+                    )
+                    for i, face_id in enumerate(range(start_face, end_face)):
+                        all_face_data[face_id]["lat"] = lat_values[i]
+
+                if "lon_center" in f:
+                    print(
+                        f"{timestamp} - INFO - Reading lon_center[{start_face}:{end_face}]"
+                    )
+                    lon_values = f["lon_center"][start_face:end_face]
+                    print(
+                        f"{timestamp} - INFO - Read {len(lon_values)} lon_center values"
+                    )
+                    for i, face_id in enumerate(range(start_face, end_face)):
+                        all_face_data[face_id]["lon"] = lon_values[i]
+
+            # Add time values to each face
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"{timestamp} - INFO - Adding time values to all faces")
+            for face_id in range(start_face, end_face):
+                all_face_data[face_id]["time"].extend(time_values)
+
+            # Efficiently read 2D datasets in batches
+            for dataset_name in dataset_info["2d_datasets"]:
+                if dataset_name in f and dataset_name not in [
+                    "lat_center",
+                    "lon_center",
+                    "nv",
+                ]:
                     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    print(f"{timestamp} - INFO - Reading lat/lon center values")
+                    print(
+                        f"{timestamp} - INFO - Reading {dataset_name}[:, {start_face}:{end_face}] (batch)"
+                    )
 
-                    if "lat_center" in f:
-                        print(
-                            f"{timestamp} - INFO - Reading lat_center[{start_face}:{end_face}]"
-                        )
-                        lat_values = f["lat_center"][start_face:end_face]
-                        print(
-                            f"{timestamp} - INFO - Read {len(lat_values)} lat_center values"
-                        )
-                        for i, face_id in enumerate(range(start_face, end_face)):
-                            all_face_data[face_id]["lat"] = lat_values[i]
+                    # Read the entire batch of faces for all time points at once
+                    batch_read_start = time.time()
+                    data_batch = f[dataset_name][:, start_face:end_face]
+                    batch_read_time = time.time() - batch_read_start
 
-                    if "lon_center" in f:
-                        print(
-                            f"{timestamp} - INFO - Reading lon_center[{start_face}:{end_face}]"
-                        )
-                        lon_values = f["lon_center"][start_face:end_face]
-                        print(
-                            f"{timestamp} - INFO - Read {len(lon_values)} lon_center values"
-                        )
-                        for i, face_id in enumerate(range(start_face, end_face)):
-                            all_face_data[face_id]["lon"] = lon_values[i]
+                    print(
+                        f"{timestamp} - INFO - Read {dataset_name} batch with shape {data_batch.shape} in {batch_read_time:.2f} seconds"
+                    )
 
-                # Add time values to each face
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                print(f"{timestamp} - INFO - Adding time values to all faces")
-                for face_id in range(start_face, end_face):
-                    all_face_data[face_id]["time"].extend(time_values)
+                    # Distribute the data to each face
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    print(
+                        f"{timestamp} - INFO - Distributing {dataset_name} data to individual faces"
+                    )
+                    distribute_start = time.time()
 
-                # Efficiently read 2D datasets in batches
-                for dataset_name in dataset_info["2d_datasets"]:
-                    if dataset_name in f and dataset_name not in [
-                        "lat_center",
-                        "lon_center",
-                        "nv",
-                    ]:
+                    for i, face_id in enumerate(range(start_face, end_face)):
+                        # Extract this face's data (all time points)
+                        face_data = data_batch[:, i]
+                        all_face_data[face_id][dataset_name].extend(face_data)
+
+                    distribute_time = time.time() - distribute_start
+                    print(
+                        f"{timestamp} - INFO - Distributed {dataset_name} data in {distribute_time:.2f} seconds"
+                    )
+
+            # Efficiently read 3D datasets in batches
+            for dataset_name, num_layers in dataset_info["3d_datasets"]:
+                if dataset_name in f and dataset_name not in ["nv"]:
+                    for layer_idx in range(num_layers):
+                        col_name = f"{dataset_name}_layer_{layer_idx}"
                         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         print(
-                            f"{timestamp} - INFO - Reading {dataset_name}[:, {start_face}:{end_face}] (batch)"
+                            f"{timestamp} - INFO - Reading {dataset_name}[:, {layer_idx}, {start_face}:{end_face}] (batch)"
                         )
 
-                        # Read the entire batch of faces for all time points at once
+                        # Read the entire batch of faces for this layer and all time points
                         batch_read_start = time.time()
-                        data_batch = f[dataset_name][:, start_face:end_face]
+                        data_batch = f[dataset_name][:, layer_idx, start_face:end_face]
                         batch_read_time = time.time() - batch_read_start
 
                         print(
-                            f"{timestamp} - INFO - Read {dataset_name} batch with shape {data_batch.shape} in {batch_read_time:.2f} seconds"
+                            f"{timestamp} - INFO - Read {dataset_name} layer {layer_idx} batch with shape {data_batch.shape} in {batch_read_time:.2f} seconds"
                         )
 
                         # Distribute the data to each face
                         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         print(
-                            f"{timestamp} - INFO - Distributing {dataset_name} data to individual faces"
+                            f"{timestamp} - INFO - Distributing {dataset_name} layer {layer_idx} data to individual faces"
                         )
                         distribute_start = time.time()
 
                         for i, face_id in enumerate(range(start_face, end_face)):
-                            # Extract this face's data (all time points)
+                            # Extract this face's data for this layer (all time points)
                             face_data = data_batch[:, i]
-                            all_face_data[face_id][dataset_name].extend(face_data)
+                            all_face_data[face_id][col_name].extend(face_data)
 
                         distribute_time = time.time() - distribute_start
                         print(
-                            f"{timestamp} - INFO - Distributed {dataset_name} data in {distribute_time:.2f} seconds"
+                            f"{timestamp} - INFO - Distributed {dataset_name} layer {layer_idx} data in {distribute_time:.2f} seconds"
                         )
 
-                # Efficiently read 3D datasets in batches
-                for dataset_name, num_layers in dataset_info["3d_datasets"]:
-                    if dataset_name in f and dataset_name not in ["nv"]:
-                        for layer_idx in range(num_layers):
-                            col_name = f"{dataset_name}_layer_{layer_idx}"
-                            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            print(
-                                f"{timestamp} - INFO - Reading {dataset_name}[:, {layer_idx}, {start_face}:{end_face}] (batch)"
-                            )
-
-                            # Read the entire batch of faces for this layer and all time points
-                            batch_read_start = time.time()
-                            data_batch = f[dataset_name][
-                                :, layer_idx, start_face:end_face
-                            ]
-                            batch_read_time = time.time() - batch_read_start
-
-                            print(
-                                f"{timestamp} - INFO - Read {dataset_name} layer {layer_idx} batch with shape {data_batch.shape} in {batch_read_time:.2f} seconds"
-                            )
-
-                            # Distribute the data to each face
-                            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            print(
-                                f"{timestamp} - INFO - Distributing {dataset_name} layer {layer_idx} data to individual faces"
-                            )
-                            distribute_start = time.time()
-
-                            for i, face_id in enumerate(range(start_face, end_face)):
-                                # Extract this face's data for this layer (all time points)
-                                face_data = data_batch[:, i]
-                                all_face_data[face_id][col_name].extend(face_data)
-
-                            distribute_time = time.time() - distribute_start
-                            print(
-                                f"{timestamp} - INFO - Distributed {dataset_name} layer {layer_idx} data in {distribute_time:.2f} seconds"
-                            )
-
-            file_time = time.time() - file_start_time
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(
-                f"{timestamp} - INFO - Completed reading file {file_idx+1}/{len(h5_files)} in {file_time:.2f} seconds"
-            )
-
-        # Now write one parquet file per face with the complete time series using threading
+        file_time = time.time() - file_start_time
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(
-            f"{timestamp} - INFO - Writing {faces_to_process} parquet files with full time series using threading"
+            f"{timestamp} - INFO - Completed reading file {file_idx+1}/{len(h5_files)} in {file_time:.2f} seconds"
         )
-        writing_start = time.time()
 
-        # Create a thread-safe counter for progress reporting
-        processed_count = 0
-        counter_lock = threading.Lock()
+    # Now write one parquet file per face with the complete time series using threading
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(
+        f"{timestamp} - INFO - Writing {faces_to_process} parquet files with full time series using threading"
+    )
+    writing_start = time.time()
 
-        def process_and_write_face(face_id):
+    # Create a thread-safe counter for progress reporting
+    processed_count = 0
+    counter_lock = threading.Lock()
+
+    def process_and_write_face(face_id):
+        nonlocal processed_count
+
+        # Create a DataFrame for this face
+        df_data = {}
+
+        # Convert all lists to numpy arrays and handle constant values
+        for key, value in all_face_data[face_id].items():
+            if "nv_layer" in key:
+                continue
+            if key in [
+                "lat",
+                "lon",
+                "element_corner_1_lat",
+                "element_corner_1_lon",
+                "element_corner_2_lat",
+                "element_corner_2_lon",
+                "element_corner_3_lat",
+                "element_corner_3_lon",
+            ]:
+                # Repeat scalar values to match time length
+                time_length = len(all_face_data[face_id]["time"])
+                df_data[key] = np.repeat(value, time_length)
+            else:
+                df_data[key] = np.array(value)
+
+        # Create DataFrame and write to parquet
+        df = pd.DataFrame(df_data)
+        df["time"] = pd.to_datetime(df["time"], unit="s", origin="unix")
+        df = df.set_index("time")
+        df = df.sort_index()
+
+        # Create partitioned directory structure and filename
+        partition_dir = Path(output_dir, get_partition_path(df))
+        partition_dir.mkdir(parents=True, exist_ok=True)
+
+        output_file = Path(
+            partition_dir, get_partition_file_name(face_id, df, config, location)
+        )
+
+        df.to_parquet(output_file)
+
+        # Update counter with thread safety
+        with counter_lock:
             nonlocal processed_count
+            processed_count += 1
+            if processed_count % 10 == 0:
+                current_time = time.time()
+                elapsed = current_time - writing_start
+                remaining = (elapsed / processed_count) * (
+                    faces_to_process - processed_count
+                )
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(
+                    f"{timestamp} - INFO - Written {processed_count}/{faces_to_process} parquet files. Estimated time remaining: {remaining:.2f} seconds"
+                )
 
-            # Create a DataFrame for this face
-            df_data = {}
+    # Use ThreadPoolExecutor to parallelize the writing process
+    with ThreadPoolExecutor(max_workers=96) as executor:
+        # Submit all face processing tasks
+        future_to_face = {
+            executor.submit(process_and_write_face, face_id): face_id
+            for face_id in range(start_face, end_face)
+        }
 
-            # Convert all lists to numpy arrays and handle constant values
-            for key, value in all_face_data[face_id].items():
-                if "nv_layer" in key:
-                    continue
-                if key in [
-                    "lat",
-                    "lon",
-                    "element_corner_1_lat",
-                    "element_corner_1_lon",
-                    "element_corner_2_lat",
-                    "element_corner_2_lon",
-                    "element_corner_3_lat",
-                    "element_corner_3_lon",
-                ]:
-                    # Repeat scalar values to match time length
-                    time_length = len(all_face_data[face_id]["time"])
-                    df_data[key] = np.repeat(value, time_length)
-                else:
-                    df_data[key] = np.array(value)
+        # Wait for all tasks to complete
+        for future in as_completed(future_to_face):
+            face_id = future_to_face[future]
+            try:
+                future.result()  # Get result to capture any exceptions
+            except Exception as e:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(
+                    f"{timestamp} - ERROR - Failed to process face {face_id}: {str(e)}"
+                )
 
-            # Create DataFrame and write to parquet
-            df = pd.DataFrame(df_data)
-            df["time"] = pd.to_datetime(df["time"], unit="s", origin="unix")
-            df = df.set_index("time")
-            df = df.sort_index()
+    writing_time = time.time() - writing_start
+    batch_time = time.time() - batch_start_time
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(
+        f"{timestamp} - INFO - Wrote {faces_to_process} parquet files in {writing_time:.2f} seconds"
+    )
 
-            # Create partitioned directory structure and filename
-            partition_dir = Path(output_dir, get_partition_path(df))
-            partition_dir.mkdir(parents=True, exist_ok=True)
-
-            output_file = Path(
-                partition_dir, get_partition_file_name(face_id, df, config, location)
-            )
-
-            df.to_parquet(output_file)
-
-            # Update counter with thread safety
-            with counter_lock:
-                nonlocal processed_count
-                processed_count += 1
-                if processed_count % 10 == 0:
-                    current_time = time.time()
-                    elapsed = current_time - writing_start
-                    remaining = (elapsed / processed_count) * (
-                        faces_to_process - processed_count
-                    )
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    print(
-                        f"{timestamp} - INFO - Written {processed_count}/{faces_to_process} parquet files. Estimated time remaining: {remaining:.2f} seconds"
-                    )
-
-        # Use ThreadPoolExecutor to parallelize the writing process
-        with ThreadPoolExecutor(max_workers=32) as executor:
-            # Submit all face processing tasks
-            future_to_face = {
-                executor.submit(process_and_write_face, face_id): face_id
-                for face_id in range(start_face, end_face)
-            }
-
-            # Wait for all tasks to complete
-            for future in as_completed(future_to_face):
-                face_id = future_to_face[future]
-                try:
-                    future.result()  # Get result to capture any exceptions
-                except Exception as e:
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    print(
-                        f"{timestamp} - ERROR - Failed to process face {face_id}: {str(e)}"
-                    )
-
-        writing_time = time.time() - writing_start
-        batch_time = time.time() - batch_start_time
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(
-            f"{timestamp} - INFO - Wrote {faces_to_process} parquet files in {writing_time:.2f} seconds"
-        )
-        print(
-            f"{timestamp} - INFO - Completed batch {batch_idx+1}/{total_batches} in {batch_time:.2f} seconds"
-        )
-
-        # Calculate memory usage
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        process = psutil.Process(os.getpid())
-        memory_mb = process.memory_info().rss / 1024 / 1024
-        print(f"{timestamp} - INFO - Current memory usage: {memory_mb:.2f} MB")
+    # Calculate memory usage
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    process = psutil.Process(os.getpid())
+    memory_mb = process.memory_info().rss / 1024 / 1024
+    print(f"{timestamp} - INFO - Current memory usage: {memory_mb:.2f} MB")
 
     elapsed_time = time.time() - start_time
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -554,7 +536,12 @@ def convert_h5_to_parquet_batched(
     )
 
 
-def partition_vap_into_parquet_dataset(config, location_key, batch_size=20000):
+def partition_vap_into_parquet_dataset(
+    config,
+    location_key,
+    batch_size=20000,
+    batch_number=0,  # Batch number must start at zero
+):
     """
     Process VAP data and convert to partitioned Parquet files using an optimized batch approach.
 
@@ -574,5 +561,10 @@ def partition_vap_into_parquet_dataset(config, location_key, batch_size=20000):
     )
 
     convert_h5_to_parquet_batched(
-        input_path, output_path, config, location, batch_size=5000
+        input_path,
+        output_path,
+        config,
+        location,
+        batch_size=batch_size,
+        batch_number=batch_number,
     )
