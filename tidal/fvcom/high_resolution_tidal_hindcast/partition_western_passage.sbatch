@@ -21,4 +21,4 @@ cd /home/asimms/marine_energy_resource_characterization/tidal/fvcom/high_resolut
 export PYTHONUNBUFFERED=1
 
 # Create a Python script that handles the parallelized processing
-python partition_dataset.py western_passage --batch-size 2500 --batch-number $SLURM_ARRAY_TASK_ID 
+python partition_dataset.py western_passage --batch-size 2500 --batch-num $SLURM_ARRAY_TASK_ID 
