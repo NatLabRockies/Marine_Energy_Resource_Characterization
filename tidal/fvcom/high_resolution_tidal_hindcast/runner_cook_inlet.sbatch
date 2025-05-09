@@ -5,10 +5,11 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=47:00:00
+## SBATCH --time=47:00:00
 ##SBATCH --partition=nvme
 ##SBATCH --partition=standard
 #SBATCH --partition=debug
+## SBATCH --time=59:00
 ##SBATCH --tmp=1600000 # Limit is 1700000
 
 
