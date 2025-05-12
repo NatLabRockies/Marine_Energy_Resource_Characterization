@@ -36,14 +36,23 @@ def prepare_netcdf_compatible_metadata(attributes):
                 return obj.isoformat()
             return super(NumpyEncoder, self).default(obj)
 
+    # List of problematic fields to exclude (ending with REFERENCE_LIST or DIMENSION_LIST)
+    exclude_patterns = ["REFERENCE_LIST", "DIMENSION_LIST"]
+
     metadata = {}
     # Process attributes based on structure
     if "variable_attributes" in attributes:
         for var_name, var_attrs in attributes["variable_attributes"].items():
+            for pattern in exclude_patterns:
+                if var_name.endswith(pattern):
+                    continue
             for attr_name, attr_value in var_attrs.items():
                 metadata[f"{var_name}:{attr_name}"] = attr_value
     if "global_attributes" in attributes:
         for attr_name, attr_value in attributes["global_attributes"].items():
+            for pattern in exclude_patterns:
+                if attr_name.endswith(pattern):
+                    continue
             metadata[f"global:{attr_name}"] = attr_value
     # Handle flat dictionary case
     if not isinstance(attributes, dict) or (
@@ -51,6 +60,9 @@ def prepare_netcdf_compatible_metadata(attributes):
         and "global_attributes" not in attributes
     ):
         for attr_name, attr_value in attributes.items():
+            for pattern in exclude_patterns:
+                if attr_name.endswith(pattern):
+                    continue
             metadata[f"global:{attr_name}"] = attr_value
     # Add metadata markers
     metadata["_WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
