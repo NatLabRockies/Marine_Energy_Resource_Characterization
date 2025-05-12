@@ -2,13 +2,75 @@ from pathlib import Path
 import os
 import time
 from datetime import datetime
+import json
 
 import h5py
 import numpy as np
 import pandas as pd
 import psutil
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from . import file_manager, file_name_convention_manager
+
+
+def prepare_netcdf_compatible_metadata(attributes):
+    """
+    Process and prepare metadata to be compatible with NetCDF/xarray structure.
+    """
+
+    # Custom JSON encoder for NumPy types
+    class NumpyEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8)):
+                return int(obj)
+            elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
+                return float(obj)
+            elif isinstance(obj, (np.ndarray,)):
+                return obj.tolist()
+            elif isinstance(obj, (np.bool_)):
+                return bool(obj)
+            elif np.isnan(obj):
+                return None
+            elif hasattr(obj, "isoformat"):  # datetime objects
+                return obj.isoformat()
+            return super(NumpyEncoder, self).default(obj)
+
+    metadata = {}
+    # Process attributes based on structure
+    if "variable_attributes" in attributes:
+        for var_name, var_attrs in attributes["variable_attributes"].items():
+            for attr_name, attr_value in var_attrs.items():
+                metadata[f"{var_name}:{attr_name}"] = attr_value
+    if "global_attributes" in attributes:
+        for attr_name, attr_value in attributes["global_attributes"].items():
+            metadata[f"global:{attr_name}"] = attr_value
+    # Handle flat dictionary case
+    if not isinstance(attributes, dict) or (
+        "variable_attributes" not in attributes
+        and "global_attributes" not in attributes
+    ):
+        for attr_name, attr_value in attributes.items():
+            metadata[f"global:{attr_name}"] = attr_value
+    # Add metadata markers
+    metadata["_WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
+    metadata["_WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
+    # Convert all metadata values to bytes
+    metadata_bytes = {}
+    for k, v in metadata.items():
+        try:
+            if (
+                isinstance(v, (list, dict, tuple))
+                or hasattr(v, "__dict__")
+                or isinstance(v, np.ndarray)
+            ):
+                metadata_bytes[k] = json.dumps(v, cls=NumpyEncoder).encode("utf-8")
+            else:
+                metadata_bytes[k] = str(v).encode("utf-8")
+        except TypeError as e:
+            metadata_bytes[k] = str(v).encode("utf-8")
+            print(f"Warning: Could not JSON encode {k}: {e}")
+    return metadata_bytes
 
 
 def get_partition_path(df) -> str:
@@ -145,11 +207,63 @@ def get_dataset_info(h5_file_path):
     return dataset_info
 
 
+def extract_metadata_from_nc(nc_file_path):
+    """
+    Extract metadata from the first NC file.
+
+    Parameters:
+    -----------
+    nc_file_path : str
+        Path to the netCDF file
+
+    Returns:
+    --------
+    dict
+        Dictionary containing prepared metadata
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{timestamp} - INFO - Extracting metadata from {nc_file_path}")
+
+    attributes = {}
+
+    try:
+        with h5py.File(nc_file_path, "r") as f:
+            # Extract global attributes
+            global_attrs = {}
+            for attr_name in f.attrs:
+                global_attrs[attr_name] = f.attrs[attr_name]
+
+            # Extract variable attributes
+            variable_attrs = {}
+            for var_name in f:
+                if isinstance(f[var_name], h5py.Dataset):
+                    var_attrs = {}
+                    for attr_name in f[var_name].attrs:
+                        var_attrs[attr_name] = f[var_name].attrs[attr_name]
+                    if var_attrs:
+                        variable_attrs[var_name] = var_attrs
+
+            attributes = {
+                "global_attributes": global_attrs,
+                "variable_attributes": variable_attrs,
+            }
+
+    except Exception as e:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(
+            f"{timestamp} - ERROR - Error extracting metadata from {nc_file_path}: {e}"
+        )
+        raise
+
+    # Prepare metadata
+    return prepare_netcdf_compatible_metadata(attributes)
+
+
 def convert_h5_to_parquet_batched(
     input_dir, output_dir, config, location, batch_size=20000, batch_number=0
 ):
     """
-    Convert h5 files to individual parquet files for each face using an optimized batch approach.
+    Convert h5 files to individual parquet files for each face using a sequential approach.
 
     This approach:
     1. Sorts input files by name (assumes time-ordered, e.g., monthly files)
@@ -158,6 +272,7 @@ def convert_h5_to_parquet_batched(
     4. Writes one parquet file per face with the complete time series
     5. Includes element corner coordinates from the nv, lat_node, and lon_node datasets
     6. Organizes files in partitioned directory structure based on lat/lon
+    7. Extracts and includes metadata from the first NC file
 
     Parameters:
     -----------
@@ -171,11 +286,13 @@ def convert_h5_to_parquet_batched(
         Location configuration
     batch_size : int
         Number of faces to process in each batch
+    batch_number : int
+        Batch number to process
     """
     start_time = time.time()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(
-        f"{timestamp} - INFO - Starting h5 to parquet conversion with optimized batch approach"
+        f"{timestamp} - INFO - Starting h5 to parquet conversion with optimized sequential approach"
     )
 
     # Create output directory if it doesn't exist
@@ -197,6 +314,10 @@ def convert_h5_to_parquet_batched(
     print(f"{timestamp} - INFO - Reading dataset information from first file")
     dataset_info = get_dataset_info(h5_files[0])
     total_faces = dataset_info["total_faces"]
+
+    # Extract metadata from the first NC file
+    file_metadata = extract_metadata_from_nc(h5_files[0])
+    print(f"{timestamp} - INFO - Extracted metadata from {h5_files[0]}")
 
     print(f"{timestamp} - INFO - Total faces to process: {total_faces}")
     print(f"{timestamp} - INFO - 2D datasets: {dataset_info['2d_datasets']}")
@@ -253,14 +374,10 @@ def convert_h5_to_parquet_batched(
         )
 
     # Process faces in batches
-    # total_batches = (total_faces + batch_size - 1) // batch_size
-    # total_batches = (total_faces + batch_size - 1) // batch_size
     start_index = batch_number * batch_size
-    # end_index = start_index + batch_size
     start_face = start_index
     print(f"{timestamp} - INFO - Processing {batch_size} faces in batch {batch_number}")
 
-    # for batch_idx, start_face in enumerate(range(0, total_faces, batch_size)):
     batch_start_time = time.time()
     end_face = min(start_face + batch_size, total_faces)
     faces_to_process = end_face - start_face
@@ -475,7 +592,17 @@ def convert_h5_to_parquet_batched(
             partition_dir, get_partition_file_name(face_id, df, config, location)
         )
 
-        df.to_parquet(output_file)
+        # Convert DataFrame to PyArrow table
+        table = pa.Table.from_pandas(df)
+
+        # Merge the extracted metadata with existing table metadata
+        merged_metadata = {**table.schema.metadata, **file_metadata}
+
+        # Create new table with updated metadata
+        table = table.replace_schema_metadata(merged_metadata)
+
+        # Write the table to parquet file
+        pq.write_table(table, output_file)
 
         # Update counter and provide progress reporting
         processed_count += 1
@@ -490,11 +617,7 @@ def convert_h5_to_parquet_batched(
                 f"{timestamp} - INFO - Written {processed_count}/{faces_to_process} parquet files. Estimated time remaining: {remaining:.2f} seconds"
             )
 
-    # Clean up memory (remove the big face data dictionary)
-    del all_face_data
-
     writing_time = time.time() - writing_start
-    batch_time = time.time() - batch_start_time
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(
         f"{timestamp} - INFO - Wrote {faces_to_process} parquet files in {writing_time:.2f} seconds"
@@ -520,7 +643,7 @@ def partition_vap_into_parquet_dataset(
     batch_number=0,  # Batch number must start at zero
 ):
     """
-    Process VAP data and convert to partitioned Parquet files using an optimized batch approach.
+    Process VAP data and convert to partitioned Parquet files using an optimized sequential approach.
 
     Parameters
     ----------
@@ -530,6 +653,8 @@ def partition_vap_into_parquet_dataset(
         Key for location in the configuration
     batch_size : int, optional
         Number of faces to process in each batch (default: 20000)
+    batch_number : int, optional
+        Batch number to process (default: 0)
     """
     location = config["location_specification"][location_key]
     input_path = file_manager.get_vap_output_dir(config, location)
