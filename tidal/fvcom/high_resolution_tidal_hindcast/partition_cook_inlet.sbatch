@@ -1,13 +1,16 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
-#SBATCH --output=parquet_conversion_%A_%a.out
-#SBATCH --job-name=parquet_convert
+#SBATCH --output=part_cook%A_%a.out
+#SBATCH --job-name=part_cook
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 #SBATCH --time=24:00:00
 #SBATCH --partition=standard
-# There are ~400000 faces and batch size is 5000
-#SBATCH --array=0-79  # Create 80 tasks (modify based on your total faces)
+# Faces 392002
+# Time Interval: Hourly
+# Recommended Batch Size: 5000
+# Calculated Tasks = 392002 / 5000 = 78.4004
+#SBATCH --array=0-78  # Create 79 tasks
 
 # Load necessary modules
 module load anaconda3/2023.07-2
