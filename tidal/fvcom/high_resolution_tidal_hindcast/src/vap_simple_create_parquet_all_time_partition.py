@@ -2,8 +2,6 @@ from pathlib import Path
 import os
 import time
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
 
 import h5py
 import numpy as np
@@ -429,20 +427,17 @@ def convert_h5_to_parquet_batched(
             f"{timestamp} - INFO - Completed reading file {file_idx+1}/{len(h5_files)} in {file_time:.2f} seconds"
         )
 
-    # Now write one parquet file per face with the complete time series using threading
+    # Now write one parquet file per face with the complete time series sequentially
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(
-        f"{timestamp} - INFO - Writing {faces_to_process} parquet files with full time series using threading"
+        f"{timestamp} - INFO - Writing {faces_to_process} parquet files with full time series sequentially"
     )
     writing_start = time.time()
 
-    # Create a thread-safe counter for progress reporting
     processed_count = 0
-    counter_lock = threading.Lock()
 
-    def process_and_write_face(face_id):
-        nonlocal processed_count
-
+    # Process and write each face sequentially
+    for face_id in range(start_face, end_face):
         # Create a DataFrame for this face
         df_data = {}
 
@@ -482,39 +477,21 @@ def convert_h5_to_parquet_batched(
 
         df.to_parquet(output_file)
 
-        # Update counter with thread safety
-        with counter_lock:
-            nonlocal processed_count
-            processed_count += 1
-            if processed_count % 10 == 0:
-                current_time = time.time()
-                elapsed = current_time - writing_start
-                remaining = (elapsed / processed_count) * (
-                    faces_to_process - processed_count
-                )
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                print(
-                    f"{timestamp} - INFO - Written {processed_count}/{faces_to_process} parquet files. Estimated time remaining: {remaining:.2f} seconds"
-                )
+        # Update counter and provide progress reporting
+        processed_count += 1
+        if processed_count % 10 == 0:
+            current_time = time.time()
+            elapsed = current_time - writing_start
+            remaining = (elapsed / processed_count) * (
+                faces_to_process - processed_count
+            )
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(
+                f"{timestamp} - INFO - Written {processed_count}/{faces_to_process} parquet files. Estimated time remaining: {remaining:.2f} seconds"
+            )
 
-    # Use ThreadPoolExecutor to parallelize the writing process
-    with ThreadPoolExecutor(max_workers=96) as executor:
-        # Submit all face processing tasks
-        future_to_face = {
-            executor.submit(process_and_write_face, face_id): face_id
-            for face_id in range(start_face, end_face)
-        }
-
-        # Wait for all tasks to complete
-        for future in as_completed(future_to_face):
-            face_id = future_to_face[future]
-            try:
-                future.result()  # Get result to capture any exceptions
-            except Exception as e:
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                print(
-                    f"{timestamp} - ERROR - Failed to process face {face_id}: {str(e)}"
-                )
+    # Clean up memory (remove the big face data dictionary)
+    del all_face_data
 
     writing_time = time.time() - writing_start
     batch_time = time.time() - batch_start_time
