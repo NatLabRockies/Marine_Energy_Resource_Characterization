@@ -20,9 +20,9 @@ from src.calculate_vap_average import (
 #     partition_vap_into_parquet_dataset,
 # )
 
-from src.vap_simple_create_parquet_all_time_partition import (
-    partition_vap_into_parquet_dataset,
-)
+# from src.vap_simple_create_parquet_all_time_partition import (
+#     partition_vap_into_parquet_dataset,
+# )
 
 # from src.vap_optimized_create_all_time_partition import (
 #     partition_vap_into_parquet_dataset,
@@ -65,8 +65,8 @@ if __name__ == "__main__":
     print("Step 6: Calculating Yearly Average...")
     calculate_vap_yearly_average(config, args.location)
 
-    print("Step 7: Create Parquet Partition Dataset...")
-    partition_vap_into_parquet_dataset(config, args.location)
+    # print("Step 7: Create Parquet Partition Dataset...")
+    # partition_vap_into_parquet_dataset(config, args.location)
 
     print("Step 8: Create Summary Parquet Dataset...")
     convert_nc_summary_to_parquet(config, args.location)
