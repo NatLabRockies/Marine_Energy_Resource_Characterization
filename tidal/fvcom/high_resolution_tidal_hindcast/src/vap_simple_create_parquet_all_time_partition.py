@@ -17,6 +17,7 @@ from . import file_manager, file_name_convention_manager
 def prepare_netcdf_compatible_metadata(attributes):
     """
     Process and prepare metadata to be compatible with NetCDF/xarray structure.
+    Filters out problematic fields that cause JSON encoding errors.
     """
 
     # Custom JSON encoder for NumPy types
@@ -43,30 +44,55 @@ def prepare_netcdf_compatible_metadata(attributes):
     # Process attributes based on structure
     if "variable_attributes" in attributes:
         for var_name, var_attrs in attributes["variable_attributes"].items():
+            # Skip variables with problematic patterns
+            should_skip = False
             for pattern in exclude_patterns:
                 if var_name.endswith(pattern):
-                    continue
+                    should_skip = True
+                    break
+
+            if should_skip:
+                continue
+
             for attr_name, attr_value in var_attrs.items():
                 metadata[f"{var_name}:{attr_name}"] = attr_value
+
     if "global_attributes" in attributes:
         for attr_name, attr_value in attributes["global_attributes"].items():
+            # Skip attributes with problematic patterns
+            should_skip = False
             for pattern in exclude_patterns:
                 if attr_name.endswith(pattern):
-                    continue
+                    should_skip = True
+                    break
+
+            if should_skip:
+                continue
+
             metadata[f"global:{attr_name}"] = attr_value
+
     # Handle flat dictionary case
     if not isinstance(attributes, dict) or (
         "variable_attributes" not in attributes
         and "global_attributes" not in attributes
     ):
         for attr_name, attr_value in attributes.items():
+            # Skip attributes with problematic patterns
+            should_skip = False
             for pattern in exclude_patterns:
                 if attr_name.endswith(pattern):
-                    continue
+                    should_skip = True
+                    break
+
+            if should_skip:
+                continue
+
             metadata[f"global:{attr_name}"] = attr_value
+
     # Add metadata markers
     metadata["_WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
     metadata["_WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
+
     # Convert all metadata values to bytes
     metadata_bytes = {}
     for k, v in metadata.items():
@@ -82,6 +108,7 @@ def prepare_netcdf_compatible_metadata(attributes):
         except TypeError as e:
             metadata_bytes[k] = str(v).encode("utf-8")
             print(f"Warning: Could not JSON encode {k}: {e}")
+
     return metadata_bytes
 
 
