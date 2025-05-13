@@ -100,7 +100,7 @@ def convert_nc_summary_to_parquet(config, location_key):
 
         output_df.to_parquet(Path(output_path, output_filename))
 
-        for col in output_df.cols:
+        for col in output_df.columns:
             print(f"{col}: {output_df[col].dtype}")
 
         # # Temp rename puget sound cols for atlas
