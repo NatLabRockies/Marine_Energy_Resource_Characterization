@@ -122,8 +122,10 @@ def convert_nc_summary_to_parquet(config, location_key):
             "element_corner_3_lon",
             "vap_water_column_mean_sea_water_speed",
             "vap_water_column_95th_percentile_sea_water_speed",
+            "vap_water_column_max_sea_water_speed",
             "vap_water_column_mean_sea_water_power_density",
             "vap_water_column_95th_percentile_sea_water_power_density",
+            "vap_water_column_max_sea_water_power_density",
         ]
 
         atlas_df = output_df[cols_for_atlas]
