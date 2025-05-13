@@ -75,7 +75,7 @@ def convert_tidal_summary_nc_to_dataframe(ds):
 
 def convert_nc_summary_to_parquet(config, location_key):
     location = config["location_specification"][location_key]
-    input_path = file_manager.get_summary_vap_output_dir(config, location)
+    input_path = file_manager.get_yearly_summary_vap_output_dir(config, location)
     output_path = file_manager.get_vap_summary_parquet_dir(config, location)
 
     input_nc_files = sorted(list(input_path.rglob("*.nc")))
