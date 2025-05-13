@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
-#SBATCH --output=part_west_%A_%j.out
+#SBATCH --output=part_west_%A_%a.out
 #SBATCH --job-name=part_west
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
