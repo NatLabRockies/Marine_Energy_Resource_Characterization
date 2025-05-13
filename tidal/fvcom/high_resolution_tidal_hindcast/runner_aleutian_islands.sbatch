@@ -5,8 +5,8 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=36:00:00
-#SBATCH --mem=128G
+#SBATCH --time=47:00:00
+#SBATCH --mem=230G
 
 # Load necessary modules (if any)
 module load anaconda3/2023.07-2
