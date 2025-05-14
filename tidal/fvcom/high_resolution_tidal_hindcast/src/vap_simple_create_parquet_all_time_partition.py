@@ -10,6 +10,7 @@ import pandas as pd
 import psutil
 import pyarrow as pa
 import pyarrow.parquet as pq
+import xarray as xr
 
 from . import file_manager, file_name_convention_manager
 
@@ -270,39 +271,50 @@ def extract_metadata_from_nc(nc_file_path):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"{timestamp} - INFO - Extracting metadata from {nc_file_path}")
 
-    attributes = {}
+    attrs = {}
+    with xr.open_dataset(nc_file_path) as ds:
+        global_attrs = dict(ds.attrs)
 
-    try:
-        with h5py.File(nc_file_path, "r") as f:
-            # Extract global attributes
-            global_attrs = {}
-            for attr_name in f.attrs:
-                global_attrs[attr_name] = f.attrs[attr_name]
+        # Get variable attributes
+        var_attrs = {}
+        for var_name, var in ds.variables.items():
+            var_attrs[var_name] = dict(var.attrs)
 
-            # Extract variable attributes
-            variable_attrs = {}
-            for var_name in f:
-                if isinstance(f[var_name], h5py.Dataset):
-                    var_attrs = {}
-                    for attr_name in f[var_name].attrs:
-                        var_attrs[attr_name] = f[var_name].attrs[attr_name]
-                    if var_attrs:
-                        variable_attrs[var_name] = var_attrs
+        attrs = {"global_attrs": global_attrs, "variable_attrs": var_attrs}
 
-            attributes = {
-                "global_attributes": global_attrs,
-                "variable_attributes": variable_attrs,
-            }
-
-    except Exception as e:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(
-            f"{timestamp} - ERROR - Error extracting metadata from {nc_file_path}: {e}"
-        )
-        raise
+    # attributes = {}
+    #
+    # try:
+    #     with h5py.File(nc_file_path, "r") as f:
+    #         # Extract global attributes
+    #         global_attrs = {}
+    #         for attr_name in f.attrs:
+    #             global_attrs[attr_name] = f.attrs[attr_name]
+    #
+    #         # Extract variable attributes
+    #         variable_attrs = {}
+    #         for var_name in f:
+    #             if isinstance(f[var_name], h5py.Dataset):
+    #                 var_attrs = {}
+    #                 for attr_name in f[var_name].attrs:
+    #                     var_attrs[attr_name] = f[var_name].attrs[attr_name]
+    #                 if var_attrs:
+    #                     variable_attrs[var_name] = var_attrs
+    #
+    #         attributes = {
+    #             "global_attributes": global_attrs,
+    #             "variable_attributes": variable_attrs,
+    #         }
+    #
+    # except Exception as e:
+    #     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #     print(
+    #         f"{timestamp} - ERROR - Error extracting metadata from {nc_file_path}: {e}"
+    #     )
+    #     raise
 
     # Prepare metadata
-    return prepare_netcdf_compatible_metadata(attributes)
+    return prepare_netcdf_compatible_metadata(attrs)
 
 
 def convert_h5_to_parquet_batched(
@@ -362,7 +374,8 @@ def convert_h5_to_parquet_batched(
     total_faces = dataset_info["total_faces"]
 
     # Extract metadata from the first NC file
-    file_metadata = extract_metadata_from_nc(h5_files[0])
+    file_metadata_bytes = extract_metadata_from_nc(h5_files[0])
+
     print(f"{timestamp} - INFO - Extracted metadata from {h5_files[0]}")
 
     print(f"{timestamp} - INFO - Total faces to process: {total_faces}")
@@ -642,7 +655,7 @@ def convert_h5_to_parquet_batched(
         table = pa.Table.from_pandas(df)
 
         # Merge the extracted metadata with existing table metadata
-        merged_metadata = {**table.schema.metadata, **file_metadata}
+        merged_metadata = {**table.schema.metadata, **file_metadata_bytes}
 
         # Create new table with updated metadata
         table = table.replace_schema_metadata(merged_metadata)
