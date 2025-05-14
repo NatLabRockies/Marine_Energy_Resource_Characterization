@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
 
@@ -71,10 +72,10 @@ def verify_constant_variables(ds1, ds2, constant_vars):
     return results
 
 
-class VAPAverager:
+class VAPSummaryCalculator:
     """
-    Class for calculating averages across VAP NetCDF files.
-    Handles both yearly and monthly averaging with a unified approach.
+    Class for calculating averages, max values, and 95th percentiles across VAP NetCDF files.
+    Handles both yearly and monthly processing with a unified approach.
     """
 
     def __init__(self, config, location_name):
@@ -104,6 +105,14 @@ class VAPAverager:
             self.seconds_per_year / self.location["expected_delta_t_seconds"]
         )
 
+        # Track max values across all files for each variable
+        self.max_values = {}
+
+        # Identify variable types
+        self.avg_vars = []  # Regular variables for averaging
+        self.max_vars = []  # Max variables
+        self.p95_vars = []  # 95th percentile variables
+
     def _verify_timestamps(self):
         print("Verifying timestamps across all files...")
         verify_timestamps(
@@ -112,41 +121,6 @@ class VAPAverager:
             self.location["expected_delta_t_seconds"],
             self.config,
         )
-
-    def _initialize_average(self, dataset, constant_variables):
-        """
-        Initialize an average template from a dataset.
-
-        Args:
-            dataset: xarray Dataset to initialize from
-            constant_variables: List of variables that should not be averaged
-
-        Returns:
-            tuple: (average_template, first_timestamp, time_attributes, variable_attributes)
-        """
-        # Initialize with the first timestep
-        avg_template = dataset.isel(time=0).copy(deep=True)
-        first_timestamp = dataset.time.isel(time=0).values
-        time_attrs = dataset.time.attrs.copy()
-
-        # Store all variable attributes
-        var_attrs = {}
-        for var in dataset.data_vars:
-            var_attrs[var] = dataset[var].attrs.copy()
-
-        # Initialize variables that need averaging
-        for var in avg_template.data_vars:
-            if "time" in dataset[var].dims and var not in constant_variables:
-                # Use float64 for better numerical stability
-                if np.issubdtype(avg_template[var].dtype, np.integer):
-                    avg_template[var] = avg_template[var].astype(np.float64)
-                elif np.issubdtype(avg_template[var].dtype, np.floating):
-                    avg_template[var] = avg_template[var].astype(np.float64)
-
-                # Initialize to zero (will be properly set in the first iteration)
-                avg_template[var].values.fill(0)
-
-        return avg_template, first_timestamp, time_attrs, var_attrs
 
     def _verify_constant_vars(self, ds, first_ds):
         """Verify constant variables haven't changed."""
@@ -157,12 +131,56 @@ class VAPAverager:
                         f"WARNING: Variable '{var}' differs between files. Using value from first file."
                     )
 
-    def _update_running_average(self, running_avg, dataset, count, constant_variables):
+    def _initialize_dataset(self, dataset, constant_variables):
+        """
+        Initialize a template dataset and identify variable types.
+        """
+        # Initialize with the first timestep
+        template = dataset.isel(time=0).copy(deep=True)
+        first_timestamp = dataset.time.isel(time=0).values
+        time_attrs = dataset.time.attrs.copy()
+
+        # Store all variable attributes
+        var_attrs = {}
+        for var in dataset.data_vars:
+            var_attrs[var] = dataset[var].attrs.copy()
+
+            # Identify variables by type
+            if "time" in dataset[var].dims and var not in constant_variables:
+                if "water_column_max" in var:
+                    self.max_vars.append(var)
+                elif "water_column_95th_percentile" in var:
+                    self.p95_vars.append(var)
+                else:
+                    self.avg_vars.append(var)
+
+        # Initialize variables with appropriate data types
+        for var in template.data_vars:
+            if "time" in dataset[var].dims and var not in constant_variables:
+                # Use float64 for better numerical stability
+                if np.issubdtype(template[var].dtype, np.integer):
+                    template[var] = template[var].astype(np.float64)
+                elif np.issubdtype(template[var].dtype, np.floating):
+                    template[var] = template[var].astype(np.float64)
+
+                # Initialize to zero (will be properly set during processing)
+                template[var].values.fill(0)
+
+                # Initialize max_values tracking for max variables
+                if var in self.max_vars:
+                    self.max_values[var] = None
+
+        return template, first_timestamp, time_attrs, var_attrs
+
+    def _update_averages(self, result_ds, dataset, count):
+        """
+        Update running averages for regular variables only.
+        """
         current_times = len(dataset.time)
 
-        # Update running average for variables - using rolling average formula
-        for var in dataset.data_vars:
-            if "time" in dataset[var].dims and var not in constant_variables:
+        # Update running average for regular variables only
+        for var in self.avg_vars:
+            if var in dataset.data_vars:
                 # Calculate mean for this dataset
                 if np.issubdtype(dataset[var].dtype, np.integer):
                     # Safely convert integers to float64 first
@@ -174,14 +192,128 @@ class VAPAverager:
                 # new_avg = old_avg + (new_value - old_avg) / new_count
                 if count == 0:
                     # First iteration - simply set to the file average
-                    running_avg[var] = file_avg
+                    result_ds[var] = file_avg
                 else:
                     weight = current_times / (count + current_times)
-                    running_avg[var] = (
-                        running_avg[var] + (file_avg - running_avg[var]) * weight
+                    result_ds[var] = (
+                        result_ds[var] + (file_avg - result_ds[var]) * weight
                     )
 
         return count + current_times
+
+    def _update_max_values(self, result_ds, dataset, count):
+        """
+        Update max values and track them for 95th percentile calculation.
+        """
+        # Process each max variable
+        for var in self.max_vars:
+            if var in dataset.data_vars:
+                # Calculate the max for this dataset
+                file_max = dataset[var].max(dim="time")
+
+                # Track all max values for later 95th percentile calculation
+                if self.max_values[var] is None:
+                    self.max_values[var] = file_max.expand_dims(dim={"file": [count]})
+                else:
+                    # Add to our collection of max values
+                    new_max = file_max.expand_dims(dim={"file": [count]})
+                    self.max_values[var] = xr.concat(
+                        [self.max_values[var], new_max], dim="file"
+                    )
+
+                # For the running result, take the maximum of the current max and the previous max
+                if count == 0:
+                    # First iteration - simply set to the file max
+                    result_ds[var] = file_max
+                else:
+                    # Update the max using element-wise maximum
+                    result_ds[var] = xr.where(
+                        file_max > result_ds[var], file_max, result_ds[var]
+                    )
+
+        return result_ds
+
+    def _calculate_percentiles(self, result_ds):
+        """
+        Calculate 95th percentiles of the max values after all files have been processed.
+        """
+        print("Calculating 95th percentiles of max values...")
+
+        # Map each p95 variable to its corresponding max variable
+        max_to_p95_map = {}
+        for p95_var in self.p95_vars:
+            # Find the corresponding max variable by replacing '95th_percentile' with 'max'
+            base_name = p95_var.replace("_95th_percentile_", "_max_")
+            if base_name in self.max_vars:
+                max_to_p95_map[base_name] = p95_var
+
+        # Calculate 95th percentile for each p95 variable
+        for max_var, p95_var in max_to_p95_map.items():
+            if max_var in self.max_values and self.max_values[max_var] is not None:
+                # Calculate the 95th percentile along the file dimension
+                p95_value = self.max_values[max_var].quantile(0.95, dim="file")
+                result_ds[p95_var] = p95_value
+                print(f"Calculated 95th percentile for {p95_var} from {max_var}")
+
+        return result_ds
+
+    def _process_files(self, ds_template, file_list, time_filter=None):
+        """
+        Process a list of files, updating averages, max values, and 95th percentiles.
+
+        Args:
+            ds_template: Template dataset initialized with proper dimensions
+            file_list: List of files to process
+            time_filter: Optional function to filter timestamps in each dataset
+
+        Returns:
+            tuple: (updated_ds, first_timestamp, time_attrs, var_attrs, source_files)
+        """
+        result_ds = ds_template
+        count = 0
+        source_files = []
+        first_timestamp = None
+        time_attrs = None
+        var_attrs = {}
+        first_ds = None
+
+        # Process each file
+        for i, nc_file in enumerate(file_list):
+            print(f"Processing File {i}: {nc_file}")
+            ds = nc_manager.nc_open(nc_file, self.config)
+
+            # Apply time filter if provided
+            if time_filter is not None:
+                ds_filtered = time_filter(ds)
+                if ds_filtered is None or len(ds_filtered.time) == 0:
+                    ds.close()
+                    continue  # Skip if no data after filtering
+                ds = ds_filtered
+
+            # Initialize if this is the first valid file
+            if first_ds is None:
+                result_ds, first_timestamp, time_attrs, var_attrs = (
+                    self._initialize_dataset(ds, self.constant_variables)
+                )
+                first_ds = ds.copy()
+            else:
+                self._verify_constant_vars(ds, first_ds)
+
+            # Update averages and max values separately
+            count = self._update_averages(result_ds, ds, count)
+            result_ds = self._update_max_values(result_ds, ds, count)
+
+            # Track source files
+            if str(nc_file) not in source_files:
+                source_files.append(str(nc_file))
+
+            ds.close()
+
+        # Calculate 95th percentiles after processing all files
+        if first_ds is not None:  # Only if we processed at least one file
+            result_ds = self._calculate_percentiles(result_ds)
+
+        return result_ds, first_timestamp, time_attrs, var_attrs, source_files
 
     def _finalize_dataset(self, running_avg, first_timestamp, time_attrs, var_attrs):
         """
@@ -279,10 +411,7 @@ class VAPAverager:
 
     def calculate_yearly_average(self):
         """
-        Calculate yearly average values across VAP NC files.
-
-        Returns:
-            Path: Path to the output file, or None if skipped
+        Calculate yearly average values, max values, and 95th percentiles across VAP NC files.
         """
         output_path = file_manager.get_yearly_summary_vap_output_dir(
             self.config, self.location
@@ -298,49 +427,34 @@ class VAPAverager:
         # Verify timestamps
         self._verify_timestamps()
 
-        # Initialize for yearly average
-        print(f"Starting yearly averaging of {len(self.vap_nc_files)} vap files...")
-        running_avg = None
-        count = 0
-        source_files = []
-        first_timestamp = None
-        time_attrs = None
-        var_attrs = {}
-        first_ds = None
+        # Reset variable tracking for this calculation
+        self.avg_vars = []
+        self.max_vars = []
+        self.p95_vars = []
+        self.max_values = {}
 
-        # Process each file
-        for i, nc_file in enumerate(self.vap_nc_files):
-            print(f"Processing File {i}: {nc_file}")
-            ds = nc_manager.nc_open(nc_file, self.config)
-
-            # Initialize if needed
-            if running_avg is None:
-                running_avg, first_timestamp, time_attrs, var_attrs = (
-                    self._initialize_average(ds, self.constant_variables)
-                )
-                first_ds = ds.copy()
-            else:
-                self._verify_constant_vars(ds, first_ds)
-
-            # Update running average
-            count = self._update_running_average(
-                running_avg, ds, count, self.constant_variables
-            )
-            source_files.append(str(nc_file))
-            ds.close()
-
-        print("Completing final yearly average calculation...")
-        # Finalize the dataset
-        averaged_ds = self._finalize_dataset(
-            running_avg, first_timestamp, time_attrs, var_attrs
+        # Process all files
+        print(f"Starting yearly processing of {len(self.vap_nc_files)} vap files...")
+        result_ds, first_timestamp, time_attrs, var_attrs, source_files = (
+            self._process_files(None, self.vap_nc_files)
         )
 
-        print(averaged_ds.info())
-        print(averaged_ds.time)
+        if result_ds is None:
+            print("No data found for yearly processing")
+            return None
+
+        print("Finalizing yearly dataset...")
+        # Finalize the dataset
+        finalized_ds = self._finalize_dataset(
+            result_ds, first_timestamp, time_attrs, var_attrs
+        )
+
+        print(finalized_ds.info())
+        print(finalized_ds.time)
 
         # Save the yearly average
         return self._save_dataset(
-            averaged_ds,
+            finalized_ds,
             output_path,
             "001.{}",
             source_files,
@@ -350,12 +464,7 @@ class VAPAverager:
 
     def calculate_monthly_averages(self):
         """
-        Calculate monthly average values across VAP NC files.
-        Handles datasets that may not align perfectly with calendar months.
-        Creates one NC file per month with averages of the variables.
-
-        Returns:
-            Path: Path to the output directory
+        Calculate monthly average values, max values, and 95th percentiles across VAP NC files.
         """
         output_path = file_manager.get_monthly_summary_vap_output_dir(
             self.config, self.location
@@ -408,71 +517,43 @@ class VAPAverager:
                 [np.datetime64(ts) for ts in month_timestamps]
             )
 
-            # Initialize for this month
-            monthly_avg = None
-            count = 0
-            source_files = []
-            first_timestamp = None
-            time_attrs = None
-            var_attrs = {}
-            first_ds = None
-
-            # Process each file for this month
-            for i, nc_file in enumerate(self.vap_nc_files):
-                ds = nc_manager.nc_open(nc_file, self.config)
-
-                # Select only times within this month
+            # Define a time filter function for this month
+            def month_filter(ds):
                 month_mask = np.isin(ds.time.values, month_timestamps_np)
                 if not any(month_mask):
-                    ds.close()
-                    continue  # Skip if no data for this month
+                    return None
+                return ds.isel(time=month_mask)
 
-                ds_month = ds.isel(time=month_mask)
-                if len(ds_month.time) == 0:
-                    ds.close()
-                    continue  # Skip if no data for this month after filtering
+            # Reset variable tracking for this month
+            self.avg_vars = []
+            self.max_vars = []
+            self.p95_vars = []
+            self.max_values = {}
 
-                print(
-                    f"  File {i}: {nc_file.name} - {len(ds_month.time)} timestamps for this month"
-                )
-
-                # Initialize if needed
-                if monthly_avg is None:
-                    monthly_avg, first_timestamp, time_attrs, var_attrs = (
-                        self._initialize_average(ds_month, self.constant_variables)
-                    )
-                    first_ds = ds_month.copy()
-                else:
-                    self._verify_constant_vars(ds_month, first_ds)
-
-                # Update running average
-                count = self._update_running_average(
-                    monthly_avg, ds_month, count, self.constant_variables
-                )
-
-                if str(nc_file) not in source_files:
-                    source_files.append(str(nc_file))
-                ds.close()
+            # Process files for this month
+            result_ds, first_timestamp, time_attrs, var_attrs, source_files = (
+                self._process_files(None, self.vap_nc_files, time_filter=month_filter)
+            )
 
             # Skip if no data was found for this month
-            if monthly_avg is None:
+            if result_ds is None:
                 print(f"No data found for {month_name} {year}, skipping")
                 continue
 
             # Finalize the dataset
-            monthly_avg = self._finalize_dataset(
-                monthly_avg, first_timestamp, time_attrs, var_attrs
+            monthly_ds = self._finalize_dataset(
+                result_ds, first_timestamp, time_attrs, var_attrs
             )
 
             # Additional monthly metadata
-            monthly_avg.attrs["month"] = month
-            monthly_avg.attrs["year"] = year
-            monthly_avg.attrs["month_name"] = month_name
+            monthly_ds.attrs["month"] = month
+            monthly_ds.attrs["year"] = year
+            monthly_ds.attrs["month_name"] = month_name
 
             # Save the monthly average
             month_str = f"{year}_{month:02d}"
             self._save_dataset(
-                monthly_avg,
+                monthly_ds,
                 output_path,
                 f"{month:02d}.{{}}",
                 source_files,
@@ -484,10 +565,12 @@ class VAPAverager:
 
 
 def calculate_vap_yearly_average(config, location):
-    averager = VAPAverager(config, location)
+    """Calculate yearly averages, max values, and 95th percentiles for VAP variables."""
+    averager = VAPSummaryCalculator(config, location)
     return averager.calculate_yearly_average()
 
 
 def calculate_vap_monthly_average(config, location):
-    averager = VAPAverager(config, location)
+    """Calculate monthly averages, max values, and 95th percentiles for VAP variables."""
+    averager = VAPSummaryCalculator(config, location)
     return averager.calculate_monthly_averages()
