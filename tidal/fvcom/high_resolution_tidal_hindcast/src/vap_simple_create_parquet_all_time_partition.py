@@ -665,7 +665,8 @@ def convert_h5_to_parquet_batched(
 
         # Update counter and provide progress reporting
         processed_count += 1
-        if processed_count % 10 == 0:
+        # if processed_count % 10 == 0:
+        if processed_count % 1 == 0:
             current_time = time.time()
             elapsed = current_time - writing_start
             remaining = (elapsed / processed_count) * (
@@ -728,4 +729,12 @@ def partition_vap_into_parquet_dataset(
         location,
         batch_size=batch_size,
         batch_number=batch_number,
+    )
+
+
+if __name__ == "__main__":
+    from config import config
+
+    partition_vap_into_parquet_dataset(
+        config, "cook_inlet", batch_size=2, batch_number=0
     )
