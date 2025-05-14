@@ -357,7 +357,7 @@ def convert_h5_to_parquet_batched(
     os.makedirs(output_dir, exist_ok=True)
 
     # Get all h5 files and sort them by name (assumes chronological ordering)
-    h5_files = sorted(list(Path(input_dir).glob("*.nc")))
+    h5_files = sorted(list(Path(input_dir).glob("*.nc")))[0:1]
     if not h5_files:
         h5_files = sorted(list(Path(input_dir).glob("*.h5")))
         if not h5_files:
