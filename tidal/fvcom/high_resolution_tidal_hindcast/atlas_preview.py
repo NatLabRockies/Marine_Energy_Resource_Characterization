@@ -59,7 +59,7 @@ def plot_tidal_variable(
     vmin,
     vmax,
     cmap="viridis",
-    figsize=(16, 12),
+    figsize=(24, 18),
     point_size=1,
     alpha=0.9,
     title=None,
