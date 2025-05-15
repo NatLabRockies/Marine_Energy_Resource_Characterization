@@ -1029,7 +1029,7 @@ if __name__ == "__main__":
             SEA_WATER_POWER_DENSITY_CBAR_MIN,
             SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
             is_aleutian="aleutian" in selected_region,
-            cmap=cmocean.cm.haline,
+            cmap=cmocean.cm.tempo,
             save_path=Path(
                 this_output_path,
                 f"{selected_region}_p95_sea_water_power_density.png",
