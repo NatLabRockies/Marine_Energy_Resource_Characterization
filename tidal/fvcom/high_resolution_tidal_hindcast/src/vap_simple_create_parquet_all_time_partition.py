@@ -43,11 +43,11 @@ def prepare_netcdf_compatible_metadata(attributes):
     metadata["WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
     metadata["WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
 
-    for var_name, var_attrs in attributes["variable_attributes"].items():
+    for var_name, var_attrs in attributes["var"].items():
         for attr_name, attr_value in var_attrs.items():
             metadata[f"{var_name}:{attr_name}"] = attr_value
 
-    for attr_name, attr_value in attributes["global_attributes"].items():
+    for attr_name, attr_value in attributes["global"].items():
         metadata[f"global:{attr_name}"] = attr_value
 
     # Convert all metadata values to bytes
@@ -229,7 +229,7 @@ def extract_metadata_from_nc(nc_file_path):
         for var_name, var in ds.variables.items():
             var_attrs[var_name] = dict(var.attrs)
 
-        attrs = {"global_attrs": global_attrs, "variable_attrs": var_attrs}
+        attrs = {"global": global_attrs, "vars": var_attrs}
 
     # attributes = {}
     #
