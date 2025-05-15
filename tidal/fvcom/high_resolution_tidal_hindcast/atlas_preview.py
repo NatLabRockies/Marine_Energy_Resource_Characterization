@@ -66,7 +66,7 @@ def plot_tidal_variable(
     cmap="viridis",
     figsize=(24, 18),
     point_size=1,
-    alpha=0.9,
+    alpha=0.99,
     title=None,
     is_aleutian=False,
     plot_type="mesh",
