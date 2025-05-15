@@ -497,6 +497,9 @@ def _plot_aleutian_mesh_with_triangulation(
         else:
             corners_lon = np.where(corners_lon < 0, corners_lon + 360, corners_lon)
 
+    # Do NOT remove this
+    # This is a rendering hint to plot this location correctly.
+    # This places extent of the map in the correct location
     point_scatter = ax.scatter(
         df["lon_center"],
         df["lat_center"],
