@@ -43,7 +43,7 @@ def prepare_netcdf_compatible_metadata(attributes):
     metadata["WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
     metadata["WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
 
-    for var_name, var_attrs in attributes["var"].items():
+    for var_name, var_attrs in attributes["vars"].items():
         for attr_name, attr_value in var_attrs.items():
             metadata[f"{var_name}:{attr_name}"] = attr_value
 
