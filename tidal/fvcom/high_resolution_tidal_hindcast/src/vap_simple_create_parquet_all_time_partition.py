@@ -663,6 +663,8 @@ def convert_h5_to_parquet_batched(
         # Write the table to parquet file
         pq.write_table(table, output_file)
 
+        print(f"File written: {output_file}")
+
         # Update counter and provide progress reporting
         processed_count += 1
         # if processed_count % 10 == 0:
