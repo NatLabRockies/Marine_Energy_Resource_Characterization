@@ -755,6 +755,7 @@ if __name__ == "__main__":
                 f"{selected_region}_mean_sea_water_speed.png",
             ),
         )
+        plt.clf()
         plot_tidal_variable(
             df,
             selected_region,
@@ -770,6 +771,7 @@ if __name__ == "__main__":
                 f"{selected_region}_p95_sea_water_speed.png",
             ),
         )
+        plt.clf()
 
         plot_tidal_variable(
             df,
@@ -786,6 +788,8 @@ if __name__ == "__main__":
                 f"{selected_region}_mean_sea_water_power_density.png",
             ),
         )
+        plt.clf()
+
         plot_tidal_variable(
             df,
             selected_region,
@@ -801,6 +805,7 @@ if __name__ == "__main__":
                 f"{selected_region}_p95_sea_water_power_density.png",
             ),
         )
+        plt.clf()
 
     print("Speed variable_summary")
     speed_summary = analyze_all_region_speed_statistics(speed_loc_stats)
