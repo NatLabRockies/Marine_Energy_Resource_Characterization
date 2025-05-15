@@ -62,8 +62,8 @@ if __name__ == "__main__":
     print("Step 5: Calculating Monthly Averages...")
     calculate_vap_monthly_average(config, args.location)
 
-    print("Step 6: Calculating Yearly Average...")
-    calculate_vap_yearly_average(config, args.location)
+    # print("Step 6: Calculating Yearly Average...")
+    # calculate_vap_yearly_average(config, args.location)
 
     # print("Step 7: Create Parquet Partition Dataset...")
     # partition_vap_into_parquet_dataset(config, args.location)
