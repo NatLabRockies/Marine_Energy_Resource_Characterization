@@ -667,7 +667,9 @@ COLUMN_DISPLAY_NAMES = {
 }
 
 
-def analyze_speed(df: pd.DataFrame, region_name: str) -> Dict[str, Any]:
+def analyze_speed(
+    df: pd.DataFrame, region_name: str, output_path: None
+) -> Dict[str, Any]:
     """
     Analyze sea water speed statistics from sigma-layer data for a given region and plot
     histograms with KDE and percentile lines.
@@ -774,17 +776,19 @@ def analyze_speed(df: pd.DataFrame, region_name: str) -> Dict[str, Any]:
 
     plt.xlabel("Speed (m/s)")
     plt.ylabel("Frequency")
-    plt.show()
 
     # Tight layout and show the individual plots
     fig.tight_layout()
-    plt.show()
+    if output_path is not None:
+        plt.savefig(Path(output_path, "speed_analysis.png"))
+    else:
+        plt.show()
 
     return results
 
 
 def analyze_all_region_speed_statistics(
-    region_stats: List[Dict[str, Any]],
+    region_stats: List[Dict[str, Any]], output_path=None
 ) -> Dict[str, Any]:
     """
     Perform meta-analysis comparing speed statistics across different regions.
@@ -854,7 +858,10 @@ def analyze_all_region_speed_statistics(
         plt.ylabel("Density")
         plt.legend()
         plt.tight_layout()
-        plt.show()
+        if output_path is not None:
+            plt.savefig(Path(output_path, f"{col}_kde_comparison.png"))
+        else:
+            plt.show()
 
     # Create bar charts for each percentile metric (95%, 99%, 99.99%)
     percentile_metrics = ["95%", "99%", "99.99%"]
@@ -906,7 +913,10 @@ def analyze_all_region_speed_statistics(
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
 
         plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for the suptitle
-        plt.show()
+        if output_path is not None:
+            plt.savefig(Path(output_path, f"{col}_bar_comparison.png"))
+        else:
+            plt.show()
 
     # Print comparison tables
     for col, table in tables.items():
@@ -947,7 +957,7 @@ if __name__ == "__main__":
         this_output_path.mkdir(parents=True, exist_ok=True)
 
         speed_loc_stats.append(
-            analyze_speed(df, selected_region, Path(this_output_path))
+            analyze_speed(df, selected_region, output_path=Path(this_output_path))
         )
 
         plot_tidal_variable(
@@ -1018,4 +1028,6 @@ if __name__ == "__main__":
         plt.clf()
 
     print("Speed variable_summary")
-    speed_summary = analyze_all_region_speed_statistics(speed_loc_stats)
+    speed_summary = analyze_all_region_speed_statistics(
+        speed_loc_stats, output_path=VIZ_OUTPUT_DIR
+    )
