@@ -1,15 +1,18 @@
-import pandas as pd
 from pathlib import Path
-import os
-import matplotlib
-import matplotlib.pyplot as plt
+from typing import Any, Dict, List
+
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import numpy as np
 import cmocean
-
 import contextily as ctx
+import matplotlib as mpl
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
 from pyproj import Transformer
 
 # Set the base directory - modify this to match your system
@@ -29,6 +32,8 @@ BASEMAP_PROVIDER = ctx.providers.Esri.WorldImagery
 
 SEA_WATER_SPEED_UNITS = r"$m/s$"
 SEA_WATER_POWER_DENSITY_UNITS = r"$W/m^2$"
+
+COLOR_BAR_DISCRETE_LEVELS = 8
 
 
 # Define available regions (derived from folder structure)
@@ -68,7 +73,45 @@ def plot_tidal_variable(
     line_width=0,
     show=False,
     save_path=None,
+    n_colors=COLOR_BAR_DISCRETE_LEVELS,
 ):
+    """
+    Plot tidal variables with optional discrete color levels.
+
+    Parameters:
+    -----------
+    df : pandas DataFrame
+        DataFrame containing the tidal data
+    location : str
+        Location identifier
+    column_name : str
+        Name of the column in df to plot
+    label : str
+        Label for the colorbar
+    units : str
+        Units for the colorbar
+    vmin, vmax : float
+        Minimum and maximum values for the colorbar
+    cmap : str, default="viridis"
+        Colormap to use
+    figsize : tuple, default=(16, 12)
+        Figure size
+    point_size : int, default=1
+        Size of points for point plots
+    alpha : float, default=0.9
+        Transparency of the plot
+    title : str, default=None
+        Title for the plot
+    is_aleutian : bool, default=False
+        Whether to use Aleutian projection
+    plot_type : str, default="mesh"
+        Type of plot, either "mesh" or "points"
+    line_width : int, default=0
+        Width of lines for mesh plots
+    n_colors : int, default=None
+        Number of discrete color levels. If None, continuous colormap is used.
+    """
+
     fig = plt.figure(figsize=figsize)
 
     has_mesh_data = _check_mesh_data_availability(df)
@@ -82,6 +125,23 @@ def plot_tidal_variable(
     lon_min, lon_max, lat_min, lat_max, lon_padding, lat_padding = (
         _calculate_coordinate_bounds(df)
     )
+
+    # Create a discrete colormap if n_colors is specified
+    discrete_norm = None
+    if n_colors is not None:
+        # Create discrete colormap
+        base_cmap = plt.cm.get_cmap(cmap)
+        colors = base_cmap(np.linspace(0, 1, n_colors))
+        discrete_cmap = mpl.colors.LinearSegmentedColormap.from_list(
+            "discrete_cmap", colors, N=n_colors
+        )
+
+        # Create boundaries for the discrete levels
+        bounds = np.linspace(vmin, vmax, n_colors + 1)
+        discrete_norm = mpl.colors.BoundaryNorm(bounds, n_colors)
+        cmap = discrete_cmap
+    else:
+        bounds = None
 
     if is_aleutian:
         ax, projection = _setup_aleutian_projection(
@@ -107,10 +167,20 @@ def plot_tidal_variable(
                 line_width,
                 transform,
                 point_size,
+                norm=discrete_norm,
             )
         else:
             scatter = _plot_aleutian_points(
-                ax, df, column_name, cmap, point_size, alpha, vmin, vmax, transform
+                ax,
+                df,
+                column_name,
+                cmap,
+                point_size,
+                alpha,
+                vmin,
+                vmax,
+                transform,
+                norm=discrete_norm,
             )
     else:
         if plot_type == "mesh":
@@ -126,23 +196,87 @@ def plot_tidal_variable(
                 x,
                 y,
                 transformer,
+                norm=discrete_norm,
             )
         else:
             scatter = _plot_standard_points(
-                ax, df, column_name, cmap, point_size, alpha, vmin, vmax, x, y
+                ax,
+                df,
+                column_name,
+                cmap,
+                point_size,
+                alpha,
+                vmin,
+                vmax,
+                x,
+                y,
+                norm=discrete_norm,
             )
 
-    _add_colorbar_and_title(fig, ax, scatter, label, units, title, location)
+    _add_colorbar_and_title(
+        fig,
+        ax,
+        scatter,
+        label,
+        units,
+        title,
+        location,
+        discrete_levels=bounds if n_colors is not None else None,
+    )
 
     plt.tight_layout()
-
     if show is True:
         plt.show()
 
     if save_path is not None:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
+    # Print out the color and value range for each level if discrete levels are used
+    if n_colors is not None:
+        _print_color_level_ranges(bounds, label, units, cmap, n_colors)
+
     return fig, ax
+
+
+def _print_color_level_ranges(bounds, label, units, cmap, n_colors):
+    """
+    Print out the color and value range for each discrete color level.
+
+    Parameters:
+    -----------
+    bounds : numpy array
+        Array of boundary values for each color level
+    label : str
+        Label for the variable
+    units : str
+        Units for the variable
+    cmap : matplotlib colormap
+        Colormap being used
+    n_colors : int
+        Number of color levels
+    """
+
+    print(f"\n{label} Color Level Ranges [{units}]:")
+    print("-" * 50)
+
+    # Get the RGB values for each color level
+    colors = [cmap(i / (n_colors - 1)) for i in range(n_colors)]
+
+    # Format the RGB values as hex colors
+    hex_colors = [mcolors.rgb2hex(color[:3]) for color in colors]
+
+    # Print the range and color for each level
+    for i in range(n_colors):
+        if i < n_colors - 1:
+            min_val = bounds[i]
+            max_val = bounds[i + 1]
+            level_str = f"Level {i+1}: {min_val:.4f} to {max_val:.4f} {units}"
+            print(f"{level_str:<40} | Color: {hex_colors[i]}")
+        else:
+            # This should not happen with the way bounds are created, but just in case
+            print(f"Level {i+1}: {bounds[i]:.4f} {units} | Color: {hex_colors[i]}")
+
+    print("-" * 50)
 
 
 def _check_mesh_data_availability(df):
@@ -307,7 +441,7 @@ def _create_triangulation_from_element_corners(df, transformer):
 
 
 def _plot_aleutian_points(
-    ax, df, column_name, cmap, point_size, alpha, vmin, vmax, transform
+    ax, df, column_name, cmap, point_size, alpha, vmin, vmax, transform, norm=None
 ):
     scatter = ax.scatter(
         df["lon_center"],
@@ -319,12 +453,23 @@ def _plot_aleutian_points(
         vmin=vmin,
         vmax=vmax,
         transform=transform,
+        norm=norm,
     )
     return scatter
 
 
 def _plot_aleutian_mesh_with_triangulation(
-    ax, df, column_name, cmap, alpha, vmin, vmax, line_width, transform, point_size=5
+    ax,
+    df,
+    column_name,
+    cmap,
+    alpha,
+    vmin,
+    vmax,
+    line_width,
+    transform,
+    point_size=5,
+    norm=None,
 ):
     corners_lon = np.column_stack(
         [
@@ -376,6 +521,7 @@ def _plot_aleutian_mesh_with_triangulation(
             vmin=vmin,
             vmax=vmax,
             transform=transform,
+            norm=norm,
         )
 
         if line_width > 0:
@@ -397,13 +543,14 @@ def _plot_aleutian_mesh_with_triangulation(
             vmin=vmin,
             vmax=vmax,
             transform=transform,
+            norm=norm,
         )
 
     return tcf
 
 
 def _plot_standard_points(
-    ax, df, column_name, cmap, point_size, alpha, vmin, vmax, x, y
+    ax, df, column_name, cmap, point_size, alpha, vmin, vmax, x, y, norm=None
 ):
     scatter = ax.scatter(
         x,
@@ -414,12 +561,24 @@ def _plot_standard_points(
         alpha=alpha,
         vmin=vmin,
         vmax=vmax,
+        norm=norm,
     )
     return scatter
 
 
 def _plot_standard_mesh_with_triangulation(
-    ax, df, column_name, cmap, alpha, vmin, vmax, line_width, x, y, transformer
+    ax,
+    df,
+    column_name,
+    cmap,
+    alpha,
+    vmin,
+    vmax,
+    line_width,
+    x,
+    y,
+    transformer,
+    norm=None,
 ):
     triang, corners_x, corners_y = _create_triangulation_from_element_corners(
         df, transformer
@@ -428,7 +587,7 @@ def _plot_standard_mesh_with_triangulation(
     mesh_data = np.repeat(df[column_name].values, 3)
 
     scatter = ax.tripcolor(
-        triang, mesh_data, cmap=cmap, alpha=alpha, vmin=vmin, vmax=vmax
+        triang, mesh_data, cmap=cmap, alpha=alpha, vmin=vmin, vmax=vmax, norm=norm
     )
 
     if line_width > 0:
@@ -437,19 +596,68 @@ def _plot_standard_mesh_with_triangulation(
     return scatter
 
 
-def _add_colorbar_and_title(fig, ax, scatter, label, units, title, location):
-    cbar = fig.colorbar(
-        scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
-    )
+def _add_colorbar_and_title(
+    fig, ax, scatter, label, units, title, location, discrete_levels=None
+):
+    """
+    Add colorbar and title to the plot with optional discrete levels.
+
+    Parameters:
+    -----------
+    fig : matplotlib Figure
+        Figure object
+    ax : matplotlib Axes
+        Axes object
+    scatter : matplotlib collection
+        Collection object returned by scatter or tripcolor
+    label : str
+        Label for the colorbar
+    units : str
+        Units for the colorbar
+    title : str or None
+        Title for the plot
+    location : str
+        Location identifier
+    discrete_levels : array-like, default=None
+        Discrete level boundaries for the colorbar
+    """
+
+    # Create a colorbar with discrete ticks if discrete levels are provided
+    if discrete_levels is not None:
+        # Format the tick labels based on the number of decimals needed
+        max_value = max(abs(discrete_levels.min()), abs(discrete_levels.max()))
+        if max_value >= 1000:
+            tick_format = "%.0f"
+        elif max_value >= 100:
+            tick_format = "%.1f"
+        elif max_value >= 10:
+            tick_format = "%.2f"
+        else:
+            tick_format = "%.3f"
+
+        # Create the colorbar with specific ticks
+        cbar = fig.colorbar(
+            scatter,
+            ax=ax,
+            orientation="vertical",
+            pad=0.02,
+            fraction=0.03,
+            shrink=0.7,
+            ticks=discrete_levels,
+            format=tick_format,
+        )
+    else:
+        # Standard continuous colorbar
+        cbar = fig.colorbar(
+            scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
+        )
+
     cbar.set_label(f"{label} [{units}]")
 
     if title is None:
         title = f"{location.replace('_', ' ').title()} - {label}"
     plt.title(title)
 
-
-import seaborn as sns
-from typing import List, Dict, Tuple, Any
 
 # Define accurate column display names
 COLUMN_DISPLAY_NAMES = {
@@ -735,10 +943,12 @@ if __name__ == "__main__":
         # Read the parquet file
         df = pd.read_parquet(parquet_file)
 
-        speed_loc_stats.append(analyze_speed(df, selected_region))
-
         this_output_path = Path(VIZ_OUTPUT_DIR, selected_region)
         this_output_path.mkdir(parents=True, exist_ok=True)
+
+        speed_loc_stats.append(
+            analyze_speed(df, selected_region, Path(this_output_path))
+        )
 
         plot_tidal_variable(
             df,
