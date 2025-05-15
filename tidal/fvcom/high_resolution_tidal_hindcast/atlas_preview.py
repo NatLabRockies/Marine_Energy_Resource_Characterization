@@ -964,6 +964,8 @@ if __name__ == "__main__":
             analyze_speed(df, selected_region, output_path=Path(this_output_path))
         )
 
+        print(f"\tPlotting {region} mean_sea_water_speed...")
+
         plot_tidal_variable(
             df,
             selected_region,
@@ -980,6 +982,7 @@ if __name__ == "__main__":
             ),
         )
         plt.clf()
+        print(f"\tPlotting {region} p95_sea_water_speed...")
         plot_tidal_variable(
             df,
             selected_region,
@@ -997,6 +1000,7 @@ if __name__ == "__main__":
         )
         plt.clf()
 
+        print(f"\tPlotting {region} mean_sea_water_power_density...")
         plot_tidal_variable(
             df,
             selected_region,
@@ -1013,6 +1017,8 @@ if __name__ == "__main__":
             ),
         )
         plt.clf()
+
+        print(f"\tPlotting {region} p95_sea_water_power_density...")
 
         plot_tidal_variable(
             df,
@@ -1031,7 +1037,7 @@ if __name__ == "__main__":
         )
         plt.clf()
 
-    print("Speed variable_summary")
+    print("Calculating and Plotting Speed variable_summary...")
     speed_summary = analyze_all_region_speed_statistics(
         speed_loc_stats, output_path=VIZ_OUTPUT_DIR
     )
