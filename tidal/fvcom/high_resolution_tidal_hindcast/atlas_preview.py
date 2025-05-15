@@ -507,6 +507,7 @@ def _plot_aleutian_mesh_with_triangulation(
         s=10,
         alpha=0.0,
         transform=transform,
+        edgecolor="none",
     )
 
     triangles = np.arange(len(df) * 3).reshape(-1, 3)
