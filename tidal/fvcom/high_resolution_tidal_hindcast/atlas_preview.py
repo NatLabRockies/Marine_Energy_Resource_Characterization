@@ -964,7 +964,7 @@ if __name__ == "__main__":
             analyze_speed(df, selected_region, output_path=Path(this_output_path))
         )
 
-        print(f"\tPlotting {region} mean_sea_water_speed...")
+        print(f"\tPlotting {selected_region} mean_sea_water_speed...")
 
         plot_tidal_variable(
             df,
@@ -982,7 +982,7 @@ if __name__ == "__main__":
             ),
         )
         plt.clf()
-        print(f"\tPlotting {region} p95_sea_water_speed...")
+        print(f"\tPlotting {selected_region} p95_sea_water_speed...")
         plot_tidal_variable(
             df,
             selected_region,
@@ -1000,7 +1000,7 @@ if __name__ == "__main__":
         )
         plt.clf()
 
-        print(f"\tPlotting {region} mean_sea_water_power_density...")
+        print(f"\tPlotting {selected_region} mean_sea_water_power_density...")
         plot_tidal_variable(
             df,
             selected_region,
@@ -1018,7 +1018,7 @@ if __name__ == "__main__":
         )
         plt.clf()
 
-        print(f"\tPlotting {region} p95_sea_water_power_density...")
+        print(f"\tPlotting {selected_region} p95_sea_water_power_density...")
 
         plot_tidal_variable(
             df,
