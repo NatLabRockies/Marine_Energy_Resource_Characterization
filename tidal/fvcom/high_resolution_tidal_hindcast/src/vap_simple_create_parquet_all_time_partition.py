@@ -43,8 +43,31 @@ def prepare_netcdf_compatible_metadata(attributes):
     metadata["WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
     metadata["WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
 
+    global_attrs_to_skip = [
+        "geospatial_bounds",
+        "geospatial_bounds_crs",
+        # global:geospatial_bounds_crs: +proj=latlon +datum=WGS84 +ellps=WGS84 +type=crs
+        # global:geospatial_lat_max: 61.499656677246094
+        "geospatial_lat_max",
+        # global:geospatial_lat_min: 58.90425491333008
+        "geospatial_lat_min",
+        # global:geospatial_lat_units: degrees_north
+        # global:geospatial_lon_max: -148.990478515625
+        "geospatial_lon_max",
+        # global:geospatial_lon_min: -154.2655029296875
+        "geospatial_lon_min",
+        # global:geospatial_lon_units: degrees_east
+        # global:geospatial_vertical_max: 171.5044708251953
+        "geospatial_vertical_max",
+        # global:geospatial_vertical_min: -6.143433570861816
+        "geospatial_vertical_min",
+        # global:geospatial_vertical_origin: geoid
+        # global:geospatial_vertical_positive: down
+        # global:geospatial_vertical_units: m
+    ]
     for attr_name, attr_value in attributes["global"].items():
-        metadata[f"global:{attr_name}"] = attr_value
+        if attr_name not in global_attrs_to_skip:
+            metadata[f"global:{attr_name}"] = attr_value
 
     for var_name, var_attrs in attributes["vars"].items():
         for attr_name, attr_value in var_attrs.items():
