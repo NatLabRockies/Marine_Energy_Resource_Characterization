@@ -38,84 +38,33 @@ def prepare_netcdf_compatible_metadata(attributes):
                 return obj.isoformat()
             return super(NumpyEncoder, self).default(obj)
 
-    # List of problematic fields to exclude (ending with REFERENCE_LIST or DIMENSION_LIST)
-    exclude_patterns = ["REFERENCE_LIST", "DIMENSION_LIST"]
-
     metadata = {}
-    # Process attributes based on structure
-    if "variable_attributes" in attributes:
-        for var_name, var_attrs in attributes["variable_attributes"].items():
-            # Skip variables with problematic patterns
-            should_skip = False
-            for pattern in exclude_patterns:
-                if var_name.endswith(pattern):
-                    should_skip = True
-                    break
+    # Set identifiers in metadata
+    metadata["WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
+    metadata["WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
 
-            if should_skip:
-                continue
+    for var_name, var_attrs in attributes["variable_attributes"].items():
+        for attr_name, attr_value in var_attrs.items():
+            metadata[f"{var_name}:{attr_name}"] = attr_value
 
-            for attr_name, attr_value in var_attrs.items():
-                metadata[f"{var_name}:{attr_name}"] = attr_value
-
-    if "global_attributes" in attributes:
-        for attr_name, attr_value in attributes["global_attributes"].items():
-            # Skip attributes with problematic patterns
-            should_skip = False
-            for pattern in exclude_patterns:
-                if attr_name.endswith(pattern):
-                    should_skip = True
-                    break
-
-            if should_skip:
-                continue
-
-            metadata[f"global:{attr_name}"] = attr_value
-
-    # Handle flat dictionary case
-    if not isinstance(attributes, dict) or (
-        "variable_attributes" not in attributes
-        and "global_attributes" not in attributes
-    ):
-        for attr_name, attr_value in attributes.items():
-            # Skip attributes with problematic patterns
-            should_skip = False
-            for pattern in exclude_patterns:
-                if attr_name.endswith(pattern):
-                    should_skip = True
-                    break
-
-            if should_skip:
-                continue
-
-            metadata[f"global:{attr_name}"] = attr_value
-
-    # Add metadata markers
-    metadata["_WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
-    metadata["_WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
+    for attr_name, attr_value in attributes["global_attributes"].items():
+        metadata[f"global:{attr_name}"] = attr_value
 
     # Convert all metadata values to bytes
     metadata_bytes = {}
     for k, v in metadata.items():
-        should_include = True
-        for skip_val in exclude_patterns:
-            if skip_val in k:
-                print(f"Skipping {k} due to exclusion pattern")
-                should_include = False
-
-        if should_include is True:
-            try:
-                if (
-                    isinstance(v, (list, dict, tuple))
-                    or hasattr(v, "__dict__")
-                    or isinstance(v, np.ndarray)
-                ):
-                    metadata_bytes[k] = json.dumps(v, cls=NumpyEncoder).encode("utf-8")
-                else:
-                    metadata_bytes[k] = str(v).encode("utf-8")
-            except TypeError as e:
+        try:
+            if (
+                isinstance(v, (list, dict, tuple))
+                or hasattr(v, "__dict__")
+                or isinstance(v, np.ndarray)
+            ):
+                metadata_bytes[k] = json.dumps(v, cls=NumpyEncoder).encode("utf-8")
+            else:
                 metadata_bytes[k] = str(v).encode("utf-8")
-                print(f"Warning: Could not JSON encode {k}: {e}")
+        except TypeError as e:
+            metadata_bytes[k] = str(v).encode("utf-8")
+            print(f"Warning: Could not JSON encode {k}: {e}")
 
     return metadata_bytes
 
