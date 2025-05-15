@@ -44,6 +44,8 @@ def prepare_netcdf_compatible_metadata(attributes):
     metadata["WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
 
     global_attrs_to_skip = [
+        # This does not provide relevant information here
+        "input_history_json",
         "geospatial_bounds",
         "geospatial_bounds_crs",
         # global:geospatial_bounds_crs: +proj=latlon +datum=WGS84 +ellps=WGS84 +type=crs
