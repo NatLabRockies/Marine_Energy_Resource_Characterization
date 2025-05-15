@@ -1041,22 +1041,23 @@ if __name__ == "__main__":
         )
 
         plt.clf()
-        plot_tidal_variable(
-            df,
-            selected_region,
-            "vap_sea_floor_depth",
-            "Distance to Sea Floor",
-            "m",
-            0,
-            1000,
-            is_aleutian="aleutian" in selected_region,
-            cmap=cmocean.cm.deep,
-            save_path=Path(
-                this_output_path,
-                f"{selected_region}_distance_to_sea_floor.png",
-            ),
-        )
-        plt.clf()
+        if "vap_sea_floor_depth" in df.columns:
+            plot_tidal_variable(
+                df,
+                selected_region,
+                "vap_sea_floor_depth",
+                "Distance to Sea Floor",
+                "m",
+                0,
+                1000,
+                is_aleutian="aleutian" in selected_region,
+                cmap=cmocean.cm.deep,
+                save_path=Path(
+                    this_output_path,
+                    f"{selected_region}_distance_to_sea_floor.png",
+                ),
+            )
+            plt.clf()
 
     print("Calculating and Plotting Speed variable_summary...")
     speed_summary = analyze_all_region_speed_statistics(
