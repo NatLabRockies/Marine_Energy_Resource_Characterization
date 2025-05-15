@@ -737,6 +737,9 @@ if __name__ == "__main__":
 
         speed_loc_stats.append(analyze_speed(df, selected_region))
 
+        this_output_path = Path(VIZ_OUTPUT_DIR, selected_region)
+        this_output_path.mkdir(parents=True, exist_ok=True)
+
         plot_tidal_variable(
             df,
             selected_region,
@@ -748,8 +751,7 @@ if __name__ == "__main__":
             is_aleutian="aleutian" in selected_region,
             cmap=cmocean.cm.thermal,
             save_path=Path(
-                VIZ_OUTPUT_DIR,
-                selected_region,
+                this_output_path,
                 f"{selected_region}_mean_sea_water_speed.png",
             ),
         )
@@ -764,8 +766,7 @@ if __name__ == "__main__":
             is_aleutian="aleutian" in selected_region,
             cmap=cmocean.cm.amp,
             save_path=Path(
-                VIZ_OUTPUT_DIR,
-                selected_region,
+                this_output_path,
                 f"{selected_region}_p95_sea_water_speed.png",
             ),
         )
@@ -781,8 +782,7 @@ if __name__ == "__main__":
             is_aleutian="aleutian" in selected_region,
             cmap=cmocean.cm.dense,
             save_path=Path(
-                VIZ_OUTPUT_DIR,
-                selected_region,
+                this_output_path,
                 f"{selected_region}_mean_sea_water_power_density.png",
             ),
         )
@@ -797,8 +797,7 @@ if __name__ == "__main__":
             is_aleutian="aleutian" in selected_region,
             cmap=cmocean.cm.haline,
             save_path=Path(
-                VIZ_OUTPUT_DIR,
-                selected_region,
+                this_output_path,
                 f"{selected_region}_p95_sea_water_power_density.png",
             ),
         )
