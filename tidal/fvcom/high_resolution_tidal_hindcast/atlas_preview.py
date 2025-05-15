@@ -726,7 +726,7 @@ if __name__ == "__main__":
 
     speed_loc_stats = []
 
-    for i in range(1, 5):
+    for i in range(0, 5):
         # Get the parquet file path
         selected_region = regions[i]
         parquet_file = get_parquet_path(selected_region)
