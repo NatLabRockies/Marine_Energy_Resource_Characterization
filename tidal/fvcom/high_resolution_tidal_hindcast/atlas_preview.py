@@ -518,8 +518,8 @@ def _plot_aleutian_mesh_with_triangulation(
             data_values,
             cmap=cmap,
             alpha=alpha,
-            vmin=vmin,
-            vmax=vmax,
+            # vmin=vmin,
+            # vmax=vmax,
             transform=transform,
             norm=norm,
         )
@@ -540,8 +540,8 @@ def _plot_aleutian_mesh_with_triangulation(
             cmap=cmap,
             s=point_size,
             alpha=alpha,
-            vmin=vmin,
-            vmax=vmax,
+            # vmin=vmin,
+            # vmax=vmax,
             transform=transform,
             norm=norm,
         )
@@ -559,8 +559,8 @@ def _plot_standard_points(
         cmap=cmap,
         s=point_size,
         alpha=alpha,
-        vmin=vmin,
-        vmax=vmax,
+        # vmin=vmin,
+        # vmax=vmax,
         norm=norm,
     )
     return scatter
@@ -587,7 +587,11 @@ def _plot_standard_mesh_with_triangulation(
     mesh_data = np.repeat(df[column_name].values, 3)
 
     scatter = ax.tripcolor(
-        triang, mesh_data, cmap=cmap, alpha=alpha, vmin=vmin, vmax=vmax, norm=norm
+        triang,
+        mesh_data,
+        cmap=cmap,
+        alpha=alpha,
+        norm=norm,  # vmin=vmin, vmax=vmax, norm=norm
     )
 
     if line_width > 0:
