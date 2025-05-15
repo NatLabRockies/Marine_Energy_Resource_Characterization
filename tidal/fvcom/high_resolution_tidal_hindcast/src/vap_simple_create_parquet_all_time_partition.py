@@ -53,18 +53,19 @@ def prepare_netcdf_compatible_metadata(attributes):
     # Convert all metadata values to bytes
     metadata_bytes = {}
     for k, v in metadata.items():
-        try:
-            if (
-                isinstance(v, (list, dict, tuple))
-                or hasattr(v, "__dict__")
-                or isinstance(v, np.ndarray)
-            ):
-                metadata_bytes[k] = json.dumps(v, cls=NumpyEncoder).encode("utf-8")
-            else:
-                metadata_bytes[k] = str(v).encode("utf-8")
-        except TypeError as e:
-            metadata_bytes[k] = str(v).encode("utf-8")
-            print(f"Warning: Could not JSON encode {k}: {e}")
+        metadata_bytes[k] = str(v).encode("utf-8")
+        # try:
+        #     if (
+        #         isinstance(v, (list, dict, tuple))
+        #         or hasattr(v, "__dict__")
+        #         or isinstance(v, np.ndarray)
+        #     ):
+        #         metadata_bytes[k] = json.dumps(v, cls=NumpyEncoder).encode("utf-8")
+        #     else:
+        #         metadata_bytes[k] = str(v).encode("utf-8")
+        # except TypeError as e:
+        #     metadata_bytes[k] = str(v).encode("utf-8")
+        #     print(f"Warning: Could not JSON encode {k}: {e}")
 
     return metadata_bytes
 
