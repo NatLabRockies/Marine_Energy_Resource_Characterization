@@ -130,7 +130,7 @@ def plot_tidal_variable(
     discrete_norm = None
     if n_colors is not None:
         # Create discrete colormap
-        base_cmap = plt.cm.get_cmap(cmap)
+        base_cmap = plt.get_cmap(cmap)
         colors = base_cmap(np.linspace(0, 1, n_colors))
         discrete_cmap = mpl.colors.LinearSegmentedColormap.from_list(
             "discrete_cmap", colors, N=n_colors
@@ -816,7 +816,7 @@ def analyze_all_region_speed_statistics(
 
     # Create consistent color mapping for regions
     # Create a colormap with distinct colors for each region
-    cmap = plt.cm.get_cmap("tab10", len(regions))
+    cmap = plt.get_cmap("tab10", len(regions))
     region_colors = {region: cmap(i) for i, region in enumerate(regions)}
 
     # Create comparison tables
