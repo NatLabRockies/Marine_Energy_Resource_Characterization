@@ -35,6 +35,9 @@ BASEMAP_PROVIDER = ctx.providers.Esri.WorldImagery
 SEA_WATER_SPEED_UNITS = r"$m/s$"
 SEA_WATER_POWER_DENSITY_UNITS = r"$W/m^2$"
 
+# Note the output visualization will actually have 9 levels
+# There will be 8 within the range and a 9th that is outside of the range
+# This makes the range easier for the user understand and interpret
 COLOR_BAR_DISCRETE_LEVELS = 8
 
 MEAN_SPEED_CMAP = cmocean.cm.thermal
@@ -649,22 +652,27 @@ def _add_colorbar_and_title(
         else:
             tick_format = "%.3f"
 
-        # Calculate midpoints between levels for tick positions
+        # Calculate midpoints between levels for tick positions for the main ranges
+        # These are the ranges within the min-max bounds
         midpoints = [
             (discrete_levels[i] + discrete_levels[i + 1]) / 2
             for i in range(len(discrete_levels) - 1)
         ]
 
+        # Add an additional midpoint for the "above max" range
+        # Position it slightly beyond the max value (e.g., 5% beyond)
+        above_midpoint = discrete_levels[-1] * 1.05
+        midpoints.append(above_midpoint)
+
         # Create labels showing range intervals
         tick_labels = []
         for i in range(len(discrete_levels) - 1):
-            if i == len(discrete_levels) - 2:  # Last interval
-                # For the last interval, use "≥" to indicate open-ended range
-                tick_labels.append(f"[≥{tick_format % discrete_levels[i]})")
-            else:
-                tick_labels.append(
-                    f"[{tick_format % discrete_levels[i]}-{tick_format % discrete_levels[i+1]})"
-                )
+            tick_labels.append(
+                f"[{tick_format % discrete_levels[i]}-{tick_format % discrete_levels[i+1]})"
+            )
+
+        # Add the final "≥ max_value" label
+        tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
 
         # Create the colorbar with specific ticks at midpoints
         cbar = fig.colorbar(
