@@ -156,14 +156,15 @@ def plot_tidal_variable(
         base_cmap = plt.get_cmap(cmap)
 
         # Get n_colors colors from the colormap (excluding the last range)
-        colors = base_cmap(np.linspace(0, 1, n_colors))
+        # Add an extra color for the "above max" range
+        colors = base_cmap(np.linspace(0, 1, n_colors + 1))
 
-        # Add one more color for the "above max" range (using the last color from the colormap)
-        extended_colors = np.vstack([colors, base_cmap(1.0)])
+        # # Add one more color for the "above max" range (using the last color from the colormap)
+        # extended_colors = np.vstack([colors, base_cmap(1.0)])
 
         # Create a new colormap with n_colors + 1 levels
         discrete_cmap = mpl.colors.LinearSegmentedColormap.from_list(
-            "discrete_cmap", extended_colors, N=n_colors + 1
+            "discrete_cmap", colors, N=n_colors + 1
         )
 
         # Create boundaries for n_colors discrete levels within vmin-vmax
