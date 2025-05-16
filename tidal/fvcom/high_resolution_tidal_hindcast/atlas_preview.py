@@ -696,7 +696,7 @@ def analyze_speed(
     columns = [
         "vap_water_column_mean_sea_water_speed",
         "vap_water_column_95th_percentile_sea_water_speed",
-        "vap_water_column_max_sea_water_speed",
+        # "vap_water_column_max_sea_water_speed",
     ]
 
     # Create a figure with subplots - one for each column
