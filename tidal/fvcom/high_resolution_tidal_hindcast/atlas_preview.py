@@ -23,13 +23,24 @@ VIZ_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 SEA_WATER_SPEED_CBAR_MAX = 2.0
 SEA_WATER_SPEED_CBAR_MIN = 0.0
+# In the output visualization, there will be 9 levels, but this is the number of levels within the range
+# The 9th level is for values outside the range.
+SEA_WATER_SPEED_LEVELS = 8
+
 SEA_WATER_MAX_SPEED_CBAR_MAX = 5.0
+SEA_WATER_MAX_SPEED_LEVELS = 10
 
 SEA_WATER_POWER_DENSITY_CBAR_MAX = 4000  # 0.5 * 1025 * (2.0^3) = 4,100
 SEA_WATER_POWER_DENSITY_CBAR_MIN = 0
+SEA_WATER_POWER_DENSITY_LEVELS = 8
+
 SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX = 64000  # 0.5 * 1025 * (5.0^3) = 64,062.5
+SEA_WATER_MAX_POWER_DENSITY_LEVELS = 8
+
 SEA_FLOOR_DEPTH_MIN = 0
 SEA_FLOOR_DEPTH_MAX = 250
+SEA_FLOOR_DEPTH_LEVELS = 10
+
 BASEMAP_PROVIDER = ctx.providers.Esri.WorldImagery
 
 SEA_WATER_SPEED_UNITS = r"$m/s$"
@@ -1028,6 +1039,7 @@ if __name__ == "__main__":
                 this_output_path,
                 f"{selected_region}_mean_sea_water_speed.png",
             ),
+            n_colors=SEA_WATER_SPEED_LEVELS,
         )
         plt.clf()
         print(f"\tPlotting {selected_region} p95_sea_water_speed...")
@@ -1056,6 +1068,7 @@ if __name__ == "__main__":
                 this_output_path,
                 f"{selected_region}_p95_sea_water_speed.png",
             ),
+            n_colors=SEA_WATER_MAX_SPEED_LEVELS,
         )
         plt.clf()
 
@@ -1085,6 +1098,7 @@ if __name__ == "__main__":
                 this_output_path,
                 f"{selected_region}_mean_sea_water_power_density.png",
             ),
+            n_colors=SEA_WATER_POWER_DENSITY_LEVELS,
         )
         plt.clf()
 
@@ -1114,6 +1128,7 @@ if __name__ == "__main__":
                 this_output_path,
                 f"{selected_region}_p95_sea_water_power_density.png",
             ),
+            n_colors=SEA_WATER_MAX_POWER_DENSITY_LEVELS,
         )
 
         plt.clf()
@@ -1141,6 +1156,7 @@ if __name__ == "__main__":
                     this_output_path,
                     f"{selected_region}_distance_to_sea_floor.png",
                 ),
+                n_colors=SEA_FLOOR_DEPTH_LEVELS,
             )
             plt.clf()
 
