@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -698,135 +698,115 @@ COLUMN_DISPLAY_NAMES = {
 }
 
 
-def analyze_speed(
-    df: pd.DataFrame, region_name: str, output_path: None
+def analyze_variable(
+    df: pd.DataFrame,
+    variable: str,
+    variable_display_name,
+    region_name,
+    units: str = "m/s",
+    percentiles: List[float] = [0.95, 0.99, 0.9999],
+    output_path: Union[Path, None] = None,
 ) -> Dict[str, Any]:
     """
-    Analyze sea water speed statistics from sigma-layer data for a given region and plot
-    histograms with KDE and percentile lines.
-
-    Context: The speed data represents values calculated across 10 sigma layers from the
-    original data. All measurements are in meters per second (m/s).
+    Analyze a variable's statistics and plot histogram with KDE and percentile lines.
 
     Args:
-        df: DataFrame containing the sea water speed data across sigma layers
-        region_name: Name of the region being analyzed
+        df: DataFrame containing the variable data
+        variable: Column name of the variable to analyze
+        variable_display_name: Display name for the variable (defaults to variable name if None)
+        region_name: Name of the region/area being analyzed (optional)
+        units: Units for the variable (for axis labels)
+        percentiles: List of percentiles to calculate and display
+        output_path: Path to save the output plots (if None, plots are displayed)
 
     Returns:
-        Dictionary containing region name, statistics, and data sample for KDE analysis
+        Dictionary containing statistics and metadata for meta-analysis
     """
-    # Define columns to analyze - these are calculated across 10 sigma layers
-    columns = [
-        "vap_water_column_mean_sea_water_speed",
-        "vap_water_column_95th_percentile_sea_water_speed",
-        # "vap_water_column_max_sea_water_speed",
-    ]
+    # Set display name if not provided
+    if variable_display_name is None:
+        variable_display_name = variable
 
-    # Create a figure with subplots - one for each column
-    fig, axes = plt.subplots(len(columns), 1, figsize=(16, 5 * len(columns)))
+    # Set region name if not provided
+    region_label = f"{region_name} - " if region_name else ""
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(16, 8))
 
     # Dictionary to store the results
     results = {
+        "variable": variable,
+        "variable_display_name": variable_display_name,
         "region": region_name,
+        "units": units,
         "df": df,  # Store the dataframe for use in the meta-analysis
         "stats": {},
     }
 
-    # Calculate percentiles and plot for each column
-    for i, col in enumerate(columns):
-        ax = axes[i] if len(columns) > 1 else axes
+    # Calculate key percentiles
+    percentile_values = {}
+    for p in percentiles:
+        p_label = f"p{int(p*100)}" if p < 1 else f"p{int(p*10000)/100}"
+        percentile_values[p_label] = df[variable].quantile(p)
 
-        # Calculate key percentiles
-        p95 = df[col].quantile(0.95)
-        p99 = df[col].quantile(0.99)
-        p9999 = df[col].quantile(0.9999)
+    # Add min and max
+    percentile_values["min"] = df[variable].min()
+    percentile_values["max"] = df[variable].max()
 
-        # Store only the statistics we need for comparison
-        results["stats"][col] = {
-            "p95": p95,
-            "p99": p99,
-            "p9999": p9999,
-            "min": df[col].min(),
-            "max": df[col].max(),
-        }
+    # Store statistics
+    results["stats"] = percentile_values
 
-        # Plot histogram with KDE
-        sns.histplot(df[col], kde=True, ax=ax, bins=50, alpha=0.6)
+    # Plot histogram with KDE
+    sns.histplot(df[variable], kde=True, ax=ax, bins=50, alpha=0.6)
 
-        # Add vertical lines for percentiles
-        ax.axvline(p95, color="r", linestyle="--")
-        ax.axvline(p99, color="g", linestyle="--")
-        ax.axvline(p9999, color="b", linestyle="--")
+    # Add vertical lines for percentiles and annotations
+    colors = ["r", "g", "b", "purple", "orange"]  # Add more if needed
 
-        # Add annotations
+    y_max = ax.get_ylim()[1]
+    y_positions = np.linspace(0.9, 0.7, len(percentiles))
+
+    for i, p in enumerate(percentiles):
+        p_label = f"p{int(p*100)}" if p < 1 else f"p{int(p*10000)/100}"
+        value = percentile_values[p_label]
+
+        # Add vertical line
+        ax.axvline(value, color=colors[i % len(colors)], linestyle="--")
+
+        # Format percentile for display
+        display_p = f"{p*100:.0f}%" if p < 1 else f"{p*100:.2f}%"
+
+        # Add annotation
         ax.annotate(
-            f"95%: {p95:.3f}",
-            xy=(p95, 0),
-            xytext=(p95, ax.get_ylim()[1] * 0.9),
+            f"{display_p}: {value:.3f}",
+            xy=(value, 0),
+            xytext=(value, y_max * y_positions[i]),
             arrowprops=dict(arrowstyle="->"),
-            ha="right",
-        )
-        ax.annotate(
-            f"99%: {p99:.3f}",
-            xy=(p99, 0),
-            xytext=(p99, ax.get_ylim()[1] * 0.8),
-            arrowprops=dict(arrowstyle="->"),
-            ha="right",
-        )
-        ax.annotate(
-            f"99.99%: {p9999:.3f}",
-            xy=(p9999, 0),
-            xytext=(p9999, ax.get_ylim()[1] * 0.7),
-            arrowprops=dict(arrowstyle="->"),
-            ha="left",
+            ha="right" if i < len(percentiles) // 2 else "left",
         )
 
-        # Get display name from dictionary
-        display_name = COLUMN_DISPLAY_NAMES.get(col, col)
+    # Set title and labels
+    ax.set_title(f"{region_label}{variable_display_name} ({units})")
+    ax.set_xlabel(f"{variable_display_name} ({units})")
+    ax.set_ylabel("Frequency")
 
-        # Set title and labels
-        ax.set_title(f"{region_name} - {display_name} (m/s)")
-        ax.set_xlabel("Speed (m/s)")
-        ax.set_ylabel("Frequency")
-
-    # Additional combined histogram plot (all columns together)
-    plt.figure(figsize=(16, 8))
-
-    # Create the histogram with proper labels
-    ax = df[columns].plot(
-        kind="hist",
-        title=f"{region_name} - Sea Water Speed Comparison",
-        figsize=(16, 8),
-        alpha=0.4,
-        bins=50,
-    )
-
-    # Update the legend with more descriptive names
-    labels = [COLUMN_DISPLAY_NAMES[col] for col in columns]
-    ax.legend(labels)
-
-    plt.xlabel("Speed (m/s)")
-    plt.ylabel("Frequency")
-
-    # Tight layout and show the individual plots
-    fig.tight_layout()
+    # Tight layout and show/save
+    plt.tight_layout()
     if output_path is not None:
-        plt.savefig(Path(output_path, "speed_analysis.png"))
+        plt.savefig(Path(output_path, f"{variable}_analysis.png"))
     else:
         plt.show()
 
     return results
 
 
-def analyze_all_region_speed_statistics(
-    region_stats: List[Dict[str, Any]], output_path=None
+def analyze_variable_across_regions(
+    region_stats: List[Dict[str, Any]], output_path: Union[Path, None] = None
 ) -> Dict[str, Any]:
     """
-    Perform meta-analysis comparing speed statistics across different regions.
+    Perform meta-analysis comparing variable statistics across different regions.
 
     Args:
-        region_stats: List of dictionaries containing region statistics and dataframes
-                     from analyze_speed
+        region_stats: List of dictionaries containing region statistics from analyze_variable
+        output_path: Path to save the output plots (if None, plots are displayed)
 
     Returns:
         Dictionary with summary statistics and comparison tables
@@ -835,133 +815,138 @@ def analyze_all_region_speed_statistics(
         print("No region statistics provided for analysis.")
         return {}
 
-    # Extract regions
-    regions = [stat["region"] for stat in region_stats]
+    # Extract variable info from the first region stats
+    variable = region_stats[0]["variable"]
+    variable_display_name = region_stats[0]["variable_display_name"]
+    units = region_stats[0].get("units", "")
 
-    # Define columns to analyze
-    columns = [
-        "vap_water_column_mean_sea_water_speed",
-        "vap_water_column_95th_percentile_sea_water_speed",
-        "vap_water_column_max_sea_water_speed",
-    ]
+    # Extract regions
+    regions = [stat["region"] for stat in region_stats if stat["region"] is not None]
 
     # Create consistent color mapping for regions
-    # Create a colormap with distinct colors for each region
     cmap = plt.get_cmap("tab10", len(regions))
     region_colors = {region: cmap(i) for i, region in enumerate(regions)}
 
-    # Create comparison tables
-    tables = {}
-    for col in columns:
-        # Create a list of dictionaries for this column
-        col_data = []
-        for stat in region_stats:
-            if col in stat["stats"]:
-                row = {
-                    "Region": stat["region"],
-                    "95%": stat["stats"][col]["p95"],
-                    "99%": stat["stats"][col]["p99"],
-                    "99.99%": stat["stats"][col]["p9999"],
-                    "Min": stat["stats"][col]["min"],
-                    "Max": stat["stats"][col]["max"],
-                }
-                col_data.append(row)
+    # Create comparison table
+    table_data = []
+    metrics = set()
 
-        # Create DataFrame
-        tables[col] = pd.DataFrame(col_data)
+    for stat in region_stats:
+        if stat["region"] is not None:  # Skip if region is None
+            row = {"Region": stat["region"]}
 
-    # Plot KDE comparisons
-    for i, col in enumerate(columns):
-        plt.figure(figsize=(16, 8))
+            # Add all metrics from this region
+            for metric, value in stat["stats"].items():
+                row[metric] = value
+                metrics.add(metric)
 
-        # Plot KDE for each region
-        for stat in region_stats:
-            if "df" in stat and col in stat["df"].columns:
-                region = stat["region"]
-                sns.kdeplot(stat["df"][col], label=region, color=region_colors[region])
+            table_data.append(row)
 
-        # Get display name from dictionary
-        display_name = COLUMN_DISPLAY_NAMES.get(col, col)
+    # Create DataFrame
+    comparison_table = pd.DataFrame(table_data)
 
-        # Set title and labels
-        plt.title(f"Comparison of {display_name} Across Regions")
-        plt.xlabel("Speed (m/s)")
-        plt.ylabel("Density")
-        plt.legend()
-        plt.tight_layout()
-        if output_path is not None:
-            plt.savefig(Path(output_path, f"{col}_kde_comparison.png"))
-        else:
-            plt.show()
+    # Plot KDE comparison
+    plt.figure(figsize=(16, 8))
 
-    # Create bar charts for each percentile metric (95%, 99%, 99.99%)
-    percentile_metrics = ["95%", "99%", "99.99%"]
+    # Plot KDE for each region
+    for stat in region_stats:
+        if stat["region"] is not None and "df" in stat:
+            region = stat["region"]
+            sns.kdeplot(stat["df"][variable], label=region, color=region_colors[region])
 
-    for col in columns:
-        display_name = COLUMN_DISPLAY_NAMES.get(col, col)
+    # Set title and labels
+    plt.title(f"Comparison of {variable_display_name} Across Regions")
+    plt.xlabel(f"{variable_display_name} ({units})")
+    plt.ylabel("Density")
+    plt.legend()
+    plt.tight_layout()
 
+    if output_path is not None:
+        plt.savefig(Path(output_path, f"{variable}_kde_comparison.png"))
+    else:
+        plt.show()
+
+    # Create bar charts for percentile metrics
+    # Identify percentile metrics (they start with 'p')
+    percentile_metrics = [
+        m for m in metrics if m.startswith("p") and m not in ["min", "max"]
+    ]
+
+    if percentile_metrics:
         # Create a figure with subplots for each percentile
         fig, axes = plt.subplots(
             len(percentile_metrics), 1, figsize=(16, 5 * len(percentile_metrics))
         )
+
+        # Handle case with only one percentile
+        if len(percentile_metrics) == 1:
+            axes = [axes]
+
         fig.suptitle(
-            f"{display_name} - Percentile Comparison Across Regions (m/s)", fontsize=16
+            f"{variable_display_name} - Percentile Comparison Across Regions ({units})",
+            fontsize=16,
         )
 
-        # Get the data for this column
-        df_col = tables[col]
+        for i, metric in enumerate(sorted(percentile_metrics)):
+            # Format metric for display
+            if metric.startswith("p"):
+                display_metric = metric.replace("p", "") + "%"
+                if len(display_metric) > 3:  # For p9999 etc.
+                    display_metric = (
+                        display_metric[:-2] + "." + display_metric[-2:] + "%"
+                    )
+            else:
+                display_metric = metric
 
-        for i, metric in enumerate(percentile_metrics):
             # Sort data by the current percentile value
-            sorted_data = df_col.sort_values(by=metric)
+            if metric in comparison_table.columns:
+                sorted_data = comparison_table.sort_values(by=metric)
 
-            # Create bar plot
-            ax = axes[i]
-            bars = ax.bar(
-                sorted_data["Region"],
-                sorted_data[metric],
-                color=[region_colors[region] for region in sorted_data["Region"]],
-            )
-
-            # Add value labels on top of bars
-            for bar in bars:
-                height = bar.get_height()
-                ax.annotate(
-                    f"{height:.3f}",
-                    xy=(bar.get_x() + bar.get_width() / 2, height),
-                    xytext=(0, 3),  # 3 points vertical offset
-                    textcoords="offset points",
-                    ha="center",
-                    va="bottom",
+                # Create bar plot
+                ax = axes[i]
+                bars = ax.bar(
+                    sorted_data["Region"],
+                    sorted_data[metric],
+                    color=[region_colors[region] for region in sorted_data["Region"]],
                 )
 
-            # Set title and labels
-            ax.set_title(f"{metric} Values", fontsize=14)
-            ax.set_xlabel("Region")
-            ax.set_ylabel("Speed (m/s)")
+                # Add value labels on top of bars
+                for bar in bars:
+                    height = bar.get_height()
+                    ax.annotate(
+                        f"{height:.3f}",
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha="center",
+                        va="bottom",
+                    )
 
-            # Rotate x-tick labels for better readability
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+                # Set title and labels
+                ax.set_title(f"{display_metric} Values", fontsize=14)
+                ax.set_xlabel("Region")
+                ax.set_ylabel(f"{variable_display_name} ({units})")
+
+                # Rotate x-tick labels for better readability
+                plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
 
         plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for the suptitle
         if output_path is not None:
-            plt.savefig(Path(output_path, f"{col}_bar_comparison.png"))
+            plt.savefig(Path(output_path, f"{variable}_bar_comparison.png"))
         else:
             plt.show()
 
-    # Print comparison tables
-    for col, table in tables.items():
-        # Get display name from dictionary
-        display_name = COLUMN_DISPLAY_NAMES.get(col, col)
-
-        print(f"\n{display_name} Comparison (m/s):")
-        print(table.to_string(index=False))
+    # Print comparison table
+    print(f"\n{variable_display_name} Comparison ({units}):")
+    print(comparison_table.to_string(index=False))
 
     # Return summary
     return {
+        "variable": variable,
+        "variable_display_name": variable_display_name,
         "regions": regions,
-        "comparison_tables": tables,
-        "region_colors": region_colors,  # Include color mapping for reference
+        "comparison_table": comparison_table,
+        "region_colors": region_colors,
     }
 
 
@@ -973,7 +958,11 @@ if __name__ == "__main__":
     for i, region in enumerate(regions):
         print(f"{i+1}. {region}")
 
-    speed_loc_stats = []
+    mean_speed_stats = []
+    max_speed_stats = []
+    mean_power_density_stats = []
+    max_power_density_stats = []
+    sea_floor_depth_stats = []
 
     for i in range(0, 5):
         # Get the parquet file path
@@ -987,11 +976,17 @@ if __name__ == "__main__":
         this_output_path = Path(VIZ_OUTPUT_DIR, selected_region)
         this_output_path.mkdir(parents=True, exist_ok=True)
 
-        speed_loc_stats.append(
-            analyze_speed(df, selected_region, output_path=Path(this_output_path))
-        )
-
         print(f"\tPlotting {selected_region} mean_sea_water_speed...")
+
+        mean_speed_stats.append(
+            analyze_variable(
+                df,
+                "vap_water_column_mean_sea_water_speed",
+                "Mean Sea Water Speed",
+                selected_region,
+                output_path=Path(this_output_path),
+            )
+        )
 
         plot_tidal_variable(
             df,
@@ -1010,6 +1005,17 @@ if __name__ == "__main__":
         )
         plt.clf()
         print(f"\tPlotting {selected_region} p95_sea_water_speed...")
+
+        max_speed_stats.append(
+            analyze_variable(
+                df,
+                "vap_water_column_95th_percentile_sea_water_speed",
+                "95th Percentile Sea Water Speed",
+                selected_region,
+                output_path=Path(this_output_path),
+            )
+        )
+
         plot_tidal_variable(
             df,
             selected_region,
@@ -1028,6 +1034,17 @@ if __name__ == "__main__":
         plt.clf()
 
         print(f"\tPlotting {selected_region} mean_sea_water_power_density...")
+
+        mean_power_density_stats.append(
+            analyze_variable(
+                df,
+                "vap_water_column_mean_sea_water_power_density",
+                "Mean Sea Water Power Density",
+                selected_region,
+                output_path=Path(this_output_path),
+            )
+        )
+
         plot_tidal_variable(
             df,
             selected_region,
@@ -1047,6 +1064,16 @@ if __name__ == "__main__":
 
         print(f"\tPlotting {selected_region} p95_sea_water_power_density...")
 
+        max_power_density_stats.append(
+            analyze_variable(
+                df,
+                "vap_water_column_95th_percentile_sea_water_power_density",
+                "95th Percentile Sea Water Power Density",
+                selected_region,
+                output_path=Path(this_output_path),
+            )
+        )
+
         plot_tidal_variable(
             df,
             selected_region,
@@ -1065,6 +1092,15 @@ if __name__ == "__main__":
 
         plt.clf()
         if "vap_sea_floor_depth" in df.columns:
+            sea_floor_depth_stats.append(
+                analyze_variable(
+                    df,
+                    "vap_sea_floor_depth",
+                    "Sea Floor Depth",
+                    selected_region,
+                    output_path=Path(this_output_path),
+                )
+            )
             plot_tidal_variable(
                 df,
                 selected_region,
@@ -1083,6 +1119,18 @@ if __name__ == "__main__":
             plt.clf()
 
     print("Calculating and Plotting Speed variable_summary...")
-    speed_summary = analyze_all_region_speed_statistics(
-        speed_loc_stats, output_path=VIZ_OUTPUT_DIR
+    mean_speed_summary = analyze_variable_across_regions(
+        mean_speed_stats, output_path=VIZ_OUTPUT_DIR
+    )
+    max_speed_summary = analyze_variable_across_regions(
+        max_speed_stats, output_path=VIZ_OUTPUT_DIR
+    )
+    mean_power_density_summary = analyze_variable_across_regions(
+        mean_power_density_stats, output_path=VIZ_OUTPUT_DIR
+    )
+    max_power_density_summary = analyze_variable_across_regions(
+        max_power_density_stats, output_path=VIZ_OUTPUT_DIR
+    )
+    sea_floor_depth_summary = analyze_variable_across_regions(
+        sea_floor_depth_stats, output_path=VIZ_OUTPUT_DIR
     )
