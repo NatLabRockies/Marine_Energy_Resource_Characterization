@@ -37,6 +37,12 @@ SEA_WATER_POWER_DENSITY_UNITS = r"$W/m^2$"
 
 COLOR_BAR_DISCRETE_LEVELS = 8
 
+MEAN_SPEED_CMAP = cmocean.cm.thermal
+MAX_SPEED_CMAP = cmocean.cm.matter
+MEAN_POWER_DENSITY_CMAP = cmocean.cm.dense
+MAX_POWER_DENSITY_CMAP = cmocean.cm.tempo
+SEA_FLOOR_DEPTH_CMAP = cmocean.cm.deep
+
 
 # Define available regions (derived from folder structure)
 def get_available_regions():
@@ -981,7 +987,7 @@ if __name__ == "__main__":
             SEA_WATER_SPEED_CBAR_MIN,
             SEA_WATER_SPEED_CBAR_MAX,
             is_aleutian="aleutian" in selected_region,
-            cmap=cmocean.cm.thermal,
+            cmap=MEAN_SPEED_CMAP,
             save_path=Path(
                 this_output_path,
                 f"{selected_region}_mean_sea_water_speed.png",
@@ -998,7 +1004,7 @@ if __name__ == "__main__":
             SEA_WATER_SPEED_CBAR_MIN,
             SEA_WATER_MAX_SPEED_CBAR_MAX,
             is_aleutian="aleutian" in selected_region,
-            cmap=cmocean.cm.amp,
+            cmap=MAX_SPEED_CMAP,
             save_path=Path(
                 this_output_path,
                 f"{selected_region}_p95_sea_water_speed.png",
@@ -1016,7 +1022,7 @@ if __name__ == "__main__":
             SEA_WATER_POWER_DENSITY_CBAR_MIN,
             SEA_WATER_POWER_DENSITY_CBAR_MAX,
             is_aleutian="aleutian" in selected_region,
-            cmap=cmocean.cm.dense,
+            cmap=cmocean.MEAN_POWER_DENSITY_CMAP,
             save_path=Path(
                 this_output_path,
                 f"{selected_region}_mean_sea_water_power_density.png",
@@ -1035,7 +1041,7 @@ if __name__ == "__main__":
             SEA_WATER_POWER_DENSITY_CBAR_MIN,
             SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
             is_aleutian="aleutian" in selected_region,
-            cmap=cmocean.cm.tempo,
+            cmap=cmocean.MAX_POWER_DENSITY_CMAP,
             save_path=Path(
                 this_output_path,
                 f"{selected_region}_p95_sea_water_power_density.png",
@@ -1053,7 +1059,7 @@ if __name__ == "__main__":
                 SEA_FLOOR_DEPTH_MIN,
                 SEA_FLOOR_DEPTH_MAX,
                 is_aleutian="aleutian" in selected_region,
-                cmap=cmocean.cm.deep,
+                cmap=SEA_FLOOR_DEPTH_CMAP,
                 save_path=Path(
                     this_output_path,
                     f"{selected_region}_distance_to_sea_floor.png",
