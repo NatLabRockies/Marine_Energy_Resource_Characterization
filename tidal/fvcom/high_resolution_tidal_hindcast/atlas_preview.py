@@ -689,9 +689,15 @@ def _add_colorbar_and_title(
         # Calculate midpoints for tick positions
         midpoints = [(r[0] + r[1]) / 2 for r in ranges]
 
+        # Calculate the step size between midpoints
+        if len(midpoints) > 1:
+            step = midpoints[1] - midpoints[0]
+        else:
+            step = discrete_levels[1] - discrete_levels[0]
+
         # Add an additional midpoint for the "above max" range
-        # Position it slightly beyond the max value
-        above_midpoint = discrete_levels[-1] + (discrete_levels[-1] - midpoints[-1])
+        # Position it one step beyond the last valid midpoint
+        above_midpoint = midpoints[-1] + step
         midpoints.append(above_midpoint)
 
         print(f"Midpoints: {midpoints}")
@@ -719,11 +725,17 @@ def _add_colorbar_and_title(
 
         # Set custom tick labels showing the ranges
         cbar.ax.set_yticklabels(tick_labels)
+
+        # Set the colorbar limits to extend slightly beyond the last midpoint
+        # This ensures the last tick mark is fully visible
+        cbar.set_clim(discrete_levels[0], above_midpoint + step / 2)
+
     else:
         # Standard continuous colorbar
         cbar = fig.colorbar(
             scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
+
     cbar.set_label(f"{label} [{units}]")
     if title is None:
         title = f"{location.replace('_', ' ').title()} - {label}"
