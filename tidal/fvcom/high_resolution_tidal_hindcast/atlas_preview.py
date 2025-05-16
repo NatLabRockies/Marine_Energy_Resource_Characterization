@@ -140,16 +140,29 @@ def plot_tidal_variable(
     # Create a discrete colormap if n_colors is specified
     discrete_norm = None
     if n_colors is not None:
-        # Create discrete colormap
+        # Create discrete colormap including an extra color for values above vmax
         base_cmap = plt.get_cmap(cmap)
+
+        # Get n_colors colors from the colormap (excluding the last range)
         colors = base_cmap(np.linspace(0, 1, n_colors))
+
+        # Add one more color for the "above max" range (using the last color from the colormap)
+        extended_colors = np.vstack([colors, base_cmap(1.0)])
+
+        # Create a new colormap with n_colors + 1 levels
         discrete_cmap = mpl.colors.LinearSegmentedColormap.from_list(
-            "discrete_cmap", colors, N=n_colors
+            "discrete_cmap", extended_colors, N=n_colors + 1
         )
 
-        # Create boundaries for the discrete levels
-        bounds = np.linspace(vmin, vmax, n_colors + 1)
-        discrete_norm = mpl.colors.BoundaryNorm(bounds, n_colors)
+        # Create boundaries for n_colors discrete levels within vmin-vmax
+        main_bounds = np.linspace(vmin, vmax, n_colors + 1)
+
+        # Add an extra boundary for values above vmax (e.g., infinity or a very large value)
+        # This ensures the colormap captures values above vmax
+        bounds = np.append(main_bounds, np.inf)
+
+        # Create a BoundaryNorm with n_colors + 1 levels
+        discrete_norm = mpl.colors.BoundaryNorm(bounds, n_colors + 1)
         cmap = discrete_cmap
     else:
         bounds = None
@@ -224,6 +237,7 @@ def plot_tidal_variable(
                 norm=discrete_norm,
             )
 
+    # Pass only the main bounds (not including infinity) to _add_colorbar_and_title
     _add_colorbar_and_title(
         fig,
         ax,
@@ -232,7 +246,7 @@ def plot_tidal_variable(
         units,
         title,
         location,
-        discrete_levels=bounds if n_colors is not None else None,
+        discrete_levels=main_bounds if n_colors is not None else None,
     )
 
     plt.tight_layout()
@@ -244,7 +258,10 @@ def plot_tidal_variable(
 
     # Print out the color and value range for each level if discrete levels are used
     if n_colors is not None:
-        _print_color_level_ranges(bounds, label, units, cmap, n_colors)
+        # Only print the main bounds and the above-max level
+        _print_color_level_ranges(
+            main_bounds, label, units, discrete_cmap, n_colors + 1
+        )
 
     return fig, ax
 
@@ -652,24 +669,25 @@ def _add_colorbar_and_title(
         else:
             tick_format = "%.3f"
 
-        # Calculate midpoints between levels for tick positions for the main ranges
-        # These are the ranges within the min-max bounds
-        midpoints = [
-            (discrete_levels[i] + discrete_levels[i + 1]) / 2
-            for i in range(len(discrete_levels) - 1)
-        ]
+        # Create ranges from the discrete levels
+        ranges = []
+        for i in range(len(discrete_levels) - 1):
+            start = discrete_levels[i]
+            end = discrete_levels[i + 1]
+            ranges.append((start, end))
+
+        # Calculate midpoints for tick positions
+        midpoints = [(r[0] + r[1]) / 2 for r in ranges]
 
         # Add an additional midpoint for the "above max" range
-        # Position it slightly beyond the max value (e.g., 5% beyond)
-        above_midpoint = discrete_levels[-1] * 1.05
+        # Position it slightly beyond the max value
+        above_midpoint = discrete_levels[-1] + (discrete_levels[-1] - midpoints[-1])
         midpoints.append(above_midpoint)
 
         # Create labels showing range intervals
         tick_labels = []
-        for i in range(len(discrete_levels) - 1):
-            tick_labels.append(
-                f"[{tick_format % discrete_levels[i]}-{tick_format % discrete_levels[i+1]})"
-            )
+        for i, (start, end) in enumerate(ranges):
+            tick_labels.append(f"[{tick_format % start}-{tick_format % end})")
 
         # Add the final "≥ max_value" label
         tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
