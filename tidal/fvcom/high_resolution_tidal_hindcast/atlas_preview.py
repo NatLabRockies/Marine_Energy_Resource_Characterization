@@ -171,7 +171,7 @@ def plot_tidal_variable(
 
         # Add an extra boundary for values above vmax (e.g., infinity or a very large value)
         # This ensures the colormap captures values above vmax
-        bounds = np.append(main_bounds, np.inf)
+        bounds = np.append(main_bounds, sys.float_info.max - 1)
 
         # Create a BoundaryNorm with n_colors + 1 levels
         discrete_norm = mpl.colors.BoundaryNorm(bounds, n_colors + 1)
