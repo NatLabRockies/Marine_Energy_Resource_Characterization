@@ -1037,7 +1037,7 @@ if __name__ == "__main__":
             SEA_WATER_POWER_DENSITY_CBAR_MIN,
             SEA_WATER_POWER_DENSITY_CBAR_MAX,
             is_aleutian="aleutian" in selected_region,
-            cmap=cmocean.MEAN_POWER_DENSITY_CMAP,
+            cmap=MEAN_POWER_DENSITY_CMAP,
             save_path=Path(
                 this_output_path,
                 f"{selected_region}_mean_sea_water_power_density.png",
@@ -1056,7 +1056,7 @@ if __name__ == "__main__":
             SEA_WATER_POWER_DENSITY_CBAR_MIN,
             SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
             is_aleutian="aleutian" in selected_region,
-            cmap=cmocean.MAX_POWER_DENSITY_CMAP,
+            cmap=MAX_POWER_DENSITY_CMAP,
             save_path=Path(
                 this_output_path,
                 f"{selected_region}_p95_sea_water_power_density.png",
