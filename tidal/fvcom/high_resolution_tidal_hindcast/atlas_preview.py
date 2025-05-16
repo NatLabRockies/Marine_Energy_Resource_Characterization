@@ -1042,7 +1042,7 @@ if __name__ == "__main__":
             ),
             n_colors=SEA_WATER_SPEED_LEVELS,
         )
-        plt.clf()
+        plt.close()
         print(f"\tPlotting {selected_region} p95_sea_water_speed...")
 
         max_speed_stats.append(
@@ -1071,7 +1071,7 @@ if __name__ == "__main__":
             ),
             n_colors=SEA_WATER_MAX_SPEED_LEVELS,
         )
-        plt.clf()
+        plt.close()
 
         print(f"\tPlotting {selected_region} mean_sea_water_power_density...")
 
@@ -1101,7 +1101,7 @@ if __name__ == "__main__":
             ),
             n_colors=SEA_WATER_POWER_DENSITY_LEVELS,
         )
-        plt.clf()
+        plt.close()
 
         print(f"\tPlotting {selected_region} p95_sea_water_power_density...")
 
@@ -1132,7 +1132,7 @@ if __name__ == "__main__":
             n_colors=SEA_WATER_MAX_POWER_DENSITY_LEVELS,
         )
 
-        plt.clf()
+        plt.close()
         if "vap_sea_floor_depth" in df.columns:
             sea_floor_depth_stats.append(
                 analyze_variable(
@@ -1159,7 +1159,7 @@ if __name__ == "__main__":
                 ),
                 n_colors=SEA_FLOOR_DEPTH_LEVELS,
             )
-            plt.clf()
+            plt.close()
 
     print("Calculating and Plotting Speed variable_summary...")
     mean_speed_summary = analyze_variable_across_regions(
