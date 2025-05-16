@@ -152,15 +152,11 @@ def plot_tidal_variable(
     # Create a discrete colormap if n_colors is specified
     discrete_norm = None
     if n_colors is not None:
-        # Create discrete colormap including an extra color for values above vmax
+        # Create discrete colormap with n_colors + 1 levels (including the above-max level)
         base_cmap = plt.get_cmap(cmap)
 
-        # Get n_colors colors from the colormap (excluding the last range)
-        # Add an extra color for the "above max" range
+        # Get n_colors + 1 colors evenly spaced from the colormap
         colors = base_cmap(np.linspace(0, 1, n_colors + 1))
-
-        # # Add one more color for the "above max" range (using the last color from the colormap)
-        # extended_colors = np.vstack([colors, base_cmap(1.0)])
 
         # Create a new colormap with n_colors + 1 levels
         discrete_cmap = mpl.colors.LinearSegmentedColormap.from_list(
@@ -168,21 +164,18 @@ def plot_tidal_variable(
         )
 
         # Create boundaries for n_colors discrete levels within vmin-vmax
-        main_bounds = np.linspace(vmin, vmax, n_colors)
+        main_bounds = np.linspace(vmin, vmax, n_colors + 1)
 
-        # Add an extra boundary for values above vmax (e.g., infinity or a very large value)
-        # This ensures the colormap captures values above vmax
-        cmap_max = np.max([vmax * 1000, df[column_name].max()])
-
-        bounds = np.append(main_bounds, cmap_max)
-
-        print("\tCMAP Bounds:", bounds)
+        # Add an extra boundary for values above vmax
+        very_large_value = vmax * 1000  # Much larger than vmax but still finite
+        bounds = np.append(main_bounds, very_large_value)
 
         # Create a BoundaryNorm with n_colors + 1 levels
         discrete_norm = mpl.colors.BoundaryNorm(bounds, n_colors + 1)
         cmap = discrete_cmap
     else:
         bounds = None
+        main_bounds = None
 
     if is_aleutian:
         ax, projection = _setup_aleutian_projection(
@@ -254,7 +247,7 @@ def plot_tidal_variable(
                 norm=discrete_norm,
             )
 
-    # Pass only the main bounds (not including infinity) to _add_colorbar_and_title
+    # Pass only the main bounds to _add_colorbar_and_title
     _add_colorbar_and_title(
         fig,
         ax,
