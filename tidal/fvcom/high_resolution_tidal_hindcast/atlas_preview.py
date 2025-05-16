@@ -612,7 +612,7 @@ def _plot_standard_mesh_with_triangulation(
     return scatter
 
 
-def add_colorbar_and_title(
+def _add_colorbar_and_title(
     fig, ax, scatter, label, units, title, location, discrete_levels=None
 ):
     """
