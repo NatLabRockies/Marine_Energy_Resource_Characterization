@@ -172,7 +172,7 @@ def plot_tidal_variable(
 
         # Add an extra boundary for values above vmax (e.g., infinity or a very large value)
         # This ensures the colormap captures values above vmax
-        cmap_max = np.max([main_bounds + 1, np.max(df[column_name])]) * 10
+        cmap_max = np.max([vmax * 1000, df[column_name].max()])
 
         bounds = np.append(main_bounds, cmap_max)
 
