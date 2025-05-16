@@ -681,7 +681,8 @@ def _add_colorbar_and_title(
 
         # Create ranges from the discrete levels
         ranges = []
-        for i in range(len(discrete_levels) - 1):
+        # for i in range(len(discrete_levels) - 1):
+        for i in range(len(discrete_levels)):
             start = discrete_levels[i]
             end = discrete_levels[i + 1]
             ranges.append((start, end))
@@ -691,8 +692,8 @@ def _add_colorbar_and_title(
 
         # Add an additional midpoint for the "above max" range
         # Position it slightly beyond the max value
-        above_midpoint = discrete_levels[-1] + (discrete_levels[-1] - midpoints[-1])
-        midpoints.append(above_midpoint)
+        # above_midpoint = discrete_levels[-1] + (discrete_levels[-1] - midpoints[-1])
+        # midpoints.append(above_midpoint)
 
         # Create labels showing range intervals
         tick_labels = []
