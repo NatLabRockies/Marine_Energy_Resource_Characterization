@@ -28,6 +28,8 @@ SEA_WATER_MAX_SPEED_CBAR_MAX = 5.0
 SEA_WATER_POWER_DENSITY_CBAR_MAX = 4000  # 0.5 * 1025 * (2.0^3) = 4,100
 SEA_WATER_POWER_DENSITY_CBAR_MIN = 0
 SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX = 64000  # 0.5 * 1025 * (5.0^3) = 64,062.5
+SEA_FLOOR_DEPTH_MIN = 0
+SEA_FLOOR_DEPTH_MAX = 250
 BASEMAP_PROVIDER = ctx.providers.Esri.WorldImagery
 
 SEA_WATER_SPEED_UNITS = r"$m/s$"
@@ -1048,8 +1050,8 @@ if __name__ == "__main__":
                 "vap_sea_floor_depth",
                 "Distance to Sea Floor",
                 "m",
-                0,
-                1000,
+                SEA_FLOOR_DEPTH_MIN,
+                SEA_FLOOR_DEPTH_MAX,
                 is_aleutian="aleutian" in selected_region,
                 cmap=cmocean.cm.deep,
                 save_path=Path(
