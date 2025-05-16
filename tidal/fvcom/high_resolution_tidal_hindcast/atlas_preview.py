@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import Any, Dict, List, Union
-import sys
 
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -172,7 +171,9 @@ def plot_tidal_variable(
 
         # Add an extra boundary for values above vmax (e.g., infinity or a very large value)
         # This ensures the colormap captures values above vmax
-        bounds = np.append(main_bounds, sys.float_info.max - 1)
+        cmap_max = np.max([main_bounds + 1, np.max(df[column_name])]) * 10
+
+        bounds = np.append(main_bounds, cmap_max)
 
         # Create a BoundaryNorm with n_colors + 1 levels
         discrete_norm = mpl.colors.BoundaryNorm(bounds, n_colors + 1)
