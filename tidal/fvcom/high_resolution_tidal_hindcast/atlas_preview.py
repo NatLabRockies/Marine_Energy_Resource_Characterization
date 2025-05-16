@@ -54,7 +54,8 @@ COLOR_BAR_DISCRETE_LEVELS = 8
 MEAN_SPEED_CMAP = cmocean.cm.thermal
 MAX_SPEED_CMAP = cmocean.cm.matter
 MEAN_POWER_DENSITY_CMAP = cmocean.cm.dense
-MAX_POWER_DENSITY_CMAP = cmocean.cm.tempo
+# MAX_POWER_DENSITY_CMAP = cmocean.cm.tempo
+MAX_POWER_DENSITY_CMAP = cmocean.cm.amp
 SEA_FLOOR_DEPTH_CMAP = cmocean.cm.deep
 
 
