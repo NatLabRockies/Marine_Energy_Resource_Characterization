@@ -168,13 +168,15 @@ def plot_tidal_variable(
         )
 
         # Create boundaries for n_colors discrete levels within vmin-vmax
-        main_bounds = np.linspace(vmin, vmax, n_colors + 1)
+        main_bounds = np.linspace(vmin, vmax, n_colors)
 
         # Add an extra boundary for values above vmax (e.g., infinity or a very large value)
         # This ensures the colormap captures values above vmax
         cmap_max = np.max([main_bounds + 1, np.max(df[column_name])]) * 10
 
         bounds = np.append(main_bounds, cmap_max)
+
+        print("\tCMAP Bounds:", bounds)
 
         # Create a BoundaryNorm with n_colors + 1 levels
         discrete_norm = mpl.colors.BoundaryNorm(bounds, n_colors + 1)
