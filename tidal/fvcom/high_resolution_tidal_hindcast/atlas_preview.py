@@ -612,12 +612,11 @@ def _plot_standard_mesh_with_triangulation(
     return scatter
 
 
-def _add_colorbar_and_title(
+def add_colorbar_and_title(
     fig, ax, scatter, label, units, title, location, discrete_levels=None
 ):
     """
     Add colorbar and title to the plot with optional discrete levels.
-
     Parameters:
     -----------
     fig : matplotlib Figure
@@ -637,7 +636,6 @@ def _add_colorbar_and_title(
     discrete_levels : array-like, default=None
         Discrete level boundaries for the colorbar
     """
-
     # Create a colorbar with discrete ticks if discrete levels are provided
     if discrete_levels is not None:
         # Format the tick labels based on the number of decimals needed
@@ -651,7 +649,24 @@ def _add_colorbar_and_title(
         else:
             tick_format = "%.3f"
 
-        # Create the colorbar with specific ticks
+        # Calculate midpoints between levels for tick positions
+        midpoints = [
+            (discrete_levels[i] + discrete_levels[i + 1]) / 2
+            for i in range(len(discrete_levels) - 1)
+        ]
+
+        # Create labels showing range intervals
+        tick_labels = []
+        for i in range(len(discrete_levels) - 1):
+            if i == len(discrete_levels) - 2:  # Last interval
+                # For the last interval, use "≥" to indicate open-ended range
+                tick_labels.append(f"[≥{tick_format % discrete_levels[i]})")
+            else:
+                tick_labels.append(
+                    f"[{tick_format % discrete_levels[i]}-{tick_format % discrete_levels[i+1]})"
+                )
+
+        # Create the colorbar with specific ticks at midpoints
         cbar = fig.colorbar(
             scatter,
             ax=ax,
@@ -659,17 +674,17 @@ def _add_colorbar_and_title(
             pad=0.02,
             fraction=0.03,
             shrink=0.7,
-            ticks=discrete_levels,
-            format=tick_format,
+            ticks=midpoints,  # Use midpoints for tick positions
         )
+
+        # Set custom tick labels showing the ranges
+        cbar.ax.set_yticklabels(tick_labels)
     else:
         # Standard continuous colorbar
         cbar = fig.colorbar(
             scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
-
     cbar.set_label(f"{label} [{units}]")
-
     if title is None:
         title = f"{location.replace('_', ' ').title()} - {label}"
     plt.title(title)
