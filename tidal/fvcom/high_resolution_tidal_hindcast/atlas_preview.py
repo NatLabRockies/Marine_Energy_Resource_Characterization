@@ -697,27 +697,37 @@ def _add_colorbar_and_title(
         # Add the final "≥ max_value" label
         tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
 
-        # Calculate the positions for the ticks such that:
-        # - Regular interval ticks are at their midpoints
-        # - The "above max" tick is positioned properly at the very top
         # First create a standard colorbar
         cbar = fig.colorbar(
             scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
 
         # Now we'll customize the tick positions and labels
-        # Get the current tick positions
+        # Get the current colorbar range
         if hasattr(cbar, "vmin") and hasattr(cbar, "vmax"):
             vmin, vmax = cbar.vmin, cbar.vmax
         else:
             vmin, vmax = discrete_levels[0], discrete_levels[-1]
 
-        # Calculate normalized positions for our ticks
+        # Calculate the segment size
+        segment_size = (vmax - vmin) / len(ranges)
+
+        # Calculate the normalized positions of midpoints for all ranges
         # For the regular intervals
         norm_positions = [(mp - vmin) / (vmax - vmin) for mp in midpoints]
 
-        # Add position for the "above max" label at the very top (0.95 of the way up)
-        norm_positions.append(0.95)
+        # Properly position the "above max" label
+        # Calculate the position as halfway between the max value and the next expected value
+        # This places it at the midpoint of the top segment
+        next_expected_value = discrete_levels[-1] + segment_size
+        above_max_midpoint = (discrete_levels[-1] + next_expected_value) / 2
+        above_max_norm_position = (above_max_midpoint - vmin) / (vmax - vmin)
+
+        # If above_max_norm_position is too large (beyond colorbar), cap it
+        above_max_norm_position = min(above_max_norm_position, 0.95)
+
+        # Add it to our normalized positions
+        norm_positions.append(above_max_norm_position)
 
         # Convert normalized positions to actual y-coordinates in the colorbar axes
         y_min, y_max = cbar.ax.get_ylim()
