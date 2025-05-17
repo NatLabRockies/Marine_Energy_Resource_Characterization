@@ -721,14 +721,16 @@ def _add_colorbar_and_title(
             fraction=0.03,
             shrink=0.7,
             ticks=midpoints,  # Use midpoints for tick positions
+            extend="max",  # This extends the colorbar for values above the max
         )
 
         # Set custom tick labels showing the ranges
         cbar.ax.set_yticklabels(tick_labels)
 
-        # Set the colorbar limits to extend slightly beyond the last midpoint
-        # This ensures the last tick mark is fully visible
-        cbar.set_clim(discrete_levels[0], above_midpoint + step / 2)
+        # Adjust the colorbar's axes limits if needed to ensure all ticks are visible
+        y_min, y_max = cbar.ax.get_ylim()
+        padding = (y_max - y_min) * 0.05  # 5% padding
+        cbar.ax.set_ylim(y_min - padding, y_max + padding)
 
     else:
         # Standard continuous colorbar
