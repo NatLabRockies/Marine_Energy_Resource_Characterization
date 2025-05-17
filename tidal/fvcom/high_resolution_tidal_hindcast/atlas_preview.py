@@ -679,13 +679,12 @@ def _add_colorbar_and_title(
         else:
             tick_format = "%.3f"
 
-        # Calculate the interval size between levels
+        # Calculate the interval between levels
         interval = (discrete_levels[-1] - discrete_levels[0]) / (
             len(discrete_levels) - 1
         )
-        print(f"Interval size: {interval}")
 
-        # Create the colorbar with no special options
+        # Create the colorbar
         cbar = fig.colorbar(
             scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
@@ -706,18 +705,28 @@ def _add_colorbar_and_title(
             tick_labels.append(f"[{tick_format % start}-{tick_format % end})")
 
         # Add position and label for the "above max" range
-        # Calculate the midpoint for the "above max" region
+        # Position it one interval higher (at the same distance as other ticks)
         above_max_midpoint = discrete_levels[-1] + interval / 2
         midpoints.append(above_max_midpoint)
 
         # Add the final "≥ max_value" label
         tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
 
-        print(f"Tick positions: {midpoints}")
+        print(f"Midpoints: {midpoints}")
         print(f"Tick labels: {tick_labels}")
 
-        # Use the explicit method to set ticks and labels together
-        cbar.set_ticks(midpoints, labels=tick_labels)
+        # First extend the colorbar's axis limits to include our new tick
+        # We need to do this BEFORE setting the ticks
+        ymin, ymax = cbar.ax.get_ylim()
+        new_ymax = max(ymax, above_max_midpoint + interval / 2)
+        cbar.ax.set_ylim(ymin, new_ymax)
+
+        # Now set the ticks and labels
+        cbar.ax.yaxis.set_ticks(midpoints)
+        cbar.ax.yaxis.set_ticklabels(tick_labels)
+
+        # Print the limits after adjustment
+        print(f"Colorbar y-limits after adjustment: {cbar.ax.get_ylim()}")
 
     else:
         # Standard continuous colorbar
