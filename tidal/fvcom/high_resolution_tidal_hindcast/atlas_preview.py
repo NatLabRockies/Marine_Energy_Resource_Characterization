@@ -1007,7 +1007,7 @@ def analyze_variable_across_regions(
 if __name__ == "__main__":
     # Display available regions
     regions = get_available_regions()
-    # regions.reverse()
+    regions.reverse()
     print("Available regions:")
     for i, region in enumerate(regions):
         print(f"{i+1}. {region}")
