@@ -163,25 +163,20 @@ def plot_tidal_variable(
             "discrete_cmap", colors, N=n_colors + 1
         )
 
-        # Calculate interval for the "above max" range
-        interval = (vmax - vmin) / n_colors
-
         # Create boundaries for n_colors discrete levels within vmin-vmax
         main_bounds = np.linspace(vmin, vmax, n_colors + 1)
 
         # Add an extra boundary for values above vmax
-        # This boundary should be exactly one interval above vmax
-        extended_max = vmax + interval
-        bounds = np.append(main_bounds, extended_max)
+        very_large_value = vmax * 1000  # Much larger than vmax but still finite
+        bounds = np.append(main_bounds, very_large_value)
 
         # Create a BoundaryNorm with n_colors + 1 levels
         discrete_norm = mpl.colors.BoundaryNorm(bounds, n_colors + 1)
         cmap = discrete_cmap
-
-        print(f"Extended bounds: {bounds}")
     else:
         bounds = None
         main_bounds = None
+
     if is_aleutian:
         ax, projection = _setup_aleutian_projection(
             df, lon_min, lon_max, lat_min, lat_max
@@ -252,6 +247,7 @@ def plot_tidal_variable(
                 norm=discrete_norm,
             )
 
+    # Pass only the main bounds to _add_colorbar_and_title
     _add_colorbar_and_title(
         fig,
         ax,
@@ -261,7 +257,6 @@ def plot_tidal_variable(
         title,
         location,
         discrete_levels=main_bounds if n_colors is not None else None,
-        extra_boundary=extended_max if n_colors is not None else None,
     )
 
     plt.tight_layout()
@@ -648,15 +643,7 @@ def _plot_standard_mesh_with_triangulation(
 
 
 def _add_colorbar_and_title(
-    fig,
-    ax,
-    scatter,
-    label,
-    units,
-    title,
-    location,
-    discrete_levels=None,
-    extra_boundary=None,
+    fig, ax, scatter, label, units, title, location, discrete_levels=None
 ):
     """
     Add colorbar and title to the plot with optional discrete levels.
@@ -678,8 +665,6 @@ def _add_colorbar_and_title(
         Location identifier
     discrete_levels : array-like, default=None
         Discrete level boundaries for the colorbar
-    extra_boundary : float, default=None
-        Extra boundary value for the "above max" range
     """
     # Create a colorbar with discrete ticks if discrete levels are provided
     if discrete_levels is not None:
@@ -694,20 +679,14 @@ def _add_colorbar_and_title(
         else:
             tick_format = "%.3f"
 
-        # Calculate the interval size between levels
+        # Calculate the interval between levels
         interval = (discrete_levels[-1] - discrete_levels[0]) / (
             len(discrete_levels) - 1
         )
-        print(f"Interval size: {interval}")
 
-        # Create the colorbar - explicitly use the correct mappable
-        if hasattr(scatter, "mappable"):
-            mappable = scatter.mappable
-        else:
-            mappable = scatter
-
+        # Create the colorbar
         cbar = fig.colorbar(
-            mappable, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
+            scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
 
         # Create ranges from the discrete levels
@@ -726,63 +705,28 @@ def _add_colorbar_and_title(
             tick_labels.append(f"[{tick_format % start}-{tick_format % end})")
 
         # Add position and label for the "above max" range
-        # Calculate the midpoint for the "above max" region
+        # Position it one interval higher (at the same distance as other ticks)
         above_max_midpoint = discrete_levels[-1] + interval / 2
         midpoints.append(above_max_midpoint)
 
         # Add the final "≥ max_value" label
         tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
 
-        print(f"Tick positions: {midpoints}")
+        print(f"Midpoints: {midpoints}")
         print(f"Tick labels: {tick_labels}")
 
-        # Before setting ticks, print the colorbar limits
-        print(f"Original colorbar limits: {mappable.norm.vmin}, {mappable.norm.vmax}")
+        # First extend the colorbar's axis limits to include our new tick
+        # We need to do this BEFORE setting the ticks
+        ymin, ymax = cbar.ax.get_ylim()
+        new_ymax = max(ymax, above_max_midpoint + interval / 2)
+        cbar.ax.set_ylim(ymin, new_ymax)
 
-        # Use explicit method to set ticks
-        cbar.set_ticks(midpoints, labels=tick_labels)
+        # Now set the ticks and labels
+        cbar.ax.yaxis.set_ticks(midpoints)
+        cbar.ax.yaxis.set_ticklabels(tick_labels)
 
-        # Try to access the colorbar's normalization to adjust its limits
-        if hasattr(mappable, "norm"):
-            # Save original norm for reference
-            original_norm = mappable.norm
-            print(f"Original norm: {type(original_norm)}")
-
-            # If it's a BoundaryNorm, we can adjust it
-            if isinstance(original_norm, mpl.colors.BoundaryNorm):
-                print(f"Original BoundaryNorm boundaries: {original_norm.boundaries}")
-
-                # Make sure our boundaries include the "above max" range
-                if extra_boundary is not None:
-                    print(
-                        f"Setting upper limit to include extra boundary: {extra_boundary}"
-                    )
-                    # Try different ways to modify the norm
-                    try:
-                        # Method 1: Set up a new norm with extended boundaries
-                        new_boundaries = np.append(discrete_levels, extra_boundary)
-                        new_norm = mpl.colors.BoundaryNorm(
-                            new_boundaries,
-                            len(new_boundaries) - 1,
-                            clip=original_norm.clip,
-                        )
-                        mappable.norm = new_norm
-
-                        # Force update
-                        mappable.changed()
-                        if hasattr(cbar, "update_normal"):
-                            cbar.update_normal(mappable)
-                        elif hasattr(cbar, "draw_all"):
-                            cbar.draw_all()
-                        print("Updated colorbar norm with new boundaries")
-                    except Exception as e:
-                        print(f"Error updating norm: {e}")
-
-        # After adjustments, print the colorbar's new limits
-        if hasattr(mappable, "norm"):
-            print(
-                f"Updated colorbar limits: {mappable.norm.vmin}, {mappable.norm.vmax}"
-            )
+        # Print the limits after adjustment
+        print(f"Colorbar y-limits after adjustment: {cbar.ax.get_ylim()}")
 
     else:
         # Standard continuous colorbar
