@@ -719,13 +719,6 @@ def _add_colorbar_and_title(
         # Use the explicit method to set ticks and labels together
         cbar.set_ticks(midpoints, labels=tick_labels)
 
-        # Adjust the colorbar limits to ensure the extra color is visible
-        # Set a ylim that extends one full interval beyond the max discrete level
-        ylim_max = discrete_levels[-1] + interval
-        ax.set_ylim([discrete_levels[0], ylim_max])
-
-        print(f"Colorbar clim: {ax.get_ylim()}")
-
     else:
         # Standard continuous colorbar
         cbar = fig.colorbar(
