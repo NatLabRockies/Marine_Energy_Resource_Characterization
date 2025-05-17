@@ -694,48 +694,36 @@ def _add_colorbar_and_title(
         for i, (start, end) in enumerate(ranges):
             tick_labels.append(f"[{tick_format % start}-{tick_format % end})")
 
-        # Add the final "≥ max_value" label
-        tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
-
-        # First create a standard colorbar
+        # Create the basic colorbar first
         cbar = fig.colorbar(
             scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
 
-        # Now we'll customize the tick positions and labels
-        # Get the current colorbar range
-        if hasattr(cbar, "vmin") and hasattr(cbar, "vmax"):
-            vmin, vmax = cbar.vmin, cbar.vmax
-        else:
-            vmin, vmax = discrete_levels[0], discrete_levels[-1]
+        # Get the y-axis positions for the regular ticks
+        ymin, ymax = cbar.ax.get_ylim()
+        y_positions = []
 
-        # Calculate the segment size
-        segment_size = (vmax - vmin) / len(ranges)
+        # Calculate normalized positions for each midpoint
+        norm = plt.Normalize(discrete_levels[0], discrete_levels[-1])
+        for mp in midpoints:
+            norm_pos = norm(mp)
+            y_pos = ymin + norm_pos * (ymax - ymin)
+            y_positions.append(y_pos)
 
-        # Calculate the normalized positions of midpoints for all ranges
-        # For the regular intervals
-        norm_positions = [(mp - vmin) / (vmax - vmin) for mp in midpoints]
+        # Add position and label for "above max" level
+        # Calculate the y-position for a point above the max level
+        # We'll position it at the same interval as the other ticks
+        y_step = y_positions[1] - y_positions[0]
+        # Position it one step above the last regular tick
+        above_y_pos = y_positions[-1] + y_step
 
-        # Properly position the "above max" label
-        # Calculate the position as halfway between the max value and the next expected value
-        # This places it at the midpoint of the top segment
-        next_expected_value = discrete_levels[-1] + segment_size
-        above_max_midpoint = (discrete_levels[-1] + next_expected_value) / 2
-        above_max_norm_position = (above_max_midpoint - vmin) / (vmax - vmin)
+        y_positions.append(above_y_pos)
+        tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
 
-        # If above_max_norm_position is too large (beyond colorbar), cap it
-        above_max_norm_position = min(above_max_norm_position, 0.95)
-
-        # Add it to our normalized positions
-        norm_positions.append(above_max_norm_position)
-
-        # Convert normalized positions to actual y-coordinates in the colorbar axes
-        y_min, y_max = cbar.ax.get_ylim()
-        tick_positions = [y_min + pos * (y_max - y_min) for pos in norm_positions]
-
-        # Clear existing ticks and set our custom ticks
+        # Remove existing ticks
         cbar.ax.yaxis.set_ticks([])
-        cbar.ax.yaxis.set_ticks(tick_positions)
+        # Set our custom ticks
+        cbar.ax.yaxis.set_ticks(y_positions)
         cbar.ax.set_yticklabels(tick_labels)
 
     else:
