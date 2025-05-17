@@ -679,6 +679,17 @@ def _add_colorbar_and_title(
         else:
             tick_format = "%.3f"
 
+        # Calculate the interval size between levels
+        interval = (discrete_levels[-1] - discrete_levels[0]) / (
+            len(discrete_levels) - 1
+        )
+        print(f"Interval size: {interval}")
+
+        # Create the colorbar with no special options
+        cbar = fig.colorbar(
+            scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
+        )
+
         # Create ranges from the discrete levels
         ranges = []
         for i in range(len(discrete_levels) - 1):
@@ -694,37 +705,26 @@ def _add_colorbar_and_title(
         for i, (start, end) in enumerate(ranges):
             tick_labels.append(f"[{tick_format % start}-{tick_format % end})")
 
-        # Create the basic colorbar first
-        cbar = fig.colorbar(
-            scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
-        )
+        # Add position and label for the "above max" range
+        # Calculate the midpoint for the "above max" region
+        above_max_midpoint = discrete_levels[-1] + interval / 2
+        midpoints.append(above_max_midpoint)
 
-        # Get the y-axis positions for the regular ticks
-        ymin, ymax = cbar.ax.get_ylim()
-        y_positions = []
-
-        # Calculate normalized positions for each midpoint
-        norm = plt.Normalize(discrete_levels[0], discrete_levels[-1])
-        for mp in midpoints:
-            norm_pos = norm(mp)
-            y_pos = ymin + norm_pos * (ymax - ymin)
-            y_positions.append(y_pos)
-
-        # Add position and label for "above max" level
-        # Calculate the y-position for a point above the max level
-        # We'll position it at the same interval as the other ticks
-        y_step = y_positions[1] - y_positions[0]
-        # Position it one step above the last regular tick
-        above_y_pos = y_positions[-1] + y_step
-
-        y_positions.append(above_y_pos)
+        # Add the final "≥ max_value" label
         tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
 
-        # Remove existing ticks
-        cbar.ax.yaxis.set_ticks([])
-        # Set our custom ticks
-        cbar.ax.yaxis.set_ticks(y_positions)
-        cbar.ax.set_yticklabels(tick_labels)
+        print(f"Tick positions: {midpoints}")
+        print(f"Tick labels: {tick_labels}")
+
+        # Use the explicit method to set ticks and labels together
+        cbar.set_ticks(midpoints, labels=tick_labels)
+
+        # Adjust the colorbar limits to ensure the extra color is visible
+        # Set a ylim that extends one full interval beyond the max discrete level
+        ylim_max = discrete_levels[-1] + interval
+        cbar.set_clim(discrete_levels[0], ylim_max)
+
+        print(f"Colorbar clim: {cbar.get_clim()}")
 
     else:
         # Standard continuous colorbar
