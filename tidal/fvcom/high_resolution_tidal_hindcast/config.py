@@ -486,6 +486,7 @@ config = {
             "coordinates": {"system": "latitude/longitude"},
             # "partition_frequency": "M",  # Monthly, Roughly 73GB per file, out of memory in partition step
             "partition_frequency": "5D",  # 7 Day Chunks
+            "face_count": 797978,
         },
         "cook_inlet": {
             "label": "Cook Inlet, Alaska",
@@ -503,6 +504,7 @@ config = {
             "coordinates": {"system": "latitude/longitude"},
             "partition_frequency": "M",  # Monthly, Roughly 35GB per file
             # "partition_frequency": "12h",
+            "face_count": 392002,
         },
         "piscataqua_river": {
             "label": "Piscataqua River, New Hampshire",
@@ -519,6 +521,7 @@ config = {
             "coordinates": {"system": "utm", "zone": 19},
             "partition_frequency": "M",  # Monthly, Roughly 67GB per file
             # "partition_frequency": "12h",
+            "face_count": 292927,
         },
         "puget_sound": {
             "label": "Puget Sound, Washington",
@@ -547,6 +550,7 @@ config = {
             # "partition_frequency": "M", Monthly OOM at Partition Step
             # "partition_frequency": "W", This starts with 5 days
             "partition_frequency": "5D",
+            "face_count": 1734765,
         },
         "western_passage": {
             "label": "Western Passage, Maine",
@@ -567,6 +571,7 @@ config = {
             "partition_frequency": "M",  # Monthly, Roughly 50GB per file
             # Trying to improve VAP compute time and find a balance between # of files and file size
             # "partition_frequency": "12h",
+            "face_count": 231208,
         },
     },
     "global_attributes": {
