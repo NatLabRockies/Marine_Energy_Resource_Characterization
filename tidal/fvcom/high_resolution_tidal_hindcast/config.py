@@ -2,7 +2,7 @@ config = {
     "dataset": {
         "label": "High Resolution Tidal Hindcast",
         "name": "wpto_high_res_tidal",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "issue_date": "2025-02-01",
         "encoding": {
             "time": {
@@ -15,7 +15,7 @@ config = {
         # "xarray_netcdf4_engine": "netcdf4"
     },
     "code": {
-        "version": "0.2.0",
+        "version": "0.3.0",
     },
     "dir": {
         # Data Input and Output Directories
