@@ -1000,6 +1000,401 @@ def analyze_variable_across_regions(
     }
 
 
+def copy_images_for_web(
+    source_dir, docs_img_dir, regions_processed, max_width=1200, quality=85
+):
+    """
+    Copy and optimize images for web display using PIL/Pillow.
+
+    Args:
+        source_dir: Source directory containing original images
+        docs_img_dir: Destination directory for web-optimized images
+        regions_processed: List of regions to process
+        max_width: Maximum width for web images (default 1200px)
+        quality: JPEG quality for optimization (default 85)
+    """
+    try:
+        from PIL import Image, ImageOps
+        import os
+
+        def optimize_image(src_path, dst_path, max_width=max_width, quality=quality):
+            """Optimize a single image for web use."""
+            try:
+                with Image.open(src_path) as img:
+                    # Convert to RGB if necessary (handles RGBA PNGs)
+                    if img.mode in ("RGBA", "LA"):
+                        # Create white background for transparency
+                        background = Image.new("RGB", img.size, (255, 255, 255))
+                        if img.mode == "RGBA":
+                            background.paste(
+                                img, mask=img.split()[-1]
+                            )  # Use alpha channel as mask
+                        else:
+                            background.paste(
+                                img, mask=img.split()[-1]
+                            )  # Use alpha channel as mask
+                        img = background
+                    elif img.mode != "RGB":
+                        img = img.convert("RGB")
+
+                    # Resize if too wide
+                    if img.width > max_width:
+                        ratio = max_width / img.width
+                        new_height = int(img.height * ratio)
+                        img = img.resize(
+                            (max_width, new_height), Image.Resampling.LANCZOS
+                        )
+
+                    # Auto-orient based on EXIF data
+                    img = ImageOps.exif_transpose(img)
+
+                    # Save as optimized PNG or JPEG based on original format
+                    if src_path.suffix.lower() == ".png":
+                        # For PNG, use optimize flag and reduce colors if possible
+                        img.save(dst_path, "PNG", optimize=True)
+                    else:
+                        # For other formats, save as high-quality JPEG
+                        dst_path = dst_path.with_suffix(".jpg")
+                        img.save(dst_path, "JPEG", quality=quality, optimize=True)
+
+                    # Get file size reduction info
+                    original_size = os.path.getsize(src_path)
+                    optimized_size = os.path.getsize(dst_path)
+                    reduction = (1 - optimized_size / original_size) * 100
+
+                    print(
+                        f"Optimized {src_path.name}: {original_size/1024:.1f}KB → {optimized_size/1024:.1f}KB ({reduction:.1f}% reduction)"
+                    )
+
+            except Exception as e:
+                print(f"Warning: Could not optimize {src_path.name}: {e}")
+                # Fallback to simple copy
+                import shutil
+
+                shutil.copy2(src_path, dst_path)
+
+        # Process regional images
+        for region in regions_processed:
+            region_dir = Path(source_dir, region)
+            if region_dir.exists():
+                image_files = [
+                    f"{region}_mean_sea_water_speed.png",
+                    f"{region}_p95_sea_water_speed.png",
+                    f"{region}_mean_sea_water_power_density.png",
+                    f"{region}_p95_sea_water_power_density.png",
+                    f"{region}_distance_to_sea_floor.png",
+                ]
+
+                for img_file in image_files:
+                    src_path = region_dir / img_file
+                    if src_path.exists():
+                        dst_path = docs_img_dir / img_file
+                        optimize_image(src_path, dst_path)
+
+        # Process comparison images from base directory
+        comparison_files = [
+            "vap_water_column_mean_sea_water_speed_kde_comparison.png",
+            "vap_water_column_95th_percentile_sea_water_speed_kde_comparison.png",
+            "vap_water_column_mean_sea_water_power_density_kde_comparison.png",
+            "vap_water_column_95th_percentile_sea_water_power_density_kde_comparison.png",
+            "vap_sea_floor_depth_kde_comparison.png",
+            "vap_water_column_mean_sea_water_speed_bar_comparison.png",
+            "vap_water_column_95th_percentile_sea_water_speed_bar_comparison.png",
+            "vap_water_column_mean_sea_water_power_density_bar_comparison.png",
+            "vap_water_column_95th_percentile_sea_water_power_density_bar_comparison.png",
+            "vap_sea_floor_depth_bar_comparison.png",
+        ]
+
+        for img_file in comparison_files:
+            src_path = Path(source_dir) / img_file
+            if src_path.exists():
+                dst_path = docs_img_dir / img_file
+                optimize_image(src_path, dst_path)
+
+    except ImportError:
+        print("Warning: PIL/Pillow not available. Falling back to simple copy.")
+        print("Install with: pip install Pillow")
+
+        # Fallback to simple copy
+        import shutil
+
+        # Copy regional images
+        for region in regions_processed:
+            region_dir = Path(source_dir, region)
+            if region_dir.exists():
+                image_files = [
+                    f"{region}_mean_sea_water_speed.png",
+                    f"{region}_p95_sea_water_speed.png",
+                    f"{region}_mean_sea_water_power_density.png",
+                    f"{region}_p95_sea_water_power_density.png",
+                    f"{region}_distance_to_sea_floor.png",
+                ]
+
+                for img_file in image_files:
+                    src_path = region_dir / img_file
+                    if src_path.exists():
+                        dst_path = docs_img_dir / img_file
+                        shutil.copy2(src_path, dst_path)
+                        print(f"Copied {img_file} to docs/img/")
+
+        # Copy comparison images
+        comparison_files = [
+            "vap_water_column_mean_sea_water_speed_kde_comparison.png",
+            "vap_water_column_95th_percentile_sea_water_speed_kde_comparison.png",
+            "vap_water_column_mean_sea_water_power_density_kde_comparison.png",
+            "vap_water_column_95th_percentile_sea_water_power_density_kde_comparison.png",
+            "vap_sea_floor_depth_kde_comparison.png",
+            "vap_water_column_mean_sea_water_speed_bar_comparison.png",
+            "vap_water_column_95th_percentile_sea_water_speed_bar_comparison.png",
+            "vap_water_column_mean_sea_water_power_density_bar_comparison.png",
+            "vap_water_column_95th_percentile_sea_water_power_density_bar_comparison.png",
+            "vap_sea_floor_depth_bar_comparison.png",
+        ]
+
+        for img_file in comparison_files:
+            src_path = Path(source_dir) / img_file
+            if src_path.exists():
+                dst_path = docs_img_dir / img_file
+                shutil.copy2(src_path, dst_path)
+                print(f"Copied {img_file} to docs/img/")
+
+
+def generate_markdown_specification(
+    regions_processed,
+    output_dir,
+    mean_speed_summary,
+    max_speed_summary,
+    mean_power_density_summary,
+    max_power_density_summary,
+    sea_floor_depth_summary,
+):
+    """
+    Generate a markdown specification file documenting all visualizations.
+
+    Args:
+        regions_processed: List of region names that were processed
+        output_dir: Base output directory path
+        *_summary: Summary objects from analyze_variable_across_regions
+    """
+
+    # Create docs/img directory for web-sized images
+    docs_img_dir = Path("docs/img")
+    docs_img_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy images to docs/img directory
+    copy_images_for_web(output_dir, docs_img_dir, regions_processed)
+
+    # Markdown content
+    md_content = []
+
+    # Header
+    md_content.extend(
+        [
+            "# ME Atlas High Resolution Tidal Data QOI Visualization Specification",
+            "",
+            "This document provides a comprehensive specification of all visualizations generated from the high-resolution tidal data analysis.",
+            "",
+            f"**Generated on:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"**Regions processed:** {len(regions_processed)}",
+            "",
+            "## Overview",
+            "",
+            "The visualization suite includes the following variable types:",
+            "- Mean Sea Water Speed",
+            "- 95th Percentile Sea Water Speed",
+            "- Mean Sea Water Power Density",
+            "- 95th Percentile Sea Water Power Density",
+            "- Sea Floor Depth (where available)",
+            "",
+            "Each variable is visualized both as spatial maps and statistical distributions.",
+            "",
+        ]
+    )
+
+    # Visualization specifications
+    viz_specs = {
+        "mean_sea_water_speed": {
+            "title": "Mean Sea Water Speed",
+            "units": "m/s",
+            "colormap": "cmocean.thermal",
+            "range": f"{SEA_WATER_SPEED_CBAR_MIN} - {SEA_WATER_SPEED_CBAR_MAX}",
+            "levels": SEA_WATER_SPEED_LEVELS,
+        },
+        "p95_sea_water_speed": {
+            "title": "95th Percentile Sea Water Speed",
+            "units": "m/s",
+            "colormap": "cmocean.matter",
+            "range": f"{SEA_WATER_SPEED_CBAR_MIN} - {SEA_WATER_MAX_SPEED_CBAR_MAX}",
+            "levels": SEA_WATER_MAX_SPEED_LEVELS,
+        },
+        "mean_sea_water_power_density": {
+            "title": "Mean Sea Water Power Density",
+            "units": "W/m²",
+            "colormap": "cmocean.dense",
+            "range": f"{SEA_WATER_POWER_DENSITY_CBAR_MIN} - {SEA_WATER_POWER_DENSITY_CBAR_MAX}",
+            "levels": SEA_WATER_POWER_DENSITY_LEVELS,
+        },
+        "p95_sea_water_power_density": {
+            "title": "95th Percentile Sea Water Power Density",
+            "units": "W/m²",
+            "colormap": "cmocean.amp",
+            "range": f"{SEA_WATER_POWER_DENSITY_CBAR_MIN} - {SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX}",
+            "levels": SEA_WATER_MAX_POWER_DENSITY_LEVELS,
+        },
+        "distance_to_sea_floor": {
+            "title": "Distance to Sea Floor",
+            "units": "m",
+            "colormap": "cmocean.deep",
+            "range": f"{SEA_FLOOR_DEPTH_MIN} - {SEA_FLOOR_DEPTH_MAX}",
+            "levels": SEA_FLOOR_DEPTH_LEVELS,
+        },
+    }
+
+    # Add specifications section
+    md_content.extend(
+        [
+            "## Visualization Specifications",
+            "",
+            "### Spatial Map Parameters",
+            "",
+        ]
+    )
+
+    for var_key, spec in viz_specs.items():
+        md_content.extend(
+            [
+                f"**{spec['title']}**",
+                f"- Units: {spec['units']}",
+                f"- Color range: {spec['range']} {spec['units']}",
+                f"- Colormap: {spec['colormap']}",
+                f"- Discrete levels: {spec['levels']}",
+                "",
+            ]
+        )
+
+    # Regional visualizations section
+    md_content.extend(
+        [
+            "## Regional Visualizations",
+            "",
+            "The following regions have been processed with complete visualization suites:",
+            "",
+        ]
+    )
+
+    for region in regions_processed:
+        region_title = region.replace("_", " ").title()
+        md_content.extend(
+            [
+                f"### {region_title}",
+                "",
+                "**Spatial Maps:**",
+                f"- Mean Sea Water Speed: `docs/img/{region}_mean_sea_water_speed.png`",
+                f"- 95th Percentile Sea Water Speed: `docs/img/{region}_p95_sea_water_speed.png`",
+                f"- Mean Sea Water Power Density: `docs/img/{region}_mean_sea_water_power_density.png`",
+                f"- 95th Percentile Sea Water Power Density: `docs/img/{region}_p95_sea_water_power_density.png`",
+                f"- Distance to Sea Floor: `docs/img/{region}_distance_to_sea_floor.png` (if available)",
+                "",
+                "**Statistical Analysis:**",
+                "- Variable distributions and percentiles in individual analysis plots",
+                "",
+            ]
+        )
+
+    # Cross-regional analysis section
+    md_content.extend(
+        [
+            "## Cross-Regional Analysis",
+            "",
+            "Comparative visualizations across all processed regions:",
+            "",
+            "**KDE Comparisons:**",
+            "- `docs/img/vap_water_column_mean_sea_water_speed_kde_comparison.png`",
+            "- `docs/img/vap_water_column_95th_percentile_sea_water_speed_kde_comparison.png`",
+            "- `docs/img/vap_water_column_mean_sea_water_power_density_kde_comparison.png`",
+            "- `docs/img/vap_water_column_95th_percentile_sea_water_power_density_kde_comparison.png`",
+            "- `docs/img/vap_sea_floor_depth_kde_comparison.png` (if available)",
+            "",
+            "**Percentile Bar Charts:**",
+            "- `docs/img/vap_water_column_mean_sea_water_speed_bar_comparison.png`",
+            "- `docs/img/vap_water_column_95th_percentile_sea_water_speed_bar_comparison.png`",
+            "- `docs/img/vap_water_column_mean_sea_water_power_density_bar_comparison.png`",
+            "- `docs/img/vap_water_column_95th_percentile_sea_water_power_density_bar_comparison.png`",
+            "- `docs/img/vap_sea_floor_depth_bar_comparison.png` (if available)",
+            "",
+        ]
+    )
+
+    # Technical details section
+    md_content.extend(
+        [
+            "## Technical Details",
+            "",
+            "### Color Mapping",
+            "- All visualizations use discrete color levels for improved interpretability",
+            "- Color levels include ranges within specified bounds plus overflow level for values above maximum",
+            "- Scientific colormaps from cmocean package ensure perceptual uniformity",
+            "",
+            "### Projection Handling",
+            "- Aleutian regions use Orthographic projection for accurate polar representation",
+            "- Other regions use Web Mercator (EPSG:3857) with satellite basemap",
+            "",
+            "### Data Processing",
+            "- Statistical analysis includes key percentiles: 95%, 99%, 99.99%",
+            "- Mesh visualization available where element corner data exists",
+            "- Point visualization used as fallback",
+            "",
+            "### File Formats",
+            "- All production visualizations saved as PNG at 300 DPI",
+            "- Web-sized versions created in docs/img/ directory with PIL/Pillow optimization",
+            "- Images resized to maximum 1200px width for web display",
+            "- PNG optimization reduces file sizes while maintaining quality",
+            "- Transparency converted to white background for better web compatibility",
+            "- Statistical plots include both distribution curves and percentile annotations",
+            "",
+        ]
+    )
+
+    # Summary statistics (if available)
+    if mean_speed_summary and "comparison_table" in mean_speed_summary:
+        md_content.extend(
+            [
+                "## Summary Statistics",
+                "",
+                "### Regional Comparison Overview",
+                "",
+                "Key statistics across all processed regions are documented in the cross-regional analysis plots.",
+                "Detailed percentile breakdowns and distribution comparisons are available in the generated visualization suite.",
+                "",
+            ]
+        )
+
+    # Footer
+    md_content.extend(
+        [
+            "## Usage Notes",
+            "",
+            "- All file paths are relative to the project root directory",
+            "- Images in docs/img/ are optimized for web display",
+            "- Original high-resolution versions available in individual region directories",
+            "- Discrete color levels enhance interpretation for decision-making applications",
+            "",
+            "---",
+            "*This specification was auto-generated from the tidal data visualization pipeline.*",
+        ]
+    )
+
+    # Write the markdown file
+    output_file = Path(
+        "me_atlas_high_resolution_tidal_data_qoi_visualization_specification.md"
+    )
+    with open(output_file, "w") as f:
+        f.write("\n".join(md_content))
+
+    print(f"Markdown specification written to: {output_file}")
+    return output_file
+
+
 if __name__ == "__main__":
     # Display available regions
     regions = get_available_regions()
@@ -1189,3 +1584,19 @@ if __name__ == "__main__":
     sea_floor_depth_summary = analyze_variable_across_regions(
         sea_floor_depth_stats, output_path=VIZ_OUTPUT_DIR
     )
+
+    # After all the plotting and analysis is complete, add:
+    print("Generating markdown specification...")
+
+    # Generate the markdown specification
+    generate_markdown_specification(
+        regions_processed=regions[:5],  # First 5 regions that were processed
+        output_dir=VIZ_OUTPUT_DIR,
+        mean_speed_summary=mean_speed_summary,
+        max_speed_summary=max_speed_summary,
+        mean_power_density_summary=mean_power_density_summary,
+        max_power_density_summary=max_power_density_summary,
+        sea_floor_depth_summary=sea_floor_depth_summary,
+    )
+
+    print("Analysis and documentation complete!")
