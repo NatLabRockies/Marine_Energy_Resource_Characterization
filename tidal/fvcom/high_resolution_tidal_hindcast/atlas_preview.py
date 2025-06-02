@@ -813,7 +813,9 @@ def analyze_variable(
 
 
 def analyze_variable_across_regions(
-    region_stats: List[Dict[str, Any]], output_path: Union[Path, None] = None
+    region_stats: List[Dict[str, Any]],
+    output_path: Union[Path, None] = None,
+    viz_max: float = None,
 ) -> Dict[str, Any]:
     """
     Perform meta-analysis comparing variable statistics across different regions.
@@ -821,6 +823,7 @@ def analyze_variable_across_regions(
     Args:
         region_stats: List of dictionaries containing region statistics from analyze_variable
         output_path: Path to save the output plots (if None, plots are displayed)
+        viz_max: Visualization maximum for reference line validation
 
     Returns:
         Dictionary with summary statistics and comparison tables
@@ -834,6 +837,9 @@ def analyze_variable_across_regions(
     variable_display_name = region_stats[0]["variable_display_name"]
     units = region_stats[0].get("units", "")
 
+    # Standardize units based on variable type
+    units = standardize_units(variable, units)
+
     # Extract regions
     regions = [stat["region"] for stat in region_stats if stat["region"] is not None]
 
@@ -841,58 +847,153 @@ def analyze_variable_across_regions(
     cmap = plt.get_cmap("tab10", len(regions))
     region_colors = {region: cmap(i) for i, region in enumerate(regions)}
 
+    # Calculate global statistics for reference lines
+    all_data = []
+    for stat in region_stats:
+        if stat["region"] is not None and "df" in stat:
+            all_data.extend(stat["df"][variable].values)
+
+    if all_data:
+        all_data = np.array(all_data)
+        global_p99 = np.percentile(all_data, 99)
+        global_p9999 = np.percentile(all_data, 99.99)
+        global_max = np.max(all_data)
+    else:
+        global_p99 = global_p9999 = global_max = None
+
     # Create comparison table
     table_data = []
     metrics = set()
 
     for stat in region_stats:
-        if stat["region"] is not None:  # Skip if region is None
+        if stat["region"] is not None:
             row = {"Region": stat["region"]}
-
-            # Add all metrics from this region
             for metric, value in stat["stats"].items():
                 row[metric] = value
                 metrics.add(metric)
-
             table_data.append(row)
 
-    # Create DataFrame
     comparison_table = pd.DataFrame(table_data)
 
-    # Plot KDE comparison
-    plt.figure(figsize=(16, 8))
+    # Enhanced KDE plot with reference lines
+    plt.figure(figsize=(16, 10))
+
+    # Determine plot range
+    if viz_max is not None:
+        plot_max = viz_max * 1.1
+    elif global_max is not None:
+        plot_max = global_max * 1.05
+    else:
+        plot_max = None
 
     # Plot KDE for each region
     for stat in region_stats:
         if stat["region"] is not None and "df" in stat:
             region = stat["region"]
-            sns.kdeplot(stat["df"][variable], label=region, color=region_colors[region])
+            data = stat["df"][variable]
+
+            # Filter data for cleaner visualization if plot_max is set
+            if plot_max is not None:
+                data = data[data <= plot_max]
+
+            if len(data) > 0:
+                sns.kdeplot(data, label=region, color=region_colors[region])
+
+    # Add reference lines if viz_max is provided
+    if viz_max is not None and global_p99 is not None:
+        plt.axvline(
+            viz_max,
+            color="red",
+            linestyle="-",
+            linewidth=3,
+            label=f"Viz Max: {viz_max:.2f} {units}",
+            alpha=0.9,
+            zorder=10,
+        )
+        plt.axvline(
+            global_p99,
+            color="orange",
+            linestyle="--",
+            linewidth=2,
+            label=f"Global 99%: {global_p99:.2f} {units}",
+            alpha=0.8,
+            zorder=9,
+        )
+        plt.axvline(
+            global_p9999,
+            color="purple",
+            linestyle=":",
+            linewidth=2,
+            label=f"Global 99.99%: {global_p9999:.2f} {units}",
+            alpha=0.8,
+            zorder=9,
+        )
+        plt.axvline(
+            global_max,
+            color="darkred",
+            linestyle="-.",
+            linewidth=1.5,
+            label=f"Global Max: {global_max:.2f} {units}",
+            alpha=0.7,
+            zorder=8,
+        )
 
     # Set title and labels
-    plt.title(f"Comparison of {variable_display_name} Across Regions")
+    title = f"Distribution Comparison: {variable_display_name}"
+    if viz_max is not None:
+        title += " (Viz Max Validation)"
+    plt.title(title, fontsize=14)
     plt.xlabel(f"{variable_display_name} ({units})")
     plt.ylabel("Density")
-    plt.legend()
+
+    # Adjust legend placement to avoid overlap
+    plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
 
     if output_path is not None:
-        plt.savefig(Path(output_path, f"{variable}_kde_comparison.png"))
+        filename = f"{variable}_kde_comparison"
+        if viz_max is not None:
+            filename += "_with_validation"
+        plt.savefig(Path(output_path, f"{filename}.png"), bbox_inches="tight", dpi=300)
     else:
         plt.show()
 
-    # Create bar charts for percentile metrics
-    # Identify percentile metrics (they start with 'p')
+    # Print validation summary if viz_max provided
+    if viz_max is not None and global_p99 is not None:
+        print(f"\nVisualization Maximum Validation for {variable_display_name}:")
+        print(f"Chosen viz_max: {viz_max:.3f} {units}")
+        print(
+            f"Global 99th percentile: {global_p99:.3f} {units} ({(global_p99/viz_max)*100:.1f}% of viz_max)"
+        )
+        print(
+            f"Global 99.99th percentile: {global_p9999:.3f} {units} ({(global_p9999/viz_max)*100:.1f}% of viz_max)"
+        )
+        print(
+            f"Global maximum: {global_max:.3f} {units} ({(global_max/viz_max)*100:.1f}% of viz_max)"
+        )
+
+        # Validation assessment
+        if global_p9999 <= viz_max:
+            print("✓ Viz_max captures 99.99% of data - excellent choice")
+        elif global_p99 <= viz_max:
+            print(
+                "⚠ Viz_max captures 99% of data - reasonable choice, some extreme values excluded"
+            )
+        else:
+            print(
+                "⚠ Viz_max excludes significant portion of data - consider increasing"
+            )
+
+    # Create bar charts for percentile metrics (existing code)
     percentile_metrics = [
         m for m in metrics if m.startswith("p") and m not in ["min", "max"]
     ]
 
     if percentile_metrics:
-        # Create a figure with subplots for each percentile
         fig, axes = plt.subplots(
             len(percentile_metrics), 1, figsize=(16, 5 * len(percentile_metrics))
         )
 
-        # Handle case with only one percentile
         if len(percentile_metrics) == 1:
             axes = [axes]
 
@@ -902,21 +1003,11 @@ def analyze_variable_across_regions(
         )
 
         for i, metric in enumerate(sorted(percentile_metrics)):
-            # Format metric for display
-            if metric.startswith("p"):
-                display_metric = metric.replace("p", "") + "%"
-                if len(display_metric) > 3:  # For p9999 etc.
-                    display_metric = (
-                        display_metric[:-2] + "." + display_metric[-2:] + "%"
-                    )
-            else:
-                display_metric = metric
+            display_metric = format_percentile_label(metric)
 
-            # Sort data by the current percentile value
             if metric in comparison_table.columns:
                 sorted_data = comparison_table.sort_values(by=metric)
 
-                # Create bar plot
                 ax = axes[i]
                 bars = ax.bar(
                     sorted_data["Region"],
@@ -924,29 +1015,42 @@ def analyze_variable_across_regions(
                     color=[region_colors[region] for region in sorted_data["Region"]],
                 )
 
-                # Add value labels on top of bars
+                # Add viz_max reference line to bar charts if provided
+                if viz_max is not None:
+                    ax.axhline(
+                        viz_max,
+                        color="red",
+                        linestyle="-",
+                        linewidth=2,
+                        alpha=0.7,
+                        label=f"Viz Max: {viz_max:.2f}",
+                    )
+                    ax.legend()
+
+                # Add value labels on bars
                 for bar in bars:
                     height = bar.get_height()
                     ax.annotate(
                         f"{height:.3f}",
                         xy=(bar.get_x() + bar.get_width() / 2, height),
-                        xytext=(0, 3),  # 3 points vertical offset
+                        xytext=(0, 3),
                         textcoords="offset points",
                         ha="center",
                         va="bottom",
                     )
 
-                # Set title and labels
                 ax.set_title(f"{display_metric} Values", fontsize=14)
                 ax.set_xlabel("Region")
                 ax.set_ylabel(f"{variable_display_name} ({units})")
-
-                # Rotate x-tick labels for better readability
                 plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
 
-        plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for the suptitle
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
         if output_path is not None:
-            plt.savefig(Path(output_path, f"{variable}_bar_comparison.png"))
+            plt.savefig(
+                Path(output_path, f"{variable}_bar_comparison.png"),
+                bbox_inches="tight",
+                dpi=300,
+            )
         else:
             plt.show()
 
@@ -954,14 +1058,55 @@ def analyze_variable_across_regions(
     print(f"\n{variable_display_name} Comparison ({units}):")
     print(comparison_table.to_string(index=False))
 
-    # Return summary
-    return {
+    # Enhanced return dictionary
+    result = {
         "variable": variable,
         "variable_display_name": variable_display_name,
         "regions": regions,
         "comparison_table": comparison_table,
         "region_colors": region_colors,
+        "units": units,
     }
+
+    # Add validation metrics if viz_max provided
+    if viz_max is not None and global_p99 is not None:
+        result["validation"] = {
+            "viz_max": viz_max,
+            "global_p99": global_p99,
+            "global_p9999": global_p9999,
+            "global_max": global_max,
+            "viz_max_coverage_99": (global_p99 / viz_max) * 100,
+            "viz_max_coverage_9999": (global_p9999 / viz_max) * 100,
+        }
+
+    return result
+
+
+def standardize_units(variable: str, current_units: str) -> str:
+    """Standardize units based on variable type"""
+    variable_lower = variable.lower()
+
+    if "speed" in variable_lower or "velocity" in variable_lower:
+        return "m/s"
+    elif "power_density" in variable_lower or "power density" in variable_lower:
+        return "W/m²"
+    elif any(
+        term in variable_lower for term in ["distance", "depth", "height", "length"]
+    ):
+        return "m"
+    else:
+        return current_units
+
+
+def format_percentile_label(metric: str) -> str:
+    """Format percentile metric names for display"""
+    if metric.startswith("p"):
+        percentile = metric.replace("p", "")
+        if len(percentile) > 2:  # For p9999 etc.
+            return f"{percentile[:-2]}.{percentile[-2:]}%"
+        else:
+            return f"{percentile}%"
+    return metric
 
 
 def copy_images_for_web(
@@ -1897,19 +2042,25 @@ if __name__ == "__main__":
 
     print("Calculating and Plotting Speed variable_summary...")
     mean_speed_summary = analyze_variable_across_regions(
-        mean_speed_stats, output_path=VIZ_OUTPUT_DIR
+        mean_speed_stats, output_path=VIZ_OUTPUT_DIR, viz_max=SEA_WATER_SPEED_CBAR_MAX
     )
     max_speed_summary = analyze_variable_across_regions(
-        max_speed_stats, output_path=VIZ_OUTPUT_DIR
+        max_speed_stats,
+        output_path=VIZ_OUTPUT_DIR,
+        viz_max=SEA_WATER_MAX_SPEED_CBAR_MAX,
     )
     mean_power_density_summary = analyze_variable_across_regions(
-        mean_power_density_stats, output_path=VIZ_OUTPUT_DIR
+        mean_power_density_stats,
+        output_path=VIZ_OUTPUT_DIR,
+        viz_max=SEA_WATER_POWER_DENSITY_CBAR_MAX,
     )
     max_power_density_summary = analyze_variable_across_regions(
-        max_power_density_stats, output_path=VIZ_OUTPUT_DIR
+        max_power_density_stats,
+        output_path=VIZ_OUTPUT_DIR,
+        viz_max=SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
     )
     sea_floor_depth_summary = analyze_variable_across_regions(
-        sea_floor_depth_stats, output_path=VIZ_OUTPUT_DIR
+        sea_floor_depth_stats, output_path=VIZ_OUTPUT_DIR, viz_max=SEA_FLOOR_DEPTH_MAX
     )
 
     # After all the plotting and analysis is complete, add:
