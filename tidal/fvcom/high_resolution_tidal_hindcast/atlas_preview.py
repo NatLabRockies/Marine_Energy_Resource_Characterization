@@ -932,10 +932,10 @@ def create_viz_max_justification_plot(
         hist_data,
         bins=n_bins,
         range=bin_range,
-        alpha=0.7,
+        alpha=0.5,
         label=labels,
         color=colors,
-        stacked=False,
+        # stacked=False,
         density=False,
     )
 
