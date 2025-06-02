@@ -1176,10 +1176,10 @@ def create_viz_max_justification_plot(
 
     # Generate assessment
     if retention_rate >= 99.5:
-        assessment = "✓ EXCELLENT\nViz max captures virtually all data"
+        assessment = f"✓ EXCELLENT\nColor bar max of {viz_max} captures > 99.5% of data\nNo significant outliers"
         color = "lightgreen"
     elif retention_rate >= 95:
-        assessment = "✓ GOOD\nViz max captures most data,\nfilters clear outliers"
+        assessment = f"✓ GOOD\nColor bar max of {viz_max} captures > 95% of data,\nFiltering some outliers"
         color = "lightblue"
     elif retention_rate >= 90:
         assessment = "⚠ ACCEPTABLE\nSome data filtered,\nconsider increasing viz_max"
@@ -1201,7 +1201,7 @@ def create_viz_max_justification_plot(
         fontweight="bold",
         bbox=dict(boxstyle="round,pad=0.4", facecolor=color, alpha=0.9),
     )
-    ax5.set_title("Assessment", fontsize=14, fontweight="bold")
+    ax5.set_title("Color Bar Max Value Assessment", fontsize=14, fontweight="bold")
 
     plt.tight_layout()
 
