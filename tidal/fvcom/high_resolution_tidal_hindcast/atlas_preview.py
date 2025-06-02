@@ -635,11 +635,11 @@ def _add_colorbar_and_title(
         if max_value >= 1000:
             tick_format = "%.0f"
         elif max_value >= 100:
-            tick_format = "%.1f"
+            tick_format = "%.0f"
         elif max_value >= 10:
             tick_format = "%.2f"
         else:
-            tick_format = "%.3f"
+            tick_format = "%.2f"
 
         # Calculate the interval between levels
         interval = (discrete_levels[-1] - discrete_levels[0]) / (
@@ -1175,11 +1175,11 @@ def capture_color_level_ranges(bounds, label, units, cmap, n_colors):
             if max_value >= 1000:
                 range_str = f"{min_val:.0f} - {max_val:.0f}"
             elif max_value >= 100:
-                range_str = f"{min_val:.1f} - {max_val:.1f}"
+                range_str = f"{min_val:.0f} - {max_val:.0f}"
             elif max_value >= 10:
                 range_str = f"{min_val:.2f} - {max_val:.2f}"
             else:
-                range_str = f"{min_val:.3f} - {max_val:.3f}"
+                range_str = f"{min_val:.2f} - {max_val:.2f}"
 
             color_levels.append(
                 {
