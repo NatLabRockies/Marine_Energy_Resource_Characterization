@@ -1357,6 +1357,10 @@ def generate_markdown_specification(
             "",
             "## Available Data File Locations",
             "",
+            "Base directory for all data files:",
+            "",
+            f"* <base_dir>: `{config['dir']['base']}`",
+            "",
             "| Location Name | System | File Path |",
             "| --- | --- | --- |",
         ]
@@ -1366,10 +1370,12 @@ def generate_markdown_specification(
         loc_spec = config["location_specification"]
         region_name = None
         for loc in loc_spec.values():
-            if loc["base_dir"] == this_region:
+            if loc["output_name"] == this_region:
                 region_name = loc["label"]
 
-        md_content.append(f"| {region_name} | NREL Kestrel HPC | `{parquet_path}` |")
+        md_content.append(
+            f"| {region_name} | NREL Kestrel HPC | `{str(parquet_path).replace(config['dir']['base'], '<base_dir>')}` |"
+        )
 
     # Add Location Details
     md_content.extend(
