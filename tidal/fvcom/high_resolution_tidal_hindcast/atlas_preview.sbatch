@@ -5,8 +5,8 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=4:00:00
-#SBATCH --partition=standard
+#SBATCH --time=59
+#SBATCH --partition=debug
 
 
 # Load necessary modules (if any)
