@@ -1770,45 +1770,44 @@ if __name__ == "__main__":
 
     parquet_paths = {}
 
-    for i in range(0, 5):
+    for this_region in regions:
         # Get the parquet file path
-        selected_region = regions[i]
-        parquet_file = get_parquet_path(selected_region)
+        parquet_file = get_parquet_path(this_region)
         print(f"Reading file: {parquet_file}")
 
-        parquet_paths[selected_region] = str(parquet_file)
+        parquet_paths[this_region] = str(parquet_file)
 
         # Read the parquet file
         df = pd.read_parquet(parquet_file)
 
-        this_output_path = Path(VIZ_OUTPUT_DIR, selected_region)
+        this_output_path = Path(VIZ_OUTPUT_DIR, this_region)
         this_output_path.mkdir(parents=True, exist_ok=True)
 
-        print(f"\tPlotting {selected_region} mean_sea_water_speed...")
+        print(f"\tPlotting {this_region} mean_sea_water_speed...")
 
         mean_speed_stats.append(
             analyze_variable(
                 df,
                 "vap_water_column_mean_sea_water_speed",
                 "Mean Sea Water Speed",
-                selected_region,
+                this_region,
                 output_path=Path(this_output_path),
             )
         )
 
         fig, ax, color_data = plot_tidal_variable(
             df,
-            selected_region,
+            this_region,
             "vap_water_column_mean_sea_water_speed",
             "Mean Sea Water Speed",
             SEA_WATER_SPEED_UNITS,
             SEA_WATER_SPEED_CBAR_MIN,
             SEA_WATER_SPEED_CBAR_MAX,
-            is_aleutian="aleutian" in selected_region,
+            is_aleutian="aleutian" in this_region,
             cmap=MEAN_SPEED_CMAP,
             save_path=Path(
                 this_output_path,
-                f"{selected_region}_mean_sea_water_speed.png",
+                f"{this_region}_mean_sea_water_speed.png",
             ),
             n_colors=SEA_WATER_SPEED_LEVELS,
         )
@@ -1817,7 +1816,7 @@ if __name__ == "__main__":
             color_level_data["mean_sea_water_speed"] = color_data
 
         plt.close()
-        print(f"\tPlotting {selected_region} p95_sea_water_speed...")
+        print(f"\tPlotting {this_region} p95_sea_water_speed...")
 
         # Capture color level data for markdown generation
 
@@ -1826,24 +1825,24 @@ if __name__ == "__main__":
                 df,
                 "vap_water_column_95th_percentile_sea_water_speed",
                 "95th Percentile Sea Water Speed",
-                selected_region,
+                this_region,
                 output_path=Path(this_output_path),
             )
         )
 
         fig, ax, color_data = plot_tidal_variable(
             df,
-            selected_region,
+            this_region,
             "vap_water_column_95th_percentile_sea_water_speed",
             "95th Percentile Sea Water Speed",
             SEA_WATER_SPEED_UNITS,
             SEA_WATER_SPEED_CBAR_MIN,
             SEA_WATER_MAX_SPEED_CBAR_MAX,
-            is_aleutian="aleutian" in selected_region,
+            is_aleutian="aleutian" in this_region,
             cmap=MAX_SPEED_CMAP,
             save_path=Path(
                 this_output_path,
-                f"{selected_region}_p95_sea_water_speed.png",
+                f"{this_region}_p95_sea_water_speed.png",
             ),
             n_colors=SEA_WATER_MAX_SPEED_LEVELS,
         )
@@ -1853,31 +1852,31 @@ if __name__ == "__main__":
 
         plt.close()
 
-        print(f"\tPlotting {selected_region} mean_sea_water_power_density...")
+        print(f"\tPlotting {this_region} mean_sea_water_power_density...")
 
         mean_power_density_stats.append(
             analyze_variable(
                 df,
                 "vap_water_column_mean_sea_water_power_density",
                 "Mean Sea Water Power Density",
-                selected_region,
+                this_region,
                 output_path=Path(this_output_path),
             )
         )
 
         fig, ax, color_data = plot_tidal_variable(
             df,
-            selected_region,
+            this_region,
             "vap_water_column_mean_sea_water_power_density",
             "Mean Sea Water Power Density",
             SEA_WATER_POWER_DENSITY_UNITS,
             SEA_WATER_POWER_DENSITY_CBAR_MIN,
             SEA_WATER_POWER_DENSITY_CBAR_MAX,
-            is_aleutian="aleutian" in selected_region,
+            is_aleutian="aleutian" in this_region,
             cmap=MEAN_POWER_DENSITY_CMAP,
             save_path=Path(
                 this_output_path,
-                f"{selected_region}_mean_sea_water_power_density.png",
+                f"{this_region}_mean_sea_water_power_density.png",
             ),
             n_colors=SEA_WATER_POWER_DENSITY_LEVELS,
         )
@@ -1887,31 +1886,31 @@ if __name__ == "__main__":
 
         plt.close()
 
-        print(f"\tPlotting {selected_region} p95_sea_water_power_density...")
+        print(f"\tPlotting {this_region} p95_sea_water_power_density...")
 
         max_power_density_stats.append(
             analyze_variable(
                 df,
                 "vap_water_column_95th_percentile_sea_water_power_density",
                 "95th Percentile Sea Water Power Density",
-                selected_region,
+                this_region,
                 output_path=Path(this_output_path),
             )
         )
 
         fig, ax, color_data = plot_tidal_variable(
             df,
-            selected_region,
+            this_region,
             "vap_water_column_95th_percentile_sea_water_power_density",
             "Max Sea Water Power Density",
             SEA_WATER_POWER_DENSITY_UNITS,
             SEA_WATER_POWER_DENSITY_CBAR_MIN,
             SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
-            is_aleutian="aleutian" in selected_region,
+            is_aleutian="aleutian" in this_region,
             cmap=MAX_POWER_DENSITY_CMAP,
             save_path=Path(
                 this_output_path,
-                f"{selected_region}_p95_sea_water_power_density.png",
+                f"{this_region}_p95_sea_water_power_density.png",
             ),
             n_colors=SEA_WATER_MAX_POWER_DENSITY_LEVELS,
         )
@@ -1926,23 +1925,23 @@ if __name__ == "__main__":
                     df,
                     "vap_sea_floor_depth",
                     "Sea Floor Depth",
-                    selected_region,
+                    this_region,
                     output_path=Path(this_output_path),
                 )
             )
             fig, ax, color_data = plot_tidal_variable(
                 df,
-                selected_region,
+                this_region,
                 "vap_sea_floor_depth",
                 "Distance to Sea Floor",
                 "m",
                 SEA_FLOOR_DEPTH_MIN,
                 SEA_FLOOR_DEPTH_MAX,
-                is_aleutian="aleutian" in selected_region,
+                is_aleutian="aleutian" in this_region,
                 cmap=SEA_FLOOR_DEPTH_CMAP,
                 save_path=Path(
                     this_output_path,
-                    f"{selected_region}_distance_to_sea_floor.png",
+                    f"{this_region}_distance_to_sea_floor.png",
                 ),
                 n_colors=SEA_FLOOR_DEPTH_LEVELS,
             )
