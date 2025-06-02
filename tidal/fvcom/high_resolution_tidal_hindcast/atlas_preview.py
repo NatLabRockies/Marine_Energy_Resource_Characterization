@@ -882,7 +882,7 @@ def create_viz_max_justification_plot(
     """Create an improved viz_max justification visualization using seaborn"""
 
     # Set palette
-    palette = sns.color_palette("Tab10", len(regional_data))
+    palette = sns.color_palette("deep", len(regional_data))
 
     # Calculate key statistics
     total_points = len(all_data)
