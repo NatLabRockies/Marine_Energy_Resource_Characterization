@@ -1384,7 +1384,7 @@ def generate_markdown_specification(
             "## Location Details",
             "",
             "| Location Name | Face Count | Averaging Dates [UTC] | Averaging Temporal Resolution",
-            "| --- | --- | --- |",
+            "| --- | --- | --- | --- |",
         ]
     )
 
@@ -1420,8 +1420,10 @@ def generate_markdown_specification(
     md_content.extend(
         [
             "",
+            "### Coordinate Details",
+            "",
             "The high resolution tidal hindcast data is based on an unstructured three dimensional grid of triangular faces with variable resolution.",
-            "To visualize in two dimensions, the data for all depth is combined to a single layer.",
+            "To visualize in two dimensions (lat/lon) the data for all depths are combined (averaging, or 95th percentile of maximums) into a single layer.",
             "This single layer has coordinates defined at the center and corners of each triangular element.",
             "Within the parquet files the coordinates are stored in the following columns:",
             "",
@@ -1432,8 +1434,6 @@ def generate_markdown_specification(
             "* Triangular elements are not guaranteed to be equilateral or isosceles, and may have varying angles and lengths.",
             "* Triangular elements vertice order has not been validated to be consistent across all regions.",
             "* The Aleutian Islands, Alaska dataset has elements that cross the from -180 to 180 longitude, which may cause visual artifacts in some mapping software.",
-            "",
-            "### Coordinate Details",
             "",
             "| Column Name | Description",
             "| --- | --- | --- |",
