@@ -1388,11 +1388,11 @@ def generate_markdown_specification(
         ]
     )
 
-    for region, parquet_path in parquet_paths.items():
+    for this_region in parquet_paths.keys():
         loc_spec = config["location_specification"]
         this_loc = None
         for loc in loc_spec.values():
-            if loc["base_dir"] == this_region:
+            if loc["output_name"] == this_region:
                 this_loc = loc
 
         md_content.append(
