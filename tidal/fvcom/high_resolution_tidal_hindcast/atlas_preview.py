@@ -1623,9 +1623,6 @@ def generate_markdown_specification(
             "",
             "This document provides a specification for visualizing select high resolution tidal hindcast variables on the [NREL Marine Energy Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged)",
             "",
-            f"**Generated on:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"**Regions processed:** {len(regions_processed)}",
-            "",
         ]
     )
     # Add location filepath details
@@ -2045,9 +2042,6 @@ def generate_markdown_specification(
             "",
             f"- **Generated:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S UTC')}",
             f"- **Regions Processed:** {', '.join(regions_processed)}",
-            f"- **Total Visualizations:** {len(regions_processed) * 5 + len(kde_comparisons) + len(bar_comparisons)}",
-            "- **Color System:** Discrete levels with scientific colormaps",
-            "- **Coordinate Systems:** Orthographic (Aleutian) / Web Mercator (Standard)",
             "",
             "*This specification was auto-generated from the tidal data visualization pipeline.*",
             "*All color codes, ranges, and technical specifications are programmatically derived.*",
