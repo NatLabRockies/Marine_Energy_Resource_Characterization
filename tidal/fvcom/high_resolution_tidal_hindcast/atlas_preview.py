@@ -267,54 +267,14 @@ def plot_tidal_variable(
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
     # Print out the color and value range for each level if discrete levels are used
+    color_data = None
     if n_colors is not None:
         # Only print the main bounds and the above-max level
-        _print_color_level_ranges(
+        color_data = _print_color_level_ranges(
             main_bounds, label, units, discrete_cmap, n_colors + 1
         )
 
-    return fig, ax
-
-
-def _print_color_level_ranges(bounds, label, units, cmap, n_colors):
-    """
-    Print out the color and value range for each discrete color level.
-
-    Parameters:
-    -----------
-    bounds : numpy array
-        Array of boundary values for each color level
-    label : str
-        Label for the variable
-    units : str
-        Units for the variable
-    cmap : matplotlib colormap
-        Colormap being used
-    n_colors : int
-        Number of color levels
-    """
-
-    print(f"\n{label} Color Level Ranges [{units}]:")
-    print("-" * 50)
-
-    # Get the RGB values for each color level
-    colors = [cmap(i / (n_colors - 1)) for i in range(n_colors)]
-
-    # Format the RGB values as hex colors
-    hex_colors = [mcolors.rgb2hex(color[:3]) for color in colors]
-
-    # Print the range and color for each level
-    for i in range(n_colors):
-        if i < n_colors - 1:
-            min_val = bounds[i]
-            max_val = bounds[i + 1]
-            level_str = f"Level {i+1}: {min_val:.4f} to {max_val:.4f} {units}"
-            print(f"{level_str:<40} | Color: {hex_colors[i]}")
-        else:
-            # This should not happen with the way bounds are created, but just in case
-            print(f"Level {i+1}: {bounds[i]:.4f} {units} | Color: {hex_colors[i]}")
-
-    print("-" * 50)
+    return fig, ax, color_data
 
 
 def _check_mesh_data_availability(df):
@@ -1159,6 +1119,134 @@ def copy_images_for_web(
                 print(f"Copied {img_file} to docs/img/")
 
 
+def _print_color_level_ranges(bounds, label, units, cmap, n_colors):
+    """
+    Print color level ranges and capture data for markdown generation.
+
+    Returns:
+        list: Color level data for markdown
+    """
+    # Capture the data first
+    color_data = capture_color_level_ranges(bounds, label, units, cmap, n_colors)
+
+    # Print the existing format (unchanged output)
+    print(f"\n{label} Color Level Ranges [{units}]:")
+    print("-" * 50)
+
+    for color_info in color_data:
+        level_str = f"Level {color_info['level']}: {color_info['range']}"
+        print(f"{level_str:<40} | Color: {color_info['hex']}")
+
+    print("-" * 50)
+
+    return color_data
+
+
+def capture_color_level_ranges(bounds, label, units, cmap, n_colors):
+    """
+    Capture color level ranges and return structured data for markdown generation.
+
+    Returns:
+        list: List of dictionaries containing color level information
+    """
+    color_levels = []
+
+    # Get the RGB values for each color level
+    colors = [cmap(i / (n_colors - 1)) for i in range(n_colors)]
+
+    # Format the RGB values as hex colors and RGB tuples
+    for i in range(n_colors):
+        if i < n_colors - 1:
+            min_val = bounds[i]
+            max_val = bounds[i + 1]
+
+            # Get color information
+            rgba_color = colors[i]
+            rgb_color = rgba_color[:3]  # Remove alpha channel
+
+            # Convert to 0-255 range
+            rgb_255 = tuple(int(c * 255) for c in rgb_color)
+            hex_color = f"#{rgb_255[0]:02x}{rgb_255[1]:02x}{rgb_255[2]:02x}"
+
+            # Format value range
+            max_value = max(abs(min_val), abs(max_val))
+            if max_value >= 1000:
+                range_str = f"{min_val:.0f} - {max_val:.0f}"
+            elif max_value >= 100:
+                range_str = f"{min_val:.1f} - {max_val:.1f}"
+            elif max_value >= 10:
+                range_str = f"{min_val:.2f} - {max_val:.2f}"
+            else:
+                range_str = f"{min_val:.3f} - {max_val:.3f}"
+
+            color_levels.append(
+                {
+                    "level": i + 1,
+                    "range": f"{range_str} {units}",
+                    "min_val": min_val,
+                    "max_val": max_val,
+                    "hex": hex_color,
+                    "rgb": f"rgb({rgb_255[0]}, {rgb_255[1]}, {rgb_255[2]})",
+                    "rgb_tuple": rgb_255,
+                }
+            )
+        else:
+            # Handle the overflow level (≥ max_value)
+            rgba_color = colors[i]
+            rgb_color = rgba_color[:3]
+            rgb_255 = tuple(int(c * 255) for c in rgb_color)
+            hex_color = f"#{rgb_255[0]:02x}{rgb_255[1]:02x}{rgb_255[2]:02x}"
+
+            # Format the overflow range
+            max_val = bounds[i - 1] if i > 0 else bounds[0]
+            if max_val >= 1000:
+                range_str = f"≥ {max_val:.0f}"
+            elif max_val >= 100:
+                range_str = f"≥ {max_val:.1f}"
+            elif max_val >= 10:
+                range_str = f"≥ {max_val:.2f}"
+            else:
+                range_str = f"≥ {max_val:.3f}"
+
+            color_levels.append(
+                {
+                    "level": i + 1,
+                    "range": f"{range_str} {units}",
+                    "min_val": max_val,
+                    "max_val": float("inf"),
+                    "hex": hex_color,
+                    "rgb": f"rgb({rgb_255[0]}, {rgb_255[1]}, {rgb_255[2]})",
+                    "rgb_tuple": rgb_255,
+                }
+            )
+
+    return color_levels
+
+
+# Modified color printing function that also captures data
+def _print_and_capture_color_level_ranges(bounds, label, units, cmap, n_colors):
+    """
+    Print color level ranges and capture data for markdown generation.
+
+    Returns:
+        list: Color level data for markdown
+    """
+    # Capture the data first
+    color_data = capture_color_level_ranges(bounds, label, units, cmap, n_colors)
+
+    # Print the existing format
+    print(f"\n{label} Color Level Ranges [{units}]:")
+    print("-" * 50)
+
+    for color_info in color_data:
+        level_str = f"Level {color_info['level']}: {color_info['range']}"
+        print(f"{level_str:<40} | Color: {color_info['hex']}")
+
+    print("-" * 50)
+
+    return color_data
+
+
 def generate_markdown_specification(
     regions_processed,
     output_dir,
@@ -1167,6 +1255,7 @@ def generate_markdown_specification(
     mean_power_density_summary,
     max_power_density_summary,
     sea_floor_depth_summary,
+    color_level_data=None,
 ):
     """
     Generate a markdown specification file documenting all visualizations.
@@ -1175,6 +1264,7 @@ def generate_markdown_specification(
         regions_processed: List of region names that were processed
         output_dir: Base output directory path
         *_summary: Summary objects from analyze_variable_across_regions
+        color_level_data: Dictionary containing color level information for each variable
     """
 
     # Create docs/img directory for web-sized images
@@ -1200,84 +1290,168 @@ def generate_markdown_specification(
             "## Overview",
             "",
             "The visualization suite includes the following variable types:",
-            "- Mean Sea Water Speed",
-            "- 95th Percentile Sea Water Speed",
-            "- Mean Sea Water Power Density",
-            "- 95th Percentile Sea Water Power Density",
-            "- Sea Floor Depth (where available)",
+            "",
+            "| Variable | Units | Description |",
+            "| -------- | ----- | ----------- |",
+            "| Mean Sea Water Speed | m/s | Time-averaged current velocity magnitude |",
+            "| 95th Percentile Sea Water Speed | m/s | High-energy current events (top 5% of observations) |",
+            "| Mean Sea Water Power Density | W/m² | Time-averaged kinetic energy flux |",
+            "| 95th Percentile Sea Water Power Density | W/m² | High-energy power density events |",
+            "| Sea Floor Depth | m | Distance from surface to sea floor (where available) |",
             "",
             "Each variable is visualized both as spatial maps and statistical distributions.",
             "",
         ]
     )
 
-    # Visualization specifications
+    # Enhanced visualization specifications with color details
     viz_specs = {
         "mean_sea_water_speed": {
             "title": "Mean Sea Water Speed",
             "units": "m/s",
+            "column_name": "vap_water_column_mean_sea_water_speed",
             "colormap": "cmocean.thermal",
-            "range": f"{SEA_WATER_SPEED_CBAR_MIN} - {SEA_WATER_SPEED_CBAR_MAX}",
+            "range_min": SEA_WATER_SPEED_CBAR_MIN,
+            "range_max": SEA_WATER_SPEED_CBAR_MAX,
             "levels": SEA_WATER_SPEED_LEVELS,
+            "physical_meaning": "Yearly average of depth averaged current velocity magnitude",
+            "intended_usage": "Estimation of tidal turbine power generation potential",
         },
         "p95_sea_water_speed": {
             "title": "95th Percentile Sea Water Speed",
             "units": "m/s",
+            "column_name": "vap_water_column_95th_percentile_sea_water_speed",
             "colormap": "cmocean.matter",
-            "range": f"{SEA_WATER_SPEED_CBAR_MIN} - {SEA_WATER_MAX_SPEED_CBAR_MAX}",
+            "range_min": SEA_WATER_SPEED_CBAR_MIN,
+            "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
             "levels": SEA_WATER_MAX_SPEED_LEVELS,
+            "physical_meaning": "95th percentile of yearly depth maximum current velocity magnitude",
+            "intended_usage": "Estimation of severity of extreme tidal events",
         },
         "mean_sea_water_power_density": {
             "title": "Mean Sea Water Power Density",
             "units": "W/m²",
+            "column_name": "vap_water_column_mean_sea_water_power_density",
             "colormap": "cmocean.dense",
-            "range": f"{SEA_WATER_POWER_DENSITY_CBAR_MIN} - {SEA_WATER_POWER_DENSITY_CBAR_MAX}",
+            "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
+            "range_max": SEA_WATER_POWER_DENSITY_CBAR_MAX,
             "levels": SEA_WATER_POWER_DENSITY_LEVELS,
+            "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
         },
         "p95_sea_water_power_density": {
             "title": "95th Percentile Sea Water Power Density",
             "units": "W/m²",
+            "column_name": "vap_water_column_95th_percentile_sea_water_power_density",
             "colormap": "cmocean.amp",
-            "range": f"{SEA_WATER_POWER_DENSITY_CBAR_MIN} - {SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX}",
+            "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
+            "range_max": SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
             "levels": SEA_WATER_MAX_POWER_DENSITY_LEVELS,
+            "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
         },
         "distance_to_sea_floor": {
             "title": "Distance to Sea Floor",
             "units": "m",
+            "column_name": "vap_sea_floor_depth",
             "colormap": "cmocean.deep",
-            "range": f"{SEA_FLOOR_DEPTH_MIN} - {SEA_FLOOR_DEPTH_MAX}",
+            "range_min": SEA_FLOOR_DEPTH_MIN,
+            "range_max": SEA_FLOOR_DEPTH_MAX,
             "levels": SEA_FLOOR_DEPTH_LEVELS,
+            "physical_meaning": "Yearly average distance from the water surface to the sea floor",
         },
     }
 
-    # Add specifications section
+    # Add detailed specifications section
     md_content.extend(
         [
             "## Visualization Specifications",
             "",
-            "### Spatial Map Parameters",
+            "### Variable Details",
             "",
+            "| Variable | Column Name | Range | Units | Discrete Levels | Colormap |",
+            "| -------- | ----------- | ----- | ----- | --------------- | -------- |",
         ]
     )
 
     for var_key, spec in viz_specs.items():
+        range_str = f"{spec['range_min']} - {spec['range_max']}"
+        md_content.append(
+            f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {spec['colormap']} |"
+        )
+
+    md_content.extend(
+        [
+            "",
+            "### Physical Interpretation",
+            "",
+            "| Variable | Physical Meaning |",
+            "| -------- | ---------------- |",
+        ]
+    )
+
+    for var_key, spec in viz_specs.items():
+        md_content.append(f"| {spec['title']} | {spec['physical_meaning']} |")
+
+    md_content.append("")
+
+    # Add color mapping details if available
+    if color_level_data:
         md_content.extend(
             [
-                f"**{spec['title']}**",
-                f"- Units: {spec['units']}",
-                f"- Color range: {spec['range']} {spec['units']}",
-                f"- Colormap: {spec['colormap']}",
-                f"- Discrete levels: {spec['levels']}",
+                "## Color Mapping Specifications",
+                "",
+                "**The following tables provide exact color specifications for each variable.",
+                "All colors use discrete levels with an overflow level for values exceeding the maximum range.",
                 "",
             ]
         )
 
-    # Regional visualizations section
+        for var_key, spec in viz_specs.items():
+            if var_key in color_level_data:
+                md_content.extend(
+                    [
+                        f"### {spec['title']} ({spec['units']})",
+                        "",
+                        f"**Colormap:** {spec['colormap']} - {spec['colormap_description']}",
+                        f"**Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}",
+                        f"**Discrete Levels:** {spec['levels']} within range + 1 overflow level",
+                        "",
+                        "| Level | Value Range | Hex Color | RGB Color | Color Preview |",
+                        "| ----- | ----------- | --------- | --------- | ------------- |",
+                    ]
+                )
+
+                # Add color level data here (this will be populated when we capture the print output)
+                colors_info = color_level_data[var_key]
+                for i, color_info in enumerate(colors_info):
+                    level_num = i + 1
+                    value_range = color_info["range"]
+                    hex_color = color_info["hex"]
+                    rgb_color = color_info["rgb"]
+                    # Create a small color block using HTML
+                    color_preview = f'<span style="background-color:{hex_color}; color:white; padding:2px 8px; border-radius:3px;">████</span>'
+                    md_content.append(
+                        f"| {level_num} | {value_range} | `{hex_color}` | `{rgb_color}` | {color_preview} |"
+                    )
+
+                md_content.append("")
+    else:
+        md_content.extend(
+            [
+                "## Color Mapping Specifications",
+                "",
+                "**Note:** Color level details will be populated when the visualization functions are executed.",
+                "The color mapping system uses discrete levels for improved interpretation.",
+                "",
+            ]
+        )
+
+    # Regional visualizations section with images
     md_content.extend(
         [
             "## Regional Visualizations",
             "",
-            "The following regions have been processed with complete visualization suites:",
+            "The following regions have been processed with complete visualization suites.",
+            "All images are optimized for web display and stored in the `docs/img/` directory.",
             "",
         ]
     )
@@ -1288,69 +1462,211 @@ def generate_markdown_specification(
             [
                 f"### {region_title}",
                 "",
-                "**Spatial Maps:**",
-                f"- Mean Sea Water Speed: `docs/img/{region}_mean_sea_water_speed.png`",
-                f"- 95th Percentile Sea Water Speed: `docs/img/{region}_p95_sea_water_speed.png`",
-                f"- Mean Sea Water Power Density: `docs/img/{region}_mean_sea_water_power_density.png`",
-                f"- 95th Percentile Sea Water Power Density: `docs/img/{region}_p95_sea_water_power_density.png`",
-                f"- Distance to Sea Floor: `docs/img/{region}_distance_to_sea_floor.png` (if available)",
-                "",
-                "**Statistical Analysis:**",
-                "- Variable distributions and percentiles in individual analysis plots",
+                "#### Spatial Distribution Maps",
                 "",
             ]
         )
 
-    # Cross-regional analysis section
+        # Add each visualization with image embed and caption
+        viz_types = [
+            ("mean_sea_water_speed", "Mean Sea Water Speed"),
+            ("p95_sea_water_speed", "95th Percentile Sea Water Speed"),
+            ("mean_sea_water_power_density", "Mean Sea Water Power Density"),
+            ("p95_sea_water_power_density", "95th Percentile Sea Water Power Density"),
+            ("distance_to_sea_floor", "Distance to Sea Floor (if available)"),
+        ]
+
+        for viz_key, viz_title in viz_types:
+            img_filename = f"{region}_{viz_key}.png"
+            img_path = f"docs/img/{img_filename}"
+
+            # Get units from viz_specs
+            units = next(
+                (
+                    spec["units"]
+                    for spec in viz_specs.values()
+                    if viz_title.startswith(spec["title"].split()[0])
+                ),
+                "",
+            )
+
+            md_content.extend(
+                [
+                    f"**{viz_title}**",
+                    "",
+                    f"![{viz_title} for {region_title}]({img_path})",
+                    f"*Figure: {viz_title} spatial distribution for {region_title}. Units: {units}. Discrete color levels enhance interpretation for decision-making applications.*",
+                    "",
+                ]
+            )
+
+        md_content.extend(
+            [
+                "#### File Paths",
+                "",
+                "| Visualization Type | File Path | Units |",
+                "| ------------------ | --------- | ----- |",
+            ]
+        )
+
+        for viz_key, viz_title in viz_types:
+            img_filename = f"{region}_{viz_key}.png"
+            img_path = f"docs/img/{img_filename}"
+            units = next(
+                (
+                    spec["units"]
+                    for spec in viz_specs.values()
+                    if viz_title.startswith(spec["title"].split()[0])
+                ),
+                "",
+            )
+            md_content.append(f"| {viz_title} | `{img_path}` | {units} |")
+
+        md_content.extend(["", "---", ""])
+
+    # Cross-regional analysis section with images
     md_content.extend(
         [
-            "## Cross-Regional Analysis",
+            "## Cross-Regional Comparative Analysis",
             "",
-            "Comparative visualizations across all processed regions:",
+            "Comparative visualizations across all processed regions provide insights into spatial variability and patterns.",
             "",
-            "**KDE Comparisons:**",
-            "- `docs/img/vap_water_column_mean_sea_water_speed_kde_comparison.png`",
-            "- `docs/img/vap_water_column_95th_percentile_sea_water_speed_kde_comparison.png`",
-            "- `docs/img/vap_water_column_mean_sea_water_power_density_kde_comparison.png`",
-            "- `docs/img/vap_water_column_95th_percentile_sea_water_power_density_kde_comparison.png`",
-            "- `docs/img/vap_sea_floor_depth_kde_comparison.png` (if available)",
+            "### Probability Density Function (KDE) Comparisons",
             "",
-            "**Percentile Bar Charts:**",
-            "- `docs/img/vap_water_column_mean_sea_water_speed_bar_comparison.png`",
-            "- `docs/img/vap_water_column_95th_percentile_sea_water_speed_bar_comparison.png`",
-            "- `docs/img/vap_water_column_mean_sea_water_power_density_bar_comparison.png`",
-            "- `docs/img/vap_water_column_95th_percentile_sea_water_power_density_bar_comparison.png`",
-            "- `docs/img/vap_sea_floor_depth_bar_comparison.png` (if available)",
+            "These plots show the statistical distribution of each variable across different regions.",
             "",
         ]
     )
 
-    # Technical details section
+    kde_comparisons = [
+        (
+            "vap_water_column_mean_sea_water_speed_kde_comparison.png",
+            "Mean Sea Water Speed",
+            "m/s",
+        ),
+        (
+            "vap_water_column_95th_percentile_sea_water_speed_kde_comparison.png",
+            "95th Percentile Sea Water Speed",
+            "m/s",
+        ),
+        (
+            "vap_water_column_mean_sea_water_power_density_kde_comparison.png",
+            "Mean Sea Water Power Density",
+            "W/m²",
+        ),
+        (
+            "vap_water_column_95th_percentile_sea_water_power_density_kde_comparison.png",
+            "95th Percentile Sea Water Power Density",
+            "W/m²",
+        ),
+        ("vap_sea_floor_depth_kde_comparison.png", "Sea Floor Depth", "m"),
+    ]
+
+    for img_file, title, units in kde_comparisons:
+        img_path = f"docs/img/{img_file}"
+        md_content.extend(
+            [
+                f"**{title} Distribution Comparison**",
+                "",
+                f"![{title} KDE Comparison]({img_path})",
+                f"*Figure: Kernel Density Estimation comparison of {title.lower()} across all processed regions. Units: {units}. Shows probability density functions for statistical comparison.*",
+                "",
+            ]
+        )
+
     md_content.extend(
         [
-            "## Technical Details",
+            "### Percentile Bar Chart Comparisons",
             "",
-            "### Color Mapping",
-            "- All visualizations use discrete color levels for improved interpretability",
-            "- Color levels include ranges within specified bounds plus overflow level for values above maximum",
-            "- Scientific colormaps from cmocean package ensure perceptual uniformity",
+            "These charts compare key percentile values across regions for quantitative analysis.",
             "",
-            "### Projection Handling",
-            "- Aleutian regions use Orthographic projection for accurate polar representation",
-            "- Other regions use Web Mercator (EPSG:3857) with satellite basemap",
+        ]
+    )
+
+    bar_comparisons = [
+        (
+            "vap_water_column_mean_sea_water_speed_bar_comparison.png",
+            "Mean Sea Water Speed",
+            "m/s",
+        ),
+        (
+            "vap_water_column_95th_percentile_sea_water_speed_bar_comparison.png",
+            "95th Percentile Sea Water Speed",
+            "m/s",
+        ),
+        (
+            "vap_water_column_mean_sea_water_power_density_bar_comparison.png",
+            "Mean Sea Water Power Density",
+            "W/m²",
+        ),
+        (
+            "vap_water_column_95th_percentile_sea_water_power_density_bar_comparison.png",
+            "95th Percentile Sea Water Power Density",
+            "W/m²",
+        ),
+        ("vap_sea_floor_depth_bar_comparison.png", "Sea Floor Depth", "m"),
+    ]
+
+    for img_file, title, units in bar_comparisons:
+        img_path = f"docs/img/{img_file}"
+        md_content.extend(
+            [
+                f"**{title} Percentile Comparison**",
+                "",
+                f"![{title} Bar Comparison]({img_path})",
+                f"*Figure: Percentile values of {title.lower()} compared across all processed regions. Units: {units}. Enables quantitative comparison of regional characteristics.*",
+                "",
+            ]
+        )
+
+    # Technical implementation details
+    md_content.extend(
+        [
+            "## Technical Implementation Details",
             "",
-            "### Data Processing",
-            "- Statistical analysis includes key percentiles: 95%, 99%, 99.99%",
-            "- Mesh visualization available where element corner data exists",
-            "- Point visualization used as fallback",
+            "### Color Mapping System",
             "",
-            "### File Formats",
-            "- All production visualizations saved as PNG at 300 DPI",
-            "- Web-sized versions created in docs/img/ directory with PIL/Pillow optimization",
-            "- Images resized to maximum 1200px width for web display",
-            "- PNG optimization reduces file sizes while maintaining quality",
-            "- Transparency converted to white background for better web compatibility",
-            "- Statistical plots include both distribution curves and percentile annotations",
+            "| Parameter | Specification |",
+            "| --------- | ------------- |",
+            "| Color Levels | Discrete levels within specified range + 1 overflow level |",
+            "| Normalization | BoundaryNorm with n_colors + 1 boundaries |",
+            "| Overflow Handling | Values > max_range mapped to final color level |",
+            "| Color Source | cmocean scientific colormaps for perceptual uniformity |",
+            "",
+            "### Projection Systems",
+            "",
+            "| Region Type | Projection | EPSG Code | Usage |",
+            "| ----------- | ---------- | --------- | ----- |",
+            "| Aleutian | Orthographic | Custom | Polar regions crossing 180° meridian |",
+            "| Standard | Web Mercator | EPSG:3857 | All other coastal regions |",
+            "",
+            "### Data Processing Pipeline",
+            "",
+            "| Step | Description |",
+            "| ---- | ----------- |",
+            "| 1. Data Loading | Read parquet files from regional directories |",
+            "| 2. Mesh Detection | Check for element corner data availability |",
+            "| 3. Projection Setup | Choose appropriate coordinate system |",
+            "| 4. Color Mapping | Apply discrete colormap with boundary normalization |",
+            "| 5. Rendering | Triangulated mesh or point scatter plot |",
+            "| 6. Overlay | Add basemap, coastlines, and geographic features |",
+            "",
+            "### File Organization",
+            "",
+            "| Directory | Contents | Purpose |",
+            "| --------- | -------- | ------- |",
+            "| `docs/img/` | Web-optimized images (PNG, max 1200px width) | Documentation and web display |",
+            "| `{region}/` | Full-resolution images (PNG, 300 DPI) | Production and archival |",
+            "| Root | Cross-regional comparison plots | Statistical analysis |",
+            "",
+            "### Image Optimization",
+            "",
+            "| Parameter | Value | Purpose |",
+            "| --------- | ----- | ------- |",
+            "| Maximum Width | 1200 pixels | Web performance optimization |",
+            "| Format | PNG (optimized) | Lossless compression with transparency support |",
+            "| Background | White | Transparency conversion for web compatibility |",
+            "| Resampling | LANCZOS | High-quality image resizing |",
             "",
         ]
     )
@@ -1359,28 +1675,58 @@ def generate_markdown_specification(
     if mean_speed_summary and "comparison_table" in mean_speed_summary:
         md_content.extend(
             [
-                "## Summary Statistics",
+                "## Regional Comparison Summary",
                 "",
-                "### Regional Comparison Overview",
-                "",
-                "Key statistics across all processed regions are documented in the cross-regional analysis plots.",
-                "Detailed percentile breakdowns and distribution comparisons are available in the generated visualization suite.",
+                "Statistical summaries and percentile comparisons are documented in the cross-regional analysis visualizations.",
+                "Key insights and quantitative comparisons are available in the generated bar charts and KDE plots.",
                 "",
             ]
         )
 
+    # Implementation guidance
+    md_content.extend(
+        [
+            "## Implementation Guidance",
+            "",
+            "### For Development Teams",
+            "",
+            "1. **Color Implementation**: Use the exact hex codes provided in the color mapping tables",
+            "2. **Value Ranges**: Implement discrete boundaries as specified for each variable",
+            "3. **Overflow Handling**: Values exceeding maximum range should use the final color level",
+            "4. **Units**: Always display units as specified in the variable tables",
+            "5. **Projections**: Use appropriate coordinate systems based on region type",
+            "",
+            "### Quality Assurance",
+            "",
+            "- Verify color accuracy using the provided hex codes",
+            "- Test overflow handling with extreme values",
+            "- Validate unit display and scientific notation",
+            "- Check projection accuracy for cross-meridian regions",
+            "",
+            "### Performance Considerations",
+            "",
+            "- Use optimized images from `docs/img/` for web applications",
+            "- Consider progressive loading for large datasets",
+            "- Implement client-side caching for repeated access",
+            "",
+        ]
+    )
+
     # Footer
     md_content.extend(
         [
-            "## Usage Notes",
-            "",
-            "- All file paths are relative to the project root directory",
-            "- Images in docs/img/ are optimized for web display",
-            "- Original high-resolution versions available in individual region directories",
-            "- Discrete color levels enhance interpretation for decision-making applications",
-            "",
             "---",
+            "",
+            "## Document Information",
+            "",
+            f"- **Generated:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"- **Regions Processed:** {', '.join(regions_processed)}",
+            f"- **Total Visualizations:** {len(regions_processed) * 5 + len(kde_comparisons) + len(bar_comparisons)}",
+            "- **Color System:** Discrete levels with scientific colormaps",
+            "- **Coordinate Systems:** Orthographic (Aleutian) / Web Mercator (Standard)",
+            "",
             "*This specification was auto-generated from the tidal data visualization pipeline.*",
+            "*All color codes, ranges, and technical specifications are programmatically derived.*",
         ]
     )
 
@@ -1409,6 +1755,8 @@ if __name__ == "__main__":
     max_power_density_stats = []
     sea_floor_depth_stats = []
 
+    color_level_data = {}
+
     for i in range(0, 5):
         # Get the parquet file path
         selected_region = regions[i]
@@ -1433,7 +1781,7 @@ if __name__ == "__main__":
             )
         )
 
-        plot_tidal_variable(
+        fig, ax, color_data = plot_tidal_variable(
             df,
             selected_region,
             "vap_water_column_mean_sea_water_speed",
@@ -1449,8 +1797,14 @@ if __name__ == "__main__":
             ),
             n_colors=SEA_WATER_SPEED_LEVELS,
         )
+
+        if "mean_sea_water_speed" not in color_level_data:
+            color_level_data["mean_sea_water_speed"] = color_data
+
         plt.close()
         print(f"\tPlotting {selected_region} p95_sea_water_speed...")
+
+        # Capture color level data for markdown generation
 
         max_speed_stats.append(
             analyze_variable(
@@ -1462,7 +1816,7 @@ if __name__ == "__main__":
             )
         )
 
-        plot_tidal_variable(
+        fig, ax, color_data = plot_tidal_variable(
             df,
             selected_region,
             "vap_water_column_95th_percentile_sea_water_speed",
@@ -1478,6 +1832,10 @@ if __name__ == "__main__":
             ),
             n_colors=SEA_WATER_MAX_SPEED_LEVELS,
         )
+
+        if "p95_sea_water_speed" not in color_level_data:
+            color_level_data["p95_sea_water_speed"] = color_data
+
         plt.close()
 
         print(f"\tPlotting {selected_region} mean_sea_water_power_density...")
@@ -1492,7 +1850,7 @@ if __name__ == "__main__":
             )
         )
 
-        plot_tidal_variable(
+        fig, ax, color_data = plot_tidal_variable(
             df,
             selected_region,
             "vap_water_column_mean_sea_water_power_density",
@@ -1508,6 +1866,10 @@ if __name__ == "__main__":
             ),
             n_colors=SEA_WATER_POWER_DENSITY_LEVELS,
         )
+
+        if "mean_sea_water_power_density" not in color_level_data:
+            color_level_data["mean_sea_water_power_density"] = color_data
+
         plt.close()
 
         print(f"\tPlotting {selected_region} p95_sea_water_power_density...")
@@ -1522,7 +1884,7 @@ if __name__ == "__main__":
             )
         )
 
-        plot_tidal_variable(
+        fig, ax, color_data = plot_tidal_variable(
             df,
             selected_region,
             "vap_water_column_95th_percentile_sea_water_power_density",
@@ -1539,6 +1901,9 @@ if __name__ == "__main__":
             n_colors=SEA_WATER_MAX_POWER_DENSITY_LEVELS,
         )
 
+        if "p95_sea_water_power_density" not in color_level_data:
+            color_level_data["p95_sea_water_power_density"] = color_data
+
         plt.close()
         if "vap_sea_floor_depth" in df.columns:
             sea_floor_depth_stats.append(
@@ -1550,7 +1915,7 @@ if __name__ == "__main__":
                     output_path=Path(this_output_path),
                 )
             )
-            plot_tidal_variable(
+            fig, ax, color_data = plot_tidal_variable(
                 df,
                 selected_region,
                 "vap_sea_floor_depth",
@@ -1566,6 +1931,10 @@ if __name__ == "__main__":
                 ),
                 n_colors=SEA_FLOOR_DEPTH_LEVELS,
             )
+
+            if "sea_floor_depth" not in color_level_data:
+                color_level_data["sea_floor_depth"] = color_data
+
             plt.close()
 
     print("Calculating and Plotting Speed variable_summary...")
@@ -1590,13 +1959,14 @@ if __name__ == "__main__":
 
     # Generate the markdown specification
     generate_markdown_specification(
-        regions_processed=regions[:5],  # First 5 regions that were processed
+        regions_processed=regions,
         output_dir=VIZ_OUTPUT_DIR,
         mean_speed_summary=mean_speed_summary,
         max_speed_summary=max_speed_summary,
         mean_power_density_summary=mean_power_density_summary,
         max_power_density_summary=max_power_density_summary,
         sea_floor_depth_summary=sea_floor_depth_summary,
+        color_level_data=color_level_data,
     )
 
     print("Analysis and documentation complete!")
