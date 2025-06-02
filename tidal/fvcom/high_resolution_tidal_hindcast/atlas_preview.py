@@ -17,6 +17,8 @@ from pyproj import Transformer
 
 from config import config
 
+sns.set_theme()
+
 # Set the base directory - modify this to match your system
 BASE_DIR = Path("/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast")
 
@@ -877,7 +879,10 @@ def analyze_variable_across_regions(
 def create_viz_max_justification_plot(
     all_data, regional_data, var_name, units, viz_max, output_path, variable
 ):
-    """Create a comprehensive viz_max justification visualization"""
+    """Create an improved viz_max justification visualization using seaborn"""
+
+    # Set palette
+    palette = sns.color_palette("Tab10", len(regional_data))
 
     # Calculate key statistics
     total_points = len(all_data)
@@ -887,37 +892,52 @@ def create_viz_max_justification_plot(
     p50, p90, p95, p99, p999 = np.percentile(all_data, [50, 90, 95, 99, 99.9])
     data_max = np.max(all_data)
 
-    # Create figure with subplots
-    fig = plt.figure(figsize=(20, 12))
-    gs = fig.add_gridspec(3, 3, height_ratios=[1, 2, 1], width_ratios=[2, 1, 1])
+    # Create figure with improved layout
+    fig = plt.figure(figsize=(20, 14))
+    gs = fig.add_gridspec(3, 3, height_ratios=[1.2, 2, 0.8], width_ratios=[2.5, 1.2, 1])
 
     # Main title
     fig.suptitle(
         f"Visualization Maximum Justification: {var_name}",
-        fontsize=20,
+        fontsize=22,
         fontweight="bold",
-        y=0.95,
+        y=0.96,
     )
 
-    # 1. Full distribution histogram with viz_max line (top spanning)
-    ax1 = fig.add_subplot(gs[0, :])
-    n_bins = min(100, int(np.sqrt(len(all_data))))
+    # 1. Regional histograms with proper separation (top spanning)
+    ax1 = fig.add_subplot(gs[0, :2])
 
-    # Create histogram
-    counts, bins, patches = ax1.hist(
-        all_data,
+    # Create stacked histogram data for regions
+    region_names = list(regional_data.keys())
+    region_colors = dict(zip(region_names, palette))
+
+    # Calculate optimal bins for all data
+    n_bins = min(60, int(np.sqrt(total_points)))
+    bin_range = (0, min(viz_max * 1.15, data_max * 1.05))
+
+    # Create separate histograms for each region
+    hist_data = []
+    labels = []
+    colors = []
+
+    for region, data in regional_data.items():
+        # Filter data to reasonable range for visualization
+        filtered_data = data[data <= bin_range[1]]
+        hist_data.append(filtered_data)
+        labels.append(f"{region} (n={len(data):,})")
+        colors.append(region_colors[region])
+
+    # Create stacked histogram
+    ax1.hist(
+        hist_data,
         bins=n_bins,
+        range=bin_range,
         alpha=0.7,
-        color="skyblue",
-        edgecolor="black",
-        linewidth=0.5,
+        label=labels,
+        color=colors,
+        stacked=False,
+        density=False,
     )
-
-    # Color bars beyond viz_max differently
-    for i, (patch, bin_center) in enumerate(zip(patches, (bins[:-1] + bins[1:]) / 2)):
-        if bin_center > viz_max:
-            patch.set_facecolor("lightcoral")
-            patch.set_alpha(0.8)
 
     # Add viz_max line
     ax1.axvline(
@@ -929,183 +949,273 @@ def create_viz_max_justification_plot(
         zorder=10,
     )
 
-    ax1.set_title(
-        f"Full Data Distribution (n={total_points:,} points)", fontsize=14, pad=20
+    # Add subtle percentile lines
+    ax1.axvline(
+        p99,
+        color="orange",
+        linewidth=2,
+        linestyle="--",
+        alpha=0.8,
+        label=f"99th %ile: {p99:.1f}",
+        zorder=9,
     )
-    ax1.set_ylabel("Frequency")
-    ax1.legend(fontsize=12)
-    ax1.grid(True, alpha=0.3)
+    ax1.axvline(
+        p95,
+        color="gray",
+        linewidth=1.5,
+        linestyle=":",
+        alpha=0.7,
+        label=f"95th %ile: {p95:.1f}",
+        zorder=8,
+    )
 
-    # Add annotation showing retention
+    ax1.set_title(
+        f"Regional Data Distributions (Total: n={total_points:,} points)",
+        fontsize=16,
+        pad=15,
+    )
+    ax1.set_xlabel(f"{var_name} ({units})", fontsize=12)
+    ax1.set_ylabel("Frequency", fontsize=12)
+    ax1.legend(bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=10)
+
+    # Add retention rate annotation
     ax1.text(
         0.02,
         0.95,
-        f"Data Retained: {retention_rate:.1f}% ({retained_points:,}/{total_points:,} points)",
+        f"Data Retained: {retention_rate:.1f}%\n({retained_points:,}/{total_points:,} points)",
         transform=ax1.transAxes,
         fontsize=12,
         fontweight="bold",
-        bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgreen", alpha=0.8),
+        bbox=dict(boxstyle="round,pad=0.4", facecolor="lightgreen", alpha=0.9),
     )
 
-    # 2. Regional distributions within viz_max (main plot)
+    # 2. Clean KDE plot for regional comparison (main central plot)
     ax2 = fig.add_subplot(gs[1, :2])
 
-    colors = plt.cm.Set3(np.linspace(0, 1, len(regional_data)))
+    # Create combined dataframe for seaborn
+    plot_data = []
+    for region, data in regional_data.items():
+        # Filter to visualization range for clean comparison
+        filtered_data = data[data <= viz_max * 1.1]
+        for value in filtered_data:
+            plot_data.append({"Region": region, "Value": value, "Count": len(data)})
 
+    plot_df = pd.DataFrame(plot_data)
+
+    # Create KDE plot with seaborn
     for i, (region, data) in enumerate(regional_data.items()):
-        # Filter to viz_max for clean visualization
-        filtered_data = data[data <= viz_max * 1.1]  # Show slightly beyond for context
-
+        filtered_data = data[data <= viz_max * 1.1]
         if len(filtered_data) > 0:
             sns.kdeplot(
                 data=filtered_data,
                 label=f"{region} (n={len(data):,})",
-                color=colors[i],
-                linewidth=2,
+                color=region_colors[region],
+                linewidth=2.5,
                 ax=ax2,
             )
 
-    # Add viz_max line
+    # Add reference lines
     ax2.axvline(
         viz_max,
         color="red",
-        linewidth=3,
+        linewidth=4,
         linestyle="-",
         label=f"Viz Max: {viz_max:.1f}",
         zorder=10,
     )
-
-    # Add percentile reference lines (subtle)
     ax2.axvline(
         p99,
         color="orange",
-        linewidth=1,
+        linewidth=2,
         linestyle="--",
-        alpha=0.6,
-        label=f"99th: {p99:.1f}",
+        alpha=0.8,
+        label=f"99th %ile: {p99:.1f}",
+        zorder=9,
     )
     ax2.axvline(
         p95,
         color="gray",
-        linewidth=1,
+        linewidth=1.5,
         linestyle=":",
-        alpha=0.5,
-        label=f"95th: {p95:.1f}",
+        alpha=0.7,
+        label=f"95th %ile: {p95:.1f}",
+        zorder=8,
     )
 
-    ax2.set_title("Regional Distributions (Focused View)", fontsize=14)
-    ax2.set_xlabel(f"{var_name} ({units})")
-    ax2.set_ylabel("Density")
-    ax2.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-    ax2.grid(True, alpha=0.3)
+    ax2.set_title(
+        "Regional Distribution Comparison (Density View)", fontsize=16, pad=15
+    )
+    ax2.set_xlabel(f"{var_name} ({units})", fontsize=12)
+    ax2.set_ylabel("Density", fontsize=12)
     ax2.set_xlim(0, viz_max * 1.1)
+    ax2.legend(bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=10)
 
-    # 3. Key statistics table (right side)
-    ax3 = fig.add_subplot(gs[1, 2])
+    # 3. Statistics table (right side, spanning two rows)
+    ax3 = fig.add_subplot(gs[:2, 2])
     ax3.axis("off")
 
-    # Create statistics table
+    # Create enhanced statistics table
     stats_data = [
-        ["Statistic", "Value", "% of Viz Max"],
-        ["50th percentile", f"{p50:.1f}", f"{(p50/viz_max)*100:.0f}%"],
-        ["90th percentile", f"{p90:.1f}", f"{(p90/viz_max)*100:.0f}%"],
-        ["95th percentile", f"{p95:.1f}", f"{(p95/viz_max)*100:.0f}%"],
-        ["99th percentile", f"{p99:.1f}", f"{(p99/viz_max)*100:.0f}%"],
-        ["99.9th percentile", f"{p999:.1f}", f"{(p999/viz_max)*100:.0f}%"],
-        ["Maximum", f"{data_max:.1f}", f"{(data_max/viz_max)*100:.0f}%"],
+        ["Metric", "Value", "% of Viz Max"],
+        ["50th percentile", f"{p50:.2f}", f"{(p50/viz_max)*100:.0f}%"],
+        ["90th percentile", f"{p90:.2f}", f"{(p90/viz_max)*100:.0f}%"],
+        ["95th percentile", f"{p95:.2f}", f"{(p95/viz_max)*100:.0f}%"],
+        ["99th percentile", f"{p99:.2f}", f"{(p99/viz_max)*100:.0f}%"],
+        ["99.9th percentile", f"{p999:.2f}", f"{(p999/viz_max)*100:.0f}%"],
+        ["Maximum", f"{data_max:.2f}", f"{(data_max/viz_max)*100:.0f}%"],
         ["", "", ""],
-        ["Viz Max", f"{viz_max:.1f}", "100%"],
-        ["Data Retained", f"{retained_points:,}", f"{retention_rate:.1f}%"],
+        ["Viz Max", f"{viz_max:.2f}", "100%"],
+        ["Points Retained", f"{retained_points:,}", f"{retention_rate:.1f}%"],
+        [
+            "Points Filtered",
+            f"{total_points-retained_points:,}",
+            f"{100-retention_rate:.1f}%",
+        ],
     ]
 
+    # Create table
     table = ax3.table(
         cellText=stats_data[1:],
         colLabels=stats_data[0],
         cellLoc="center",
-        loc="center",
-        bbox=[0, 0, 1, 1],
+        loc="upper center",
+        bbox=[0, 0.2, 1, 0.8],
     )
     table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1, 1.5)
+    table.set_fontsize(11)
+    table.scale(1, 1.8)
 
-    # Color code the viz max row
-    table[(8, 0)].set_facecolor("lightcoral")
-    table[(8, 1)].set_facecolor("lightcoral")
-    table[(8, 2)].set_facecolor("lightcoral")
-    table[(9, 0)].set_facecolor("lightgreen")
-    table[(9, 1)].set_facecolor("lightgreen")
-    table[(9, 2)].set_facecolor("lightgreen")
+    # Style the table
+    table[(8, 0)].set_facecolor("#ffcccb")  # Light red for viz max
+    table[(8, 1)].set_facecolor("#ffcccb")
+    table[(8, 2)].set_facecolor("#ffcccb")
+    table[(9, 0)].set_facecolor("#90EE90")  # Light green for retained
+    table[(9, 1)].set_facecolor("#90EE90")
+    table[(9, 2)].set_facecolor("#90EE90")
+    table[(10, 0)].set_facecolor("#FFE4B5")  # Light orange for filtered
+    table[(10, 1)].set_facecolor("#FFE4B5")
+    table[(10, 2)].set_facecolor("#FFE4B5")
 
-    ax3.set_title("Key Statistics", fontsize=14, pad=20)
+    ax3.set_title("Key Statistics", fontsize=16, pad=20, fontweight="bold")
 
-    # 4. Outlier assessment (bottom)
-    ax4 = fig.add_subplot(gs[2, :])
+    # 4. Improved outlier visualization (bottom)
+    ax4 = fig.add_subplot(gs[2, :2])
 
-    # Create a simple scatter showing the "outlier zone"
     outliers = all_data[all_data > viz_max]
     if len(outliers) > 0:
-        # Show outliers as a scatter plot
-        y_pos = np.random.normal(0, 0.1, len(outliers))  # Add jitter
-        ax4.scatter(
+        # Create a proper histogram for outliers
+        outlier_range = (viz_max, min(data_max * 1.02, viz_max * 2))
+        n_outlier_bins = min(30, max(5, len(outliers) // 10))
+
+        counts, bins, patches = ax4.hist(
             outliers,
-            y_pos,
-            alpha=0.6,
-            color="red",
-            s=20,
-            label=f"Outliers (n={len(outliers)})",
+            bins=n_outlier_bins,
+            range=outlier_range,
+            alpha=0.7,
+            color="lightcoral",
+            edgecolor="darkred",
+            linewidth=0.5,
         )
 
+        # Add viz_max reference line
         ax4.axvline(
-            viz_max, color="red", linewidth=3, linestyle="-", label="Viz Max Cutoff"
+            viz_max,
+            color="red",
+            linewidth=4,
+            linestyle="-",
+            label=f"Viz Max Cutoff: {viz_max:.1f}",
+            zorder=10,
         )
-        ax4.set_xlim(viz_max * 0.95, max(viz_max * 1.1, data_max * 1.05))
-        ax4.set_ylim(-0.5, 0.5)
-        ax4.set_xlabel(f"{var_name} ({units})")
-        ax4.set_title("Outlier Zone: Values Above Viz Max", fontsize=14)
-        ax4.legend()
-        ax4.grid(True, alpha=0.3)
-        ax4.set_yticks([])
 
-        # Add summary text
-        outlier_text = (
-            f"Outliers represent {((len(outliers)/total_points)*100):.2f}% of data"
+        ax4.set_xlabel(f"{var_name} ({units})", fontsize=12)
+        ax4.set_ylabel("Frequency", fontsize=12)
+        ax4.set_title(
+            f"Filtered Outliers: {len(outliers):,} points ({((len(outliers)/total_points)*100):.2f}% of data)",
+            fontsize=14,
+            pad=10,
         )
-        if len(outliers) > 0:
-            outlier_text += (
-                f"\nRange: {np.min(outliers):.1f} to {np.max(outliers):.1f} {units}"
-            )
+        ax4.legend(fontsize=10)
+
+        # Add summary statistics for outliers
+        if len(outliers) > 1:
+            outlier_stats = f"Outlier Range: {np.min(outliers):.2f} to {np.max(outliers):.2f} {units}\nMean: {np.mean(outliers):.2f} {units}"
+        else:
+            outlier_stats = f"Single outlier: {outliers[0]:.2f} {units}"
+
         ax4.text(
             0.02,
-            0.8,
-            outlier_text,
+            0.85,
+            outlier_stats,
             transform=ax4.transAxes,
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow"),
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow", alpha=0.9),
+            fontsize=10,
         )
+
     else:
+        # No outliers case
         ax4.text(
             0.5,
             0.5,
-            "No outliers beyond viz_max",
+            "✓ No outliers beyond visualization maximum\nAll data retained for analysis",
             transform=ax4.transAxes,
             ha="center",
             va="center",
             fontsize=14,
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgreen"),
+            fontweight="bold",
+            bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgreen", alpha=0.9),
         )
         ax4.set_xlim(0, 1)
         ax4.set_ylim(0, 1)
-        ax4.axis("off")
+        ax4.set_xticks([])
+        ax4.set_yticks([])
+        ax4.set_title("Outlier Assessment", fontsize=14, pad=10)
+
+    # Add assessment text in bottom right
+    ax5 = fig.add_subplot(gs[2, 2])
+    ax5.axis("off")
+
+    # Generate assessment
+    if retention_rate >= 99.5:
+        assessment = "✓ EXCELLENT\nViz max captures virtually all data"
+        color = "lightgreen"
+    elif retention_rate >= 95:
+        assessment = "✓ GOOD\nViz max captures most data,\nfilters clear outliers"
+        color = "lightblue"
+    elif retention_rate >= 90:
+        assessment = "⚠ ACCEPTABLE\nSome data filtered,\nconsider increasing viz_max"
+        color = "lightyellow"
+    else:
+        assessment = (
+            "⚠ REVIEW NEEDED\nSignificant data loss,\nincrease viz_max recommended"
+        )
+        color = "lightcoral"
+
+    ax5.text(
+        0.5,
+        0.5,
+        assessment,
+        transform=ax5.transAxes,
+        ha="center",
+        va="center",
+        fontsize=12,
+        fontweight="bold",
+        bbox=dict(boxstyle="round,pad=0.4", facecolor=color, alpha=0.9),
+    )
+    ax5.set_title("Assessment", fontsize=14, fontweight="bold")
 
     plt.tight_layout()
 
-    # Save with descriptive filename
+    # Save with high quality
     if output_path is not None:
         filename = f"{variable}_viz_max_justification.png"
         plt.savefig(
-            Path(output_path, filename), bbox_inches="tight", dpi=300, facecolor="white"
+            Path(output_path, filename),
+            bbox_inches="tight",
+            dpi=300,
+            facecolor="white",
+            edgecolor="none",
         )
-        print(f"Viz max justification plot saved as: {filename}")
+        print(f"Enhanced viz max justification plot saved as: {filename}")
     else:
         plt.show()
 
