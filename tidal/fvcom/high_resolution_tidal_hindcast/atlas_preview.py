@@ -1376,6 +1376,40 @@ def generate_markdown_specification(
     for region, parquet_path in parquet_paths.items():
         md_content.append(f"| {region} | NREL Kestrel HPC | `{parquet_path}` |")
 
+    # Add coordinate details
+    md_content.extend(
+        [
+            "The high resolution tidal hindcast data is based on an unstructured three dimensional grid of triangular faces with variable resolution.",
+            "To visualize in two dimensions, the data for all depth is combined to a single layer.",
+            "This single layer has coordinates defined at the center and corners of each triangular element.",
+            "Within the parquet files the coordinates are stored in the following columns:",
+            "",
+            "Notes:" "",
+            "* All coordinates are in WGS84 (EPSG:4326) format.",
+            "* All centerpoints have been validated to be within the bounding box of the triangular element.",
+            "* All triangular elements coordinates are visualized below and can be assumed to be valid",
+            "* Triangular elements are not guaranteed to be equilateral or isosceles, and may have varying angles and lengths.",
+            "* Triangular elements vertice order has not been validated to be consistent across all regions.",
+            "* The Aleutian Islands, Alaska dataset has elements that cross the from -180 to 180 longitude, which may cause visual artifacts in some mapping software.",
+            "",
+            "### Coordinate Details",
+            "",
+            "| Column Name | Description",
+            "| --- | --- | --- |",
+            "| `lat_center` | Element Center Latitude",
+            "| `lon_center` | Element Center Longitude",
+            "| `element_corner_1_lat` | Element Triangular Vertice 1 Latitude",
+            "| `element_corner_1_lon` | Element Triangular Vertice 1 Longitude",
+            "| `element_corner_2_lat` | Element Triangular Vertice 2 Latitude",
+            "| `element_corner_2_lon` | Element Triangular Vertice 2 Longitude",
+            "| `element_corner_3_lat` | Element Triangular Vertice 3 Latitude",
+            "| `element_corner_3_lon` | Element Triangular Vertice 3 Longitude",
+        ]
+    )
+
+    for region, parquet_path in parquet_paths.items():
+        md_content.append(f"| {region} | NREL Kestrel HPC | `{parquet_path}` |")
+
     # Add detailed specifications section
     md_content.extend(
         [
@@ -1733,11 +1767,15 @@ if __name__ == "__main__":
 
     color_level_data = {}
 
+    parquet_paths = {}
+
     for i in range(0, 5):
         # Get the parquet file path
         selected_region = regions[i]
         parquet_file = get_parquet_path(selected_region)
         print(f"Reading file: {parquet_file}")
+
+        parquet_paths[selected_region] = str(parquet_file)
 
         # Read the parquet file
         df = pd.read_parquet(parquet_file)
@@ -1943,6 +1981,7 @@ if __name__ == "__main__":
         max_power_density_summary=max_power_density_summary,
         sea_floor_depth_summary=sea_floor_depth_summary,
         color_level_data=color_level_data,
+        parquet_paths=parquet_paths,
     )
 
     print("Analysis and documentation complete!")
