@@ -2063,7 +2063,7 @@ if __name__ == "__main__":
     # Display available regions
     regions = get_available_regions()
     regions.reverse()
-    regions = regions[:2]
+    regions = regions[:4]
     print("Available regions:")
     for i, region in enumerate(regions):
         print(f"{i+1}. {region}")
