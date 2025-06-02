@@ -980,9 +980,9 @@ def create_viz_max_justification_plot(
 
     # Add retention rate annotation
     ax1.text(
-        0.02,
-        0.95,
-        f"Data Retained: {retention_rate:.1f}%\n({retained_points:,}/{total_points:,} points)",
+        0.35,
+        0.85,
+        f"Data Retained: {retention_rate:.2f}%\n({retained_points:,}/{total_points:,} points)",
         transform=ax1.transAxes,
         fontsize=12,
         fontweight="bold",
