@@ -1342,14 +1342,14 @@ def generate_markdown_specification(
         [
             "# ME Atlas High Resolution Tidal Data QOI Visualization Specification",
             "",
-            "This document provides a comprehensive specification of all visualizations generated from the high-resolution tidal data analysis.",
+            "This document provides a specification for visualizing select high resolution tidal hindcast variables on the [NREL Marine Energy Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged)",
             "",
             f"**Generated on:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"**Regions processed:** {len(regions_processed)}",
             "",
             "## Overview",
             "",
-            "The visualization suite includes the following variable types:",
+            "The visualization specification includes the following variables:",
             "",
             "| Variable | Units | Description |",
             "| -------- | ----- | ----------- |",
@@ -1394,19 +1394,6 @@ def generate_markdown_specification(
             f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {spec['colormap']} |"
         )
 
-    md_content.extend(
-        [
-            "",
-            "### Physical Interpretation",
-            "",
-            "| Variable | Physical Meaning |",
-            "| -------- | ---------------- |",
-        ]
-    )
-
-    for var_key, spec in viz_specs.items():
-        md_content.append(f"| {spec['title']} | {spec['physical_meaning']} |")
-
     md_content.append("")
 
     # Add color mapping details if available
@@ -1425,7 +1412,7 @@ def generate_markdown_specification(
             if var_key in color_level_data:
                 md_content.extend(
                     [
-                        f"### {spec['title']} ({spec['units']})",
+                        f"### {spec['title']} [{spec['units']}], `{spec['column_name']}`",
                         "",
                         f"* **Colormap:** {spec['colormap']}\n",
                         f"* **Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}\n",
@@ -1464,10 +1451,7 @@ def generate_markdown_specification(
     # Regional visualizations section with images
     md_content.extend(
         [
-            "## Regional Visualizations",
-            "",
-            "The following regions have been processed with complete visualization suites.",
-            "All images are optimized for web display and stored in the `docs/img/` directory.",
+            "## Visualizations by Region",
             "",
         ]
     )
@@ -1477,8 +1461,6 @@ def generate_markdown_specification(
         md_content.extend(
             [
                 f"### {region_title}",
-                "",
-                "#### Spatial Distribution Maps",
                 "",
             ]
         )
@@ -1515,28 +1497,6 @@ def generate_markdown_specification(
                     "",
                 ]
             )
-
-        md_content.extend(
-            [
-                "#### File Paths",
-                "",
-                "| Visualization Type | File Path | Units |",
-                "| ------------------ | --------- | ----- |",
-            ]
-        )
-
-        for viz_key, viz_title in viz_types:
-            img_filename = f"{region}_{viz_key}.png"
-            img_path = f"docs/img/{img_filename}"
-            units = next(
-                (
-                    spec["units"]
-                    for spec in viz_specs.values()
-                    if viz_title.startswith(spec["title"].split()[0])
-                ),
-                "",
-            )
-            md_content.append(f"| {viz_title} | `{img_path}` | {units} |")
 
         md_content.extend(["", "---", ""])
 
