@@ -1057,15 +1057,11 @@ def create_viz_max_justification_plot(
     # Create enhanced statistics table
     stats_data = [
         ["Metric", "Value", "% of Viz Max"],
-        ["50th percentile", f"{p50:.2f}", f"{(p50/viz_max)*100:.0f}%"],
-        ["90th percentile", f"{p90:.2f}", f"{(p90/viz_max)*100:.0f}%"],
-        ["95th percentile", f"{p95:.2f}", f"{(p95/viz_max)*100:.0f}%"],
-        ["99th percentile", f"{p99:.2f}", f"{(p99/viz_max)*100:.0f}%"],
-        ["99.9th percentile", f"{p999:.2f}", f"{(p999/viz_max)*100:.0f}%"],
-        ["Maximum", f"{data_max:.2f}", f"{(data_max/viz_max)*100:.0f}%"],
+        ["99th percentile", f"{p99:.2f}", f"{(p99/viz_max)*100:.2f}%"],
+        ["99.9th percentile", f"{p999:.2f}", f"{(p999/viz_max)*100:.2f}%"],
+        ["Maximum", f"{data_max:.2f}", f"{(data_max/viz_max)*100:.2f}%"],
         ["", "", ""],
-        ["Viz Max", f"{viz_max:.2f}", "100%"],
-        ["Points Retained", f"{retained_points:,}", f"{retention_rate:.1f}%"],
+        ["Points Retained", f"{retained_points:,}", f"{retention_rate:.2f}%"],
         [
             "Points Filtered",
             f"{total_points-retained_points:,}",
@@ -1086,17 +1082,14 @@ def create_viz_max_justification_plot(
     table.scale(1, 1.8)
 
     # Style the table
-    table[(8, 0)].set_facecolor("#ffcccb")  # Light red for viz max
-    table[(8, 1)].set_facecolor("#ffcccb")
-    table[(8, 2)].set_facecolor("#ffcccb")
-    table[(9, 0)].set_facecolor("#90EE90")  # Light green for retained
-    table[(9, 1)].set_facecolor("#90EE90")
-    table[(9, 2)].set_facecolor("#90EE90")
-    table[(10, 0)].set_facecolor("#FFE4B5")  # Light orange for filtered
-    table[(10, 1)].set_facecolor("#FFE4B5")
-    table[(10, 2)].set_facecolor("#FFE4B5")
+    table[(5, 0)].set_facecolor("#90EE90")  # Light green for retained
+    table[(5, 1)].set_facecolor("#90EE90")
+    table[(5, 2)].set_facecolor("#90EE90")
+    table[(6, 0)].set_facecolor("#FFE4B5")  # Light orange for filtered
+    table[(6, 1)].set_facecolor("#FFE4B5")
+    table[(6, 2)].set_facecolor("#FFE4B5")
 
-    ax3.set_title("Key Statistics", fontsize=16, pad=20, fontweight="bold")
+    ax3.set_title("Statistics", fontsize=16, pad=20, fontweight="bold")
 
     # 4. Improved outlier visualization (bottom)
     ax4 = fig.add_subplot(gs[2, :2])
