@@ -1519,30 +1519,33 @@ def generate_markdown_specification(
     # Regional visualizations section with images
     md_content.extend(
         [
-            "## Visualizations by Region",
+            "## Visualizations by Variable",
             "",
         ]
     )
-
-    for region in regions_processed:
-        region_title = region.replace("_", " ").title()
+    # Add each visualization with image embed and caption
+    viz_types = [
+        ("mean_sea_water_speed", "Mean Sea Water Speed"),
+        ("p95_sea_water_speed", "95th Percentile Sea Water Speed"),
+        ("mean_sea_water_power_density", "Mean Sea Water Power Density"),
+        ("p95_sea_water_power_density", "95th Percentile Sea Water Power Density"),
+        ("distance_to_sea_floor", "Distance to Sea Floor"),
+    ]
+    for viz_key, viz_title in viz_types:
         md_content.extend(
             [
-                f"### {region_title}",
+                f"### {viz_title}",
                 "",
             ]
         )
-
-        # Add each visualization with image embed and caption
-        viz_types = [
-            ("mean_sea_water_speed", "Mean Sea Water Speed"),
-            ("p95_sea_water_speed", "95th Percentile Sea Water Speed"),
-            ("mean_sea_water_power_density", "Mean Sea Water Power Density"),
-            ("p95_sea_water_power_density", "95th Percentile Sea Water Power Density"),
-            ("distance_to_sea_floor", "Distance to Sea Floor (if available)"),
-        ]
-
-        for viz_key, viz_title in viz_types:
+        for region in regions_processed:
+            # region_title = region.replace("_", " ").title()
+            loc_spec = config["location_specification"]
+            this_loc = None
+            for loc in loc_spec.values():
+                if loc["output_name"] == region:
+                    this_loc = loc
+            region_title = this_loc["label"]
             img_filename = f"{region}_{viz_key}.png"
             img_path = f"docs/img/{img_filename}"
 
@@ -1558,10 +1561,10 @@ def generate_markdown_specification(
 
             md_content.extend(
                 [
-                    f"**{viz_title}**",
+                    f"**{region_title} {viz_title}**",
                     "",
                     f"![{viz_title} for {region_title}]({img_path})",
-                    f"*Figure: {viz_title} spatial distribution for {region_title}. Units: {units}. Discrete color levels enhance interpretation for decision-making applications.*",
+                    f"*Figure: {viz_title} spatial distribution for {region_title}. Units: {units}",
                     "",
                 ]
             )
