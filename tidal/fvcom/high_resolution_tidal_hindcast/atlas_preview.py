@@ -1411,7 +1411,7 @@ def generate_markdown_specification(
                     [
                         f"### {spec['title']} ({spec['units']})",
                         "",
-                        f"**Colormap:** {spec['colormap']} - {spec['colormap_description']}",
+                        f"**Colormap:** {spec['colormap']}",
                         f"**Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}",
                         f"**Discrete Levels:** {spec['levels']} within range + 1 overflow level",
                         "",
