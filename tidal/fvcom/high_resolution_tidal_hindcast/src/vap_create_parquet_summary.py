@@ -7,6 +7,39 @@ import xarray as xr
 from . import file_manager, file_name_convention_manager
 
 
+def compute_grid_resolution(df):
+    """Compute FVCOM grid resolution as average edge length"""
+
+    # Convert degrees to radians
+    lat1_rad = np.radians(df["element_corner_1_lat"])
+    lon1_rad = np.radians(df["element_corner_1_lon"])
+    lat2_rad = np.radians(df["element_corner_2_lat"])
+    lon2_rad = np.radians(df["element_corner_2_lon"])
+    lat3_rad = np.radians(df["element_corner_3_lat"])
+    lon3_rad = np.radians(df["element_corner_3_lon"])
+
+    # Earth radius in meters (WGS84)
+    R = 6378137.0
+
+    def haversine_vectorized(lat1, lon1, lat2, lon2):
+        """Vectorized haversine distance calculation"""
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+        c = 2 * np.arcsin(np.sqrt(a))
+        return R * c
+
+    # Calculate three edge lengths
+    edge1 = haversine_vectorized(lat1_rad, lon1_rad, lat2_rad, lon2_rad)
+    edge2 = haversine_vectorized(lat2_rad, lon2_rad, lat3_rad, lon3_rad)
+    edge3 = haversine_vectorized(lat3_rad, lon3_rad, lat1_rad, lon1_rad)
+
+    # Grid resolution as average edge length
+    df["grid_resolution_meters"] = (edge1 + edge2 + edge3) / 3
+
+    return df
+
+
 def convert_tidal_summary_nc_to_dataframe(ds):
     face_vars = []
     sigma_vars = []
@@ -68,6 +101,8 @@ def convert_tidal_summary_nc_to_dataframe(ds):
     # Create dataframe all at once
     result_df = pd.DataFrame(data_dict)
 
+    result_df = compute_grid_resolution(result_df)
+
     print(f"Created dataframe with {result_df.shape[1]} columns")
 
     return result_df
@@ -125,6 +160,7 @@ def convert_nc_summary_to_parquet(config, location_key):
             "vap_water_column_mean_sea_water_power_density",
             "vap_water_column_95th_percentile_sea_water_power_density",
             "vap_sea_floor_depth",
+            "grid_resolution_meters",
         ]
 
         atlas_df = output_df[cols_for_atlas]
