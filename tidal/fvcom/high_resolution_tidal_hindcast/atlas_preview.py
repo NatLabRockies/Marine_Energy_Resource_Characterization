@@ -1274,36 +1274,6 @@ def generate_markdown_specification(
     # Copy images to docs/img directory
     copy_images_for_web(output_dir, docs_img_dir, regions_processed)
 
-    # Markdown content
-    md_content = []
-
-    # Header
-    md_content.extend(
-        [
-            "# ME Atlas High Resolution Tidal Data QOI Visualization Specification",
-            "",
-            "This document provides a comprehensive specification of all visualizations generated from the high-resolution tidal data analysis.",
-            "",
-            f"**Generated on:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"**Regions processed:** {len(regions_processed)}",
-            "",
-            "## Overview",
-            "",
-            "The visualization suite includes the following variable types:",
-            "",
-            "| Variable | Units | Description |",
-            "| -------- | ----- | ----------- |",
-            "| Mean Sea Water Speed | m/s | Time-averaged current velocity magnitude |",
-            "| 95th Percentile Sea Water Speed | m/s | High-energy current events (top 5% of observations) |",
-            "| Mean Sea Water Power Density | W/m² | Time-averaged kinetic energy flux |",
-            "| 95th Percentile Sea Water Power Density | W/m² | High-energy power density events |",
-            "| Sea Floor Depth | m | Distance from surface to sea floor (where available) |",
-            "",
-            "Each variable is visualized both as spatial maps and statistical distributions.",
-            "",
-        ]
-    )
-
     # Enhanced visualization specifications with color details
     viz_specs = {
         "mean_sea_water_speed": {
@@ -1314,7 +1284,7 @@ def generate_markdown_specification(
             "range_min": SEA_WATER_SPEED_CBAR_MIN,
             "range_max": SEA_WATER_SPEED_CBAR_MAX,
             "levels": SEA_WATER_SPEED_LEVELS,
-            "physical_meaning": "Yearly average of depth averaged current velocity magnitude",
+            "physical_meaning": "Yearly average of depth averaged current speed",
             "intended_usage": "Estimation of tidal turbine power generation potential",
         },
         "p95_sea_water_speed": {
@@ -1325,7 +1295,7 @@ def generate_markdown_specification(
             "range_min": SEA_WATER_SPEED_CBAR_MIN,
             "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
             "levels": SEA_WATER_MAX_SPEED_LEVELS,
-            "physical_meaning": "95th percentile of yearly depth maximum current velocity magnitude",
+            "physical_meaning": "95th percentile of yearly depth maximum current speed",
             "intended_usage": "Estimation of severity of extreme tidal events",
         },
         "mean_sea_water_power_density": {
@@ -1356,9 +1326,36 @@ def generate_markdown_specification(
             "range_min": SEA_FLOOR_DEPTH_MIN,
             "range_max": SEA_FLOOR_DEPTH_MAX,
             "levels": SEA_FLOOR_DEPTH_LEVELS,
-            "physical_meaning": "Yearly average distance from the water surface to the sea floor",
+            "physical_meaning": "Yearly average distance from water surface to the sea floor",
         },
     }
+
+    # Markdown content
+    md_content = []
+
+    # Header
+    md_content.extend(
+        [
+            "# ME Atlas High Resolution Tidal Data QOI Visualization Specification",
+            "",
+            "This document provides a comprehensive specification of all visualizations generated from the high-resolution tidal data analysis.",
+            "",
+            f"**Generated on:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"**Regions processed:** {len(regions_processed)}",
+            "",
+            "## Overview",
+            "",
+            "The visualization suite includes the following variable types:",
+            "",
+            "| Variable | Units | Description |",
+            "| -------- | ----- | ----------- |",
+        ]
+    )
+
+    for var in viz_specs.values():
+        md_content.append(
+            f"| {var['title']} | {var['units']} | {var['physical_meaning']} |"
+        )
 
     # Add detailed specifications section
     md_content.extend(
