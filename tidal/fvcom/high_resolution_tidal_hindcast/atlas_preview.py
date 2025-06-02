@@ -43,8 +43,10 @@ SEA_FLOOR_DEPTH_LEVELS = 10
 
 BASEMAP_PROVIDER = ctx.providers.Esri.WorldImagery
 
-SEA_WATER_SPEED_UNITS = r"$m/s$"
-SEA_WATER_POWER_DENSITY_UNITS = r"$W/m^2$"
+# SEA_WATER_SPEED_UNITS = r"$m/s$"
+SEA_WATER_SPEED_UNITS = "m/s"
+# SEA_WATER_POWER_DENSITY_UNITS = r"$W/m^2$"
+SEA_WATER_POWER_DENSITY_UNITS = "W/m^2"
 
 # Note the output visualization will actually have 9 levels
 # There will be 8 within the range and a 9th that is outside of the range
