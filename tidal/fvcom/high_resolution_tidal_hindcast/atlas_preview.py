@@ -894,14 +894,14 @@ def create_viz_max_justification_plot(
 
     # Create figure with improved layout
     fig = plt.figure(figsize=(24, 14))
-    gs = fig.add_gridspec(3, 3, height_ratios=[1.2, 2, 0.8], width_ratios=[2.5, 1.2, 1])
+    gs = fig.add_gridspec(3, 3, height_ratios=[1.2, 2, 0.8], width_ratios=[2, 1.5, 1.5])
 
     # Main title
     fig.suptitle(
-        f"Visualization Maximum Justification: {var_name}",
+        f"Colorbar Maximum Justification: {var_name}",
         fontsize=22,
         fontweight="bold",
-        y=0.96,
+        y=0.99,
     )
 
     # 1. Regional histograms with proper separation (top spanning)
@@ -935,7 +935,7 @@ def create_viz_max_justification_plot(
         alpha=0.5,
         label=labels,
         color=colors,
-        # stacked=False,
+        stacked=True,
         density=False,
     )
 
@@ -1136,7 +1136,7 @@ def create_viz_max_justification_plot(
             outlier_stats = f"Single outlier: {outliers[0]:.2f} {units}"
 
         ax4.text(
-            0.02,
+            0.50,
             0.85,
             outlier_stats,
             transform=ax4.transAxes,
