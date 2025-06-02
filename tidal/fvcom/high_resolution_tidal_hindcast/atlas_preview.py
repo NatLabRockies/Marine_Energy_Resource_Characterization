@@ -13,7 +13,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from pyproj import Transformer
+from pyproj import transformer
+
+from config import config
 
 # Set the base directory - modify this to match your system
 BASE_DIR = Path("/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast")
@@ -1347,9 +1349,50 @@ def generate_markdown_specification(
             f"**Generated on:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"**Regions processed:** {len(regions_processed)}",
             "",
-            "## Overview",
+        ]
+    )
+    # Add location filepath details
+    md_content.extend(
+        [
             "",
-            "The visualization specification includes the following variables:",
+            "## Available Data File Locations",
+            "",
+            "| Location Name | System | File Path |",
+            "| --- | --- | --- |",
+        ]
+    )
+
+    for this_region, parquet_path in parquet_paths.items():
+        loc_spec = config["location_specification"]
+        region_name = None
+        for loc in loc_spec.values():
+            if loc["base_dir"] == this_region:
+                region_name = loc["label"]
+
+        md_content.append(f"| {region_name} | NREL Kestrel HPC | `{parquet_path}` |")
+
+    # Add Location Details
+    md_content.extend(
+        [
+            "",
+            "## Available Data File Locations",
+            "",
+            "| Location Name | System | File Path |",
+            "| --- | --- | --- |",
+        ]
+    )
+
+    for region, parquet_path in parquet_paths.items():
+        md_content.append(f"| {region} | NREL Kestrel HPC | `{parquet_path}` |")
+
+    md_content.extend(
+        [
+            "",
+            "## Visualization Specification",
+            "",
+            "## Variable Information",
+            "",
+            "This dataset includes the following variables:",
             "",
             "| Variable | Units | Description |",
             "| -------- | ----- | ----------- |",
@@ -1361,24 +1404,10 @@ def generate_markdown_specification(
             f"| {var['title']} | {var['units']} | {var['physical_meaning']} |"
         )
 
-    # Add location filepath details
-    md_content.extend(
-        [
-            "Data is stored in Parquet format at the following locations:",
-            "",
-            "### Data Details",
-            "",
-            "| Location Name | System | File Path |",
-            "| --- | --- | --- |",
-        ]
-    )
-
-    for region, parquet_path in parquet_paths.items():
-        md_content.append(f"| {region} | NREL Kestrel HPC | `{parquet_path}` |")
-
     # Add coordinate details
     md_content.extend(
         [
+            "",
             "The high resolution tidal hindcast data is based on an unstructured three dimensional grid of triangular faces with variable resolution.",
             "To visualize in two dimensions, the data for all depth is combined to a single layer.",
             "This single layer has coordinates defined at the center and corners of each triangular element.",
