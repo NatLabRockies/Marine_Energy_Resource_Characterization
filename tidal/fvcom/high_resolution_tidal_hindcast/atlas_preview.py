@@ -17,7 +17,6 @@ from pyproj import Transformer
 
 from config import config
 
-sns.set_theme()
 
 # Set the base directory - modify this to match your system
 BASE_DIR = Path("/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast")
@@ -2364,6 +2363,8 @@ if __name__ == "__main__":
                 color_level_data["sea_floor_depth"] = color_data
 
             plt.close()
+
+    sns.set_theme()
 
     print("Calculating and Plotting Speed variable_summary...")
     mean_speed_summary = analyze_variable_across_regions(
