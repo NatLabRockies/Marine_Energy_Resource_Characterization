@@ -1203,7 +1203,7 @@ def capture_color_level_ranges(bounds, label, units, cmap, n_colors):
             hex_color = f"#{rgb_255[0]:02x}{rgb_255[1]:02x}{rgb_255[2]:02x}"
 
             # Format the overflow range
-            max_val = bounds[i - 1] if i > 0 else bounds[0]
+            max_val = bounds[i] if i > 0 else bounds[0]
             if max_val >= 1000:
                 range_str = f"≥ {max_val:.0f}"
             elif max_val >= 100:
