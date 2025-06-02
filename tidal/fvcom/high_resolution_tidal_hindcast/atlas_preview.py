@@ -1355,7 +1355,7 @@ def generate_markdown_specification(
     md_content.extend(
         [
             "",
-            "## Available Data File Locations",
+            "## Available Data File Details",
             "",
             "Base directory for all data files:",
             "",
@@ -1402,9 +1402,7 @@ def generate_markdown_specification(
     md_content.extend(
         [
             "",
-            "## Variable Information",
-            "",
-            "This dataset includes the following variables:",
+            "## Variable Details",
             "",
             "| Variable | Units | Description |",
             "| -------- | ----- | ----------- |",
@@ -1420,7 +1418,7 @@ def generate_markdown_specification(
     md_content.extend(
         [
             "",
-            "### Coordinate Details",
+            "## Coordinate Details",
             "",
             "The high resolution tidal hindcast data is based on an unstructured three dimensional grid of triangular faces with variable resolution.",
             "To visualize in two dimensions (lat/lon) the data for all depths are combined (averaging, or 95th percentile of maximums) into a single layer.",
@@ -1448,15 +1446,10 @@ def generate_markdown_specification(
         ]
     )
 
-    for region, parquet_path in parquet_paths.items():
-        md_content.append(f"| {region} | NREL Kestrel HPC | `{parquet_path}` |")
-
     # Add detailed specifications section
     md_content.extend(
         [
-            "## Visualization Specifications",
-            "",
-            "### Variable Details",
+            "## Color Details",
             "",
             "| Variable | Column Name | Range | Units | Discrete Levels | Colormap |",
             "| -------- | ----------- | ----- | ----- | --------------- | -------- |",
@@ -1489,8 +1482,8 @@ def generate_markdown_specification(
                     [
                         f"### {spec['title']} [{spec['units']}], `{spec['column_name']}`",
                         "",
-                        f"* **Colormap:** {spec['colormap']}\n",
-                        f"* **Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}\n",
+                        f"* **Colormap:** {spec['colormap']}",
+                        f"* **Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}",
                         f"* **Discrete Levels:** {spec['levels'] + 1} ({spec['levels']} within range + 1 overflow level)",
                         "",
                         "| Level | Value Range | Hex Color | RGB Color | Color Preview |",
