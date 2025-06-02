@@ -1184,7 +1184,8 @@ def capture_color_level_ranges(bounds, label, units, cmap, n_colors):
             color_levels.append(
                 {
                     "level": i + 1,
-                    "range": f"{range_str} {units}",
+                    # "range": f"{range_str} [{units}]",
+                    "range": f"{range_str} [{units}]",
                     "min_val": min_val,
                     "max_val": max_val,
                     "hex": hex_color,
