@@ -1258,6 +1258,7 @@ def generate_markdown_specification(
     mean_power_density_summary,
     max_power_density_summary,
     sea_floor_depth_summary,
+    parquet_paths,
     color_level_data=None,
 ):
     """
@@ -1359,6 +1360,21 @@ def generate_markdown_specification(
         md_content.append(
             f"| {var['title']} | {var['units']} | {var['physical_meaning']} |"
         )
+
+    # Add location filepath details
+    md_content.extend(
+        [
+            "Data is stored in Parquet format at the following locations:",
+            "",
+            "### Data Details",
+            "",
+            "| Location Name | System | File Path |",
+            "| --- | --- | --- |",
+        ]
+    )
+
+    for region, parquet_path in parquet_paths.items():
+        md_content.append(f"| {region} | NREL Kestrel HPC | `{parquet_path}` |")
 
     # Add detailed specifications section
     md_content.extend(
