@@ -1402,8 +1402,6 @@ def generate_markdown_specification(
     md_content.extend(
         [
             "",
-            "## Visualization Specification",
-            "",
             "## Variable Information",
             "",
             "This dataset includes the following variables:",
