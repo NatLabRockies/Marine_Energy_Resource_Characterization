@@ -1397,9 +1397,9 @@ def generate_markdown_specification(
     if color_level_data:
         md_content.extend(
             [
-                "## Color Mapping Specifications",
+                "## Color Specifications",
                 "",
-                "**The following tables provide exact color specifications for each variable.",
+                "The following tables provide exact color specifications for each variable.",
                 "All colors use discrete levels with an overflow level for values exceeding the maximum range.",
                 "",
             ]
@@ -1411,9 +1411,9 @@ def generate_markdown_specification(
                     [
                         f"### {spec['title']} ({spec['units']})",
                         "",
-                        f"**Colormap:** {spec['colormap']}",
-                        f"**Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}",
-                        f"**Discrete Levels:** {spec['levels']} within range + 1 overflow level",
+                        f"* **Colormap:** {spec['colormap']}\n",
+                        f"* **Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}\n",
+                        f"* **Discrete Levels:** {spec['levels'] + 1} ({spec['levels']} within range + 1 overflow level)",
                         "",
                         "| Level | Value Range | Hex Color | RGB Color | Color Preview |",
                         "| ----- | ----------- | --------- | --------- | ------------- |",
@@ -1428,7 +1428,7 @@ def generate_markdown_specification(
                     hex_color = color_info["hex"]
                     rgb_color = color_info["rgb"]
                     # Create a small color block using HTML
-                    color_preview = f'<span style="background-color:{hex_color}; color:white; padding:2px 8px; border-radius:3px;">████</span>'
+                    color_preview = f'<span style="background-color:{hex_color}; color:{hex_color}; padding:2px 8px; border-radius:3px;">████</span>'
                     md_content.append(
                         f"| {level_num} | {value_range} | `{hex_color}` | `{rgb_color}` | {color_preview} |"
                     )
