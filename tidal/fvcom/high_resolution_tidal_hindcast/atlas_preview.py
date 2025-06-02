@@ -1396,7 +1396,7 @@ def generate_markdown_specification(
                 this_loc = loc
 
         md_content.append(
-            f"| {this_loc['label']} | {this_loc['face_count']} | {this_loc['start_date_uct']} to {this_loc['end_date_utc']} | {this_loc['temporal_resolution']} |"
+            f"| {this_loc['label']} | {this_loc['face_count']} | {this_loc['start_date_utc']} to {this_loc['end_date_utc']} | {this_loc['temporal_resolution']} |"
         )
 
     md_content.extend(
