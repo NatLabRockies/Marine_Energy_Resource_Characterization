@@ -893,7 +893,7 @@ def create_viz_max_justification_plot(
     data_max = np.max(all_data)
 
     # Create figure with improved layout
-    fig = plt.figure(figsize=(20, 14))
+    fig = plt.figure(figsize=(24, 14))
     gs = fig.add_gridspec(3, 3, height_ratios=[1.2, 2, 0.8], width_ratios=[2.5, 1.2, 1])
 
     # Main title
@@ -1210,7 +1210,7 @@ def create_viz_max_justification_plot(
         filename = f"{variable}_viz_max_justification.png"
         plt.savefig(
             Path(output_path, filename),
-            bbox_inches="tight",
+            # bbox_inches="tight",
             dpi=300,
             facecolor="white",
             edgecolor="none",
