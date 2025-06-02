@@ -1381,15 +1381,23 @@ def generate_markdown_specification(
     md_content.extend(
         [
             "",
-            "## Available Data File Locations",
+            "## Location Details",
             "",
-            "| Location Name | System | File Path |",
+            "| Location Name | Face Count | Averaging Dates [UTC] | Averaging Temporal Resolution",
             "| --- | --- | --- |",
         ]
     )
 
     for region, parquet_path in parquet_paths.items():
-        md_content.append(f"| {region} | NREL Kestrel HPC | `{parquet_path}` |")
+        loc_spec = config["location_specification"]
+        this_loc = None
+        for loc in loc_spec.values():
+            if loc["base_dir"] == this_region:
+                this_loc = loc
+
+        md_content.append(
+            f"| {this_loc['label']} | {this_loc['face_count']} | {this_loc['start_date_uct']} to {this_loc['end_date_utc']} | {this_loc['temporal_resolution']} |"
+        )
 
     md_content.extend(
         [
