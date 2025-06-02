@@ -1434,7 +1434,7 @@ def generate_markdown_specification(
             "* The Aleutian Islands, Alaska dataset has elements that cross the from -180 to 180 longitude, which may cause visual artifacts in some mapping software.",
             "",
             "| Column Name | Description",
-            "| --- | --- | --- |",
+            "| --- | --- |",
             "| `lat_center` | Element Center Latitude",
             "| `lon_center` | Element Center Longitude",
             "| `element_corner_1_lat` | Element Triangular Vertice 1 Latitude",
