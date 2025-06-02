@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from pyproj import transformer
+from pyproj import Transformer
 
 from config import config
 
