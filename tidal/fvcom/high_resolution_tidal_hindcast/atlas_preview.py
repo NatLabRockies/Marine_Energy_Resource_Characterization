@@ -1834,13 +1834,15 @@ def generate_markdown_specification(
     )
 
     for var in viz_specs.values():
-        md_content.append(
-            f"### {var['title']}" "",
-            "",
-            "Equation:",
-            "",
-            f"{var['equation']}" f"",
-            f"{var['equation_variables']} |",
+        md_content.extend(
+            [
+                f"### {var['title']}" "",
+                "",
+                "Equation:",
+                "",
+                f"{var['equation']}" f"",
+                f"{var['equation_variables']} |",
+            ]
         )
 
     # Add coordinate details
