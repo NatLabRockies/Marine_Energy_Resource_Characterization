@@ -1674,6 +1674,8 @@ def generate_markdown_specification(
             "levels": SEA_WATER_SPEED_LEVELS,
             "physical_meaning": "Yearly average of depth averaged current speed",
             "intended_usage": "Estimation of tidal turbine power generation potential",
+            "equation": r"$\overline{U} = \frac{1}{T} \int_0^T \frac{1}{N_{\sigma}} \sum_{i=1}^{N_{\sigma}} \sqrt{u_i^2 + v_i^2} \, dt$",
+            "equation_variables": "where $u_i, v_i$ are velocity components at sigma level $i$ (m/s), $N_{\sigma} = 10$ levels, $T = 1$ year",
         },
         "p95_sea_water_speed": {
             "title": "95th Percentile Sea Water Speed",
@@ -1685,6 +1687,8 @@ def generate_markdown_specification(
             "levels": SEA_WATER_MAX_SPEED_LEVELS,
             "physical_meaning": "95th percentile of yearly depth maximum current speed",
             "intended_usage": "Estimation of severity of extreme tidal events",
+            "equation": r"$U_{95} = P_{95}\left(\max_{\sigma}\left(\sqrt{u^2 + v^2}\right)\right)$",
+            "equation_variables": "where $P_{95}$ denotes 95th percentile over 1 year, $\\max_{\\sigma}$ is depth maximum over 10 sigma levels, $u, v$ in m/s",
         },
         "mean_sea_water_power_density": {
             "title": "Mean Sea Water Power Density",
@@ -1695,6 +1699,8 @@ def generate_markdown_specification(
             "range_max": SEA_WATER_POWER_DENSITY_CBAR_MAX,
             "levels": SEA_WATER_POWER_DENSITY_LEVELS,
             "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
+            "equation": r"$\overline{P} = \frac{1}{T} \int_0^T \frac{1}{2} \rho \left(\frac{1}{N_{\sigma}} \sum_{i=1}^{N_{\sigma}} \sqrt{u_i^2 + v_i^2}\right)^3 dt$",
+            "equation_variables": "where $\\rho = 1025$ kg/m³, $u_i, v_i$ are velocity components at sigma level $i$ (m/s), $N_{\\sigma} = 10$, $T = 1$ year",
         },
         "p95_sea_water_power_density": {
             "title": "95th Percentile Sea Water Power Density",
@@ -1705,6 +1711,8 @@ def generate_markdown_specification(
             "range_max": SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
             "levels": SEA_WATER_MAX_POWER_DENSITY_LEVELS,
             "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
+            "equation": r"$P_{95} = P_{95}\left(\frac{1}{2} \rho \left(\max_{\sigma}\left(\sqrt{u^2 + v^2}\right)\right)^3\right)$",
+            "equation_variables": "where $\\rho = 1025$ kg/m³, $P_{95}$ denotes 95th percentile over 1 year, $\\max_{\\sigma}$ is depth maximum, $u, v$ in m/s",
         },
         "distance_to_sea_floor": {
             "title": "Distance to Sea Floor",
@@ -1715,6 +1723,8 @@ def generate_markdown_specification(
             "range_max": SEA_FLOOR_DEPTH_MAX,
             "levels": SEA_FLOOR_DEPTH_LEVELS,
             "physical_meaning": "Yearly average distance from water surface to the sea floor",
+            "equation": r"$d = \overline{h + \zeta}$",
+            "equation_variables": "where $h$ is bathymetry below NAVD88 (m), $\\zeta$ is sea surface elevation above NAVD88 (m), overbar denotes yearly average",
         },
     }
 
@@ -1781,16 +1791,44 @@ def generate_markdown_specification(
     md_content.extend(
         [
             "",
-            "## Variable Details",
+            "## Variable Overview",
             "",
-            "| Variable | Units | Description |",
+            "| Variable | Units | Data Column |",
             "| -------- | ----- | ----------- |",
         ]
     )
 
     for var in viz_specs.values():
+        md_content.append(f"| {var['title']} | {var['units']} | {var['column_name']} |")
+
+    md_content.extend(
+        [
+            "",
+            "## Variable Usage",
+            "",
+            "| Variable | Units | Meaning | Intended Usage",
+            "| -------- | ----- | ------- | --- |",
+        ]
+    )
+
+    for var in viz_specs.values():
         md_content.append(
-            f"| {var['title']} | {var['units']} | {var['physical_meaning']} |"
+            f"| {var['title']} | {var['units']} | {var['physical_meaning']} | {var['intended_usage']} |"
+        )
+
+    md_content.extend(
+        [
+            "",
+            "## Variable Details",
+            "",
+            "| Variable | Equation | Inputs",
+            "| -------- | ----- | --- |",
+        ]
+    )
+
+    for var in viz_specs.values():
+        md_content.append(
+            f"| {var['title']} | {var['equation']} | {var['equation_variables']} |"
         )
 
     # Add coordinate details
