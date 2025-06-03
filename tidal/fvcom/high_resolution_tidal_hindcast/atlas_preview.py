@@ -1674,8 +1674,8 @@ def generate_markdown_specification(
             "physical_meaning": "Yearly average of depth averaged current speed",
             "intended_usage": "Site screening and turbine selection for power generation",
             "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-            "equation": r"$\overline{U} = \frac{1}{T} \int_0^T \frac{1}{N_{\sigma}} \sum_{i=1}^{N_{\sigma}} \sqrt{u_i^2 + v_i^2} \, dt$",
-            "equation_variables": "where $u_i, v_i$ are velocity components at sigma level $i$ (m/s), $N_{\sigma} = 10$ levels, $T = 1$ year",
+            "equation": r"$\overline{\overline{U}} = \frac{1}{T} \sum_{t=1}^T \frac{1}{N_{\sigma}} \sum_{i=1}^{N_{\sigma}} \sqrt{u_{i,t}^2 + v_{i,t}^2}$",
+            "equation_variables": "where $u_i, v_i$ are velocity components at uniformly distributed sigma level $i$ at volume centers (m/s), $N_{\sigma} = 10$ levels, $T = 1$ year",
         },
         "p95_sea_water_speed": {
             "title": "95th Percentile Sea Water Speed",
@@ -1688,8 +1688,8 @@ def generate_markdown_specification(
             "physical_meaning": "95th percentile of yearly depth maximum current speed",
             "intended_usage": "Generator sizing and power electronics design",
             "intended_usage_detail": "Critical for sizing electrical generation components. Used to determine maximum generator output capacity, size power electronics and converters for peak electrical loads, design control systems for extreme speed conditions, and set cut-out speeds for generator protection. Essential for electrical system certification, grid connection requirements, and ensuring generators can handle maximum rotational speeds without damage.",
-            "equation": r"$U_{95} = P_{95}\left(\max_{\sigma}\left(\sqrt{u^2 + v^2}\right)\right)$",
-            "equation_variables": "where $P_{95}$ denotes 95th percentile over 1 year, $\\max_{\\sigma}$ is depth maximum over 10 sigma levels, $u, v$ in m/s",
+            "equation": r"$U_{95} = P_{95}\left(\left[\max(U_{1,t}, U_{2,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+            "equation_variables": "where $P_{95}$ is 95th percentile of the set of depth-maximum speeds, $\\max_{\\sigma}(U_t)$ is depth maximum speed at time $t$ over 10 uniformly distributed sigma levels at volume centers, $T = 1$ year",
         },
         "mean_sea_water_power_density": {
             "title": "Mean Sea Water Power Density",
@@ -1702,8 +1702,8 @@ def generate_markdown_specification(
             "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
             "intended_usage": "Resource quantification and economic feasibility analysis",
             "intended_usage_detail": "Direct measure of extractable energy resource for economic analysis. Used to calculate theoretical power output, estimate capacity factors for project financing, compare energy density between sites, and determine optimal turbine spacing in arrays. Essential for LCOE calculations, investor presentations, and grid integration planning. Minimum thresholds (typically >300 W/m²) define commercial viability.",
-            "equation": r"$\overline{P} = \frac{1}{T} \int_0^T \frac{1}{2} \rho \left(\frac{1}{N_{\sigma}} \sum_{i=1}^{N_{\sigma}} \sqrt{u_i^2 + v_i^2}\right)^3 dt$",
-            "equation_variables": "where $\\rho = 1025$ kg/m³, $u_i, v_i$ are velocity components at sigma level $i$ (m/s), $N_{\\sigma} = 10$, $T = 1$ year",
+            "equation": r"$\overline{\overline{P}} = \frac{1}{T} \sum_{t=1}^T \frac{1}{2} \rho \left(\overline{U}_t\right)^3$",
+            "equation_variables": "where $\\rho = 1025$ kg/m³, $\\overline{U}$ is depth-averaged speed over 10 uniformly distributed sigma levels at volume centers, $T = 1$ year",
         },
         "p95_sea_water_power_density": {
             "title": "95th Percentile Sea Water Power Density",
@@ -1716,8 +1716,8 @@ def generate_markdown_specification(
             "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
             "intended_usage": "Structural design loads and extreme loading conditions",
             "intended_usage_detail": "Essential for structural engineering and extreme load analysis. Used to determine maximum design loads for turbine blades, drive trains, support structures, and foundation systems. Critical for fatigue analysis, ultimate load calculations, and ensuring structural integrity during extreme tidal events. Defines design margins for mooring systems, tower structures, and emergency braking systems. Required for structural certification and insurance assessments.",
-            "equation": r"$P_{95} = P_{95}\left(\frac{1}{2} \rho \left(\max_{\sigma}\left(\sqrt{u^2 + v^2}\right)\right)^3\right)$",
-            "equation_variables": "where $\\rho = 1025$ kg/m³, $P_{95}$ denotes 95th percentile over 1 year, $\\max_{\\sigma}$ is depth maximum, $u, v$ in m/s",
+            "equation": r"$P_{95} = P_{95}\left(\left[\max(P_{1,t}, P_{2,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+            "equation_variables": "where $P_{95}$ is 95th percentile of the set of depth-maximum power densities, $\\rho = 1025$ kg/m³, $\\max_{\\sigma}(U_t)$ is depth maximum speed at time $t$ over 10 uniformly distributed sigma levels at volume centers, $T = 1$ year",
         },
         "distance_to_sea_floor": {
             "title": "Mean Depth",
@@ -1730,8 +1730,8 @@ def generate_markdown_specification(
             "physical_meaning": "Yearly average distance from water surface to the sea floor",
             "intended_usage": "Installation planning and foundation design",
             "intended_usage_detail": "Fundamental constraint for deployment strategy and cost estimation. Used to determine installation vessel requirements, foundation type selection (gravity, pile, suction caisson), and deployment method feasibility. Critical for cost modeling (deeper = more expensive), accessibility planning for maintenance operations, and environmental impact assessments. Optimal depths typically 20-50m for current technology, with deeper sites requiring specialized equipment and higher costs.",
-            "equation": r"$\overline{d} = \overline{h + \zeta}$",
-            "equation_variables": "where $h$ is bathymetry below NAVD88 (m), $\\zeta$ is sea surface elevation relative to NAVD88 (m), overbar denotes yearly average",
+            "equation": r"$\overline{d} = \frac{1}{T} \sum_{t=1}^T (h + \zeta_t)$",
+            "equation_variables": "where $h$ is bathymetry below NAVD88 (m), $\\zeta$ is sea surface elevation above NAVD88 (m), overbar denotes yearly average",
         },
     }
 
