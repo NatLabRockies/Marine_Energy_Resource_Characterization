@@ -40,6 +40,19 @@ def compute_grid_resolution(df):
     return df
 
 
+def compute_max_to_mean_ratio(df):
+    df["vap_water_column_sea_water_speed_max_to_mean_ratio"] = (
+        df["vap_water_column_95th_percentile_sea_water_speed"]
+        / df["vap_water_column_mean_sea_water_speed"],
+    )
+    df["vap_water_column_sea_water_power_density_max_to_mean_ratio"] = (
+        df["vap_water_column_95th_percentile_sea_water_power_density"]
+        / df["vap_water_column_mean_sea_water_power_density"],
+    )
+
+    return df
+
+
 def convert_tidal_summary_nc_to_dataframe(ds):
     face_vars = []
     sigma_vars = []
@@ -102,6 +115,7 @@ def convert_tidal_summary_nc_to_dataframe(ds):
     result_df = pd.DataFrame(data_dict)
 
     result_df = compute_grid_resolution(result_df)
+    result_df = compute_max_to_mean_ratio(result_df)
 
     print(f"Created dataframe with {result_df.shape[1]} columns")
 
