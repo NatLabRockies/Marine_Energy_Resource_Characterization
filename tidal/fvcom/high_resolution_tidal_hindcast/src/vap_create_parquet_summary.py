@@ -40,7 +40,25 @@ def compute_grid_resolution(df):
     return df
 
 
+def diagnose_columns(df):
+    cols_to_check = [
+        "vap_water_column_95th_percentile_sea_water_speed",
+        "vap_water_column_mean_sea_water_speed",
+        "vap_water_column_95th_percentile_sea_water_power_density",
+        "vap_water_column_mean_sea_water_power_density",
+    ]
+
+    for col in cols_to_check:
+        print(f"\n{col}:")
+        print(f"  Shape: {df[col].shape}")
+        print(f"  Unique values: {df[col].nunique()}")
+        print(f"  Data type: {df[col].dtype}")
+        print(f"  First few values: {df[col].head().values}")
+        print(f"  Has NaN: {df[col].isna().any()}")
+
+
 def compute_max_to_mean_ratio(df):
+    diagnose_columns(df)
     df["vap_water_column_sea_water_speed_max_to_mean_ratio"] = (
         df["vap_water_column_95th_percentile_sea_water_speed"]
         / df["vap_water_column_mean_sea_water_speed"],
