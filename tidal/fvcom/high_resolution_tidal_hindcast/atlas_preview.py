@@ -2390,6 +2390,7 @@ if __name__ == "__main__":
                 output_path=Path(this_output_path),
             )
         )
+
         fig, ax, color_data = plot_tidal_variable(
             df,
             this_region,
@@ -2409,36 +2410,7 @@ if __name__ == "__main__":
 
         if "sea_floor_depth" not in color_level_data:
             color_level_data["sea_floor_depth"] = color_data
-
-        plt.close()
-        sea_floor_depth_stats.append(
-            analyze_variable(
-                df,
-                "vap_sea_floor_depth",
-                "Sea Floor Depth",
-                this_region,
-                output_path=Path(this_output_path),
-            )
-        )
-        fig, ax, color_data = plot_tidal_variable(
-            df,
-            this_region,
-            "vap_sea_floor_depth",
-            "Distance to Sea Floor",
-            "m",
-            SEA_FLOOR_DEPTH_MIN,
-            SEA_FLOOR_DEPTH_MAX,
-            is_aleutian="aleutian" in this_region,
-            cmap=SEA_FLOOR_DEPTH_CMAP,
-            save_path=Path(
-                this_output_path,
-                f"{this_region}_distance_to_sea_floor.png",
-            ),
-            n_colors=SEA_FLOOR_DEPTH_LEVELS,
-        )
-
-        if "sea_floor_depth" not in color_level_data:
-            color_level_data["sea_floor_depth"] = color_data
+            print(color_data)
 
         plt.close()
 
