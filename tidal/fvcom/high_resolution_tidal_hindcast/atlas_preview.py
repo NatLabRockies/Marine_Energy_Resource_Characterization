@@ -2410,7 +2410,7 @@ if __name__ == "__main__":
 
         if "sea_floor_depth" not in color_level_data:
             color_level_data["sea_floor_depth"] = color_data
-            print(color_data)
+            print(color_level_data)
 
         plt.close()
 
