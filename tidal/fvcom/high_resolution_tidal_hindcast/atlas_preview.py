@@ -1880,6 +1880,7 @@ def generate_markdown_specification(
     # Add detailed specifications section
     md_content.extend(
         [
+            "",
             "## Color Details",
             "",
             "| Variable | Column Name | Range | Units | Discrete Levels | Colormap |",
@@ -2411,9 +2412,9 @@ if __name__ == "__main__":
             ),
             n_colors=SEA_FLOOR_DEPTH_LEVELS,
         )
-
-        color_level_data["sea_floor_depth"] = color_data
-        print(color_level_data)
+        if "distance_to_sea_floor" not in color_level_data:
+            color_level_data["distance_to_sea_floor"] = color_data
+            print(color_level_data)
 
         plt.close()
 
