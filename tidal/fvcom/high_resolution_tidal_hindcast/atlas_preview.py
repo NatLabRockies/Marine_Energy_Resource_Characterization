@@ -1675,7 +1675,7 @@ def generate_markdown_specification(
             "intended_usage": "Site screening and turbine selection for power generation",
             "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
             "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-            "equation_variables": "where $U_{i,t} = \\sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s), $N_{\\sigma} = 10$ levels, $T = 1$ year",
+            "equation_variables": "Where $U_{i,t} = \\sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s), $N_{\\sigma} = 10$ levels, $T = 1$ year",
         },
         "p95_sea_water_speed": {
             "title": "95th Percentile Sea Water Speed",
@@ -1689,7 +1689,7 @@ def generate_markdown_specification(
             "intended_usage": "Generator sizing and power electronics design",
             "intended_usage_detail": "Critical for sizing electrical generation components. Used to determine maximum generator output capacity, size power electronics and converters for peak electrical loads, design control systems for extreme speed conditions, and set cut-out speeds for generator protection. Essential for electrical system certification, grid connection requirements, and ensuring generators can handle maximum rotational speeds without damage.",
             "equation": r"$U_{95} = \text{percentile}_{95}\left(\left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-            "equation_variables": "where $U_{i,t} = \\sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s), $N_{\\sigma} = 10$ levels, $T = 1$ year",
+            "equation_variables": "Where $U_{i,t} = \\sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s), $N_{\\sigma} = 10$ levels, $T = 1$ year",
         },
         "mean_sea_water_power_density": {
             "title": "Mean Sea Water Power Density",
@@ -1703,7 +1703,7 @@ def generate_markdown_specification(
             "intended_usage": "Resource quantification and economic feasibility analysis",
             "intended_usage_detail": "Direct measure of extractable energy resource for economic analysis. Used to calculate theoretical power output, estimate capacity factors for project financing, compare energy density between sites, and determine optimal turbine spacing in arrays. Essential for LCOE calculations, investor presentations, and grid integration planning. Minimum thresholds (typically >300 W/m²) define commercial viability.",
             "equation": r"$\overline{\overline{P}} = P_{\text{average}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-            "equation_variables": "where $P_{i,t} = \\frac{1}{2} \\rho U_{i,t}^3$ with $\\rho = 1025$ kg/m³, $U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$, $N_{\\sigma} = 10$ levels, $T = 1$ year",
+            "equation_variables": "Where $P_{i,t} = \\frac{1}{2} \\rho U_{i,t}^3$ with $\\rho = 1025$ kg/m³, $U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$, $N_{\\sigma} = 10$ levels, $T = 1$ year",
         },
         "p95_sea_water_power_density": {
             "title": "95th Percentile Sea Water Power Density",
@@ -1717,7 +1717,7 @@ def generate_markdown_specification(
             "intended_usage": "Structural design loads and extreme loading conditions",
             "intended_usage_detail": "Essential for structural engineering and extreme load analysis. Used to determine maximum design loads for turbine blades, drive trains, support structures, and foundation systems. Critical for fatigue analysis, ultimate load calculations, and ensuring structural integrity during extreme tidal events. Defines design margins for mooring systems, tower structures, and emergency braking systems. Required for structural certification and insurance assessments.",
             "equation": r"$P_{95} = \text{percentile}_{95}\left(\left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-            "equation_variables": "where $P_{i,t} = \\frac{1}{2} \\rho U_{i,t}^3$ with $\\rho = 1025$ kg/m³, $U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$, $N_{\\sigma} = 10$ levels, $T = 1$ year",
+            "equation_variables": "Where $P_{i,t} = \\frac{1}{2} \\rho U_{i,t}^3$ with $\\rho = 1025$ kg/m³, $U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$, $N_{\\sigma} = 10$ levels, $T = 1$ year",
         },
         "distance_to_sea_floor": {
             "title": "Mean Depth",
@@ -1731,7 +1731,7 @@ def generate_markdown_specification(
             "intended_usage": "Installation planning and foundation design",
             "intended_usage_detail": "Fundamental constraint for deployment strategy and cost estimation. Used to determine installation vessel requirements, foundation type selection (gravity, pile, suction caisson), and deployment method feasibility. Critical for cost modeling (deeper = more expensive), accessibility planning for maintenance operations, and environmental impact assessments. Optimal depths typically 20-50m for current technology, with deeper sites requiring specialized equipment and higher costs.",
             "equation": r"$\overline{d} = d_{\text{average}} = \text{mean}\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
-            "equation_variables": "where $h$ is bathymetry below NAVD88 (m), $\\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m), $T = 1$ year",
+            "equation_variables": "Where $h$ is bathymetry below NAVD88 (m), $\\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m), $T = 1$ year",
         },
     }
 
@@ -1743,7 +1743,7 @@ def generate_markdown_specification(
         [
             "# ME Atlas High Resolution Tidal Data QOI Visualization Specification",
             "",
-            "This document provides a specification for visualizing select high resolution tidal hindcast variables on the [NREL Marine Energy Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged)",
+            "The following sections provide the specification for visualizing selected high resolution tidal hindcast variables on the [NREL Marine Energy Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged)",
             "",
         ]
     )
@@ -1792,7 +1792,7 @@ def generate_markdown_specification(
                 this_loc = loc
 
         md_content.append(
-            f"| {this_loc['label']} | {this_loc['face_count']} | {this_loc['start_date_utc']} to {this_loc['end_date_utc']} | {this_loc['temporal_resolution']} |"
+            f"| {this_loc['label']} | {this_loc['face_count']:,} | {this_loc['start_date_utc']} to {this_loc['end_date_utc']} | {this_loc['temporal_resolution']} |"
         )
 
     md_content.extend(
@@ -1813,29 +1813,32 @@ def generate_markdown_specification(
             "",
             "## Variable Usage",
             "",
-            "| Variable | Units | Meaning | Intended Usage",
-            "| -------- | ----- | ------- | --- |",
+            "| Variable | Meaning | Intended Usage",
+            "| ---- | ------- | --- |",
         ]
     )
 
     for var in viz_specs.values():
         md_content.append(
-            f"| {var['title']} | {var['units']} | {var['physical_meaning']} | {var['intended_usage']} |"
+            f"| {var['title']} | {var['physical_meaning']} | {var['intended_usage']} |"
         )
 
     md_content.extend(
         [
             "",
-            "## Variable Details",
+            "## Variable Equations",
             "",
-            "| Variable | Equation | Inputs",
-            "| -------- | ----- | --- |",
         ]
     )
 
     for var in viz_specs.values():
         md_content.append(
-            f"| {var['title']} | {var['equation']} | {var['equation_variables']} |"
+            f"### {var['title']}" "",
+            "",
+            "Equation:",
+            "",
+            f"{var['equation']}" f"",
+            f"{var['equation_variables']} |",
         )
 
     # Add coordinate details
