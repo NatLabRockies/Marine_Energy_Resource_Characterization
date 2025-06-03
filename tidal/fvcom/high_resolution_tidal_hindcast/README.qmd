@@ -54,41 +54,123 @@ model = config['model_specification']
 
 # Overview
 
-This repository contains the code and methodology for processing and visualizing high-resolution
-tidal hindcast data generated using the Finite Volume Community Ocean Model (FVCOM) at five
-strategically selected U.S. coastal locations. The project represents a collaborative effort between
-Pacific Northwest National Laboratory (data generation) and National Renewable Energy Laboratory
-(data processing and visualization), to generate original high resolution tidal data then
-standardize and summarize the outputs into accessible resource data for marine energy assessment.
-The processing pipeline in this repository converts approximately 10 terabytes of raw model data
-through a series of quality-controlled stages, standardizing coordinates to consistent geographic
-reference systems, calculating key variables such as water speed and power density, and generating
-depth averaged variables and yearly averaged summaries. Complete and summarized standardized
-datasets can be be found on OpenEI, and summary data is visualized on the Marine Energy Atlas
+This repository contains the code and methodology for processing and visualizing the U.S. Department
+of Energy (DOE) Water Power Technologies Office (WPTO) high-resolution tidal hindcast data generated
+using the Finite Volume Community Ocean Model (FVCOM) at five strategically selected U.S. coastal
+locations. The project represents a collaborative effort between the [Pacific Northwest National
+Laboratory][pnnl_resource_char] (PNNL) (data generation) and the [National Renewable Energy
+Laboratory][nrel_resource_char] (data processing and visualization), to generate, standardize, and
+summarize original high resolution tidal data into accessible resource data for tidal resource
+characterization. Complete standardized and summarized datasets can downloaded from [Amazon Web
+Services Open Data Registry][aws_tidal_docs], and summary data is visualized on the [Marine Energy
+Atlas][me_atlas].
 
 ## High Resolution Tidal Hindcast Overview
 
-| Label                                          | Specification                                                                                                                    |
-| -------                                        | ---------------                                                                                                                  |
-| Project Title                                  | `{python} dataset['label']`                                                                                                      |
-| Project ID                                     | `{python} dataset['name']`                                                                                                       |
-| Data Generation Organization                   | Pacific Northwest National Laboratory (PNNL)                                                                                     |
-| Data Processing and Visualization Organization | National Renewable Energy Laboratory (NREL)                                                                                      |
-| Brief Description                              | 1 year of high resolution tidal data at 5 targeted US locations, generated using the Finite Volume Community Ocean Model (FVCOM) |
+| Label                                          | Specification                                |
+| -------                                        | ---------------                              |
+| Project Title                                  | `{python} dataset['label']`                  |
+| Project ID                                     | `{python} dataset['name']`                   |
+| Data Generation                                | Pacific Northwest National Laboratory (PNNL) |
+| Data Processing and Visualization Organization | National Renewable Energy Laboratory (NREL)  |
 
 : High Resolution Tidal Hindcast Overview {#tbl-hrth-overview}
 
-## Program Links
 
-<https://www.energy.gov/eere/water/marine-energy-resource-assessment-and-characterization>
-<https://www.pnnl.gov/marine-energy-resource-characterization>
-<https://www.nrel.gov/water/resource-characterization>
+```{python}
+#| echo: false
+#| label: tbl-loc-overview
+#| tbl-cap: Location Overview
 
-## Processing Software Links
+loc_spec = config["location_specification"]
 
-<https://github.com/NREL/Marine_Energy_Resource_Characterization>
+# Create lists for each path
+label = []
+start_date = []
+end_date = []
+temporal_resolution = []
+face_count = []
+
+for key, this in loc_spec.items():
+    label.append(this["label"])
+    start_date.append(this["start_date_utc"])
+    end_date.append(this["end_date_utc"])
+    temporal_resolution.append(this["temporal_resolution"].title())
+    face_count.append(this["face_count"])
+
+df = pd.DataFrame(
+    {
+        "Location Name": label,
+        # "Output Name": output_name,
+        # "Input Directory": base_dir,
+        "Start Time [UTC]": start_date,
+        "End Time [UTC]": end_date,
+        "Sampling Frequency": temporal_resolution,
+        "Faces": face_count
+    }
+)
+
+display(Markdown(tabulate(df, tablefmt="markdown", headers="keys", showindex=False)))
+```
+
+## Model Configuration
+
+| Model Configuration      | Specification                                                                                                                  |
+| ------------             | -------------                                                                                                                  |
+| Model                    | [Finite Volume Community Ocean Model (FVCOM)](htpps://www.fvcom.org)                                                           |
+| Documentation            | [FVCOM Publicly Available Manual - 3.1.6](https://etchellsfleet27.com/wp-content/uploads/2020/06/FVCOM_User_Manual_v3.1.6.pdf) |
+| Dimensions               | 3D, over time                                                                                                                  |
+| Horizontal Resolution    | Unstructured grid node and element points                                                                                                   |
+| Vertical Resolution      | 10 uniform sigma-stretched coordinate                                                                                          |
+| Horizontal Coordinates   | lat and lon, UTM zone, State Plane                                                                                             |
+| Vertical Datum           | mean sea level (MSL), NAVD88                                                                                                   |
+| Temporal Resolution      | hourly (Alaska), half-hourly                                                                                                            |
+| Wetting & drying feature | activated                                                                                                                      |
+| Boundary forcing         | 12 tidal constituents from OSU TPXO Tide Models                                                                                |
+| Wind                     | ERA5 or CFSv2                                                                                                                  |
+
+: High Resolution Tidal Hindcast FVCOM Specification and Configuration {#tbl-model-config}
+
+## IEC Standards Compliance
+
+| IEC Standards (IEC TS 62600-201, 2015)                       | Compliance Status                                                                                             |
+| ------------                                                 | -------------                                                                                                 |
+| Stage 1 (feasibility) tidal resource assessment requirements | Meet all requirements except those listed below                                                               |
+| Wave-current interaction                                     | Not considered because wave is small in the study domain                                                      |
+| Atmospheric forcing (Wind and pressure)                      | Not considered because effects of wind and atmospheric pressure on tidal currents in the domain is negligible |
+| Seawater density, salinity and temperature                   | Not considered because density-induced estuarine flow is small in the domain                                  |
+
+: High Resolution Tidal Hindcast IEC Standards Compliance {#tbl-iec-compliance}
 
 ## Available Data Overview
+
+| Long Name                             | Units                      | Dimensions              | Description                                         |
+| ---                                   | ---                        | ---                     | ---                                                 |
+| Eastward Sea Water Velocity           | m/s                        | face, sigma_layer, time | Eastward component of sea water velocity            |
+| North Sea Water Velocity              | m/s                        | face, sigma_layer, time | Northward component of sea water velocity           |
+| Sea Water Speed                       | m/s                        | face, sigma_layer, time | Speed calculated from u and v vectors               |
+| Depth Averaged Sea Water Speed        | m/s                        | face, time              | Mean of `vap_sea_water_speed`                       |
+| Sea Water To Direction                | Degrees CW from True North | face, sigma_layer, time | To Direction calculated from u and v vectors        |
+| Depth Averaged Sea Water To Direction | Degrees CW from True North | face, sigma_layer, time | Mean of `vap_sea_water_to_direction`                |
+| Surface Elevation                     | m [from [NAVD88][navd88]]  | face, time              | Distance from surface elevation to NAVD88 elevation |
+| Layer Depth                           | m (From Surface Elevation) | face, sigma_layer, time | Northward component of sea water velocity           |
+| Sea Floor Depth                       | m (From Surface Elevation) | face, time              | Northward component of sea water velocity           |
+
+: High Resolution Tidal Hindcast Variables {#tbl-model-config}
+
+| Long Name                             | NC Variable                               |
+| ---                                   | ---                                       |
+| Eastward Sea Water Velocity           | `u`                                       |
+| North Sea Water Velocity              | `v`                                       |
+| Sea Water Speed                       | `vap_sea_water_speed`                     |
+| Depth Averaged Sea Water Speed        | `vap_water_column_sea_water_speed`        |
+| Sea Water To Direction                | `vap_sea_water_to_direction`              |
+| Depth Averaged Sea Water To Direction | `vap_water_column_sea_water_to_direction` |
+| Surface Elevation                     | `vap_zeta_center`                         |
+| Layer Depth                           | `vap_sigma_layer_depth`                   |
+| Sea Floor Depth                       | `vap_depth`                               |
+
+: High Resolution Tidal Hindcast Variables {#tbl-model-config}
 
 5 US locations of new high resolution 3D tidal data, generated using FVCOM version 4.3.1, with `u` and `v` vectors, and calculated
 `sea_water_speed`, `sea_water_to_direction`, and `sea_water_power_density` at 10 sigma layers:
@@ -125,38 +207,7 @@ datasets can be be found on OpenEI, and summary data is visualized on the Marine
 | Standardized Dataset              | `{python} dataset['version']`     |
 
 
-## Model Configuration
-
-| Model Configuration      | Specification                                                                                                                             |
-| ------------             | -------------                                                                                                                             |
-| Model                    | FVCOM, https://www.fvcom.org/                                                                                                             |
-| Documentation Link       | [FVCOM Publicly Available Manual - 3.1.6](https://etchellsfleet27.com/wp-content/uploads/2020/06/FVCOM_User_Manual_v3.1.6.pdf) |
-| Dimensions               | 3D, over time                                                                                                                             |
-| Horizontal Resolution    | grid node and element points                                                                                                              |
-| Vertical Resolution      | 10 uniform sigma-stretched coordinate                                                                                                     |
-| Horizontal Coordinates   | lat and lon, UTM zone, State Plane                                                                                                        |
-| Vertical Datum           | mean sea level (MSL), NAVD88                                                                                                              |
-| Temporal Resolution      | hourly, half-hourly                                                                                                                       |
-| Wetting & drying feature | activated                                                                                                                                 |
-| Boundary forcing         | 12 tidal constituents from OSU TPXO Tide Models                                                                                           |
-| Wind                     | ERA5 or CFSv2                                                                                                                             |
-
-: High Resolution Tidal Hindcast Model Configuration per PNNL {#tbl-model-config}
-
-## Standards
-
-| IEC Standards (IEC TS 62600-201, 2015)                       | Compliance Status                                                                                             |
-| ------------                                                 | -------------                                                                                                 |
-| Stage 1 (feasibility) tidal resource assessment requirements | Meet all requirements except those listed below                                                               |
-| Wave-current interaction                                     | Not considered because wave is small in the study domain                                                      |
-| Atmospheric forcing (Wind and pressure)                      | Not considered because effects of wind and atmospheric pressure on tidal currents in the domain is negligible |
-| Seawater density, salinity and temperature                   | Not considered because density-induced estuarine flow is small in the domain                                  |
-
-: High Resolution Tidal Hindcast IEC Standards Compliance per PNNL {#tbl-iec-compliance}
-
-
-
-# Locations
+# Location Details
 
 
 ```{python}
@@ -1105,6 +1156,10 @@ Base Path: `/projects/hindcastra/Tidal/datasets/<location>/`
 | Mean Sea Water Power Density | watts per meter squared, [W m-2] | `vap_water_column_mean_sea_water_power_density` | 0             | 8000          | 256            |
 | Max Sea Water Power Density  | watts per meter squared, [W m-2] | `vap_water_column_max_sea_water_speed`          | 0             | 8000          | 256            |
 
+# Marine Energy Atlas Visualization Specification
+
+{{< include "me_atlas_high_resolution_tidal_data_qoi_visualization_specification.md" >}}
+
 
 # Acknowledgement
 
@@ -1362,6 +1417,7 @@ Please cite the most relevant publication below when referencing this dataset:
 5) [Yang, Z. and V.S. Neary, High-resolution hindcasts for U.S. wave energy resource characterization. International Marine Energy Journal, 2020, 3, 65-71](https://doi.org/10.36688/imej.3.65-71)
 6) [Allahdadi, M.N., He, R., and Neary, V.S.: Predicting ocean waves along the US East Coast during energetic winter storms: sensitivity to whitecapping parameterizations, Ocean Sci., 2019, 15, 691-715](https://doi.org/10.5194/os-15-691-2019)
 7) [Allahdadi, M.N., Gunawan, J. Lai, R. He, V.S. Neary, Development and validation of a regional-scale high-resolution unstructured model for wave energy resource characterization along the US East Coast, Renewable Energy, 2019, 136, 500-511](https://doi.org/10.1016/j.renene.2019.01.020)
+-->
 
 ## Disclaimer and Attribution
 
@@ -1395,4 +1451,11 @@ the event that user engages in any scientific or technical publication
 utilizing this data user agrees to credit DOE/PNNL/NREL/BATTELLE/ALLIANCE in
 any such publication consistent with respective professional practice.
 
--->
+
+[aws_tidal_docs]: https://registry.opendata.aws/wpto-pds-us-tidal/
+[me_atlas]: https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged
+[wpto_resource_char]: https://www.energy.gov/eere/water/marine-energy-resource-assessment-and-characterization
+[pnnl_resource_char]: https://www.pnnl.gov/marine-energy-resource-characterization
+[nrel_resource_char]: https://www.nrel.gov/water/resource-characterization
+[navd88]: https://en.wikipedia.org/wiki/North_American_Vertical_Datum_of_1988
+[this_repo]: https://github.com/NREL/Marine_Energy_Resource_Characterization
