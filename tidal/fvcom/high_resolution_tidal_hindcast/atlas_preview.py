@@ -1930,10 +1930,26 @@ def generate_markdown_specification(
                 for i, color_info in enumerate(colors_info):
                     level_num = i + 1
                     value_range = color_info["range"]
+                    # e7fa5a
                     hex_color = color_info["hex"]
+                    # rgb(231, 250, 90)
                     rgb_color = color_info["rgb"]
+
+                    # This works in GitHub/GFM markdown. This is a hack to get around github not allowing inline html
+                    # ${\color[rgb]{0.012, 0.137, 0.200}\rule{30pt}{15pt}}$
+                    hex_clean = hex_color.lstrip("#")
+                    r, g, b = (
+                        int(hex_clean[0:2], 16),
+                        int(hex_clean[2:4], 16),
+                        int(hex_clean[4:6], 16),
+                    )
+                    latex_rgb = f"{r/255:.3f}, {g/255:.3f}, {b/255:.3f}"
+
+                    color_preview = (
+                        f"$\\color[rgb]{{{latex_rgb}}}\\rule{{40pt}}{{15pt}}$"
+                    )
                     # Create a small color block using HTML
-                    color_preview = f'<span style="background-color:{hex_color}; color:{hex_color}; padding:2px 8px; border-radius:3px;">████</span>'
+                    # color_preview = f'<span style="background-color:{hex_color}; color:{hex_color}; padding:2px 8px; border-radius:3px;">████</span>'
                     md_content.append(
                         f"| {level_num} | {value_range} | `{hex_color}` | `{rgb_color}` | {color_preview} |"
                     )
