@@ -2016,6 +2016,22 @@ def generate_markdown_specification(
             "",
         ]
     )
+    # Add a summary section explaining the visualization approach
+    md_content.extend(
+        [
+            "### Visualization Methodology Notes",
+            "",
+            "**Visualization Maximum (Viz Max) Approach**: All visualizations use validated maximum values that capture 95-99.9% of the data while filtering extreme outliers. This approach ensures:",
+            "",
+            "- Clear, readable visualizations without distortion from extreme values",
+            "- Consistent scales across regional comparisons",
+            "- Transparent documentation of data filtering decisions",
+            "- Preservation of statistical integrity for the bulk of the dataset",
+            "",
+            "**Data Retention**: The following justification plots show exactly what percentage of data is retained vs. filtered, providing full transparency about the visualization choices and their impact on the analysis.",
+            "",
+        ]
+    )
 
     # Viz max justification plots - these are the main new outputs
     viz_justification_plots = [
@@ -2117,79 +2133,6 @@ def generate_markdown_specification(
                 "",
             ]
         )
-
-    # Note: The original bar chart comparisons may still exist if your analyze_variable_across_regions
-    # function still generates them. If so, you can keep this section:
-    md_content.extend(
-        [
-            "### Percentile Bar Chart Comparisons",
-            "",
-            "These charts provide quantitative comparison of key percentile values across regions, with visualization maximum reference lines for context.",
-            "",
-        ]
-    )
-
-    bar_comparisons = [
-        (
-            "vap_water_column_mean_sea_water_speed_bar_comparison.png",
-            "Mean Sea Water Speed",
-            "m/s",
-            "Quantitative percentile comparison with visualization bounds overlay",
-        ),
-        (
-            "vap_water_column_95th_percentile_sea_water_speed_bar_comparison.png",
-            "95th Percentile Sea Water Speed",
-            "m/s",
-            "High-speed percentile values across regions with reference thresholds",
-        ),
-        (
-            "vap_water_column_mean_sea_water_power_density_bar_comparison.png",
-            "Mean Sea Water Power Density",
-            "W/m²",
-            "Power density percentile analysis with visualization maximum context",
-        ),
-        (
-            "vap_water_column_95th_percentile_sea_water_power_density_bar_comparison.png",
-            "95th Percentile Sea Water Power Density",
-            "W/m²",
-            "Regional power density extremes with validated cutoff references",
-        ),
-        (
-            "vap_sea_floor_depth_bar_comparison.png",
-            "Sea Floor Depth",
-            "m",
-            "Depth percentile comparison across bathymetric regions",
-        ),
-    ]
-
-    for img_file, title, units, description in bar_comparisons:
-        img_path = f"docs/img/{img_file}"
-        md_content.extend(
-            [
-                f"**{title} Percentile Comparison**",
-                "",
-                f"![{title} Bar Comparison]({img_path})",
-                f"*Figure: Percentile values of {title.lower()} compared across all processed regions. Units: {units}. {description}. Enables quantitative assessment of regional variability and extreme value characteristics.*",
-                "",
-            ]
-        )
-
-    # Add a summary section explaining the visualization approach
-    md_content.extend(
-        [
-            "### Visualization Methodology Notes",
-            "",
-            "**Visualization Maximum (Viz Max) Approach**: All visualizations use validated maximum values that capture 95-99.9% of the data while filtering extreme outliers. This approach ensures:",
-            "",
-            "- Clear, readable visualizations without distortion from extreme values",
-            "- Consistent scales across regional comparisons",
-            "- Transparent documentation of data filtering decisions",
-            "- Preservation of statistical integrity for the bulk of the dataset",
-            "",
-            "**Data Retention**: The justification plots show exactly what percentage of data is retained vs. filtered, providing full transparency about the visualization choices and their impact on the analysis.",
-            "",
-        ]
-    )
 
     # Footer
     md_content.extend(
