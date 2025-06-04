@@ -136,19 +136,19 @@ All colors use discrete levels with an overflow level for values exceeding the m
 - **Data Range:** 0.0 to 1.5 m/s
 - **Discrete Levels:** 11 (10 within range + 1 overflow level)
 
-| Level | Value Range       | Hex Color | RGB Color            | Color Preview                                    |
-| ----- | ----------------- | --------- | -------------------- | ------------------------------------------------ |
-| 1     | 0.00 - 0.15 [m/s] | `#032333` | `rgb(3, 35, 51)`     | ${\color[rgb]{0.012, 0.137, 0.200}\blacksquare}$ |
-| 2     | 0.15 - 0.30 [m/s] | `#0f3169` | `rgb(15, 49, 105)`   | ${\color[rgb]{0.059, 0.192, 0.412}\blacksquare}$ |
-| 3     | 0.30 - 0.45 [m/s] | `#3f339f` | `rgb(63, 51, 159)`   | ${\color[rgb]{0.247, 0.200, 0.624}\blacksquare}$ |
-| 4     | 0.45 - 0.60 [m/s] | `#674396` | `rgb(103, 67, 150)`  | ${\color[rgb]{0.404, 0.263, 0.588}\blacksquare}$ |
-| 5     | 0.60 - 0.75 [m/s] | `#8a528c` | `rgb(138, 82, 140)`  | ${\color[rgb]{0.541, 0.322, 0.549}\blacksquare}$ |
-| 6     | 0.75 - 0.90 [m/s] | `#b05f81` | `rgb(176, 95, 129)`  | ${\color[rgb]{0.690, 0.373, 0.506}\blacksquare}$ |
-| 7     | 0.90 - 1.05 [m/s] | `#d56b6c` | `rgb(213, 107, 108)` | ${\color[rgb]{0.835, 0.420, 0.424}\blacksquare}$ |
-| 8     | 1.05 - 1.20 [m/s] | `#f2824c` | `rgb(242, 130, 76)`  | ${\color[rgb]{0.949, 0.510, 0.298}\blacksquare}$ |
-| 9     | 1.20 - 1.35 [m/s] | `#fba53c` | `rgb(251, 165, 60)`  | ${\color[rgb]{0.984, 0.647, 0.235}\blacksquare}$ |
-| 10    | 1.35 - 1.50 [m/s] | `#f6d045` | `rgb(246, 208, 69)`  | ${\color[rgb]{0.965, 0.816, 0.271}\blacksquare}$ |
-| 11    | ≥ 1.500 m/s       | `#e7fa5a` | `rgb(231, 250, 90)`  | ${\color[rgb]{0.906, 0.980, 0.353}\blacksquare}$ |
+| Level | Value Range       | Hex Color | RGB Color            | Color Preview                                                     |
+| ----- | ----------------- | --------- | -------------------- | ----------------------------------------------------------------- |
+| 1     | 0.00 - 0.15 [m/s] | `#032333` | `rgb(3, 35, 51)`     | ${\color[rgb]{0.012, 0.137, 0.200}\huge\blacksquare\blacksquare}$ |
+| 2     | 0.15 - 0.30 [m/s] | `#0f3169` | `rgb(15, 49, 105)`   | ${\color[rgb]{0.059, 0.192, 0.412}\huge\blacksquare\blacksquare}$ |
+| 3     | 0.30 - 0.45 [m/s] | `#3f339f` | `rgb(63, 51, 159)`   | ${\color[rgb]{0.247, 0.200, 0.624}\huge\blacksquare\blacksquare}$ |
+| 4     | 0.45 - 0.60 [m/s] | `#674396` | `rgb(103, 67, 150)`  | ${\color[rgb]{0.404, 0.263, 0.588}\huge\blacksquare\blacksquare}$ |
+| 5     | 0.60 - 0.75 [m/s] | `#8a528c` | `rgb(138, 82, 140)`  | ${\color[rgb]{0.541, 0.322, 0.549}\huge\blacksquare\blacksquare}$ |
+| 6     | 0.75 - 0.90 [m/s] | `#b05f81` | `rgb(176, 95, 129)`  | ${\color[rgb]{0.690, 0.373, 0.506}\huge\blacksquare\blacksquare}$ |
+| 7     | 0.90 - 1.05 [m/s] | `#d56b6c` | `rgb(213, 107, 108)` | ${\color[rgb]{0.835, 0.420, 0.424}\huge\blacksquare\blacksquare}$ |
+| 8     | 1.05 - 1.20 [m/s] | `#f2824c` | `rgb(242, 130, 76)`  | ${\color[rgb]{0.949, 0.510, 0.298}\huge\blacksquare\blacksquare}$ |
+| 9     | 1.20 - 1.35 [m/s] | `#fba53c` | `rgb(251, 165, 60)`  | ${\color[rgb]{0.984, 0.647, 0.235}\huge\blacksquare\blacksquare}$ |
+| 10    | 1.35 - 1.50 [m/s] | `#f6d045` | `rgb(246, 208, 69)`  | ${\color[rgb]{0.965, 0.816, 0.271}\huge\blacksquare\blacksquare}$ |
+| 11    | ≥ 1.500 m/s       | `#e7fa5a` | `rgb(231, 250, 90)`  | ${\color[rgb]{0.906, 0.980, 0.353}\huge\blacksquare\blacksquare}$ |
 
 ### 95th Percentile Sea Water Speed [m/s], `vap_water_column_95th_percentile_sea_water_speed`
 
