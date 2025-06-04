@@ -1,6 +1,6 @@
 # WPTO High Resolution Tidal Hindcast
 
-2025-06-03
+2025-06-04
 
 - [<span class="toc-section-number">1</span> Overview](#overview)
 - [<span class="toc-section-number">2</span> Versions](#versions)
@@ -1385,19 +1385,21 @@ values exceeding the maximum range.
 - **Data Range:** 0.0 to 1.5 m/s
 - **Discrete Levels:** 11 (10 within range + 1 overflow level)
 
+<!-- ${\color[HTML]{032333}\blacksquare}$ -->
+
 | Level | Value Range | Hex Color | RGB Color | Color Preview |
 |----|----|----|----|----|
-| 1 | 0.00 - 0.15 \[m/s\] | `#032333` | `rgb(3, 35, 51)` | <span style="background-color:#032333; color:#032333; padding:2px 8px; border-radius:3px;">████</span> |
-| 2 | 0.15 - 0.30 \[m/s\] | `#0f3169` | `rgb(15, 49, 105)` | <span style="background-color:#0f3169; color:#0f3169; padding:2px 8px; border-radius:3px;">████</span> |
-| 3 | 0.30 - 0.45 \[m/s\] | `#3f339f` | `rgb(63, 51, 159)` | <span style="background-color:#3f339f; color:#3f339f; padding:2px 8px; border-radius:3px;">████</span> |
-| 4 | 0.45 - 0.60 \[m/s\] | `#674396` | `rgb(103, 67, 150)` | <span style="background-color:#674396; color:#674396; padding:2px 8px; border-radius:3px;">████</span> |
-| 5 | 0.60 - 0.75 \[m/s\] | `#8a528c` | `rgb(138, 82, 140)` | <span style="background-color:#8a528c; color:#8a528c; padding:2px 8px; border-radius:3px;">████</span> |
-| 6 | 0.75 - 0.90 \[m/s\] | `#b05f81` | `rgb(176, 95, 129)` | <span style="background-color:#b05f81; color:#b05f81; padding:2px 8px; border-radius:3px;">████</span> |
-| 7 | 0.90 - 1.05 \[m/s\] | `#d56b6c` | `rgb(213, 107, 108)` | <span style="background-color:#d56b6c; color:#d56b6c; padding:2px 8px; border-radius:3px;">████</span> |
-| 8 | 1.05 - 1.20 \[m/s\] | `#f2824c` | `rgb(242, 130, 76)` | <span style="background-color:#f2824c; color:#f2824c; padding:2px 8px; border-radius:3px;">████</span> |
-| 9 | 1.20 - 1.35 \[m/s\] | `#fba53c` | `rgb(251, 165, 60)` | <span style="background-color:#fba53c; color:#fba53c; padding:2px 8px; border-radius:3px;">████</span> |
-| 10 | 1.35 - 1.50 \[m/s\] | `#f6d045` | `rgb(246, 208, 69)` | <span style="background-color:#f6d045; color:#f6d045; padding:2px 8px; border-radius:3px;">████</span> |
-| 11 | ≥ 1.500 m/s | `#e7fa5a` | `rgb(231, 250, 90)` | <span style="background-color:#e7fa5a; color:#e7fa5a; padding:2px 8px; border-radius:3px;">████</span> |
+| 1 | 0.00 - 0.15 \[m/s\] | `#032333` | `rgb(3, 35, 51)` | ${\color[HTML]{032333}\blacksquare}$ |
+| 2 | 0.15 - 0.30 \[m/s\] | `#0f3169` | `rgb(15, 49, 105)` | ${\color[HTML]{0f3169}\blacksquare}$ |
+| 3 | 0.30 - 0.45 \[m/s\] | `#3f339f` | `rgb(63, 51, 159)` | ${\color[HTML]{3f339f}\blacksquare}$ |
+| 4 | 0.45 - 0.60 \[m/s\] | `#674396` | `rgb(103, 67, 150)` | ${\color[HTML]{674396}\blacksquare}$ |
+| 5 | 0.60 - 0.75 \[m/s\] | `#8a528c` | `rgb(138, 82, 140)` | ${\color[HTML]{8a528c}\blacksquare}$ |
+| 6 | 0.75 - 0.90 \[m/s\] | `#b05f81` | `rgb(176, 95, 129)` | ${\color[HTML]{b05f81}\blacksquare}$ |
+| 7 | 0.90 - 1.05 \[m/s\] | `#d56b6c` | `rgb(213, 107, 108)` | ${\color[HTML]{d56b6c}\blacksquare}$ |
+| 8 | 1.05 - 1.20 \[m/s\] | `#f2824c` | `rgb(242, 130, 76)` | ${\color[HTML]{f2824c}\blacksquare}$ |
+| 9 | 1.20 - 1.35 \[m/s\] | `#fba53c` | `rgb(251, 165, 60)` | ${\color[HTML]{fba53c}\blacksquare}$ |
+| 10 | 1.35 - 1.50 \[m/s\] | `#f6d045` | `rgb(246, 208, 69)` | ${\color[HTML]{f6d045}\blacksquare}$ |
+| 11 | ≥ 1.500 m/s | `#e7fa5a` | `rgb(231, 250, 90)` | ${\color[HTML]{e7fa5a}\blacksquare}$ |
 
 ### 95th Percentile Sea Water Speed \[m/s\], `vap_water_column_95th_percentile_sea_water_speed`
 
