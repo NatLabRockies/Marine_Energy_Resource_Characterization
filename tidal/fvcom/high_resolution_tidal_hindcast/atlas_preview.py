@@ -70,7 +70,9 @@ SEA_FLOOR_DEPTH_CMAP = cmocean.cm.deep
 # Define available regions (derived from folder structure)
 def get_available_regions():
     """Get list of available regions based on directory structure"""
-    return sorted([d.name for d in BASE_DIR.iterdir() if d.is_dir()])
+    return sorted(
+        [d.name for d in BASE_DIR.iterdir() if d.is_dir() and "me_atlas" not in d.name]
+    )
 
 
 # Function to get parquet file path for a given region
