@@ -66,6 +66,79 @@ MEAN_POWER_DENSITY_CMAP = cmocean.cm.dense
 MAX_POWER_DENSITY_CMAP = cmocean.cm.amp
 SEA_FLOOR_DEPTH_CMAP = cmocean.cm.deep
 
+VIZ_SPECS = {
+    "mean_sea_water_speed": {
+        "title": "Mean Sea Water Speed",
+        "units": "m/s",
+        "column_name": "vap_water_column_mean_sea_water_speed",
+        "colormap": "cmocean.thermal",
+        "range_min": SEA_WATER_SPEED_CBAR_MIN,
+        "range_max": SEA_WATER_SPEED_CBAR_MAX,
+        "levels": SEA_WATER_SPEED_LEVELS,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": "Where $U_{i,t} = \\sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s), $N_{\\sigma} = 10$ levels, $T = 1$ year",
+    },
+    "p95_sea_water_speed": {
+        "title": "95th Percentile Sea Water Speed",
+        "units": "m/s",
+        "column_name": "vap_water_column_95th_percentile_sea_water_speed",
+        "colormap": "cmocean.matter",
+        "range_min": SEA_WATER_SPEED_CBAR_MIN,
+        "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
+        "levels": SEA_WATER_MAX_SPEED_LEVELS,
+        "physical_meaning": "95th percentile of yearly depth maximum current speed",
+        "intended_usage": "Generator sizing and power electronics design",
+        "intended_usage_detail": "Critical for sizing electrical generation components. Used to determine maximum generator output capacity, size power electronics and converters for peak electrical loads, design control systems for extreme speed conditions, and set cut-out speeds for generator protection. Essential for electrical system certification, grid connection requirements, and ensuring generators can handle maximum rotational speeds without damage.",
+        "equation": r"$U_{95} = \text{percentile}_{95}\left(\left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": "Where $U_{i,t} = \\sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s), $N_{\\sigma} = 10$ levels, $T = 1$ year",
+    },
+    "mean_sea_water_power_density": {
+        "title": "Mean Sea Water Power Density",
+        "units": "W/m²",
+        "column_name": "vap_water_column_mean_sea_water_power_density",
+        "colormap": "cmocean.dense",
+        "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
+        "range_max": SEA_WATER_POWER_DENSITY_CBAR_MAX,
+        "levels": SEA_WATER_POWER_DENSITY_LEVELS,
+        "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
+        "intended_usage": "Resource quantification and economic feasibility analysis",
+        "intended_usage_detail": "Direct measure of extractable energy resource for economic analysis. Used to calculate theoretical power output, estimate capacity factors for project financing, compare energy density between sites, and determine optimal turbine spacing in arrays. Essential for LCOE calculations, investor presentations, and grid integration planning. Minimum thresholds (typically >300 W/m²) define commercial viability.",
+        "equation": r"$\overline{\overline{P}} = P_{\text{average}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": "Where $P_{i,t} = \\frac{1}{2} \\rho U_{i,t}^3$ with $\\rho = 1025$ kg/m³, $U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$, $N_{\\sigma} = 10$ levels, $T = 1$ year",
+    },
+    "p95_sea_water_power_density": {
+        "title": "95th Percentile Sea Water Power Density",
+        "units": "W/m²",
+        "column_name": "vap_water_column_95th_percentile_sea_water_power_density",
+        "colormap": "cmocean.amp",
+        "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
+        "range_max": SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
+        "levels": SEA_WATER_MAX_POWER_DENSITY_LEVELS,
+        "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
+        "intended_usage": "Structural design loads and extreme loading conditions",
+        "intended_usage_detail": "Essential for structural engineering and extreme load analysis. Used to determine maximum design loads for turbine blades, drive trains, support structures, and foundation systems. Critical for fatigue analysis, ultimate load calculations, and ensuring structural integrity during extreme tidal events. Defines design margins for mooring systems, tower structures, and emergency braking systems. Required for structural certification and insurance assessments.",
+        "equation": r"$P_{95} = \text{percentile}_{95}\left(\left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": "Where $P_{i,t} = \\frac{1}{2} \\rho U_{i,t}^3$ with $\\rho = 1025$ kg/m³, $U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$, $N_{\\sigma} = 10$ levels, $T = 1$ year",
+    },
+    "distance_to_sea_floor": {
+        "title": "Mean Depth",
+        "units": "m (below NAVD88)",
+        "column_name": "vap_sea_floor_depth",
+        "colormap": "cmocean.deep",
+        "range_min": SEA_FLOOR_DEPTH_MIN,
+        "range_max": SEA_FLOOR_DEPTH_MAX,
+        "levels": SEA_FLOOR_DEPTH_LEVELS,
+        "physical_meaning": "Yearly average distance from water surface to the sea floor",
+        "intended_usage": "Installation planning and foundation design",
+        "intended_usage_detail": "Fundamental constraint for deployment strategy and cost estimation. Used to determine installation vessel requirements, foundation type selection (gravity, pile, suction caisson), and deployment method feasibility. Critical for cost modeling (deeper = more expensive), accessibility planning for maintenance operations, and environmental impact assessments. Optimal depths typically 20-50m for current technology, with deeper sites requiring specialized equipment and higher costs.",
+        "equation": r"$\overline{d} = d_{\text{average}} = \text{mean}\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": "Where $h$ is bathymetry below NAVD88 (m), $\\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m), $T = 1$ year",
+    },
+}
+
 
 # Define available regions (derived from folder structure)
 def get_available_regions():
@@ -1666,79 +1739,6 @@ def generate_markdown_specification(
     # Copy images to docs/img directory
     copy_images_for_web(output_dir, docs_img_dir, regions_processed)
 
-    viz_specs = {
-        "mean_sea_water_speed": {
-            "title": "Mean Sea Water Speed",
-            "units": "m/s",
-            "column_name": "vap_water_column_mean_sea_water_speed",
-            "colormap": "cmocean.thermal",
-            "range_min": SEA_WATER_SPEED_CBAR_MIN,
-            "range_max": SEA_WATER_SPEED_CBAR_MAX,
-            "levels": SEA_WATER_SPEED_LEVELS,
-            "physical_meaning": "Yearly average of depth averaged current speed",
-            "intended_usage": "Site screening and turbine selection for power generation",
-            "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-            "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-            "equation_variables": "Where $U_{i,t} = \\sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s), $N_{\\sigma} = 10$ levels, $T = 1$ year",
-        },
-        "p95_sea_water_speed": {
-            "title": "95th Percentile Sea Water Speed",
-            "units": "m/s",
-            "column_name": "vap_water_column_95th_percentile_sea_water_speed",
-            "colormap": "cmocean.matter",
-            "range_min": SEA_WATER_SPEED_CBAR_MIN,
-            "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-            "levels": SEA_WATER_MAX_SPEED_LEVELS,
-            "physical_meaning": "95th percentile of yearly depth maximum current speed",
-            "intended_usage": "Generator sizing and power electronics design",
-            "intended_usage_detail": "Critical for sizing electrical generation components. Used to determine maximum generator output capacity, size power electronics and converters for peak electrical loads, design control systems for extreme speed conditions, and set cut-out speeds for generator protection. Essential for electrical system certification, grid connection requirements, and ensuring generators can handle maximum rotational speeds without damage.",
-            "equation": r"$U_{95} = \text{percentile}_{95}\left(\left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-            "equation_variables": "Where $U_{i,t} = \\sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s), $N_{\\sigma} = 10$ levels, $T = 1$ year",
-        },
-        "mean_sea_water_power_density": {
-            "title": "Mean Sea Water Power Density",
-            "units": "W/m²",
-            "column_name": "vap_water_column_mean_sea_water_power_density",
-            "colormap": "cmocean.dense",
-            "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
-            "range_max": SEA_WATER_POWER_DENSITY_CBAR_MAX,
-            "levels": SEA_WATER_POWER_DENSITY_LEVELS,
-            "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
-            "intended_usage": "Resource quantification and economic feasibility analysis",
-            "intended_usage_detail": "Direct measure of extractable energy resource for economic analysis. Used to calculate theoretical power output, estimate capacity factors for project financing, compare energy density between sites, and determine optimal turbine spacing in arrays. Essential for LCOE calculations, investor presentations, and grid integration planning. Minimum thresholds (typically >300 W/m²) define commercial viability.",
-            "equation": r"$\overline{\overline{P}} = P_{\text{average}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-            "equation_variables": "Where $P_{i,t} = \\frac{1}{2} \\rho U_{i,t}^3$ with $\\rho = 1025$ kg/m³, $U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$, $N_{\\sigma} = 10$ levels, $T = 1$ year",
-        },
-        "p95_sea_water_power_density": {
-            "title": "95th Percentile Sea Water Power Density",
-            "units": "W/m²",
-            "column_name": "vap_water_column_95th_percentile_sea_water_power_density",
-            "colormap": "cmocean.amp",
-            "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
-            "range_max": SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
-            "levels": SEA_WATER_MAX_POWER_DENSITY_LEVELS,
-            "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
-            "intended_usage": "Structural design loads and extreme loading conditions",
-            "intended_usage_detail": "Essential for structural engineering and extreme load analysis. Used to determine maximum design loads for turbine blades, drive trains, support structures, and foundation systems. Critical for fatigue analysis, ultimate load calculations, and ensuring structural integrity during extreme tidal events. Defines design margins for mooring systems, tower structures, and emergency braking systems. Required for structural certification and insurance assessments.",
-            "equation": r"$P_{95} = \text{percentile}_{95}\left(\left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-            "equation_variables": "Where $P_{i,t} = \\frac{1}{2} \\rho U_{i,t}^3$ with $\\rho = 1025$ kg/m³, $U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$, $N_{\\sigma} = 10$ levels, $T = 1$ year",
-        },
-        "distance_to_sea_floor": {
-            "title": "Mean Depth",
-            "units": "m (below NAVD88)",
-            "column_name": "vap_sea_floor_depth",
-            "colormap": "cmocean.deep",
-            "range_min": SEA_FLOOR_DEPTH_MIN,
-            "range_max": SEA_FLOOR_DEPTH_MAX,
-            "levels": SEA_FLOOR_DEPTH_LEVELS,
-            "physical_meaning": "Yearly average distance from water surface to the sea floor",
-            "intended_usage": "Installation planning and foundation design",
-            "intended_usage_detail": "Fundamental constraint for deployment strategy and cost estimation. Used to determine installation vessel requirements, foundation type selection (gravity, pile, suction caisson), and deployment method feasibility. Critical for cost modeling (deeper = more expensive), accessibility planning for maintenance operations, and environmental impact assessments. Optimal depths typically 20-50m for current technology, with deeper sites requiring specialized equipment and higher costs.",
-            "equation": r"$\overline{d} = d_{\text{average}} = \text{mean}\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
-            "equation_variables": "Where $h$ is bathymetry below NAVD88 (m), $\\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m), $T = 1$ year",
-        },
-    }
-
     # Markdown content
     md_content = []
 
@@ -1809,7 +1809,7 @@ def generate_markdown_specification(
         ]
     )
 
-    for var in viz_specs.values():
+    for var in VIZ_SPECS.values():
         md_content.append(f"| {var['title']} | {var['units']} | {var['column_name']} |")
 
     md_content.extend(
@@ -1822,7 +1822,7 @@ def generate_markdown_specification(
         ]
     )
 
-    for var in viz_specs.values():
+    for var in VIZ_SPECS.values():
         md_content.append(
             f"| {var['title']} | {var['physical_meaning']} | {var['intended_usage']} |"
         )
@@ -1835,7 +1835,7 @@ def generate_markdown_specification(
         ]
     )
 
-    for var in viz_specs.values():
+    for var in VIZ_SPECS.values():
         md_content.extend(
             [
                 f"### {var['title']}" "",
@@ -1890,7 +1890,7 @@ def generate_markdown_specification(
         ]
     )
 
-    for var_key, spec in viz_specs.items():
+    for var_key, spec in VIZ_SPECS.items():
         range_str = f"{spec['range_min']} - {spec['range_max']}"
         md_content.append(
             f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {spec['colormap']} |"
@@ -1910,7 +1910,7 @@ def generate_markdown_specification(
             ]
         )
 
-        for var_key, spec in viz_specs.items():
+        for var_key, spec in VIZ_SPECS.items():
             if var_key in color_level_data:
                 md_content.extend(
                     [
@@ -1999,11 +1999,11 @@ def generate_markdown_specification(
             img_filename = f"{region}_{viz_key}.png"
             img_path = f"docs/img/{img_filename}"
 
-            # Get units from viz_specs
+            # Get units from VIZ_SPECS
             units = next(
                 (
                     spec["units"]
-                    for spec in viz_specs.values()
+                    for spec in VIZ_SPECS.values()
                     if viz_title.startswith(spec["title"].split()[0])
                 ),
                 "",
