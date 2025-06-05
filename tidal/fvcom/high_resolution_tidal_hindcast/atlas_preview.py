@@ -159,6 +159,26 @@ VIZ_SPECS = {
             r"$T = 1$ year",
         ],
     },
+    "grid_resolution_meters": {
+        "title": "Grid Resolution",
+        "units": "m",
+        "column_name": "grid_resolution_meters",
+        "colormap": "cmocean.haline",
+        "range_min": GRID_RESOLUTION_MIN,
+        "range_max": GRID_RESOLUTION_MAX,
+        "levels": GRID_RESOLUTION_LEVELS,
+        "physical_meaning": "Average edge length of triangular finite volume elements",
+        "intended_usage": "Model accuracy assessment and validation",
+        "intended_usage_detail": "Indicates the spatial scale at which model results are resolved. Finer resolution (smaller values) provides more detailed results but requires greater computational resources. Used to assess model fidelity, determine appropriate applications for the data, and understand spatial limitations of the model output. Critical for validating model results against observations and determining if resolution is adequate for specific engineering applications. Per IEC 62600-201 standards: Stage 1 assessments require < 500 m resolution, while Stage 2 detailed studies require < 50 m resolution for areas of interest.",
+        "equation": r"$\text{Grid Resolution} = \frac{1}{3}(d_1 + d_2 + d_3)$",
+        "equation_variables": [
+            r"$d_1 = \text{haversine}(\text{lat}_1, \text{lon}_1, \text{lat}_2, \text{lon}_2)$ is the distance between corners 1 and 2",
+            r"$d_2 = \text{haversine}(\text{lat}_2, \text{lon}_2, \text{lat}_3, \text{lon}_3)$ is the distance between corners 2 and 3",
+            r"$d_3 = \text{haversine}(\text{lat}_3, \text{lon}_3, \text{lat}_1, \text{lon}_1)$ is the distance between corners 3 and 1",
+            r"$\text{haversine}(\text{lat}_a, \text{lon}_a, \text{lat}_b, \text{lon}_b) = R \cdot 2\arcsin\left(\sqrt{\sin^2\left(\frac{\Delta\text{lat}}{2}\right) + \cos(\text{lat}_a)\cos(\text{lat}_b)\sin^2\left(\frac{\Delta\text{lon}}{2}\right)}\right)$",
+            r"$R = 6378137.0$ m is the Earth radius (WGS84)",
+        ],
+    },
 }
 
 
