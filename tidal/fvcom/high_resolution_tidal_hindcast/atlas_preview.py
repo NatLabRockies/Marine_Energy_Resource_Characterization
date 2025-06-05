@@ -47,12 +47,18 @@ SEA_FLOOR_DEPTH_MIN = 0
 SEA_FLOOR_DEPTH_MAX = 200
 SEA_FLOOR_DEPTH_LEVELS = 10
 
+GRID_RESOLUTION_MIN = 0
+GRID_RESOLUTION_MAX = 200
+GRID_RESOLUTION_LEVELS = 10
+
 BASEMAP_PROVIDER = ctx.providers.Esri.WorldImagery
 
 # SEA_WATER_SPEED_UNITS = r"$m/s$"
 SEA_WATER_SPEED_UNITS = "m/s"
 # SEA_WATER_POWER_DENSITY_UNITS = r"$W/m^2$"
 SEA_WATER_POWER_DENSITY_UNITS = "W/m^2"
+SEA_FLOOR_DEPTH_UNITS = "m"
+GRID_RESOLUTION_UNITS = "m"
 
 # Note the output visualization will actually have 9 levels
 # There will be 8 within the range and a 9th that is outside of the range
@@ -62,16 +68,16 @@ COLOR_BAR_DISCRETE_LEVELS = 8
 MEAN_SPEED_CMAP = cmocean.cm.thermal
 MAX_SPEED_CMAP = cmocean.cm.matter
 MEAN_POWER_DENSITY_CMAP = cmocean.cm.dense
-# MAX_POWER_DENSITY_CMAP = cmocean.cm.tempo
 MAX_POWER_DENSITY_CMAP = cmocean.cm.amp
 SEA_FLOOR_DEPTH_CMAP = cmocean.cm.deep
+GRID_RESOLUTION_CMAP = cmocean.cm.haline
 
 VIZ_SPECS = {
     "mean_sea_water_speed": {
         "title": "Mean Sea Water Speed",
         "units": "m/s",
         "column_name": "vap_water_column_mean_sea_water_speed",
-        "colormap": "cmocean.thermal",
+        "colormap": MEAN_SPEED_CMAP,
         "range_min": SEA_WATER_SPEED_CBAR_MIN,
         "range_max": SEA_WATER_SPEED_CBAR_MAX,
         "levels": SEA_WATER_SPEED_LEVELS,
@@ -89,7 +95,7 @@ VIZ_SPECS = {
         "title": "95th Percentile Sea Water Speed",
         "units": "m/s",
         "column_name": "vap_water_column_95th_percentile_sea_water_speed",
-        "colormap": "cmocean.matter",
+        "colormap": MAX_SPEED_CMAP,
         "range_min": SEA_WATER_SPEED_CBAR_MIN,
         "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
         "levels": SEA_WATER_MAX_SPEED_LEVELS,
@@ -107,7 +113,7 @@ VIZ_SPECS = {
         "title": "Mean Sea Water Power Density",
         "units": "W/m²",
         "column_name": "vap_water_column_mean_sea_water_power_density",
-        "colormap": "cmocean.dense",
+        "colormap": MEAN_POWER_DENSITY_CMAP,
         "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
         "range_max": SEA_WATER_POWER_DENSITY_CBAR_MAX,
         "levels": SEA_WATER_POWER_DENSITY_LEVELS,
@@ -126,7 +132,7 @@ VIZ_SPECS = {
         "title": "95th Percentile Sea Water Power Density",
         "units": "W/m²",
         "column_name": "vap_water_column_95th_percentile_sea_water_power_density",
-        "colormap": "cmocean.amp",
+        "colormap": MAX_POWER_DENSITY_CMAP,
         "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
         "range_max": SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
         "levels": SEA_WATER_MAX_POWER_DENSITY_LEVELS,
@@ -145,7 +151,7 @@ VIZ_SPECS = {
         "title": "Mean Depth",
         "units": "m (below NAVD88)",
         "column_name": "vap_sea_floor_depth",
-        "colormap": "cmocean.deep",
+        "colormap": SEA_FLOOR_DEPTH_CMAP,
         "range_min": SEA_FLOOR_DEPTH_MIN,
         "range_max": SEA_FLOOR_DEPTH_MAX,
         "levels": SEA_FLOOR_DEPTH_LEVELS,
@@ -163,7 +169,7 @@ VIZ_SPECS = {
         "title": "Grid Resolution",
         "units": "m",
         "column_name": "grid_resolution_meters",
-        "colormap": "cmocean.haline",
+        "colormap": GRID_RESOLUTION_CMAP,
         "range_min": GRID_RESOLUTION_MIN,
         "range_max": GRID_RESOLUTION_MAX,
         "levels": GRID_RESOLUTION_LEVELS,
@@ -1756,11 +1762,7 @@ def _print_and_capture_color_level_ranges(bounds, label, units, cmap, n_colors):
 def generate_markdown_specification(
     regions_processed,
     output_dir,
-    mean_speed_summary,
-    max_speed_summary,
-    mean_power_density_summary,
-    max_power_density_summary,
-    sea_floor_depth_summary,
+    summaries,  # Now accepts dict of summaries instead of individual parameters
     parquet_paths,
     color_level_data=None,
 ):
@@ -1770,7 +1772,8 @@ def generate_markdown_specification(
     Args:
         regions_processed: List of region names that were processed
         output_dir: Base output directory path
-        *_summary: Summary objects from analyze_variable_across_regions
+        summaries: Dictionary of summary objects from analyze_variable_across_regions
+        parquet_paths: Dictionary of parquet file paths for each region
         color_level_data: Dictionary containing color level information for each variable
     """
 
@@ -1880,14 +1883,22 @@ def generate_markdown_specification(
     for var in VIZ_SPECS.values():
         md_content.extend(
             [
-                f"### {var['title']}" "",
+                f"### {var['title']}",
                 "",
                 "Equation:",
                 "",
-                f"{var['equation']}" f"",
-                f"{var['equation_variables']} |",
+                f"{var['equation']}",
+                "",
+                "Variables:",
+                "",
             ]
         )
+
+        # Add equation variables as bullet points
+        for eq_var in var["equation_variables"]:
+            md_content.append(f"- {eq_var}")
+
+        md_content.append("")
 
     # Add coordinate details
     md_content.extend(
@@ -1900,7 +1911,8 @@ def generate_markdown_specification(
             "This single layer has coordinates defined at the center and corners of each triangular element.",
             "Within the parquet files the coordinates are stored in the following columns:",
             "",
-            "Notes:" "",
+            "Notes:",
+            "",
             "* All coordinates are in WGS84 (EPSG:4326) format.",
             "* All centerpoints have been validated to be within the bounding box of the triangular element.",
             "* All triangular elements coordinates are visualized below and can be assumed to be valid",
@@ -1935,7 +1947,7 @@ def generate_markdown_specification(
     for var_key, spec in VIZ_SPECS.items():
         range_str = f"{spec['range_min']} - {spec['range_max']}"
         md_content.append(
-            f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {spec['colormap']} |"
+            f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {spec['colormap'].name} |"
         )
 
     md_content.append("")
@@ -2015,14 +2027,10 @@ def generate_markdown_specification(
             "",
         ]
     )
-    # Add each visualization with image embed and caption
-    viz_types = [
-        ("mean_sea_water_speed", "Mean Sea Water Speed"),
-        ("p95_sea_water_speed", "95th Percentile Sea Water Speed"),
-        ("mean_sea_water_power_density", "Mean Sea Water Power Density"),
-        ("p95_sea_water_power_density", "95th Percentile Sea Water Power Density"),
-        ("distance_to_sea_floor", "Distance to Sea Floor"),
-    ]
+
+    # Generate viz_types list dynamically from VIZ_SPECS
+    viz_types = [(key, spec["title"]) for key, spec in VIZ_SPECS.items()]
+
     for viz_key, viz_title in viz_types:
         md_content.extend(
             [
@@ -2042,21 +2050,14 @@ def generate_markdown_specification(
             img_path = f"docs/img/{img_filename}"
 
             # Get units from VIZ_SPECS
-            units = next(
-                (
-                    spec["units"]
-                    for spec in VIZ_SPECS.values()
-                    if viz_title.startswith(spec["title"].split()[0])
-                ),
-                "",
-            )
+            units = VIZ_SPECS[viz_key]["units"]
 
             md_content.extend(
                 [
                     f"**{region_title} {viz_title}**",
                     "",
                     f"![{viz_title} for {region_title}]({img_path})",
-                    f"*Figure: {viz_title} spatial distribution for {region_title}. Units: {units}",
+                    f"*Figure: {viz_title} spatial distribution for {region_title}. Units: {units}*",
                     "",
                 ]
             )
@@ -2093,42 +2094,14 @@ def generate_markdown_specification(
         ]
     )
 
-    # Viz max justification plots - these are the main new outputs
-    viz_justification_plots = [
-        (
-            "vap_water_column_mean_sea_water_speed_viz_max_justification.png",
-            "Mean Sea Water Speed",
-            "m/s",
-            "Validates the visualization maximum used for mean sea water speed analysis, showing data retention rates and outlier filtering effectiveness.",
-        ),
-        (
-            "vap_water_column_95th_percentile_sea_water_speed_viz_max_justification.png",
-            "95th Percentile Sea Water Speed",
-            "m/s",
-            "Demonstrates the appropriateness of the visualization cutoff for 95th percentile sea water speed values across all regions.",
-        ),
-        (
-            "vap_water_column_mean_sea_water_power_density_viz_max_justification.png",
-            "Mean Sea Water Power Density",
-            "W/m²",
-            "Justifies the power density visualization maximum by showing statistical distribution and outlier characteristics.",
-        ),
-        (
-            "vap_water_column_95th_percentile_sea_water_power_density_viz_max_justification.png",
-            "95th Percentile Sea Water Power Density",
-            "W/m²",
-            "Validates the visualization bounds for 95th percentile power density measurements across regional datasets.",
-        ),
-        (
-            "vap_sea_floor_depth_viz_max_justification.png",
-            "Sea Floor Depth",
-            "m",
-            "Shows the effectiveness of depth visualization parameters in capturing bathymetric variability while controlling for extreme outliers.",
-        ),
-    ]
-
-    for img_file, title, units, description in viz_justification_plots:
+    # Viz max justification plots - generate dynamically from VIZ_SPECS
+    for var_key, spec in VIZ_SPECS.items():
+        img_file = f"{spec['column_name']}_viz_max_justification.png"
         img_path = f"docs/img/{img_file}"
+        title = spec["title"]
+        units = spec["units"]
+        description = f"Validates the visualization maximum used for {title.lower()} analysis, showing data retention rates and outlier filtering effectiveness."
+
         md_content.extend(
             [
                 f"**{title} - Visualization Maximum Validation**",
@@ -2148,42 +2121,14 @@ def generate_markdown_specification(
         ]
     )
 
-    # Regional comparison plots - these are the simplified KDE plots
-    regional_comparison_plots = [
-        (
-            "vap_water_column_mean_sea_water_speed_regional_comparison.png",
-            "Mean Sea Water Speed",
-            "m/s",
-            "Regional distribution patterns for mean sea water speed",
-        ),
-        (
-            "vap_water_column_95th_percentile_sea_water_speed_regional_comparison.png",
-            "95th Percentile Sea Water Speed",
-            "m/s",
-            "Comparative analysis of high-speed current characteristics across regions",
-        ),
-        (
-            "vap_water_column_mean_sea_water_power_density_regional_comparison.png",
-            "Mean Sea Water Power Density",
-            "W/m²",
-            "Power density distribution comparison highlighting regional resource potential",
-        ),
-        (
-            "vap_water_column_95th_percentile_sea_water_power_density_regional_comparison.png",
-            "95th Percentile Sea Water Power Density",
-            "W/m²",
-            "High-power density event comparison across different oceanic regions",
-        ),
-        (
-            "vap_sea_floor_depth_regional_comparison.png",
-            "Sea Floor Depth",
-            "m",
-            "Bathymetric distribution comparison showing depth characteristics by region",
-        ),
-    ]
-
-    for img_file, title, units, description in regional_comparison_plots:
+    # Regional comparison plots - generate dynamically from VIZ_SPECS
+    for var_key, spec in VIZ_SPECS.items():
+        img_file = f"{spec['column_name']}_regional_comparison.png"
         img_path = f"docs/img/{img_file}"
+        title = spec["title"]
+        units = spec["units"]
+        description = f"{title} distribution comparison across regions"
+
         md_content.extend(
             [
                 f"**{title} Distribution Comparison**",
@@ -2220,30 +2165,177 @@ def generate_markdown_specification(
     return output_file
 
 
+def create_variables_config():
+    """Convert global VIZ_SPECS to processing configuration format with equation_variables as lists"""
+
+    # Convert equation_variables strings to lists for bullet rendering
+    def convert_equation_variables_to_list(equation_variables):
+        """Convert equation variables string/list to clean list, removing 'Where' prefix"""
+        if not equation_variables:
+            return []
+
+        # If already a list, return as-is
+        if isinstance(equation_variables, list):
+            return equation_variables
+
+        # Handle string format
+        text = equation_variables
+        if text.startswith("Where "):
+            text = text[6:]  # Remove 'Where '
+
+        # Split on common delimiters and clean up
+        parts = []
+        current_part = ""
+        paren_depth = 0
+
+        for char in text:
+            if char == "$":
+                current_part += char
+            elif char in "({[":
+                paren_depth += 1
+                current_part += char
+            elif char in ")}]":
+                paren_depth -= 1
+                current_part += char
+            elif char == "," and paren_depth == 0:
+                # Safe to split here
+                if current_part.strip():
+                    parts.append(current_part.strip())
+                current_part = ""
+            else:
+                current_part += char
+
+        # Add the last part
+        if current_part.strip():
+            parts.append(current_part.strip())
+
+        return parts
+
+    # Convert to processing configuration format
+    variables_config = []
+
+    for stats_key, spec in VIZ_SPECS.items():
+        # Convert equation_variables to list format
+        equation_vars_list = convert_equation_variables_to_list(
+            spec.get("equation_variables", [])
+        )
+
+        config = {
+            "column": spec["column_name"],
+            "title": spec["title"],
+            "units": spec["units"],
+            "cbar_min": spec["range_min"],
+            "cbar_max": spec["range_max"],
+            "cmap": spec["colormap"],
+            "cmap_name": spec["colormap"].name,
+            "filename_suffix": stats_key,
+            "n_colors": spec["levels"],
+            "stats_key": stats_key,
+            "viz_max": spec["range_max"],
+            # Keep all the rich metadata from VIZ_SPECS
+            "physical_meaning": spec["physical_meaning"],
+            "intended_usage": spec["intended_usage"],
+            "intended_usage_detail": spec["intended_usage_detail"],
+            "equation": spec["equation"],
+            "equation_variables": equation_vars_list,
+        }
+        variables_config.append(config)
+
+    return variables_config, VIZ_SPECS
+
+
+def process_variable(df, region, output_path, var_config, bypass_visualizations=False):
+    """Process a single variable - analyze and optionally plot"""
+    action = "Analyzing" if bypass_visualizations else "Plotting"
+    print(f"\t{action} {region} {var_config['filename_suffix']}...")
+
+    # Always analyze variable
+    stats = analyze_variable(
+        df,
+        var_config["column"],
+        var_config["title"],
+        region,
+        output_path=output_path,
+    )
+
+    # Only plot if visualizations are enabled
+    color_data = None
+    if not bypass_visualizations:
+        fig, ax, color_data = plot_tidal_variable(
+            df,
+            region,
+            var_config["column"],
+            var_config["title"],
+            var_config["units"],
+            var_config["cbar_min"],
+            var_config["cbar_max"],
+            is_aleutian="aleutian" in region,
+            cmap=var_config["cmap"],
+            save_path=Path(
+                output_path, f"{region}_{var_config['filename_suffix']}.png"
+            ),
+            n_colors=var_config["n_colors"],
+        )
+        plt.close()
+
+    return stats, color_data
+
+
+def analyze_all_variables_across_regions(
+    all_stats, output_path, variables_config, bypass_visualizations=False
+):
+    """Generate summary analysis for all variables across regions"""
+    summaries = {}
+
+    for var_config in variables_config:
+        stats_key = var_config["stats_key"]
+        if stats_key in all_stats and all_stats[stats_key]:
+            action = (
+                "Calculating" if bypass_visualizations else "Calculating and plotting"
+            )
+            print(f"{action} {var_config['title']} variable summary...")
+
+            summaries[stats_key] = analyze_variable_across_regions(
+                all_stats[stats_key],
+                output_path=output_path,
+                viz_max=var_config["viz_max"],
+            )
+
+    return summaries
+
+
+def get_summary_value(summaries, key):
+    """Safely get summary value, handling None case when visualizations are bypassed"""
+    return summaries.get(key) if summaries else None
+
+
 if __name__ == "__main__":
+    # Configuration - set this to skip visualization generation
+    BYPASS_VISUALIZATIONS = True  # Set to True to skip all plotting
+
+    # Create configuration from VIZ_SPECS
+    variables_config, viz_specs = create_variables_config()
+
     # Display available regions
     regions = get_available_regions()
     regions.reverse()
-    # regions = regions[:4]
     print("Available regions:")
     for i, region in enumerate(regions):
         print(f"{i+1}. {region}")
 
-    mean_speed_stats = []
-    max_speed_stats = []
-    mean_power_density_stats = []
-    max_power_density_stats = []
-    sea_floor_depth_stats = []
+    if BYPASS_VISUALIZATIONS:
+        print("Visualization generation is DISABLED - only performing analysis")
 
+    # Initialize data structures
+    all_stats = {config["stats_key"]: [] for config in variables_config}
     color_level_data = {}
-
     parquet_paths = {}
 
+    # Process each region
     for this_region in regions:
         # Get the parquet file path
         parquet_file = get_parquet_path(this_region)
         print(f"Reading file: {parquet_file}")
-
         parquet_paths[this_region] = str(parquet_file)
 
         # Read the parquet file
@@ -2252,214 +2344,45 @@ if __name__ == "__main__":
         this_output_path = Path(VIZ_OUTPUT_DIR, this_region)
         this_output_path.mkdir(parents=True, exist_ok=True)
 
-        print(f"\tPlotting {this_region} mean_sea_water_speed...")
-
-        mean_speed_stats.append(
-            analyze_variable(
+        # Process all variables for this region
+        for var_config in variables_config:
+            stats, color_data = process_variable(
                 df,
-                "vap_water_column_mean_sea_water_speed",
-                "Mean Sea Water Speed",
                 this_region,
-                output_path=Path(this_output_path),
-            )
-        )
-
-        fig, ax, color_data = plot_tidal_variable(
-            df,
-            this_region,
-            "vap_water_column_mean_sea_water_speed",
-            "Mean Sea Water Speed",
-            SEA_WATER_SPEED_UNITS,
-            SEA_WATER_SPEED_CBAR_MIN,
-            SEA_WATER_SPEED_CBAR_MAX,
-            is_aleutian="aleutian" in this_region,
-            cmap=MEAN_SPEED_CMAP,
-            save_path=Path(
                 this_output_path,
-                f"{this_region}_mean_sea_water_speed.png",
-            ),
-            n_colors=SEA_WATER_SPEED_LEVELS,
-        )
-
-        if "mean_sea_water_speed" not in color_level_data:
-            color_level_data["mean_sea_water_speed"] = color_data
-
-        plt.close()
-        print(f"\tPlotting {this_region} p95_sea_water_speed...")
-
-        # Capture color level data for markdown generation
-
-        max_speed_stats.append(
-            analyze_variable(
-                df,
-                "vap_water_column_95th_percentile_sea_water_speed",
-                "95th Percentile Sea Water Speed",
-                this_region,
-                output_path=Path(this_output_path),
+                var_config,
+                bypass_visualizations=BYPASS_VISUALIZATIONS,
             )
-        )
+            all_stats[var_config["stats_key"]].append(stats)
 
-        fig, ax, color_data = plot_tidal_variable(
-            df,
-            this_region,
-            "vap_water_column_95th_percentile_sea_water_speed",
-            "95th Percentile Sea Water Speed",
-            SEA_WATER_SPEED_UNITS,
-            SEA_WATER_SPEED_CBAR_MIN,
-            SEA_WATER_MAX_SPEED_CBAR_MAX,
-            is_aleutian="aleutian" in this_region,
-            cmap=MAX_SPEED_CMAP,
-            save_path=Path(
-                this_output_path,
-                f"{this_region}_p95_sea_water_speed.png",
-            ),
-            n_colors=SEA_WATER_MAX_SPEED_LEVELS,
-        )
+            # Store color data if not already stored and if we have it
+            # if not BYPASS_VISUALIZATIONS and color_data is not None:
+            if var_config["stats_key"] not in color_level_data:
+                color_level_data[var_config["stats_key"]] = color_data
 
-        if "p95_sea_water_speed" not in color_level_data:
-            color_level_data["p95_sea_water_speed"] = color_data
+    # Set theme for summary plots (only if doing visualizations)
+    if not BYPASS_VISUALIZATIONS:
+        sns.set_theme()
 
-        plt.close()
-
-        print(f"\tPlotting {this_region} mean_sea_water_power_density...")
-
-        mean_power_density_stats.append(
-            analyze_variable(
-                df,
-                "vap_water_column_mean_sea_water_power_density",
-                "Mean Sea Water Power Density",
-                this_region,
-                output_path=Path(this_output_path),
-            )
-        )
-
-        fig, ax, color_data = plot_tidal_variable(
-            df,
-            this_region,
-            "vap_water_column_mean_sea_water_power_density",
-            "Mean Sea Water Power Density",
-            SEA_WATER_POWER_DENSITY_UNITS,
-            SEA_WATER_POWER_DENSITY_CBAR_MIN,
-            SEA_WATER_POWER_DENSITY_CBAR_MAX,
-            is_aleutian="aleutian" in this_region,
-            cmap=MEAN_POWER_DENSITY_CMAP,
-            save_path=Path(
-                this_output_path,
-                f"{this_region}_mean_sea_water_power_density.png",
-            ),
-            n_colors=SEA_WATER_POWER_DENSITY_LEVELS,
-        )
-
-        if "mean_sea_water_power_density" not in color_level_data:
-            color_level_data["mean_sea_water_power_density"] = color_data
-
-        plt.close()
-
-        print(f"\tPlotting {this_region} p95_sea_water_power_density...")
-
-        max_power_density_stats.append(
-            analyze_variable(
-                df,
-                "vap_water_column_95th_percentile_sea_water_power_density",
-                "95th Percentile Sea Water Power Density",
-                this_region,
-                output_path=Path(this_output_path),
-            )
-        )
-
-        fig, ax, color_data = plot_tidal_variable(
-            df,
-            this_region,
-            "vap_water_column_95th_percentile_sea_water_power_density",
-            "Max Sea Water Power Density",
-            SEA_WATER_POWER_DENSITY_UNITS,
-            SEA_WATER_POWER_DENSITY_CBAR_MIN,
-            SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
-            is_aleutian="aleutian" in this_region,
-            cmap=MAX_POWER_DENSITY_CMAP,
-            save_path=Path(
-                this_output_path,
-                f"{this_region}_p95_sea_water_power_density.png",
-            ),
-            n_colors=SEA_WATER_MAX_POWER_DENSITY_LEVELS,
-        )
-
-        if "p95_sea_water_power_density" not in color_level_data:
-            color_level_data["p95_sea_water_power_density"] = color_data
-
-        plt.close()
-
-        sea_floor_depth_stats.append(
-            analyze_variable(
-                df,
-                "vap_sea_floor_depth",
-                "Sea Floor Depth",
-                this_region,
-                output_path=Path(this_output_path),
-            )
-        )
-
-        fig, ax, color_data = plot_tidal_variable(
-            df,
-            this_region,
-            "vap_sea_floor_depth",
-            "Distance to Sea Floor",
-            "m",
-            SEA_FLOOR_DEPTH_MIN,
-            SEA_FLOOR_DEPTH_MAX,
-            is_aleutian="aleutian" in this_region,
-            cmap=SEA_FLOOR_DEPTH_CMAP,
-            save_path=Path(
-                this_output_path,
-                f"{this_region}_distance_to_sea_floor.png",
-            ),
-            n_colors=SEA_FLOOR_DEPTH_LEVELS,
-        )
-        if "distance_to_sea_floor" not in color_level_data:
-            color_level_data["distance_to_sea_floor"] = color_data
-            print(color_level_data)
-
-        plt.close()
-
-    sns.set_theme()
-
-    print("Calculating and Plotting Speed variable_summary...")
-    mean_speed_summary = analyze_variable_across_regions(
-        mean_speed_stats, output_path=VIZ_OUTPUT_DIR, viz_max=SEA_WATER_SPEED_CBAR_MAX
-    )
-    max_speed_summary = analyze_variable_across_regions(
-        max_speed_stats,
-        output_path=VIZ_OUTPUT_DIR,
-        viz_max=SEA_WATER_MAX_SPEED_CBAR_MAX,
-    )
-    mean_power_density_summary = analyze_variable_across_regions(
-        mean_power_density_stats,
-        output_path=VIZ_OUTPUT_DIR,
-        viz_max=SEA_WATER_POWER_DENSITY_CBAR_MAX,
-    )
-    max_power_density_summary = analyze_variable_across_regions(
-        max_power_density_stats,
-        output_path=VIZ_OUTPUT_DIR,
-        viz_max=SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
-    )
-    sea_floor_depth_summary = analyze_variable_across_regions(
-        sea_floor_depth_stats, output_path=VIZ_OUTPUT_DIR, viz_max=SEA_FLOOR_DEPTH_MAX
+    # Generate summary analysis for all variables
+    summaries = analyze_all_variables_across_regions(
+        all_stats,
+        VIZ_OUTPUT_DIR,
+        variables_config,
+        bypass_visualizations=BYPASS_VISUALIZATIONS,
     )
 
-    # After all the plotting and analysis is complete, add:
+    # Generate markdown specification
     print("Generating markdown specification...")
-
-    # Generate the markdown specification
     generate_markdown_specification(
         regions_processed=regions,
         output_dir=VIZ_OUTPUT_DIR,
-        mean_speed_summary=mean_speed_summary,
-        max_speed_summary=max_speed_summary,
-        mean_power_density_summary=mean_power_density_summary,
-        max_power_density_summary=max_power_density_summary,
-        sea_floor_depth_summary=sea_floor_depth_summary,
-        color_level_data=color_level_data,
+        summaries=summaries,  # Now pass the entire summaries dict
         parquet_paths=parquet_paths,
+        color_level_data=color_level_data,
     )
 
-    print("Analysis and documentation complete!")
+    analysis_type = (
+        "Analysis" if BYPASS_VISUALIZATIONS else "Analysis and visualization"
+    )
+    print(f"{analysis_type} complete!")
