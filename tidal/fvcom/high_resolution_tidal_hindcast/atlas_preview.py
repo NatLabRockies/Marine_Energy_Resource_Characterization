@@ -2311,7 +2311,7 @@ def get_summary_value(summaries, key):
 
 if __name__ == "__main__":
     # Configuration - set this to skip visualization generation
-    BYPASS_VISUALIZATIONS = True  # Set to True to skip all plotting
+    BYPASS_VISUALIZATIONS = False  # Set to True to skip all plotting
 
     # Create configuration from VIZ_SPECS
     variables_config, viz_specs = create_variables_config()
