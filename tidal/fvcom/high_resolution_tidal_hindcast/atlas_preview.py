@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
@@ -13,6 +14,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from PIL import Image, ImageOps
 from pyproj import Transformer
 
 from config import config
@@ -1455,6 +1457,49 @@ def compile_results(
     return result
 
 
+def optimize_image(src_path, dst_path, max_width=1200, quality=85):
+    """Optimize a single image for web use."""
+    with Image.open(src_path) as img:
+        # Convert to RGB if necessary (handles RGBA PNGs)
+        if img.mode in ("RGBA", "LA"):
+            # Create white background for transparency
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "RGBA":
+                background.paste(img, mask=img.split()[-1])  # Use alpha channel as mask
+            else:
+                background.paste(img, mask=img.split()[-1])  # Use alpha channel as mask
+            img = background
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+
+        # Resize if too wide
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+
+        # Auto-orient based on EXIF data
+        img = ImageOps.exif_transpose(img)
+
+        # Save as optimized PNG or JPEG based on original format
+        if src_path.suffix.lower() == ".png":
+            # For PNG, use optimize flag and reduce colors if possible
+            img.save(dst_path, "PNG", optimize=True)
+        else:
+            # For other formats, save as high-quality JPEG
+            dst_path = dst_path.with_suffix(".jpg")
+            img.save(dst_path, "JPEG", quality=quality, optimize=True)
+
+        # Get file size reduction info
+        original_size = os.path.getsize(src_path)
+        optimized_size = os.path.getsize(dst_path)
+        reduction = (1 - optimized_size / original_size) * 100
+
+        print(
+            f"Optimized {src_path.name}: {original_size/1024:.1f}KB → {optimized_size/1024:.1f}KB ({reduction:.1f}% reduction)"
+        )
+
+
 def copy_images_for_web(
     source_dir, docs_img_dir, regions_processed, max_width=1200, quality=85
 ):
@@ -1468,166 +1513,40 @@ def copy_images_for_web(
         max_width: Maximum width for web images (default 1200px)
         quality: JPEG quality for optimization (default 85)
     """
-    try:
-        from PIL import Image, ImageOps
-        import os
 
-        def optimize_image(src_path, dst_path, max_width=max_width, quality=quality):
-            """Optimize a single image for web use."""
-            try:
-                with Image.open(src_path) as img:
-                    # Convert to RGB if necessary (handles RGBA PNGs)
-                    if img.mode in ("RGBA", "LA"):
-                        # Create white background for transparency
-                        background = Image.new("RGB", img.size, (255, 255, 255))
-                        if img.mode == "RGBA":
-                            background.paste(
-                                img, mask=img.split()[-1]
-                            )  # Use alpha channel as mask
-                        else:
-                            background.paste(
-                                img, mask=img.split()[-1]
-                            )  # Use alpha channel as mask
-                        img = background
-                    elif img.mode != "RGB":
-                        img = img.convert("RGB")
+    # Generate regional image files dynamically from VIZ_SPECS
+    regional_image_suffixes = [f"{key}.png" for key in VIZ_SPECS.keys()]
 
-                    # Resize if too wide
-                    if img.width > max_width:
-                        ratio = max_width / img.width
-                        new_height = int(img.height * ratio)
-                        img = img.resize(
-                            (max_width, new_height), Image.Resampling.LANCZOS
-                        )
-
-                    # Auto-orient based on EXIF data
-                    img = ImageOps.exif_transpose(img)
-
-                    # Save as optimized PNG or JPEG based on original format
-                    if src_path.suffix.lower() == ".png":
-                        # For PNG, use optimize flag and reduce colors if possible
-                        img.save(dst_path, "PNG", optimize=True)
-                    else:
-                        # For other formats, save as high-quality JPEG
-                        dst_path = dst_path.with_suffix(".jpg")
-                        img.save(dst_path, "JPEG", quality=quality, optimize=True)
-
-                    # Get file size reduction info
-                    original_size = os.path.getsize(src_path)
-                    optimized_size = os.path.getsize(dst_path)
-                    reduction = (1 - optimized_size / original_size) * 100
-
-                    print(
-                        f"Optimized {src_path.name}: {original_size/1024:.1f}KB → {optimized_size/1024:.1f}KB ({reduction:.1f}% reduction)"
+    # Process regional images
+    for region in regions_processed:
+        region_dir = Path(source_dir, region)
+        if region_dir.exists():
+            for suffix in regional_image_suffixes:
+                img_file = f"{region}_{suffix}"
+                src_path = region_dir / img_file
+                if src_path.exists():
+                    dst_path = docs_img_dir / img_file
+                    optimize_image(
+                        src_path, dst_path, max_width=max_width, quality=quality
                     )
 
-            except Exception as e:
-                print(f"Warning: Could not optimize {src_path.name}: {e}")
-                # Fallback to simple copy
-                import shutil
+    # Generate comparison files dynamically from VIZ_SPECS
+    comparison_files = []
 
-                shutil.copy2(src_path, dst_path)
+    # Add viz max justification plots
+    for spec in VIZ_SPECS.values():
+        comparison_files.append(f"{spec['column_name']}_viz_max_justification.png")
 
-        # Process regional images (these remain the same as they're from individual region analysis)
-        for region in regions_processed:
-            region_dir = Path(source_dir, region)
-            if region_dir.exists():
-                image_files = [
-                    f"{region}_mean_sea_water_speed.png",
-                    f"{region}_p95_sea_water_speed.png",
-                    f"{region}_mean_sea_water_power_density.png",
-                    f"{region}_p95_sea_water_power_density.png",
-                    f"{region}_distance_to_sea_floor.png",
-                ]
+    # Add regional comparison plots
+    for spec in VIZ_SPECS.values():
+        comparison_files.append(f"{spec['column_name']}_regional_comparison.png")
 
-                for img_file in image_files:
-                    src_path = region_dir / img_file
-                    if src_path.exists():
-                        dst_path = docs_img_dir / img_file
-                        optimize_image(src_path, dst_path)
-
-        # Process NEW comparison images from base directory - updated for new naming scheme
-        comparison_files = [
-            # Viz max justification plots (primary new outputs)
-            "vap_water_column_mean_sea_water_speed_viz_max_justification.png",
-            "vap_water_column_95th_percentile_sea_water_speed_viz_max_justification.png",
-            "vap_water_column_mean_sea_water_power_density_viz_max_justification.png",
-            "vap_water_column_95th_percentile_sea_water_power_density_viz_max_justification.png",
-            "vap_sea_floor_depth_viz_max_justification.png",
-            # Regional comparison plots (simplified KDE plots)
-            "vap_water_column_mean_sea_water_speed_regional_comparison.png",
-            "vap_water_column_95th_percentile_sea_water_speed_regional_comparison.png",
-            "vap_water_column_mean_sea_water_power_density_regional_comparison.png",
-            "vap_water_column_95th_percentile_sea_water_power_density_regional_comparison.png",
-            "vap_sea_floor_depth_regional_comparison.png",
-            # Bar comparison plots (if still generated by your updated function)
-            "vap_water_column_mean_sea_water_speed_bar_comparison.png",
-            "vap_water_column_95th_percentile_sea_water_speed_bar_comparison.png",
-            "vap_water_column_mean_sea_water_power_density_bar_comparison.png",
-            "vap_water_column_95th_percentile_sea_water_power_density_bar_comparison.png",
-            "vap_sea_floor_depth_bar_comparison.png",
-        ]
-
-        for img_file in comparison_files:
-            src_path = Path(source_dir) / img_file
-            if src_path.exists():
-                dst_path = docs_img_dir / img_file
-                optimize_image(src_path, dst_path)
-
-    except ImportError:
-        print("Warning: PIL/Pillow not available. Falling back to simple copy.")
-        print("Install with: pip install Pillow")
-
-        # Fallback to simple copy
-        import shutil
-
-        # Copy regional images
-        for region in regions_processed:
-            region_dir = Path(source_dir, region)
-            if region_dir.exists():
-                image_files = [
-                    f"{region}_mean_sea_water_speed.png",
-                    f"{region}_p95_sea_water_speed.png",
-                    f"{region}_mean_sea_water_power_density.png",
-                    f"{region}_p95_sea_water_power_density.png",
-                    f"{region}_distance_to_sea_floor.png",
-                ]
-
-                for img_file in image_files:
-                    src_path = region_dir / img_file
-                    if src_path.exists():
-                        dst_path = docs_img_dir / img_file
-                        shutil.copy2(src_path, dst_path)
-                        print(f"Copied {img_file} to docs/img/")
-
-        # Copy NEW comparison images - updated file list
-        comparison_files = [
-            # Viz max justification plots
-            "vap_water_column_mean_sea_water_speed_viz_max_justification.png",
-            "vap_water_column_95th_percentile_sea_water_speed_viz_max_justification.png",
-            "vap_water_column_mean_sea_water_power_density_viz_max_justification.png",
-            "vap_water_column_95th_percentile_sea_water_power_density_viz_max_justification.png",
-            "vap_sea_floor_depth_viz_max_justification.png",
-            # Regional comparison plots
-            "vap_water_column_mean_sea_water_speed_regional_comparison.png",
-            "vap_water_column_95th_percentile_sea_water_speed_regional_comparison.png",
-            "vap_water_column_mean_sea_water_power_density_regional_comparison.png",
-            "vap_water_column_95th_percentile_sea_water_power_density_regional_comparison.png",
-            "vap_sea_floor_depth_regional_comparison.png",
-            # Bar comparison plots (if still generated)
-            "vap_water_column_mean_sea_water_speed_bar_comparison.png",
-            "vap_water_column_95th_percentile_sea_water_speed_bar_comparison.png",
-            "vap_water_column_mean_sea_water_power_density_bar_comparison.png",
-            "vap_water_column_95th_percentile_sea_water_power_density_bar_comparison.png",
-            "vap_sea_floor_depth_bar_comparison.png",
-        ]
-
-        for img_file in comparison_files:
-            src_path = Path(source_dir) / img_file
-            if src_path.exists():
-                dst_path = docs_img_dir / img_file
-                shutil.copy2(src_path, dst_path)
-                print(f"Copied {img_file} to docs/img/")
+    # Process comparison images from base directory
+    for img_file in comparison_files:
+        src_path = Path(source_dir) / img_file
+        if src_path.exists():
+            dst_path = docs_img_dir / img_file
+            optimize_image(src_path, dst_path)
 
 
 def _print_color_level_ranges(bounds, label, units, cmap, n_colors):
