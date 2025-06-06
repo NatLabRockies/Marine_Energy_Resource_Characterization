@@ -49,8 +49,11 @@ SEA_FLOOR_DEPTH_MIN = 0
 SEA_FLOOR_DEPTH_MAX = 200
 SEA_FLOOR_DEPTH_LEVELS = 10
 
+# Per 62600-201 standards
+# * Stage 1 assessments require < 500 m resolution
+# * Stage 2 assessments require < 50 m resolution
 GRID_RESOLUTION_MIN = 0
-GRID_RESOLUTION_MAX = 200
+GRID_RESOLUTION_MAX = 500
 GRID_RESOLUTION_LEVELS = 10
 
 BASEMAP_PROVIDER = ctx.providers.Esri.WorldImagery
