@@ -1,3 +1,5 @@
+from src.citation_manager import format_references
+
 config = {
     "dataset": {
         "label": "High Resolution Tidal Hindcast",
@@ -487,7 +489,7 @@ config = {
             # "partition_frequency": "M",  # Monthly, Roughly 73GB per file, out of memory in partition step
             "partition_frequency": "5D",  # 7 Day Chunks
             "face_count": 797978,
-            "location_specific_citations": "",
+            "citation": format_references(["ak_aleutian_spicer2025_spatially"]),
         },
         "cook_inlet": {
             "label": "Cook Inlet, Alaska",
@@ -506,7 +508,7 @@ config = {
             "partition_frequency": "M",  # Monthly, Roughly 35GB per file
             # "partition_frequency": "12h",
             "face_count": 392002,
-            "location_specific_citations": "",
+            "citation": format_references(["ak_cook_deb2025_characterizing"]),
         },
         "piscataqua_river": {
             "label": "Piscataqua River, New Hampshire",
@@ -524,7 +526,7 @@ config = {
             "partition_frequency": "M",  # Monthly, Roughly 67GB per file
             # "partition_frequency": "12h",
             "face_count": 292927,
-            "location_specific_citations": "",
+            "citation": format_references(["nh_piscataqua_spicer2023_tidal"]),
         },
         "puget_sound": {
             "label": "Puget Sound, Washington",
@@ -554,7 +556,13 @@ config = {
             # "partition_frequency": "W", This starts with 5 days
             "partition_frequency": "5D",
             "face_count": 1734765,
-            "location_specific_citations": "",
+            "citation": format_references(
+                [
+                    "wa_puget_deb2024_tidal_iec",
+                    "wa_puget_spicer2024_localized",
+                    "wa_puget_yang2021_tidal",
+                ]
+            ),
         },
         "western_passage": {
             "label": "Western Passage, Maine",
@@ -576,7 +584,7 @@ config = {
             # Trying to improve VAP compute time and find a balance between # of files and file size
             # "partition_frequency": "12h",
             "face_count": 231208,
-            "location_specific_citations": "",
+            "citation": format_references(["me_western_deb2023_turbulence"]),
         },
     },
     "global_attributes": {
