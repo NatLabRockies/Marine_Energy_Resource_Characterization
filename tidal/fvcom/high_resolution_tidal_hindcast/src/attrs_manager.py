@@ -722,7 +722,27 @@ def standardize_dataset_global_attrs(
         # Source: Global, ACDD
         # A user-friendly description of the dataset. It should provide enough context
         # about the data for new users to quickly understand how the data can be used.
-        "description": f"This dataset provides detailed tidal current information for {location['label']} specifically designed for tidal energy resource characterization and to de-risk project development. It contains {location['temporal_resolution']} predictions of water velocities, as u (`eastward_sea_water_velocity`), and v (`northward_seawater_velocity`) and calculated speed, to direction, and power density, that developers can use for site selection, device positioning, and energy production estimates. Created using the {config['model_specification']['model_version']} ocean model, the data covers the period from {location['start_date_utc']} to {location['end_date_utc']} and includes 3D current velocities at multiple depths, allowing developers to better understand the resource and de-risk deployments.",
+        "description": f"""
+High Resolution Tidal Hindcast dataset for {location['label']}, a strategically selected U.S. coastal location 
+with significant tidal energy potential, part of the standardized US Tidal hindcast dataset. Funded by the 
+U.S. Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) 
+Marine Energy Resource Assessment and Characterization project and developed by Pacific Northwest National Laboratory (PNNL) 
+and National Renewable Energy Laboratory (NREL) following IEC TC 114 best practices. 
+This dataset contains 1 year ({location['start_date_utc']} to {location['end_date_utc']}) of {location['temporal_resolution']} 
+resolved eastward sea water velocity (u) [m/s], northward  sea water velocity (v) [m/s], surface elevation [m] from NAVD88, 
+and calculated values including sea water speed [m/s], sea water to direction [deg clockwise from true north], power density [W/m²], 
+layer depths [m] below surface, and total depth [m] from surface across 10 uniform depth layers. 
+PNNL used FVCOM {config['model_specification']}, a finite volume coastal ocean model, to generate data and 
+validated data against available Acoustic Doppler Current Profiler (ADCP) measurements as described in 
+{location['citation']}. NREL performed data standardization, documentation, and publication using its Kestrel 
+HPC to produce full fidelity and summarized data products using software available at {code_metadata['code_url']}. 
+The model uses an unstructured triangular 3d layered mesh topology with 10 vertical coordinate (sigma) layers that adjust dynamically with 
+tides. Model results are computed at volume centroids with coordinates in WGS84 (EPSG:4326) format. Boundary 
+conditions incorporate 12 tidal constituents from OSU TPXO tide model. Atmospheric forcing is provided 
+by ERA5/CFSv2 wind data. This dataset meets IEC 62600-201 Stage 1 tidal resource analysis standards, with 
+most tidal energy areas having grid resolution  under 500 meters as required. Users should verify local grid 
+resolution for specific analysis requirements.
+""",
         # Source: Global
         # The DOI that has been registered for this dataset, if applicable.
         "doi": config_global_attrs["doi"],
@@ -902,7 +922,21 @@ def standardize_dataset_global_attrs(
         "project": config_global_attrs["project"],
         # Source: ACDD
         # A paragraph describing the dataset, analogous to an abstract for a paper.
-        "summary": f"This dataset is a high resolution tidal hindcast of {location['label']} intended for use by tidal energy developers for resource characterization, site selection, energy production estimation, and de-risking device deployments. The simulation employs the {config['model_specification']['model_version']} (FVCOM) with unstructured grid finite-volume methods to accurately resolve complex coastal geometries and bathymetric features critical for tidal energy assessment. The model provides {location['temporal_resolution']} outputs covering {location['start_date_utc']} to {location['end_date_utc']}, including three-dimensional velocity components (eastward and northward), free surface elevation, and derived parameters essential for resource characterization: current speed, directional metrics, and power density (W/m²). 10 uniform sigma layers provide a representation of the water column at potential deployment depths. The high spatial resolution  allows developers to identify and characterize optimal deployment locations where tidal energy extraction potential is maximized while accounting for site-specific flow characteristics and temporal variability.",
+        "summary": f"""
+High Resolution Tidal Hindcast dataset for {location['label']}, part of the standardized US Tidal hindcast 
+dataset funded by the Funded by the U.S. Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) 
+Marine Energy Resource Assessment and Characterization project and developed by Pacific Northwest National Laboratory (PNNL) 
+and National Renewable Energy Laboratory (NREL). This dataset 
+supports theoretical and technical resource potential assessments, providing foundational data for practical 
+assessments that incorporate engineering, economic, environmental, and regulatory constraints. Designed to meet IEC 62600-201 
+Stage 1 standards, this publicly accessible dataset supports commercial development, policy analysis, environmental 
+planning, and research applications. This 3D dataset captures tidal energy throughout the water column with 
+10 evenly spaced depth layers from the water surface to seafloor, that vary the thickness of each layer as the surface water lever changes.
+The dataset provides 1 year of {location['temporal_resolution']} model results of 
+eastward velocity (u) [m/s], northward velocity (v) [m/s], surface elevation [m] from NAVD88, and calculated 
+variables of speed [m/s], flow direction [deg clockwise from true north], power density [W/m²], layer 
+depths [m] below surface, and total depth [m] from surface from {location['start_date_utc']} to {location['end_date_utc']}.
+""",
         # Source: IOOS
         # Country of the person or organization that distributes the data.
         "publisher_country": config_global_attrs["publisher_country"],
