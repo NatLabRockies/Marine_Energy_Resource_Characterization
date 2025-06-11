@@ -194,7 +194,7 @@ display(Markdown(tabulate(df, tablefmt="markdown", headers="keys", showindex=Fal
 | `a2_std_partition`             | Standardized data partitioned by time chunks for processing           | NetCDF (nc)  | HPC Kestrel                               | No            |
 | `b1_vap`                       | Value-added products with derived variables, full temporal resolution | NetCDF (nc)  | HPC Kestrel / OpenEI AWS                  | Yes           |
 | `b2_summary_vap`               | Summary statistics of value-added products                            | NetCDF (nc)  | HPC Kestrel                               | No            |
-| `b3_vap_partition`             | Partitioned VAP data for efficient processing                         | NetCDF (nc)  | HPC Kestrel                               | No            |
+| `b3_vap_partition`             | Point data timeseries in a coordinate parquet partition               | Parquet      | HPC Kestrel                               | No            |
 | `b4_vap_summary_parquet`       | Summary data in Parquet format for analytics                          | Parquet      | HPC Kestrel / OpenEI AWS                  | Yes           |
 | `b5_vap_atlas_summary_parquet` | Atlas-ready summary data for visualization                            | Parquet      | HPC Kestrel                               | No            |
 
