@@ -743,11 +743,6 @@ config = {
         # Controlled vocabulary for the names used in the 'platform' attribute.
         # "platform_vocabulary": "http://mmisw.org/ont/ioos/platform",
         # Source: Global
-        # Optional attribute used to cite other data, algorithms, etc. as needed.
-        "references": "Spicer, P., Z. Yang, T. Wang, and M. Deb. (in prep.)."
-        "Considering the relative importance of diurnal and semidiurnal tides "
-        "in tidal power potential around the Aleutian Islands, AK, Renewable Energy.",
-        # Source: Global
         # An optional string which distinguishes these data from other datasets
         # produced by the same instrument.
         # "qualifier": None,
