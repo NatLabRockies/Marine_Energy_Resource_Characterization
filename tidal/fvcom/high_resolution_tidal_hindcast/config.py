@@ -603,9 +603,9 @@ config = {
         "Energy Efficiency & Renewable Energy, Water Power Technologies Office. The authors "
         "gratefully acknowledge project support from Heather Spence and Jim McNally (U.S. "
         "Department of Energy Water Power Technologies Office) and Mary Serafin (National "
-        "Renewable Energy Laboratory). Technical guidance was provided by Vincent Neary (Sandia "
-        "National Laboratories), Levi Kilcher, Caroline Draxl, and Katie Peterson (National "
-        "Renewable Energy Laboratory).",
+        "Renewable Energy Laboratory). Technical guidance was provided by Levi Kilcher, Caroline Draxl, "
+        "and Katie Peterson (National Renewable Energy Laboratory).",
+        "citation": format_references(["mhkdr_submission"]),
         # Source: IOOS
         # Country of the person or organization that operates a platform or network,
         # which collected the observation data.
