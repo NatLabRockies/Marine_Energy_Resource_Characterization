@@ -966,6 +966,7 @@ depths [m] below surface, and total depth [m] from surface from {location['start
         # The method of production of the original data. If it was model-generated,
         # source should name the model and its version.
         "source": config["model_specification"]["model_version"],
+        "title": f"{config['dataset']['label']} for {location['label']}",
     }
 
     # Remove key/value pairs where the value is None
