@@ -596,7 +596,7 @@ config = {
         # Source: ACDD
         # A comma-separated list of the conventions that are followed by the dataset.
         # For files that follow this version of ACDD, include the string 'ACDD-1.3'.
-        "Conventions": "CF-1.0, ACDD-1.3, ME Data Pipeline-1.0",
+        "Conventions": "CF-1.10, ACDD-1.3, ME Data Pipeline-1.0",
         # Source: ACDD
         # A place to acknowledge various types of support for the project that produced this data.
         "acknowledgement": "This work was funded by the U.S. Department of Energy, Office of "
