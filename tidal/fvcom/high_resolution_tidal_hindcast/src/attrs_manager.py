@@ -876,7 +876,7 @@ resolution for specific analysis requirements.
         # "platform_vocabulary": "http://mmisw.org/ont/ioos/platform",
         # Source: Global
         # Optional attribute used to cite other data, algorithms, etc. as needed.
-        "references": config_global_attrs["references"],
+        "references": location["citation"],
         # Source: Global
         # An optional string which distinguishes these data from other datasets
         # produced by the same instrument.
