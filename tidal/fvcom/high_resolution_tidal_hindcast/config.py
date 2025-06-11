@@ -696,7 +696,7 @@ config = {
         "featureType": "timeSeries",
         # Source: IOOS
         # URL for background information about this dataset.
-        "infoURL": "https://www.github.com/nrel/marine_energy_resource_characterization/tidal/fvcom/fy_25_tidal_hindcast",
+        "infoURL": "https://www.github.com/nrel/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast",
         # Source: ACDD
         # Name of the contributing instrument(s) or sensor(s) used to create this
         # data set or product.
