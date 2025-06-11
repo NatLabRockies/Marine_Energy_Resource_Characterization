@@ -793,3 +793,16 @@ config = {
         "publisher_url": "https://www.nrel.gov",
     },
 }
+
+if __name__ == "__main__":
+    import json
+
+    # Print the configuration as a JSON string for easy readability
+    for key in config["location_specification"].keys():
+        print(f"Location: {key}")
+        print(
+            json.dumps(
+                config["location_specification"][key]["citation"],
+                indent=2,
+            )
+        )
