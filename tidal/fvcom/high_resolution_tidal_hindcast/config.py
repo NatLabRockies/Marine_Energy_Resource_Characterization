@@ -754,7 +754,7 @@ config = {
         "comment": None,
         # Source: ACDD
         # A URL that gives the location of more complete metadata.
-        "metadata_link": None,
+        "metadata_link": "https://www.github.com/nrel/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast",
         # Source: ACDD
         # The overarching program(s) of which the dataset is a part.
         "program": "DOE Water Power Technologies Office Marine Energy Resource Characterization",
