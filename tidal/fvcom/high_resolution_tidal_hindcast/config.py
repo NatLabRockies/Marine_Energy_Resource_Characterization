@@ -764,6 +764,7 @@ config = {
         "project": "High Resolution Tidal Hindcast",
         # Source: ACDD
         # A paragraph describing the dataset, analogous to an abstract for a paper.
+        # Defined in attrs_manager and is specific to each location
         "summary": None,
         # Source: IOOS
         # Country of the person or organization that distributes the data.
