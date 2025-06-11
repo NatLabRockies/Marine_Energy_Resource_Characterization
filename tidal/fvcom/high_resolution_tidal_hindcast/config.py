@@ -647,7 +647,7 @@ config = {
         # Source: ACDD
         # The name of any individuals, projects, or institutions that contributed to
         # the creation of this data.
-        "contributor_name": "Mithun Deb, Andrew Simms, Ethan Young",
+        "contributor_name": "Mithun Deb, Preston Spicer, Taiping Wang, Levi Kilcher, Kevin Haas, Andrew Simms, Ethan Young, Mike Lawson",
         # Source: ACDD
         # The role of any individuals, projects, or institutions that contributed to
         # the creation of this data.
@@ -674,7 +674,7 @@ config = {
         # | sponsor                 | Party who speaks for the resource                                                                                |
         # | stakeholder             | Party who has an interest in the resource or the use of the resource                                             |
         # | user                    | Party who uses the resource                                                                                      |
-        "contributor_role": "author, processor, processor",
+        "contributor_role": "author, author, author, author, author, processor, processor, publisher",
         # Source: IOOS
         # The URL of the controlled vocabulary used for the contributor_role attribute.
         # The default is "https://vocab.nerc.ac.uk/collection/G04/current/".
