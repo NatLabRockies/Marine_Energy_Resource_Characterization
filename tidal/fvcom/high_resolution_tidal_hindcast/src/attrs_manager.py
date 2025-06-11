@@ -1017,18 +1017,18 @@ if __name__ == "__main__":
     # print(standardize_dataset_global_attrs(None, None, None, "a1"))
     import xarray as xr
     from pathlib import Path
-
     import sys
 
     sys.path.append("..")
-
     from config import config
     import coord_manager
+    from compliance_checker.runner import ComplianceChecker, CheckSuite
 
     nc_file = Path("../data/00_raw/MD_AIS_west_hrBathy_0240.nc")
     print(f"Reading {nc_file} into ds...")
     ds = xr.open_dataset(nc_file, decode_times=False)
     print(ds.attrs)
+
     # std_coords = coord_manager.standardize_fvcom_coords(ds, None)
     # ds["latc"].values = std_coords["lat_centers"]
     # ds["lonc"].values = std_coords["lon_centers"]
@@ -1037,15 +1037,15 @@ if __name__ == "__main__":
 
     ds = ds.rename(
         {
-            "lat": "latitude",
-            "lon": "longitude",
-            "latc": "latitude_center",
-            "lonc": "longitude_center",
+            "lat": "lat_node",
+            "lon": "lon_node",
+            "latc": "lat_center",
+            "lonc": "lon_center",
         }
     )
 
     print(f"Standardizing attrs from {nc_file.name} into ds...")
-    standardize_dataset_global_attrs(
+    ds = standardize_dataset_global_attrs(
         ds,
         config,
         config["location_specification"]["cook_inlet"],
@@ -1054,4 +1054,104 @@ if __name__ == "__main__":
         input_ds_is_original_model_output=True,
         coordinate_reference_system_string="CRS_String",
     )
+
+    # Save the modified dataset
+    output_file = Path("../data/00_raw/MD_AIS_west_hrBathy_0240_standardized.nc")
+    print(f"Saving standardized dataset to {output_file}...")
+    ds.to_netcdf(output_file)
+    print("Dataset saved!")
+
+    # Check compliance
+    print("\n" + "=" * 60)
+    print("RUNNING CF COMPLIANCE CHECK")
+    print("=" * 60)
+
+    import json
+
+    # Load all available checker classes
+    check_suite = CheckSuite()
+    check_suite.load_all_available_checkers()
+
+    # Run cf checks
+    path = str(output_file)
+    checker_names = ["cf"]
+    verbose = 1
+    criteria = "normal"
+    output_filename = "../data/00_raw/compliance_report.json"
+    output_format = "json"
+
+    return_value, errors = ComplianceChecker.run_checker(
+        path,
+        checker_names,
+        verbose,
+        criteria,
+        output_filename=output_filename,
+        output_format=output_format,
+    )
+
+    # Open the JSON output and get the compliance scores
+    with open(output_filename, "r") as fp:
+        cc_data = json.load(fp)
+        cf_results = cc_data[checker_names[0]]
+        scored = cf_results["scored_points"]
+        possible = cf_results["possible_points"]
+
+        print("\n" + "=" * 60)
+        print("COMPLIANCE ANALYSIS")
+        print("=" * 60)
+        print(f"Overall Score: {scored}/{possible} ({scored/possible*100:.1f}%)")
+        print(
+            f"Issues: {cf_results['high_count']} High Priority, {cf_results['medium_count']} Medium Priority"
+        )
+
+        # Show issues that lost points
+        high_issues = [
+            item
+            for item in cf_results["high_priorities"]
+            if item["value"][0] < item["value"][1]
+        ]
+        med_issues = [
+            item
+            for item in cf_results["medium_priorities"]
+            if item["value"][0] < item["value"][1]
+        ]
+
+        if high_issues:
+            print(f"\nHigh Priority Issues ({len(high_issues)}):")
+            for issue in high_issues:
+                points_lost = issue["value"][1] - issue["value"][0]
+                print(f"  • {issue['name']}: -{points_lost} points")
+                if issue["msgs"]:
+                    for msg in issue["msgs"][:2]:  # Show first 2 messages
+                        print(f"    - {msg}")
+                    if len(issue["msgs"]) > 2:
+                        print(f"    ... and {len(issue['msgs'])-2} more")
+
+        if med_issues:
+            print(f"\nMedium Priority Issues ({len(med_issues)}):")
+            for issue in med_issues:
+                points_lost = issue["value"][1] - issue["value"][0]
+                print(f"  • {issue['name']}: -{points_lost} points")
+                if issue["msgs"]:
+                    for msg in issue["msgs"]:
+                        print(f"    - {msg}")
+
+        print("\n" + "=" * 60)
+        print("SUMMARY")
+        print("=" * 60)
+        print(f"Score: {scored}/{possible} ({scored/possible*100:.1f}%)")
+        print(f"Status: {'Passed' if not return_value else 'Failed'}")
+        print(f"Points to gain: {possible-scored}")
+
+    # Clean up the JSON report file
+    Path(output_filename).unlink()
+
+    # Clean up - delete the temporary output file
+    print(f"\nCleaning up: deleting {output_file}...")
+    output_file.unlink()
+    print("Temporary file deleted!")
+
     print("Done!")
+
+    # Close the dataset
+    ds.close()
