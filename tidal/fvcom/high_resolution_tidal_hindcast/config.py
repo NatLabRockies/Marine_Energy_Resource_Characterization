@@ -757,7 +757,7 @@ config = {
         "metadata_link": "https://www.github.com/nrel/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast",
         # Source: ACDD
         # The overarching program(s) of which the dataset is a part.
-        "program": "DOE Water Power Technologies Office Marine Energy Resource Characterization",
+        "program": "U.S. Department of Energy (DOE) Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) Marine Energy Resource Assessment and Characterization",
         # Source: ACDD
         # The name of the project(s) principally responsible for originating
         # this data.
