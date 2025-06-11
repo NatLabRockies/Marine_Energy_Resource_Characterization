@@ -969,6 +969,10 @@ depths [m] below surface, and total depth [m] from surface from {location['start
         "title": f"{config['dataset']['label']} for {location['label']}",
     }
 
+    if len(input_files) > 0:
+        standardized_attributes["inputs"] = str(input_files)
+        standardized_attributes["input_history_json"] = input_history_json
+
     # Remove key/value pairs where the value is None
     print("Cleaning up attributes...")
     standardized_attributes = {
