@@ -1,4 +1,7 @@
 from pathlib import Path
+from collections import defaultdict
+import re
+
 
 import numpy as np
 import pandas as pd
@@ -78,11 +81,17 @@ class VAPSummaryCalculator:
     Handles both yearly and monthly processing with a unified approach.
     """
 
-    def __init__(self, config, location_name):
+    def __init__(
+        self, config, location_name, face_batch_size=None, batch_index_start=0
+    ):
         self.config = config
         self.location_name = location_name
         self.location = config["location_specification"][location_name]
         self.constant_variables = ["nv"]  # Variables that should remain constant
+
+        # Face batching parameters
+        self.face_batch_size = face_batch_size
+        self.batch_index_start = batch_index_start
 
         # Common paths
         self.vap_path = file_manager.get_vap_output_dir(config, self.location)
@@ -112,6 +121,55 @@ class VAPSummaryCalculator:
         self.avg_vars = []  # Regular variables for averaging
         self.max_vars = []  # Max variables
         self.p95_vars = []  # 95th percentile variables
+
+    def _calculate_face_batch_slice(self, total_faces):
+        """
+        Calculate the face slice for the current batch configuration.
+
+        Args:
+            total_faces: Total number of faces in the dataset
+
+        Returns:
+            slice: Python slice object for face dimension, or None for full dataset
+        """
+        if self.face_batch_size is None:
+            return None
+
+        if self.batch_index_start >= total_faces:
+            raise ValueError(
+                f"batch_index_start ({self.batch_index_start}) >= total_faces ({total_faces})"
+            )
+
+        end_index = min(self.batch_index_start + self.face_batch_size, total_faces)
+
+        print(
+            f"Face batching: processing faces {self.batch_index_start} to {end_index-1} "
+            f"out of {total_faces} total faces"
+        )
+
+        return slice(self.batch_index_start, end_index)
+
+    def _load_dataset_with_face_batch(self, nc_file):
+        """
+        Load a dataset with optional face batching applied.
+
+        Args:
+            nc_file: Path to NetCDF file
+
+        Returns:
+            xarray.Dataset: Loaded dataset with face batching applied if configured
+        """
+        ds = nc_manager.nc_open(nc_file, self.config)
+
+        # Apply face batching if configured
+        if self.face_batch_size is not None:
+            total_faces = ds.dims["face"]
+            face_slice = self._calculate_face_batch_slice(total_faces)
+
+            if face_slice is not None:
+                ds = ds.isel(face=face_slice)
+
+        return ds
 
     def _verify_timestamps(self):
         print("Verifying timestamps across all files...")
@@ -280,7 +338,9 @@ class VAPSummaryCalculator:
         # Process each file
         for i, nc_file in enumerate(file_list):
             print(f"Processing File {i}: {nc_file}")
-            ds = nc_manager.nc_open(nc_file, self.config)
+
+            # Load dataset with face batching applied
+            ds = self._load_dataset_with_face_batch(nc_file)
 
             # Apply time filter if provided
             if time_filter is not None:
@@ -382,7 +442,7 @@ class VAPSummaryCalculator:
         Returns:
             Path: Path to the saved file
         """
-        # Generate output filename
+        # Generate base filename
         data_level_file_name = (
             file_name_convention_manager.generate_filename_for_data_level(
                 dataset,
@@ -393,6 +453,23 @@ class VAPSummaryCalculator:
             )
         )
 
+        # Add face batch information to filename if batching is used
+        if self.face_batch_size is not None:
+            end_face = (
+                self.batch_index_start
+                + min(
+                    self.face_batch_size, dataset.dims.get("face", self.face_batch_size)
+                )
+                - 1
+            )
+            batch_info = f"_faces_{self.batch_index_start}_{end_face}"
+            # Insert before file extension
+            parts = data_level_file_name.rsplit(".", 1)
+            if len(parts) == 2:
+                data_level_file_name = f"{parts[0]}{batch_info}.{parts[1]}"
+            else:
+                data_level_file_name = f"{data_level_file_name}{batch_info}"
+
         # Add standard attributes
         dataset = attrs_manager.standardize_dataset_global_attrs(
             dataset,
@@ -401,6 +478,12 @@ class VAPSummaryCalculator:
             data_level,
             source_files,
         )
+
+        # Add face batch metadata
+        if self.face_batch_size is not None:
+            dataset.attrs["face_batch_size"] = self.face_batch_size
+            dataset.attrs["batch_index_start"] = self.batch_index_start
+            dataset.attrs["face_dimension"] = "face"
 
         file_path = Path(output_path, filename.format(data_level_file_name))
         print(f"Saving to {file_path}...")
@@ -564,13 +647,272 @@ class VAPSummaryCalculator:
         return output_path
 
 
-def calculate_vap_yearly_average(config, location):
-    """Calculate yearly averages, max values, and 95th percentiles for VAP variables."""
-    averager = VAPSummaryCalculator(config, location)
+def calculate_vap_yearly_average(
+    config, location, face_batch_size=None, batch_index_start=0
+):
+    """
+    Calculate yearly averages, max values, and 95th percentiles for VAP variables.
+
+    Args:
+        config: Configuration dictionary
+        location: Location name
+        face_batch_size: Number of faces to process in this batch (None = process all)
+        batch_index_start: Starting face index for this batch
+    """
+    averager = VAPSummaryCalculator(
+        config, location, face_batch_size, batch_index_start
+    )
     return averager.calculate_yearly_average()
 
 
-def calculate_vap_monthly_average(config, location):
-    """Calculate monthly averages, max values, and 95th percentiles for VAP variables."""
-    averager = VAPSummaryCalculator(config, location)
+def calculate_vap_monthly_average(
+    config, location, face_batch_size=None, batch_index_start=0
+):
+    """
+    Calculate monthly averages, max values, and 95th percentiles for VAP variables.
+
+    Args:
+        config: Configuration dictionary
+        location: Location name
+        face_batch_size: Number of faces to process in this batch (None = process all)
+        batch_index_start: Starting face index for this batch
+    """
+    averager = VAPSummaryCalculator(
+        config, location, face_batch_size, batch_index_start
+    )
     return averager.calculate_monthly_averages()
+
+
+def parse_face_batch_info(filename):
+    """
+    Parse face batch information from filename.
+
+    Args:
+        filename: String filename containing face batch info
+
+    Returns:
+        tuple: (start_face, end_face) or (None, None) if no batch info found
+    """
+    # Look for pattern like "_faces_0_99" in filename
+    match = re.search(r"_faces_(\d+)_(\d+)", filename)
+    if match:
+        start_face = int(match.group(1))
+        end_face = int(match.group(2))
+        return start_face, end_face
+    return None, None
+
+
+def get_base_filename(filename):
+    """
+    Get the base filename without face batch information.
+
+    Args:
+        filename: String filename
+
+    Returns:
+        str: Base filename with face batch info removed
+    """
+    # Remove face batch pattern from filename
+    base_name = re.sub(r"_faces_\d+_\d+", "", filename)
+    return base_name
+
+
+def group_files_by_base(file_paths):
+    """
+    Group files by their base filename (without face batch info).
+
+    Args:
+        file_paths: List of Path objects
+
+    Returns:
+        dict: Dictionary mapping base filenames to lists of (path, start_face, end_face) tuples
+    """
+    grouped_files = defaultdict(list)
+
+    for file_path in file_paths:
+        filename = file_path.name
+        start_face, end_face = parse_face_batch_info(filename)
+        base_name = get_base_filename(filename)
+
+        # Only include files with face batch information
+        if start_face is not None and end_face is not None:
+            grouped_files[base_name].append((file_path, start_face, end_face))
+        else:
+            print(f"Skipping file without face batch info: {filename}")
+
+    # Sort each group by start_face to ensure proper ordering
+    for base_name in grouped_files:
+        grouped_files[base_name].sort(key=lambda x: x[1])  # Sort by start_face
+
+    return grouped_files
+
+
+def verify_face_continuity(file_info_list):
+    """
+    Verify that face batches are continuous and don't overlap.
+
+    Args:
+        file_info_list: List of (path, start_face, end_face) tuples, sorted by start_face
+
+    Returns:
+        bool: True if faces are continuous, False otherwise
+    """
+    if not file_info_list:
+        return False
+
+    expected_next = 0
+    for i, (path, start_face, end_face) in enumerate(file_info_list):
+        if start_face != expected_next:
+            print(
+                f"WARNING: Face discontinuity detected. Expected start {expected_next}, got {start_face} in {path.name}"
+            )
+            return False
+        expected_next = end_face + 1
+
+    return True
+
+
+def combine_face_files(file_info_list, output_path):
+    """
+    Combine multiple face batch files into a single file.
+
+    Args:
+        file_info_list: List of (path, start_face, end_face) tuples, sorted by start_face
+        output_path: Path where to save the combined file
+
+    Returns:
+        Path: Path to the created combined file
+    """
+    print(f"Combining {len(file_info_list)} face batch files into {output_path.name}")
+
+    # Verify face continuity
+    if not verify_face_continuity(file_info_list):
+        print("WARNING: Face batches are not continuous. Proceeding anyway...")
+
+    datasets = []
+
+    # Load all datasets
+    for path, start_face, end_face in file_info_list:
+        print(f"  Loading {path.name} (faces {start_face}-{end_face})")
+        ds = xr.open_dataset(path)
+        datasets.append(ds)
+
+    # Combine along face dimension
+    print("  Concatenating datasets along face dimension...")
+    combined_ds = xr.concat(datasets, dim="face")
+
+    # Clean up attributes - remove face batch specific metadata
+    attrs_to_remove = ["face_batch_size", "batch_index_start"]
+    for attr in attrs_to_remove:
+        if attr in combined_ds.attrs:
+            del combined_ds.attrs[attr]
+
+    # Add metadata about the combination
+    combined_ds.attrs["combined_from_face_batches"] = True
+    combined_ds.attrs["num_face_batch_files"] = len(file_info_list)
+    combined_ds.attrs["total_faces"] = combined_ds.dims["face"]
+
+    # Save the combined dataset
+    print(f"  Saving combined dataset with {combined_ds.dims['face']} faces...")
+    combined_ds.to_netcdf(output_path)
+
+    # Close all datasets
+    for ds in datasets:
+        ds.close()
+    combined_ds.close()
+
+    return output_path
+
+
+def combine_face_batch_files_in_directory(
+    input_dir, output_dir=None, file_pattern="*.nc"
+):
+    """
+    Combine face batch files in a directory into single files per base filename.
+
+    Args:
+        input_dir: Path to directory containing face batch files
+        output_dir: Path to output directory (if None, uses input_dir)
+        file_pattern: Glob pattern for files to process
+
+    Returns:
+        list: List of paths to created combined files
+    """
+    input_path = Path(input_dir)
+    output_path = Path(output_dir) if output_dir else input_path
+
+    # Create output directory if it doesn't exist
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Find all NetCDF files
+    nc_files = list(input_path.glob(file_pattern))
+    print(f"Found {len(nc_files)} NetCDF files in {input_path}")
+
+    if not nc_files:
+        print("No NetCDF files found.")
+        return []
+
+    # Group files by base filename
+    grouped_files = group_files_by_base(nc_files)
+    print(f"Grouped into {len(grouped_files)} base filename groups")
+
+    created_files = []
+
+    # Process each group
+    for base_name, file_info_list in grouped_files.items():
+        print(f"\nProcessing group: {base_name}")
+        print(f"  Found {len(file_info_list)} face batch files")
+
+        # Skip if only one file (no combining needed)
+        if len(file_info_list) == 1:
+            print(f"  Only one file found, skipping combination for {base_name}")
+            continue
+
+        # Generate output filename (remove any existing face batch info)
+        output_filename = base_name
+        output_file_path = output_path / output_filename
+
+        # Skip if output file already exists
+        if output_file_path.exists():
+            print(f"  Output file already exists: {output_filename}")
+            continue
+
+        # Combine the files
+        try:
+            combined_file = combine_face_files(file_info_list, output_file_path)
+            created_files.append(combined_file)
+            print(f"  Successfully created: {output_filename}")
+        except Exception as e:
+            print(f"  ERROR combining files for {base_name}: {e}")
+
+    return created_files
+
+
+def combine_monthly_face_files(monthly_dir, output_dir=None):
+    """
+    Combine monthly face batch files into complete monthly files.
+
+    Args:
+        monthly_dir: Path to directory containing monthly face batch files
+        output_dir: Path to output directory (if None, uses monthly_dir)
+
+    Returns:
+        list: List of paths to created combined files
+    """
+    print("=== Combining Monthly Face Batch Files ===")
+    return combine_face_batch_files_in_directory(monthly_dir, output_dir)
+
+
+def combine_yearly_face_files(yearly_dir, output_dir=None):
+    """
+    Combine yearly face batch files into complete yearly files.
+
+    Args:
+        yearly_dir: Path to directory containing yearly face batch files
+        output_dir: Path to output directory (if None, uses yearly_dir)
+
+    Returns:
+        list: List of paths to created combined files
+    """
+    print("=== Combining Yearly Face Batch Files ===")
+    return combine_face_batch_files_in_directory(yearly_dir, output_dir)
