@@ -1,39 +1,41 @@
 # WPTO High Resolution Tidal Hindcast
 
-2025-06-04
+2025-06-12
 
 - [<span class="toc-section-number">1</span> Overview](#overview)
 - [<span class="toc-section-number">2</span> Versions](#versions)
-- [<span class="toc-section-number">3</span> Location
+- [<span class="toc-section-number">3</span> Tidal Data
+  Overview](#tidal-data-overview)
+- [<span class="toc-section-number">4</span> Location
   Details](#location-details)
-- [<span class="toc-section-number">4</span> HPC Data
+- [<span class="toc-section-number">5</span> HPC Data
   Locations](#hpc-data-locations)
-- [<span class="toc-section-number">5</span> Model Data
+- [<span class="toc-section-number">6</span> Model Data
   Specification](#model-data-specification)
-- [<span class="toc-section-number">6</span> Data Quality Assurance and
+- [<span class="toc-section-number">7</span> Data Quality Assurance and
   Quality Control](#data-quality-assurance-and-quality-control)
-- [<span class="toc-section-number">7</span> Derived Variables, Value
+- [<span class="toc-section-number">8</span> Derived Variables, Value
   Added Products (VAP)](#derived-variables-value-added-products-vap)
-- [<span class="toc-section-number">8</span> Data Quality Assurance and
+- [<span class="toc-section-number">9</span> Data Quality Assurance and
   Quality Control](#data-quality-assurance-and-quality-control-1)
-- [<span class="toc-section-number">9</span> Data Levels and Processing
+- [<span class="toc-section-number">10</span> Data Levels and Processing
   Pipeline](#data-levels-and-processing-pipeline)
-- [<span class="toc-section-number">10</span> Running Standardization
+- [<span class="toc-section-number">11</span> Running Standardization
   Code](#running-standardization-code)
-- [<span class="toc-section-number">11</span> Included
+- [<span class="toc-section-number">12</span> Included
   Metadata](#included-metadata)
-- [<span class="toc-section-number">12</span> Visualization
+- [<span class="toc-section-number">13</span> Visualization
   Specification](#visualization-specification)
-- [<span class="toc-section-number">13</span> Marine Energy Atlas
+- [<span class="toc-section-number">14</span> Marine Energy Atlas
   Visualization
   Specification](#marine-energy-atlas-visualization-specification)
-- [<span class="toc-section-number">14</span> ME Atlas High Resolution
+- [<span class="toc-section-number">15</span> ME Atlas High Resolution
   Tidal Data QOI Visualization
   Specification](#me-atlas-high-resolution-tidal-data-qoi-visualization-specification)
-- [<span class="toc-section-number">15</span>
+- [<span class="toc-section-number">16</span>
   Acknowledgement](#acknowledgement)
-- [<span class="toc-section-number">16</span> Citation](#citation)
-- [<span class="toc-section-number">17</span> References](#references)
+- [<span class="toc-section-number">17</span> Citation](#citation)
+- [<span class="toc-section-number">18</span> References](#references)
 
 # Overview
 
@@ -54,16 +56,24 @@ Registry](https://registry.opendata.aws/wpto-pds-us-tidal/), and summary
 data is visualized on the [Marine Energy
 Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged).
 
-## High Resolution Tidal Hindcast Overview
+# Versions
+
+| Asset                             | Status         | Version |
+|-----------------------------------|----------------|---------|
+| Processing Code (This Repository) | In Development | 0.3.0   |
+| Public Dataset                    | Not Released   | 0.3.0   |
+| Working Dataset                   | In Development | 0.4.0   |
+
+# Tidal Data Overview
 
 <div id="tbl-hrth-overview">
 
 | Label | Specification |
 |----|----|
 | Project Title | High Resolution Tidal Hindcast |
-| Project ID | wpto_high_res_tidal |
+| Project ID | `wpto_high_res_tidal` |
 | Data Generation | Pacific Northwest National Laboratory (PNNL) |
-| Data Processing and Visualization Organization | National Renewable Energy Laboratory (NREL) |
+| Data Processing and Visualization | National Renewable Energy Laboratory (NREL) |
 
 Table 1: High Resolution Tidal Hindcast Overview
 
@@ -217,22 +227,14 @@ Depth Average
 
 | Data Level | Description | Format | Storage Location | Public Access |
 |----|----|----|----|----|
-| `00_raw` | Original NetCDF files from FVCOM model | NetCDF (nc) | HPC Kestrel / AWS Archive | No |
+| `00_raw` | Original NetCDF files from FVCOM model | NetCDF (nc) | HPC Kestrel, OpenEI AWS, NREL Stratus AWS | Yes |
 | `a1_std` | Standardized data with consistent naming and attributes | NetCDF (nc) | HPC Kestrel | No |
 | `a2_std_partition` | Standardized data partitioned by time chunks for processing | NetCDF (nc) | HPC Kestrel | No |
 | `b1_vap` | Value-added products with derived variables, full temporal resolution | NetCDF (nc) | HPC Kestrel / OpenEI AWS | Yes |
-| `b2_summary_vap` | Summary statistics of value-added products | NetCDF (nc) | HPC Kestrel / OpenEI AWS | Yes |
-| `b3_vap_partition` | Partitioned VAP data for efficient processing | NetCDF (nc) | HPC Kestrel / OpenEI AWS | Yes |
+| `b2_summary_vap` | Summary statistics of value-added products | NetCDF (nc) | HPC Kestrel | No |
+| `b3_vap_partition` | Point data timeseries in a coordinate parquet partition | Parquet | HPC Kestrel | No |
 | `b4_vap_summary_parquet` | Summary data in Parquet format for analytics | Parquet | HPC Kestrel / OpenEI AWS | Yes |
-| `b5_vap_atlas_summary_parquet` | Atlas-ready summary data for visualization | Parquet | HPC Kestrel / OpenEI AWS | Yes |
-
-# Versions
-
-| Asset                             | Version     |
-|-----------------------------------|-------------|
-| Model                             | FVCOM_4.3.1 |
-| Processing Code (This Repository) | 0.3.0       |
-| Standardized Dataset              | 0.3.0       |
+| `b5_vap_atlas_summary_parquet` | Atlas-ready summary data for visualization | Parquet | HPC Kestrel | No |
 
 # Location Details
 
@@ -1158,8 +1160,9 @@ sbatch runner_cook_inlet.sbatch
 
 | Label | Key | Value |
 |:---|:---|:---|
-| Conventions | Conventions | CF-1.0, ACDD-1.3, ME Data Pipeline-1.0 |
-| Acknowledgement | acknowledgement | This work was funded by the U.S. Department of Energy, Office of Energy Efficiency & Renewable Energy, Water Power Technologies Office. The authors gratefully acknowledge project support from Heather Spence and Jim McNally (U.S. Department of Energy Water Power Technologies Office) and Mary Serafin (National Renewable Energy Laboratory). Technical guidance was provided by Vincent Neary (Sandia National Laboratories), Levi Kilcher, Caroline Draxl, and Katie Peterson (National Renewable Energy Laboratory). |
+| Conventions | Conventions | CF-1.10, ACDD-1.3, ME Data Pipeline-1.0 |
+| Acknowledgement | acknowledgement | This work was funded by the U.S. Department of Energy, Office of Energy Efficiency & Renewable Energy, Water Power Technologies Office. The authors gratefully acknowledge project support from Heather Spence and Jim McNally (U.S. Department of Energy Water Power Technologies Office) and Mary Serafin (National Renewable Energy Laboratory). Technical guidance was provided by Levi Kilcher, Caroline Draxl, and Katie Peterson (National Renewable Energy Laboratory). |
+| Citation | citation | \[“Yang, Zhaoqing, Mithun Deb, Taiping Wang, Preston Spicer, Andrew Simms, Ethan Young, and Mike Lawson. 2025. ‘High Resolution Tidal Hindcast’.”\] |
 | Creator Country | creator_country | USA |
 | Creator Email | creator_email | zhaoqing.yang@pnnl.gov |
 | Creator Institution | creator_institution | Pacific Northwest National Laboratory (PNNL) |
@@ -1169,8 +1172,8 @@ sbatch runner_cook_inlet.sbatch
 | Creator State | creator_state | Washington |
 | Creator Type | creator_type | institution |
 | Creator Url | creator_url | https://www.pnnl.gov/ |
-| Contributor Name | contributor_name | Mithun Deb, Andrew Simms, Ethan Young |
-| Contributor Role | contributor_role | author, processor, processor |
+| Contributor Name | contributor_name | Mithun Deb, Preston Spicer, Taiping Wang, Levi Kilcher, Kevin Haas, Andrew Simms, Ethan Young, Mike Lawson |
+| Contributor Role | contributor_role | author, author, author, author, author, processor, processor, publisher |
 | Contributor Role Vocabulary | contributor_role_vocabulary | https://vocab.nerc.ac.uk/collection/G04/current/ |
 | Contributor Url | contributor_url | https://www.pnnl.gov, www.nrel.gov |
 | Featuretype | featureType | timeSeries |
@@ -1178,9 +1181,8 @@ sbatch runner_cook_inlet.sbatch
 | Keywords | keywords | OCEAN TIDES, TIDAL ENERGY, VELOCITY, SPEED, DIRECTION, POWER DENSITY |
 | License | license | Freely Distributed |
 | Naming Authority | naming_authority | gov.nrel.water_power |
-| References | references | Deb, Mithun, Zhaoqing Yang, Kevin Haas, and Taiping Wang. 2024. “Hydrokinetic Tidal Energy Resource Assessment Following International Electrotechnical Commission Guidelines.” Renewable Energy 229 (August):120767. https://doi.org/10.1016/j.renene.2024.120767., Spicer, P., Z. Yang, T. Wang, and M. Deb. (in prep.) Considering the relative importance of diurnal and semidiurnal tides in tidal power potential around the Aleutian Islands, AK, Renewable Energy. |
 | Metadata Link | metadata_link | https://www.github.com/nrel/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast |
-| Program | program | U.S. Department of Energy Water Power Technologies Office Marine Energy Resource Assessment and Characterization |
+| Program | program | U.S. Department of Energy (DOE) Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) Marine Energy Resource Assessment and Characterization |
 | Project | project | High Resolution Tidal Hindcast |
 | Publisher Country | publisher_country | USA |
 | Publisher Email | publisher_email | michael.lawson@nrel.gov |
@@ -1385,19 +1387,19 @@ values exceeding the maximum range.
 - **Data Range:** 0.0 to 1.5 m/s
 - **Discrete Levels:** 11 (10 within range + 1 overflow level)
 
-| Level | Value Range         | Hex Color | RGB Color            | Color Preview                                         |
-| ----- | ------------------- | --------- | -------------------- | ----------------------------------------------------- |
-| 1     | 0.00 - 0.15 \[m/s\] | `#032333` | `rgb(3, 35, 51)`     | ${\color[rgb]{0.012, 0.137, 0.200}\rule{30pt}{15pt}}$ |
-| 2     | 0.15 - 0.30 \[m/s\] | `#0f3169` | `rgb(15, 49, 155)`   | ${\color[rgb]{0.059, 0.192, 0.412}\rule{30pt}{15pt}}$ |
-| 3     | 0.30 - 0.45 \[m/s\] | `#3f339f` | `rgb(63, 51, 159)`   | ${\color[rgb]{0.247, 0.200, 0.624}\rule{30pt}{15pt}}$ |
-| 4     | 0.45 - 0.60 \[m/s\] | `#674396` | `rgb(153, 67, 150)`  | ${\color[rgb]{0.404, 0.263, 0.588}\rule{30pt}{15pt}}$ |
-| 5     | 0.60 - 0.75 \[m/s\] | `#8a528c` | `rgb(138, 82, 140)`  | ${\color[rgb]{0.541, 0.322, 0.549}\rule{30pt}{15pt}}$ |
-| 6     | 0.75 - 0.90 \[m/s\] | `#b05f81` | `rgb(176, 95, 129)`  | ${\color[rgb]{0.690, 0.373, 0.506}\rule{30pt}{15pt}}$ |
-| 7     | 0.90 - 1.05 \[m/s\] | `#d56b6c` | `rgb(213, 157, 158)` | ${\color[rgb]{0.835, 0.420, 0.424}\rule{30pt}{15pt}}$ |
-| 8     | 1.05 - 1.20 \[m/s\] | `#f2824c` | `rgb(242, 130, 76)`  | ${\color[rgb]{0.949, 0.515, 0.298}\rule{30pt}{15pt}}$ |
-| 9     | 1.20 - 1.35 \[m/s\] | `#fba53c` | `rgb(251, 165, 60)`  | ${\color[rgb]{0.984, 0.647, 0.235}\rule{30pt}{15pt}}$ |
-| 15    | 1.35 - 1.50 \[m/s\] | `#f6d045` | `rgb(246, 208, 69)`  | ${\color[rgb]{0.965, 0.816, 0.271}\rule{30pt}{15pt}}$ |
-| 11    | ≥ 1.500 m/s         | `#e7fa5a` | `rgb(231, 250, 90)`  | ${\color[rgb]{0.906, 0.980, 0.353}\rule{30pt}{15pt}}$ |
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+|----|----|----|----|----|
+| 1 | 0.00 - 0.15 \[m/s\] | `#032333` | `rgb(3, 35, 51)` | ${\color[rgb]{0.012, 0.137, 0.200}\rule{30pt}{15pt}}$ |
+| 2 | 0.15 - 0.30 \[m/s\] | `#0f3169` | `rgb(15, 49, 155)` | ${\color[rgb]{0.059, 0.192, 0.412}\rule{30pt}{15pt}}$ |
+| 3 | 0.30 - 0.45 \[m/s\] | `#3f339f` | `rgb(63, 51, 159)` | ${\color[rgb]{0.247, 0.200, 0.624}\rule{30pt}{15pt}}$ |
+| 4 | 0.45 - 0.60 \[m/s\] | `#674396` | `rgb(153, 67, 150)` | ${\color[rgb]{0.404, 0.263, 0.588}\rule{30pt}{15pt}}$ |
+| 5 | 0.60 - 0.75 \[m/s\] | `#8a528c` | `rgb(138, 82, 140)` | ${\color[rgb]{0.541, 0.322, 0.549}\rule{30pt}{15pt}}$ |
+| 6 | 0.75 - 0.90 \[m/s\] | `#b05f81` | `rgb(176, 95, 129)` | ${\color[rgb]{0.690, 0.373, 0.506}\rule{30pt}{15pt}}$ |
+| 7 | 0.90 - 1.05 \[m/s\] | `#d56b6c` | `rgb(213, 157, 158)` | ${\color[rgb]{0.835, 0.420, 0.424}\rule{30pt}{15pt}}$ |
+| 8 | 1.05 - 1.20 \[m/s\] | `#f2824c` | `rgb(242, 130, 76)` | ${\color[rgb]{0.949, 0.515, 0.298}\rule{30pt}{15pt}}$ |
+| 9 | 1.20 - 1.35 \[m/s\] | `#fba53c` | `rgb(251, 165, 60)` | ${\color[rgb]{0.984, 0.647, 0.235}\rule{30pt}{15pt}}$ |
+| 15 | 1.35 - 1.50 \[m/s\] | `#f6d045` | `rgb(246, 208, 69)` | ${\color[rgb]{0.965, 0.816, 0.271}\rule{30pt}{15pt}}$ |
+| 11 | ≥ 1.500 m/s | `#e7fa5a` | `rgb(231, 250, 90)` | ${\color[rgb]{0.906, 0.980, 0.353}\rule{30pt}{15pt}}$ |
 
 ### 95th Percentile Sea Water Speed \[m/s\], `vap_water_column_95th_percentile_sea_water_speed`
 
@@ -1872,9 +1874,8 @@ Efficiency & Renewable Energy, Water Power Technologies Office. The
 authors gratefully acknowledge project support from Heather Spence and
 Jim McNally (U.S. Department of Energy Water Power Technologies Office)
 and Mary Serafin (National Renewable Energy Laboratory). Technical
-guidance was provided by Vincent Neary (Sandia National Laboratories),
-Levi Kilcher, Caroline Draxl, and Katie Peterson (National Renewable
-Energy Laboratory).
+guidance was provided by Levi Kilcher, Caroline Draxl, and Katie
+Peterson (National Renewable Energy Laboratory).
 
 # Citation
 
