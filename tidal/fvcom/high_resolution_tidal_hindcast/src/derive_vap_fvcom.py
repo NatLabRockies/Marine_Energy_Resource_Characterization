@@ -1272,83 +1272,38 @@ def derive_vap(config, location_key, use_multiprocessing=False):
         return
 
     results = []
+    total_files = len(files_to_process)
+    print(f"Processing {total_files} vap data files sequentially")
 
-    use_multiprocessing = False
+    # Record start time for overall processing
+    overall_start_time = time.time()
 
-    if use_multiprocessing is True:
-        # Determine a reasonable number of processes
-        # Use a smaller fraction of available CPUs to avoid memory issues
-        cpu_count = mp.cpu_count()
-        # Using 1/4 of available CPUs or 1, whichever is larger
-        num_processes = max(1, int(cpu_count / 4))
-        num_processes = 2
-        print(
-            f"Using {num_processes} processes to process {len(files_to_process)} vap data files"
+    for i, (nc_file, idx) in enumerate(files_to_process, 1):
+        print(f"Processing file {idx}/{total_files}: {nc_file}")
+        result = process_single_file(
+            nc_file,
+            config,
+            location,
+            vap_output_dir,
+            idx,
+            total_files=total_files,
+            start_time=overall_start_time,
         )
+        results.append(result)
 
-        # Set a timeout for each task to avoid indefinite hanging
-        timeout_per_file = 3600  # 1 hour per file, adjust as needed
+        # Force garbage collection after each file
+        gc.collect()
 
-        try:
-            # Process files in chunks to avoid memory overflow
-            chunk_size = min(
-                10, len(files_to_process)
-            )  # Process max 10 files at a time
-            for i in range(0, len(files_to_process), chunk_size):
-                chunk = files_to_process[i : i + chunk_size]
-                print(
-                    f"Processing chunk {i//chunk_size + 1}/{(len(files_to_process)-1)//chunk_size + 1}"
-                )
-                with mp.Pool(num_processes) as pool:
-                    chunk_results = pool.starmap_async(
-                        process_single_file,
-                        [
-                            (nc_file, config, location, vap_output_dir, idx)
-                            for nc_file, idx in chunk
-                        ],
-                    ).get(timeout=timeout_per_file * len(chunk))
-                    results.extend(chunk_results)
-                # Force garbage collection between chunks
-                gc.collect()
-            print(f"Completed processing {len(results)} files with multiprocessing.")
-        except mp.TimeoutError:
-            print("ERROR: Processing timed out.")
-        except Exception as e:
-            print(f"ERROR during multiprocessing: {str(e)}")
-    else:
-        # Sequential processing approach with timing
-        total_files = len(files_to_process)
-        print(f"Processing {total_files} vap data files sequentially")
+    # Calculate total elapsed time
+    total_elapsed_time = time.time() - overall_start_time
+    total_hours, remainder = divmod(total_elapsed_time, 3600)
+    total_minutes, total_seconds = divmod(remainder, 60)
 
-        # Record start time for overall processing
-        overall_start_time = time.time()
-
-        for i, (nc_file, idx) in enumerate(files_to_process, 1):
-            print(f"Processing file {idx}/{total_files}: {nc_file}")
-            result = process_single_file(
-                nc_file,
-                config,
-                location,
-                vap_output_dir,
-                idx,
-                total_files=total_files,
-                start_time=overall_start_time,
-            )
-            results.append(result)
-
-            # Force garbage collection after each file
-            gc.collect()
-
-        # Calculate total elapsed time
-        total_elapsed_time = time.time() - overall_start_time
-        total_hours, remainder = divmod(total_elapsed_time, 3600)
-        total_minutes, total_seconds = divmod(remainder, 60)
-
-        print(f"Completed processing {len(results)} files sequentially.")
-        print(
-            f"Total processing time: {int(total_hours):02d}:{int(total_minutes):02d}:{int(total_seconds):02d} (hh:mm:ss)"
-        )
-        print(f"Average time per file: {total_elapsed_time/len(results):.2f} seconds")
+    print(f"Completed processing {len(results)} files sequentially.")
+    print(
+        f"Total processing time: {int(total_hours):02d}:{int(total_minutes):02d}:{int(total_seconds):02d} (hh:mm:ss)"
+    )
+    print(f"Average time per file: {total_elapsed_time/len(results):.2f} seconds")
 
     # Check for any errors in processing (for both approaches)
     failed_files = [i for i in results if i < 0]
