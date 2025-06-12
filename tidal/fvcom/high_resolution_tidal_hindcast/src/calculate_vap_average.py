@@ -548,10 +548,10 @@ class VAPSummaryCalculator:
 
         end_index = min(self.batch_index_start + self.face_batch_size, total_faces)
 
-        print(
-            f"Face batching: processing faces {self.batch_index_start} to {end_index-1} "
-            f"out of {total_faces} total faces"
-        )
+        # print(
+        #     f"Face batching: processing faces {self.batch_index_start} to {end_index-1} "
+        #     f"out of {total_faces} total faces"
+        # )
 
         return slice(self.batch_index_start, end_index)
 
