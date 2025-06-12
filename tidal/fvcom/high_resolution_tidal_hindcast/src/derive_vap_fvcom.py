@@ -1237,7 +1237,12 @@ def process_single_file(
         return file_index
 
 
-def derive_vap(config, location_key, use_multiprocessing=False):
+def derive_vap(
+    config,
+    location_key,
+    single_file_to_process_index=None,
+    skip_if_output_files_exist=True,
+):
     location = config["location_specification"][location_key]
     std_partition_path = file_manager.get_standardized_partition_output_dir(
         config, location
@@ -1270,6 +1275,9 @@ def derive_vap(config, location_key, use_multiprocessing=False):
     if not files_to_process:
         print("No new files to process.")
         return
+
+    if single_file_to_process_index is not None:
+        files_to_process = [files_to_process[single_file_to_process_index]]
 
     results = []
     total_files = len(files_to_process)
