@@ -1251,13 +1251,13 @@ def derive_vap(
 
     vap_output_dir = Path(file_manager.get_vap_output_dir(config, location))
 
-    existing_vap_nc_files = sorted(list(vap_output_dir.rglob("*.nc")))
-
-    if len(existing_vap_nc_files) >= 12:
-        print(
-            f"Found {len(existing_vap_nc_files)} files in {vap_output_dir}. Skipping derive vap!"
-        )
-        return
+    if skip_if_output_files_exist:
+        existing_vap_nc_files = sorted(list(vap_output_dir.rglob("*.nc")))
+        if len(existing_vap_nc_files) >= 12:
+            print(
+                f"Found {len(existing_vap_nc_files)} files in {vap_output_dir}. Skipping derive vap!"
+            )
+            return
 
     # Create a list of files to be processed, with their indices
     # Filter out files that might already be processed
