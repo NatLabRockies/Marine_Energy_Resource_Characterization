@@ -16,7 +16,9 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     batch_number = args.batch_num
 
-    print(f"Create Parquet Partition Dataset for {args.location}...")
+    print(
+        f"Create VAP Summary Dataset for {args.location} for batch {batch_number} of size {batch_size}..."
+    )
     calculate_vap_yearly_average(
         config, args.location, batch_size=batch_size, batch_number=batch_number
     )
