@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
-#SBATCH --output=sum_cook%A_%a.out
+##SBATCH --output=sum_cook%A_%a.out
+#SBATCH --output=sum_cook_%j.out
 #SBATCH --job-name=sum_cook
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
