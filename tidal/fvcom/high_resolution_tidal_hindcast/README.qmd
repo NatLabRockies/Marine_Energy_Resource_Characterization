@@ -65,6 +65,14 @@ characterization. Complete standardized and summarized datasets can downloaded f
 Services Open Data Registry][aws_tidal_docs], and summary data is visualized on the [Marine Energy
 Atlas][me_atlas].
 
+# Versions
+
+| Asset                             | Status         | Version                           |
+| ---                               | ---            | ---                               |
+| Processing Code (This Repository) | In Development | `{python} code['version']`        |
+| Public Dataset                    | Not Released   | `{python} dataset['version']`     |
+| Working Dataset                   | In Development | `{python} dataset['dev_version']` |
+
 ## High Resolution Tidal Hindcast Overview
 
 | Label                                          | Specification                                |
@@ -198,13 +206,6 @@ display(Markdown(tabulate(df, tablefmt="markdown", headers="keys", showindex=Fal
 | `b4_vap_summary_parquet`       | Summary data in Parquet format for analytics                          | Parquet      | HPC Kestrel / OpenEI AWS                  | Yes           |
 | `b5_vap_atlas_summary_parquet` | Atlas-ready summary data for visualization                            | Parquet      | HPC Kestrel                               | No            |
 
-# Versions
-
-| Asset                             | Version                           |
-| ---                               | ---                               |
-| Model                             | `{python} model['model_version']` |
-| Processing Code (This Repository) | `{python} code['version']`        |
-| Standardized Dataset              | `{python} dataset['version']`     |
 
 
 # Location Details
