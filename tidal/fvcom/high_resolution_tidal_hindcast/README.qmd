@@ -29,10 +29,7 @@ format:
 
 ::: {.content-visible when-format="html"}
 
-
-
 # Python Setup
-
 
 ```{python}
 import pandas as pd
@@ -43,6 +40,10 @@ from IPython.display import display, Markdown
 from config import config
 
 print(type(config))
+
+# This is a hack to get around how quarto handles inline code blocks and backticks
+def render_monospace(text):
+    return Markdown(f"`{text}`")
 
 attrs = config['global_attributes']
 dataset = config['dataset']
@@ -73,14 +74,14 @@ Atlas][me_atlas].
 | Public Dataset                    | Not Released   | `{python} dataset['version']`     |
 | Working Dataset                   | In Development | `{python} dataset['dev_version']` |
 
-## High Resolution Tidal Hindcast Overview
+# Tidal Data Overview
 
-| Label                                          | Specification                                |
-| -------                                        | ---------------                              |
-| Project Title                                  | `{python} dataset['label']`                  |
-| Project ID                                     | `{python} dataset['name']`                   |
-| Data Generation                                | Pacific Northwest National Laboratory (PNNL) |
-| Data Processing and Visualization Organization | National Renewable Energy Laboratory (NREL)  |
+| Label                             | Specification                                |
+| -------                           | ---------------                              |
+| Project Title                     | `{python} dataset['label']`                  |
+| Project ID                        | `{python} render_monospace(dataset['name'])` |
+| Data Generation                   | Pacific Northwest National Laboratory (PNNL) |
+| Data Processing and Visualization | National Renewable Energy Laboratory (NREL)  |
 
 : High Resolution Tidal Hindcast Overview {#tbl-hrth-overview}
 
@@ -205,8 +206,6 @@ display(Markdown(tabulate(df, tablefmt="markdown", headers="keys", showindex=Fal
 | `b3_vap_partition`             | Point data timeseries in a coordinate parquet partition               | Parquet      | HPC Kestrel                               | No            |
 | `b4_vap_summary_parquet`       | Summary data in Parquet format for analytics                          | Parquet      | HPC Kestrel / OpenEI AWS                  | Yes           |
 | `b5_vap_atlas_summary_parquet` | Atlas-ready summary data for visualization                            | Parquet      | HPC Kestrel                               | No            |
-
-
 
 # Location Details
 
