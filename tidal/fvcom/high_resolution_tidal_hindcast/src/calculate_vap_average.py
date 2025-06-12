@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from scipy.signal import find_peaks
+
 from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
 
 
@@ -73,6 +75,410 @@ def verify_constant_variables(ds1, ds2, constant_vars):
             results[var_name] = False
 
     return results
+
+
+def calculate_single_primary_and_secondary_direction(
+    direction_timeseries, bin_width_degrees=1, mask_width_degrees=180
+):
+    """
+    Calculate primary and secondary flow directions from a time series of directions.
+    """
+    min_degrees = 0
+    max_degrees = 360
+    n_bins = int(max_degrees / bin_width_degrees)
+    dir_histogram, bin_edges = np.histogram(
+        direction_timeseries,
+        bins=n_bins,
+        range=(min_degrees, max_degrees),
+        density=True,
+    )
+    # Find primary direction (highest peak)
+    primary_bin_idx = np.argmax(dir_histogram)
+    primary_direction = bin_edges[primary_bin_idx]
+    # Calculate all bin centers at once
+    bin_centers = bin_edges[:-1]
+    # Vectorized circular distance calculation
+    angular_diff = np.minimum(
+        np.abs(bin_centers - primary_direction),
+        360 - np.abs(bin_centers - primary_direction),
+    )
+    # Create mask and apply it
+    mask = angular_diff > mask_width_degrees / 2
+    masked_histogram = dir_histogram * mask
+    # Find secondary direction
+    secondary_bin_idx = np.argmax(masked_histogram)
+    secondary_direction = bin_centers[secondary_bin_idx]
+    return primary_direction, secondary_direction
+
+
+def calculate_tidal_periods(surface_elevation, times):
+    """
+    Calculate tidal period statistics and ranges between consecutive tidal cycles.
+
+    Parameters:
+    -----------
+    surface_elevation : array-like
+        Array of modeled water surface elevations
+    times : array-like
+        Array of timestamps corresponding to surface positions
+
+    Returns:
+    --------
+    dict
+        Dictionary containing tidal period statistics and cycle-specific data
+    """
+
+    # Find peaks (high tides) with appropriate prominence
+    high_tide_indices, _ = find_peaks(surface_elevation, prominence=0.05)
+
+    # Also find troughs (low tides)
+    low_tide_indices, _ = find_peaks(-surface_elevation, prominence=0.05)
+
+    # Sort the indices chronologically
+    high_tide_indices = np.sort(high_tide_indices)
+    low_tide_indices = np.sort(low_tide_indices)
+
+    # Calculate time differences between consecutive high tides (semi-diurnal period)
+    high_tide_periods = []
+    low_tide_periods = []
+    tidal_ranges = []
+    tidal_cycles_data = []
+
+    if len(high_tide_indices) < 2:
+        # Not enough peaks to calculate periods
+        return {
+            "average_period_seconds": 0,
+            "min_period_seconds": 0,
+            "max_period_seconds": 0,
+            "average_period_str": "0.00h",
+            "min_period_str": "0.00h",
+            "max_period_str": "0.00h",
+            "tide_type": "Unknown",
+            "average_range": 0,
+            "min_range": 0,
+            "max_range": 0,
+            "min_range_cycle": None,
+            "max_range_cycle": None,
+            "tidal_ranges": [],
+            "cycle_data": [],
+        }
+
+    # Calculate high tide periods and tidal ranges for consecutive cycles
+    for i in range(1, len(high_tide_indices)):
+        prev_idx = high_tide_indices[i - 1]
+        curr_idx = high_tide_indices[i]
+
+        # Find the low tide(s) between consecutive high tides
+        between_low_indices = low_tide_indices[
+            (low_tide_indices > prev_idx) & (low_tide_indices < curr_idx)
+        ]
+
+        # Only process valid tidal cycles with low tides between consecutive high tides
+        if len(between_low_indices) > 0:
+            # Use the lowest low tide between consecutive high tides
+            lowest_low_idx = between_low_indices[
+                np.argmin(surface_elevation[between_low_indices])
+            ]
+
+            # Calculate range for this tidal cycle
+            high_tide_value = surface_elevation[prev_idx]
+            low_tide_value = surface_elevation[lowest_low_idx]
+            tidal_range = high_tide_value - low_tide_value
+            tidal_ranges.append(tidal_range)
+
+            # Get timestamps if available
+            high_tide_time = None
+            low_tide_time = None
+
+            if times is not None:
+                try:
+                    if isinstance(times, pd.DatetimeIndex):
+                        high_tide_time = times[prev_idx]
+                        low_tide_time = times[lowest_low_idx]
+                    elif hasattr(times, "iloc"):
+                        high_tide_time = times.iloc[prev_idx]
+                        low_tide_time = times.iloc[lowest_low_idx]
+                    else:
+                        high_tide_time = times[prev_idx]
+                        low_tide_time = times[lowest_low_idx]
+                except Exception:
+                    pass
+
+            # Record detailed data for this tidal cycle
+            cycle_data = {
+                "high_tide_index": prev_idx,
+                "high_tide_value": high_tide_value,
+                "high_tide_time": high_tide_time,
+                "low_tide_index": lowest_low_idx,
+                "low_tide_value": low_tide_value,
+                "low_tide_time": low_tide_time,
+                "tidal_range": tidal_range,
+            }
+            tidal_cycles_data.append(cycle_data)
+
+        # Calculate time difference between consecutive high tides
+        if times is not None:
+            try:
+                if isinstance(times, pd.DatetimeIndex):
+                    time_diff = (times[curr_idx] - times[prev_idx]).total_seconds()
+                elif hasattr(times, "iloc"):
+                    time_diff = (
+                        times.iloc[curr_idx] - times.iloc[prev_idx]
+                    ).total_seconds()
+                else:
+                    time_diff = (times[curr_idx] - times[prev_idx]).total_seconds()
+
+                # Only include reasonable periods (10-14 hours for semi-diurnal, 20-26 hours for diurnal)
+                if (
+                    10 * 3600 < time_diff < 14 * 3600
+                    or 20 * 3600 < time_diff < 26 * 3600
+                ):
+                    high_tide_periods.append(time_diff)
+            except Exception:
+                continue
+
+    # Calculate statistics for tidal periods
+    all_periods = high_tide_periods + low_tide_periods
+
+    # Calculate statistics if we have valid periods
+    if all_periods:
+        avg_period = np.mean(all_periods)
+        min_period = np.min(all_periods)
+        max_period = np.max(all_periods)
+
+        # Use plain language descriptions for tide patterns
+        if 10 * 3600 < avg_period < 14 * 3600:
+            tide_type = "Twice Daily Tides"
+        elif 20 * 3600 < avg_period < 26 * 3600:
+            tide_type = "Once Daily Tides"
+        else:
+            tide_type = "Mixed Pattern Tides"
+    else:
+        # No valid periods found
+        return {
+            "average_period_seconds": 0,
+            "min_period_seconds": 0,
+            "max_period_seconds": 0,
+            "average_period_str": "0.00h",
+            "min_period_str": "0.00h",
+            "max_period_str": "0.00h",
+            "tide_type": "Unknown",
+            "average_range": 0,
+            "min_range": 0,
+            "max_range": 0,
+            "min_range_cycle": None,
+            "max_range_cycle": None,
+            "tidal_ranges": [],
+            "cycle_data": tidal_cycles_data,
+        }
+
+    # Calculate tidal range statistics
+    if tidal_ranges:
+        avg_range = np.mean(tidal_ranges)
+        min_range = np.min(tidal_ranges)
+        max_range = np.max(tidal_ranges)
+
+        # Find the indices of min and max ranges for reporting
+        min_range_idx = np.argmin(tidal_ranges)
+        max_range_idx = np.argmax(tidal_ranges)
+
+        # Get the corresponding cycle data
+        min_range_cycle = (
+            tidal_cycles_data[min_range_idx]
+            if min_range_idx < len(tidal_cycles_data)
+            else None
+        )
+        max_range_cycle = (
+            tidal_cycles_data[max_range_idx]
+            if max_range_idx < len(tidal_cycles_data)
+            else None
+        )
+    else:
+        avg_range = 0
+        min_range = 0
+        max_range = 0
+        min_range_cycle = None
+        max_range_cycle = None
+
+    def format_seconds_to_decimal_hours(seconds):
+        # Convert seconds to hours (as a float)
+        hours = seconds / 3600
+
+        # Format to 2 decimal places and add 'h' suffix
+        return f"{hours:.2f}h"
+
+    # Create the return dictionary with all needed keys
+    period_stats = {
+        "average_period_seconds": avg_period if all_periods else 0,
+        "min_period_seconds": min_period if all_periods else 0,
+        "max_period_seconds": max_period if all_periods else 0,
+        "average_period_str": format_seconds_to_decimal_hours(avg_period)
+        if all_periods
+        else "0.00h",
+        "min_period_str": format_seconds_to_decimal_hours(min_period)
+        if all_periods
+        else "0.00h",
+        "max_period_str": format_seconds_to_decimal_hours(max_period)
+        if all_periods
+        else "0.00h",
+        "tide_type": tide_type if all_periods else "Unknown",
+        "average_range": avg_range,
+        "min_range": min_range,
+        "max_range": max_range,
+        "min_range_cycle": min_range_cycle,
+        "max_range_cycle": max_range_cycle,
+        "tidal_ranges": tidal_ranges,
+        "cycle_data": tidal_cycles_data,
+    }
+
+    return period_stats
+
+
+def calculate_tidal_levels(surface_positions, msl_tolerance_meters=0.2):
+    """
+    Calculate model-derived tidal reference levels using plain language terminology.
+    Converts from NAVD88 datum to Mean Sea Level (MSL) relative values.
+
+    Parameters:
+    -----------
+    surface_positions : array-like
+        Array of modeled water surface elevations (referenced to NAVD88)
+    msl_tolerance_meters : float, optional
+        Tolerance for validating MSL conversion in meters (default: 0.2)
+        Used to check if mean water level is close to zero after conversion
+
+    Returns:
+    --------
+    dict
+        Dictionary containing tidal reference levels relative to MSL with plain language keys
+
+    Raises:
+    -------
+    ValueError
+        If mean water level is more than msl_tolerance_meters from zero after MSL conversion,
+        indicating the conversion may not be working properly
+
+    Notes:
+    ------
+    This function converts NAVD88-referenced surface elevations to MSL-relative tidal levels:
+    1. Calculates MSL offset (mean of all surface positions)
+    2. Converts all tidal levels to be relative to MSL (subtracts offset)
+    3. Validates that resulting mean water level is close to zero
+    """
+    import numpy as np
+    from scipy.signal import find_peaks
+
+    # Convert to numpy array for calculations
+    surface_positions = np.array(surface_positions)
+
+    # Calculate MSL offset - this is the mean water level relative to NAVD88
+    msl_offset_from_navd88 = np.mean(surface_positions)
+
+    # Convert surface positions to be relative to MSL
+    # Subtract the offset so that mean becomes ~0
+    surface_relative_to_msl = surface_positions - msl_offset_from_navd88
+
+    # Validate the conversion worked (mean should now be very close to 0)
+    converted_mean = np.mean(surface_relative_to_msl)
+    if abs(converted_mean) > 1e-10:  # Allow for floating point precision
+        raise ValueError(
+            f"Error: Converted MSL ({converted_mean:.2e}) is not close to zero"
+        )
+
+    print(f"MSL offset from NAVD88: {msl_offset_from_navd88:.3f} m")
+    print(f"Converted mean relative to MSL: {converted_mean:.6f} m")
+
+    # Find peaks (high tides) and troughs (low tides) using MSL-relative data
+    high_tide_indices, _ = find_peaks(surface_relative_to_msl, prominence=0.05)
+    low_tide_indices, _ = find_peaks(-surface_relative_to_msl, prominence=0.05)
+
+    # If no peaks or troughs are found, use fallback method
+    # if len(high_tide_indices) == 0 or len(low_tide_indices) == 0:
+    #     print("Warning: Could not detect peaks and troughs. Using simplified method.")
+    #     high_tides = np.sort(surface_relative_to_msl)[
+    #         -int(len(surface_relative_to_msl) * 0.2) :
+    #     ]  # Top 20%
+    #     low_tides = np.sort(surface_relative_to_msl)[
+    #         : int(len(surface_relative_to_msl) * 0.2)
+    #     ]  # Bottom 20%
+    #
+    #     # Create simple indices for reference
+    #     high_tide_indices = np.argsort(surface_relative_to_msl)[
+    #         -int(len(surface_relative_to_msl) * 0.2) :
+    #     ]
+    #     low_tide_indices = np.argsort(surface_relative_to_msl)[
+    #         : int(len(surface_relative_to_msl) * 0.2)
+    #     ]
+    # else:
+    #     # Get the water levels at high and low tides (MSL-relative)
+    high_tides = surface_relative_to_msl[high_tide_indices]
+    low_tides = surface_relative_to_msl[low_tide_indices]
+
+    # Calculate tidal statistics relative to MSL
+    max_high_tide = np.max(high_tides)  # Highest high tide above MSL
+    min_high_tide = np.min(high_tides)  # Lowest high tide above MSL
+    mean_high_tide = np.mean(high_tides)  # Mean high tide above MSL
+    mean_water_level = np.mean(surface_relative_to_msl)  # Should be ~0
+    max_low_tide = np.max(low_tides)  # Highest low tide (could be above MSL)
+    mean_low_tide = np.mean(low_tides)  # Mean low tide below MSL
+    min_low_tide = np.min(low_tides)  # Lowest low tide below MSL
+
+    # Calculate tidal range
+    tidal_range = max_high_tide - min_low_tide
+
+    # Validation checks for physically reasonable tidal levels
+    validation_warnings = []
+
+    # Check if tidal range is reasonable (typically 0.1m to 15m globally)
+    if tidal_range < 0.1:
+        validation_warnings.append(f"Very small tidal range ({tidal_range:.3f} m)")
+    elif tidal_range > 15.0:
+        validation_warnings.append(f"Very large tidal range ({tidal_range:.3f} m)")
+
+    # Check if high tides are actually higher than low tides
+    if mean_high_tide <= mean_low_tide:
+        validation_warnings.append("Mean high tide is not greater than mean low tide")
+
+    # Check if the mean is close to zero after conversion
+    if abs(mean_water_level) > msl_tolerance_meters:
+        raise ValueError(
+            f"MSL conversion validation failed: Mean water level ({mean_water_level:.3f} m) "
+            f"is more than {msl_tolerance_meters} m from zero after conversion to MSL. "
+            f"This indicates the conversion may not be working properly. "
+            f"Expected range: [{-msl_tolerance_meters:.1f}, {msl_tolerance_meters:.1f}] m relative to MSL."
+        )
+
+    # Print validation results
+    if validation_warnings:
+        print("Validation warnings:")
+        for warning in validation_warnings:
+            print(f"  - {warning}")
+    else:
+        print("All tidal level validations passed")
+
+    # Create dictionary with MSL-relative tidal levels
+    tidal_data = {
+        # Tidal levels relative to MSL
+        "Max High Tide": max_high_tide,  # Maximum high tide above MSL
+        "Min High Tide": min_high_tide,  # Minimum high tide above MSL
+        "Mean High Tide": mean_high_tide,  # Average high tide above MSL
+        "Mean Water Level": mean_water_level,  # Should be ~0 (MSL reference)
+        "Max Low Tide": max_low_tide,  # Maximum low tide relative to MSL
+        "Mean Low Tide": mean_low_tide,  # Average low tide relative to MSL
+        "Min Low Tide": min_low_tide,  # Minimum low tide below MSL
+        # Conversion metadata
+        "MSL_Offset_from_NAVD88": msl_offset_from_navd88,  # Offset applied for conversion
+        "Tidal_Range": tidal_range,  # Max high - min low tide
+        # Indices for reference
+        "high_tide_indices": high_tide_indices,
+        "low_tide_indices": low_tide_indices,
+        # Validation metadata
+        "msl_conversion_successful": len(validation_warnings) == 0,
+        "validation_warnings": validation_warnings,
+        "msl_tolerance_used": msl_tolerance_meters,
+    }
+
+    return tidal_data
 
 
 class VAPSummaryCalculator:
@@ -315,6 +721,269 @@ class VAPSummaryCalculator:
 
         return result_ds
 
+    def calculate_to_direction_qoi(self, result_ds, to_direction_data):
+        """
+        Calculate direction quantities of interest (QOI) using accumulated direction data.
+
+        Args:
+            result_ds: Result dataset to add direction QOI variables to
+            to_direction_data: Accumulated direction data across all processed files
+
+        Returns:
+            xarray.Dataset: Updated dataset with direction QOI variables
+        """
+        if to_direction_data is None or to_direction_data.size == 0:
+            print("Warning: No direction data available for QOI calculation")
+            return result_ds
+
+        # Direction data shape is [time, sigma_layer, face]
+        # We'll calculate QOI for each face and sigma_layer combination
+        n_sigma_layers, n_faces = to_direction_data.shape[1], to_direction_data.shape[2]
+
+        # Initialize arrays for primary and secondary directions
+        primary_directions = np.full((n_sigma_layers, n_faces), np.nan)
+        secondary_directions = np.full((n_sigma_layers, n_faces), np.nan)
+        bin_width_degrees = 2
+        mask_width_degrees = 180
+
+        # Calculate direction QOI for each sigma_layer-face combination
+        for layer_idx in range(n_sigma_layers):
+            for face_idx in range(n_faces):
+                # Extract time series for this sigma_layer-face combination
+                direction_timeseries = to_direction_data[:, layer_idx, face_idx]
+
+                # Remove NaN values
+                valid_mask = ~np.isnan(direction_timeseries)
+                if np.sum(valid_mask) < 10:  # Need minimum data points
+                    continue
+
+                valid_directions = direction_timeseries[valid_mask]
+
+                # Calculate primary and secondary directions
+                primary_dir, secondary_dir = (
+                    calculate_single_primary_and_secondary_direction(
+                        valid_directions,
+                        bin_width_degrees=bin_width_degrees,
+                        mask_width_degrees=mask_width_degrees,
+                    )
+                )
+                primary_directions[layer_idx, face_idx] = primary_dir
+                secondary_directions[layer_idx, face_idx] = secondary_dir
+
+        # Add direction QOI variables to result dataset using correct dimension names
+        # Create new variables for direction QOI with CF-compliant attributes
+        result_ds["vap_sea_water_primary_to_direction"] = xr.DataArray(
+            primary_directions,
+            dims=["sigma_layer", "face"],
+            attrs={
+                "long_name": "Sea Water Primary To Direction",
+                "units": "degrees",
+                "valid_range": [0.0, 360.0],
+                "description": "Most frequent flow direction at each location and depth based on directional histogram analysis",
+                "computation": f"calculated using directional histogram with {bin_width_degrees}-degree wide bins with {mask_width_degrees}-degree masking",
+                "input_variables": "vap_sea_water_to_direction",
+                "cell_methods": "time: histogram_mode",
+            },
+        )
+
+        result_ds["vap_sea_water_secondary_to_direction"] = xr.DataArray(
+            secondary_directions,
+            dims=["sigma_layer", "face"],
+            attrs={
+                "long_name": "sea water secondary flow direction",
+                "standard_name": "sea_water_to_direction",
+                "units": "degrees",
+                "valid_range": [0.0, 360.0],
+                "description": "Second most frequent flow direction at each location and depth, excluding directions within 90 degrees of primary direction",
+                "computation": f"calculated using directional histogram with {bin_width_degrees}-degree wide bins with {mask_width_degrees}-degree masking",
+                "input_variables": "vap_sea_water_to_direction",
+                "cell_methods": "time: histogram_mode",
+            },
+        )
+
+        return result_ds
+
+    def calculate_surface_elevation_qoi(
+        self, result_ds, zeta_center_data, all_timestamps
+    ):
+        """
+        Calculate surface elevation quantities of interest (QOI) using accumulated surface elevation data.
+
+        Args:
+            result_ds: Result dataset to add surface elevation QOI variables to
+            zeta_center_data: Accumulated surface elevation data across all processed files
+            all_timestamps: All timestamps corresponding to the surface elevation data
+
+        Returns:
+            xarray.Dataset: Updated dataset with surface elevation QOI variables
+        """
+
+        # Assuming zeta_center_data shape is [time, face] for surface elevation
+        n_faces = (
+            zeta_center_data.shape[1]
+            if len(zeta_center_data.shape) > 1
+            else zeta_center_data.shape[0]
+        )
+
+        # Initialize arrays for tidal statistics
+        mean_water_levels = np.full(n_faces, np.nan)
+        max_high_tides = np.full(n_faces, np.nan)
+        mean_high_tides = np.full(n_faces, np.nan)
+        mean_low_tides = np.full(n_faces, np.nan)
+        min_low_tides = np.full(n_faces, np.nan)
+        tidal_ranges = np.full(n_faces, np.nan)
+
+        # Tidal period statistics
+        avg_periods = np.full(n_faces, np.nan)
+        min_periods = np.full(n_faces, np.nan)
+        max_periods = np.full(n_faces, np.nan)
+
+        # Calculate tidal statistics for each face
+        for face_idx in range(n_faces):
+            # Extract time series for this face
+            surface_timeseries = zeta_center_data[:, face_idx]
+
+            # Get corresponding valid timestamps if available
+
+            # Calculate tidal levels using the provided function
+            tidal_levels = calculate_tidal_levels(surface_timeseries)
+
+            # Calculate tidal periods if timestamps are available
+            period_stats = calculate_tidal_periods(surface_timeseries, all_timestamps)
+            avg_periods[face_idx] = period_stats["average_period_seconds"]
+            min_periods[face_idx] = period_stats["min_period_seconds"]
+            max_periods[face_idx] = period_stats["max_period_seconds"]
+
+            # Store tidal level results
+            mean_water_levels[face_idx] = tidal_levels["Mean Water Level"]
+            max_high_tides[face_idx] = tidal_levels["Max High Tide"]
+            mean_high_tides[face_idx] = tidal_levels["Mean High Tide"]
+            mean_low_tides[face_idx] = tidal_levels["Mean Low Tide"]
+            min_low_tides[face_idx] = tidal_levels["Min Low Tide"]
+            tidal_ranges[face_idx] = (
+                tidal_levels["Max High Tide"] - tidal_levels["Min Low Tide"]
+            )
+
+        # Add surface elevation QOI variables to result dataset with CF-compliant attributes
+        result_ds["vap_sea_surface_elevation_mean"] = xr.DataArray(
+            mean_water_levels,
+            dims=["face"],
+            attrs={
+                "long_name": "Mean Sea Surface Elevation",
+                "units": "m",
+                "description": "Average water surface elevation over the analysis period",
+                "computation": "arithmetic mean of all surface elevation values",
+                "input_variables": "vap_zeta_center",
+                "cell_methods": "time: mean",
+            },
+        )
+
+        result_ds["vap_sea_surface_elevation_high_tide_max"] = xr.DataArray(
+            max_high_tides,
+            dims=["face"],
+            attrs={
+                "long_name": "maximum high tide sea surface height above mean sea surface elevation",
+                "units": "m",
+                "description": "Highest observed high tide level detected using peak analysis",
+                "computation": "maximum value among detected high tide peaks",
+                "input_variables": "vap_zeta_center",
+                "cell_methods": "time: maximum within high_tide_events",
+            },
+        )
+
+        result_ds["vap_surface_elevation_high_tide_mean"] = xr.DataArray(
+            mean_high_tides,
+            dims=["face"],
+            attrs={
+                "long_name": "mean high tide sea surface height above mean sea surface elevation",
+                "units": "m",
+                "description": "Average of all high tide levels detected using peak analysis",
+                "computation": "arithmetic mean of detected high tide peak values",
+                "input_variables": "vap_zeta_center",
+                "cell_methods": "time: mean within high_tide_events",
+            },
+        )
+
+        result_ds["vap_surface_elevation_low_tide_mean"] = xr.DataArray(
+            mean_low_tides,
+            dims=["face"],
+            attrs={
+                "long_name": "mean low tide sea surface height above mean sea surface elevation",
+                "units": "m",
+                "description": "Average of all low tide levels detected using trough analysis",
+                "computation": "arithmetic mean of detected low tide trough values",
+                "input_variables": "vap_zeta_center",
+                "cell_methods": "time: mean within low_tide_events",
+            },
+        )
+
+        result_ds["vap_surface_elevation_low_tide_min"] = xr.DataArray(
+            min_low_tides,
+            dims=["face"],
+            attrs={
+                "long_name": "minimum low tide sea surface height above mean sea surface elevation",
+                "units": "m",
+                "description": "Lowest observed low tide level detected using trough analysis",
+                "computation": "minimum value among detected low tide troughs",
+                "input_variables": "vap_zeta_center",
+                "cell_methods": "time: minimum within low_tide_events",
+            },
+        )
+
+        result_ds["vap_tidal_range"] = xr.DataArray(
+            tidal_ranges,
+            dims=["face"],
+            attrs={
+                "long_name": "tidal range",
+                "units": "m",
+                "description": "Difference between maximum high tide and minimum low tide levels",
+                "computation": "vap_sea_surface_elevation_high_tide_max - vap_surface_elevation_low_tide_min",
+                "input_variables": "vap_zeta_center",
+                "cell_methods": "time: range",
+            },
+        )
+
+        result_ds["vap_average_tidal_period"] = xr.DataArray(
+            avg_periods,
+            dims=["face"],
+            attrs={
+                "long_name": "average tidal period",
+                "units": "s",
+                "description": "Average time between consecutive high tides or low tides",
+                "computation": "arithmetic mean of time differences between consecutive tidal peaks",
+                "input_variables": "vap_zeta_center",
+                "cell_methods": "time: mean of tidal_periods",
+            },
+        )
+
+        result_ds["vap_min_tidal_period"] = xr.DataArray(
+            min_periods,
+            dims=["face"],
+            attrs={
+                "long_name": "minimum tidal period",
+                "units": "s",
+                "description": "Shortest time between consecutive high tides or low tides",
+                "computation": "minimum of time differences between consecutive tidal peaks",
+                "input_variables": "vap_zeta_center",
+                "cell_methods": "time: minimum of tidal_periods",
+            },
+        )
+
+        result_ds["vap_max_tidal_period"] = xr.DataArray(
+            max_periods,
+            dims=["face"],
+            attrs={
+                "long_name": "maximum tidal period",
+                "units": "s",
+                "description": "Longest time between consecutive high tides or low tides",
+                "computation": "maximum of time differences between consecutive tidal peaks",
+                "input_variables": "vap_zeta_center",
+                "cell_methods": "time: maximum of tidal_periods",
+            },
+        )
+
+        return result_ds
+
     def _process_files(self, ds_template, file_list, time_filter=None):
         """
         Process a list of files, updating averages, max values, and 95th percentiles.
@@ -334,6 +1003,11 @@ class VAPSummaryCalculator:
         time_attrs = None
         var_attrs = {}
         first_ds = None
+
+        # Initialize lists to accumulate direction and surface elevation data with timestamps
+        to_direction_data = []
+        zeta_center_data = []
+        all_timestamps = []
 
         # Process each file
         for i, nc_file in enumerate(file_list):
@@ -363,6 +1037,13 @@ class VAPSummaryCalculator:
             count = self._update_averages(result_ds, ds, count)
             result_ds = self._update_max_values(result_ds, ds, count)
 
+            # Accumulate direction and surface elevation data with timestamps
+            to_direction_data.append(ds["vap_sea_water_to_direction"].values)
+
+            zeta_center_data.append(ds["vap_zeta_center"].values)
+
+            all_timestamps.append(ds.time.values)
+
             # Track source files
             if str(nc_file) not in source_files:
                 source_files.append(str(nc_file))
@@ -372,6 +1053,21 @@ class VAPSummaryCalculator:
         # Calculate 95th percentiles after processing all files
         if first_ds is not None:  # Only if we processed at least one file
             result_ds = self._calculate_percentiles(result_ds)
+
+        # Combine accumulated data and calculate QOI
+        # Concatenate along time axis (axis 0)
+        combined_to_direction = np.concatenate(to_direction_data, axis=0)
+        result_ds = self.calculate_to_direction_qoi(result_ds, combined_to_direction)
+
+        # Concatenate along time axis (axis 0)
+        combined_zeta_center = np.concatenate(zeta_center_data, axis=0)
+
+        # Combine timestamps
+        combined_timestamps = np.concatenate(all_timestamps, axis=0)
+
+        result_ds = self.calculate_surface_elevation_qoi(
+            result_ds, combined_zeta_center, combined_timestamps
+        )
 
         return result_ds, first_timestamp, time_attrs, var_attrs, source_files
 
@@ -430,6 +1126,7 @@ class VAPSummaryCalculator:
     ):
         """
         Save the dataset to a NetCDF file with proper attributes and encoding.
+        Modified to include face batch information in filename if applicable.
 
         Args:
             dataset: xarray Dataset to save
