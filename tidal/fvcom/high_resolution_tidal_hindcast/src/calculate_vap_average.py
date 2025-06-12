@@ -569,7 +569,7 @@ class VAPSummaryCalculator:
 
         # Apply face batching if configured
         if self.face_batch_size is not None:
-            total_faces = ds.dims["face"]
+            total_faces = ds.sizes["face"]
             face_slice = self._calculate_face_batch_slice(total_faces)
 
             if face_slice is not None:
