@@ -1345,7 +1345,7 @@ class VAPSummaryCalculator:
 
 
 def calculate_vap_yearly_average(
-    config, location, face_batch_size=None, batch_index_start=0
+    config, location, batch_size=None, batch_number=0
 ):
     """
     Calculate yearly averages, max values, and 95th percentiles for VAP variables.
@@ -1353,17 +1353,17 @@ def calculate_vap_yearly_average(
     Args:
         config: Configuration dictionary
         location: Location name
-        face_batch_size: Number of faces to process in this batch (None = process all)
-        batch_index_start: Starting face index for this batch
+        batch_size: Number of faces to process in this batch (None = process all)
+        batch_number: Starting face index for this batch
     """
     averager = VAPSummaryCalculator(
-        config, location, face_batch_size, batch_index_start
+        config, location, batch_size, batch_number
     )
     return averager.calculate_yearly_average()
 
 
 def calculate_vap_monthly_average(
-    config, location, face_batch_size=None, batch_index_start=0
+    config, location, batch_size=None, batch_number=0
 ):
     """
     Calculate monthly averages, max values, and 95th percentiles for VAP variables.
@@ -1371,11 +1371,11 @@ def calculate_vap_monthly_average(
     Args:
         config: Configuration dictionary
         location: Location name
-        face_batch_size: Number of faces to process in this batch (None = process all)
-        batch_index_start: Starting face index for this batch
+        batch_size: Number of faces to process in this batch (None = process all)
+        batch_number: Starting face index for this batch
     """
     averager = VAPSummaryCalculator(
-        config, location, face_batch_size, batch_index_start
+        config, location, batch_size, batch_number
     )
     return averager.calculate_monthly_averages()
 
