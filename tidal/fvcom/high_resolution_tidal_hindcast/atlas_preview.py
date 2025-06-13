@@ -2065,6 +2065,9 @@ def generate_markdown_specification(
 
         for var_key, spec in VIZ_SPECS.items():
             if var_key in color_level_data:
+                colormap_name = "Custom"
+                if "colormap" in spec:
+                    colormap_name = spec["colormap"].name
                 md_content.extend(
                     [
                         f"### {spec['title']} [{spec['units']}], `{spec['column_name']}`",
