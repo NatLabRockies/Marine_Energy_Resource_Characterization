@@ -1167,7 +1167,7 @@ class VAPSummaryCalculator:
 
         # Add face batch information to filename if batching is used
         if self.face_batch_size is not None:
-            batch_info = f"batch_{self.batch_index_start}_faces_{self.face_indexes[0]}_{self.face_indexes[-1]}"
+            batch_info = f".batch_{self.batch_index_start}_faces_{self.face_indexes[0]}_{self.face_indexes[-1]}"
             # Insert before file extension
             parts = data_level_file_name.rsplit(".", 1)
             if len(parts) == 2:
@@ -1521,9 +1521,7 @@ def combine_face_files(file_info_list, output_path):
     return output_path
 
 
-def combine_face_batch_files_in_directory(
-    input_dir, output_dir=None, file_pattern="*.nc"
-):
+def combine_face_batch_files_in_directory(input_dir, output_dir, file_pattern="*.nc"):
     """
     Combine face batch files in a directory into single files per base filename.
 
@@ -1535,49 +1533,58 @@ def combine_face_batch_files_in_directory(
     Returns:
         list: List of paths to created combined files
     """
-    input_path = Path(input_dir)
-    output_path = Path(output_dir) if output_dir else input_path
-
-    # Create output directory if it doesn't exist
-    output_path.mkdir(parents=True, exist_ok=True)
-
     # Find all NetCDF files
-    nc_files = list(input_path.glob(file_pattern))
-    print(f"Found {len(nc_files)} NetCDF files in {input_path}")
+    nc_files = list(input_dir.glob(file_pattern))
+    print(f"Found {len(nc_files)} NetCDF files in {input_dir}")
 
     if not nc_files:
         print("No NetCDF files found.")
         return []
 
-    # Group files by base filename
-    grouped_files = group_files_by_base(nc_files)
-    print(f"Grouped into {len(grouped_files)} base filename groups")
-
     created_files = []
 
-    # Process each group
-    for base_name, file_info_list in grouped_files.items():
-        print(f"\nProcessing group: {base_name}")
-        print(f"  Found {len(file_info_list)} face batch files")
+    output_file_name = nc_files[0].name.split(".")[
+        :-2
+    ]  # Use the first file's name as base
+    output_file_name = ".".join(output_file_name) + ".nc"
 
-        # Skip if only one file (no combining needed)
-        if len(file_info_list) == 1:
-            print(f"  Only one file found, skipping combination for {base_name}")
-            continue
+    combined_file = combine_face_files(nc_files, output_dir)
+    created_files.append(combined_file)
+    print(f"  Successfully created: {output_file_name}")
 
-        # Generate output filename (remove any existing face batch info)
-        output_filename = base_name
-        output_file_path = output_path / output_filename
-
-        # Skip if output file already exists
-        if output_file_path.exists():
-            print(f"  Output file already exists: {output_filename}")
-            continue
-
-        # Combine the files
-        combined_file = combine_face_files(file_info_list, output_file_path)
-        created_files.append(combined_file)
-        print(f"  Successfully created: {output_filename}")
+    print(f"Deleting original face batch files in {input_dir}...")
+    for nc_file in nc_files:
+        print(f"  Deleting {nc_file.name}")
+        nc_file.unlink()  # Delete the original face batch files
+    # # Group files by base filename
+    # grouped_files = group_files_by_base(nc_files)
+    # print(f"Grouped into {len(grouped_files)} base filename groups")
+    #
+    # created_files = []
+    #
+    # # Process each group
+    # for base_name, file_info_list in grouped_files.items():
+    #     print(f"\nProcessing group: {base_name}")
+    #     print(f"  Found {len(file_info_list)} face batch files")
+    #
+    #     # Skip if only one file (no combining needed)
+    #     if len(file_info_list) == 1:
+    #         print(f"  Only one file found, skipping combination for {base_name}")
+    #         continue
+    #
+    #     # Generate output filename (remove any existing face batch info)
+    #     output_filename = base_name
+    #     output_file_path = output_path / output_filename
+    #
+    #     # Skip if output file already exists
+    #     if output_file_path.exists():
+    #         print(f"  Output file already exists: {output_filename}")
+    #         continue
+    #
+    #     # Combine the files
+    #     combined_file = combine_face_files(file_info_list, output_file_path)
+    #     created_files.append(combined_file)
+    #     print(f"  Successfully created: {output_filename}")
 
     return created_files
 
