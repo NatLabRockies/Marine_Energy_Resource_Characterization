@@ -190,7 +190,7 @@ VIZ_SPECS = {
                 "color": "#ff7f0e",  # Seaborn Orange
             },
             "non_compliant": {
-                "max": float("inf"),
+                "max": 100000,
                 "label": "Non-compliant (>500m)",
                 "color": "#DC143C",  # Pleasing red
             },
@@ -321,7 +321,7 @@ def plot_tidal_variable(
 
     if spec_ranges is not None:
         # Use specification-based ranges
-        discrete_cmap, discrete_norm, bounds, spec_labels = (
+        discrete_cmap, discrete_norm, bounds, spec_labels, main_bounds = (
             create_spec_based_colormap_and_norm(spec_ranges, vmin, vmax)
         )
         cmap = discrete_cmap
@@ -462,11 +462,22 @@ def plot_tidal_variable(
 
     # Print out the color and value range for each level if discrete levels are used
     color_data = None
-    if n_colors is not None:
-        # Only print the main bounds and the above-max level
+    if spec_ranges is not None:
+        # Use main_bounds for spec ranges color printing
+        color_data = _print_color_level_ranges(
+            main_bounds, label, units, discrete_cmap, len(spec_labels)
+        )
+    elif n_colors is not None:
+        # Use existing logic for n_colors approach
         color_data = _print_color_level_ranges(
             main_bounds, label, units, discrete_cmap, n_colors + 1
         )
+    # color_data = None
+    # if n_colors is not None:
+    #     # Only print the main bounds and the above-max level
+    #     color_data = _print_color_level_ranges(
+    #         main_bounds, label, units, discrete_cmap, n_colors + 1
+    #     )
 
     return fig, ax, color_data
 
@@ -917,67 +928,57 @@ def create_spec_based_colormap_and_norm(spec_dict, vmin=0, vmax=1000):
     norm : matplotlib normalization
         BoundaryNorm for discrete color mapping
     bounds : array
-        Array of boundaries between color regions
+        Array of boundaries between color regions (includes extended boundary for above-max)
     labels : list
-        List of range labels for colorbar (only for ranges that have data)
+        List of range labels for colorbar
+    main_bounds : array
+        Array of main boundaries without the above-max extension (for color printing)
     """
+
     # Sort specs by max value to ensure proper ordering
     sorted_specs = sorted(spec_dict.items(), key=lambda x: x[1]["max"])
 
     # Create boundaries starting with vmin
-    bounds = [vmin]
+    main_bounds = [vmin]  # This will be the "clean" bounds without above-max extension
     colors = []
     labels = []
 
     for spec_name, spec_info in sorted_specs:
-        # Determine if this range has any data
-        spec_max = spec_info["max"]
+        # Add boundary (but don't exceed vmax for finite values)
+        if spec_info["max"] != float("inf"):
+            main_bounds.append(min(spec_info["max"], vmax))
 
-        if spec_max == float("inf"):
-            # Infinite range - only include if vmax extends beyond the previous boundary
-            if bounds[-1] < vmax:
-                bounds.append(vmax)
-                colors.append(spec_info["color"])
-                labels.append(spec_info["label"])
-        else:
-            # Finite range - include if it's within our data range
-            if spec_max > vmin and spec_max <= vmax:
-                bounds.append(spec_max)
-                colors.append(spec_info["color"])
-                labels.append(spec_info["label"])
-            elif spec_max > vmax:
-                # This range extends beyond our data, but we still need the color
-                # for the segment from the last boundary to vmax
-                if bounds[-1] < vmax:
-                    bounds.append(vmax)
-                    colors.append(spec_info["color"])
-                    # Modify label to reflect actual range shown
-                    if spec_max == float("inf"):
-                        labels.append(
-                            f"{spec_info['label'].split('(')[0]}(>{bounds[-2]})"
-                        )
-                    else:
-                        labels.append(
-                            f"{spec_info['label'].split('(')[0]}({bounds[-2]}-{vmax})"
-                        )
+        # Store color and label
+        colors.append(spec_info["color"])
+        labels.append(spec_info["label"])
 
-    # Ensure we end at vmax if we haven't already
-    if bounds[-1] < vmax:
-        bounds.append(vmax)
+    # Add final boundary if the last spec didn't reach vmax
+    if main_bounds[-1] < vmax:
+        main_bounds.append(vmax)
 
-    print("Debug create_spec_based_colormap_and_norm:")
-    print(f"  Input vmin={vmin}, vmax={vmax}")
-    print(f"  Final bounds: {bounds}")
-    print(f"  Final labels: {labels}")
-    print(f"  Number of colors: {len(colors)}")
+    # Create extended bounds for normalization (includes above-max handling)
+    bounds = main_bounds.copy()
+
+    # If we have an infinite max (like non_compliant), extend bounds for proper normalization
+    has_infinite_max = any(
+        spec_info["max"] == float("inf") for spec_info in spec_dict.values()
+    )
+    if has_infinite_max:
+        # Add a very large value for the above-max region (similar to your original logic)
+        very_large_value = vmax * 1000
+        bounds.append(very_large_value)
 
     # Create custom discrete colormap
     cmap = mcolors.ListedColormap(colors)
 
-    # Create boundary normalization
+    # Create boundary normalization using extended bounds
     norm = mcolors.BoundaryNorm(bounds, len(colors))
 
-    return cmap, norm, bounds, labels
+    # Convert to numpy arrays for consistency with your existing code
+    main_bounds = np.array(main_bounds)
+    bounds = np.array(bounds)
+
+    return cmap, norm, bounds, labels, main_bounds
 
 
 # Define accurate column display names
