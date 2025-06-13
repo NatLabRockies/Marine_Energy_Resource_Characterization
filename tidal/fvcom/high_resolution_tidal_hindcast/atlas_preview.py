@@ -2269,9 +2269,10 @@ def process_variable(
             var_config["range_min"],
             var_config["range_max"],
             is_aleutian="aleutian" in region,
-            cmap=var_config["colormap"],
+            cmap=var_config.get("colormap", None),
             save_path=Path(output_path, f"{region}_{filename_suffix}.png"),
             n_colors=var_config["levels"],
+            spec_ranges=var_config.get("spec_ranges", None),
         )
         plt.close()
 
