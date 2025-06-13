@@ -458,6 +458,7 @@ def plot_tidal_variable(
         plt.show()
 
     if save_path is not None:
+        print(f"Saving figure to {save_path}...")
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
     # Print out the color and value range for each level if discrete levels are used
