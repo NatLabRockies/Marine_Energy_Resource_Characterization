@@ -2010,11 +2010,11 @@ def generate_markdown_specification(
     for var_key, spec in VIZ_SPECS.items():
         range_str = f"{spec['range_min']} - {spec['range_max']}"
         colormap_name = "Custom"
-        if "colormap" in spec
-            color_map_name = spec["colormap"].name
+        if "colormap" in spec:
+            colormap_name = spec["colormap"].name
 
         md_content.append(
-            f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {color_map_name} |"
+            f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {colormap_name} |"
         )
 
     md_content.append("")
