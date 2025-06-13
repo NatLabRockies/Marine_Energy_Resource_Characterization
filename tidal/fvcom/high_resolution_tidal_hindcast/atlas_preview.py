@@ -249,7 +249,7 @@ def plot_tidal_variable(
     show=False,
     save_path=None,
     n_colors=COLOR_BAR_DISCRETE_LEVELS,
-    spec_ranges=None
+    spec_ranges=None,
 ):
     """
     Plot tidal variables with optional discrete color levels.
@@ -289,10 +289,10 @@ def plot_tidal_variable(
     spec_ranges : dict, default=None
         Dictionary defining specification ranges. Each key should have:
         - 'max': maximum value for this range
-        - 'label': display label for this range  
+        - 'label': display label for this range
         - 'color': color for this range
         If provided, takes precedence over n_colors.
-        
+
     Example spec_ranges:
     {
         'stage_2': {'max': 50, 'label': 'Stage 2 (≤50m)', 'color': 'green'},
@@ -317,12 +317,12 @@ def plot_tidal_variable(
 
     if spec_ranges is not None:
         # Use specification-based ranges
-        discrete_cmap, discrete_norm, bounds, spec_labels = create_spec_based_colormap_and_norm(
-            spec_ranges, vmin, vmax
+        discrete_cmap, discrete_norm, bounds, spec_labels = (
+            create_spec_based_colormap_and_norm(spec_ranges, vmin, vmax)
         )
         cmap = discrete_cmap
         discrete_levels = bounds
-        
+
     elif n_colors is not None:
         # Use existing evenly-spaced discrete levels approach
         base_cmap = plt.get_cmap(cmap)
@@ -447,7 +447,6 @@ def plot_tidal_variable(
         # discrete_levels=main_bounds if n_colors is not None else None,
         discrete_levels=discrete_levels,
         spec_labels=spec_labels,
-
     )
 
     plt.tight_layout()
@@ -794,7 +793,15 @@ def _plot_standard_mesh_with_triangulation(
 
 
 def _add_colorbar_and_title(
-    fig, ax, scatter, label, units, title, location, discrete_levels=None
+    fig,
+    ax,
+    scatter,
+    label,
+    units,
+    title,
+    location,
+    discrete_levels=None,
+    spec_labels=None,
 ):
     """
     Add colorbar and title to the plot with optional discrete levels.
@@ -823,16 +830,16 @@ def _add_colorbar_and_title(
         cbar = fig.colorbar(
             scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
-        
+
         if spec_labels is not None:
             # Use specification labels
             midpoints = []
-            for i in range(len(discrete_levels)-1):
-                midpoints.append((discrete_levels[i] + discrete_levels[i+1]) / 2)
-            
+            for i in range(len(discrete_levels) - 1):
+                midpoints.append((discrete_levels[i] + discrete_levels[i + 1]) / 2)
+
             cbar.ax.yaxis.set_ticks(midpoints)
             cbar.ax.yaxis.set_ticklabels(spec_labels)
-            
+
         else:
             # Use existing discrete level logic
             max_value = max(abs(discrete_levels.min()), abs(discrete_levels.max()))
@@ -844,28 +851,30 @@ def _add_colorbar_and_title(
                 tick_format = "%.2f"
             else:
                 tick_format = "%.2f"
-                
-            interval = (discrete_levels[-1] - discrete_levels[0]) / (len(discrete_levels) - 1)
-            
+
+            interval = (discrete_levels[-1] - discrete_levels[0]) / (
+                len(discrete_levels) - 1
+            )
+
             ranges = []
             for i in range(len(discrete_levels) - 1):
                 start = discrete_levels[i]
                 end = discrete_levels[i + 1]
                 ranges.append((start, end))
-                
+
             midpoints = [(r[0] + r[1]) / 2 for r in ranges]
             tick_labels = []
             for i, (start, end) in enumerate(ranges):
                 tick_labels.append(f"[{tick_format % start}-{tick_format % end})")
-                
+
             above_max_midpoint = discrete_levels[-1] + interval / 2
             midpoints.append(above_max_midpoint)
             tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
-            
+
             ymin, ymax = cbar.ax.get_ylim()
             new_ymax = max(ymax, above_max_midpoint + interval / 2)
             cbar.ax.set_ylim(ymin, new_ymax)
-            
+
             cbar.ax.yaxis.set_ticks(midpoints)
             cbar.ax.yaxis.set_ticklabels(tick_labels)
     else:
@@ -879,10 +888,11 @@ def _add_colorbar_and_title(
         title = f"{location.replace('_', ' ').title()} - {label}"
     plt.title(title)
 
+
 def create_spec_based_colormap_and_norm(spec_dict, vmin=0, vmax=1000):
     """
     Create a colormap and normalization based on specification ranges.
-    
+
     Parameters:
     -----------
     spec_dict : dict
@@ -890,51 +900,51 @@ def create_spec_based_colormap_and_norm(spec_dict, vmin=0, vmax=1000):
         Example:
         {
             'stage_2': {'max': 50, 'label': 'Stage 2 (≤50m)', 'color': 'green'},
-            'stage_1': {'max': 500, 'label': 'Stage 1 (≤500m)', 'color': 'yellow'}, 
+            'stage_1': {'max': 500, 'label': 'Stage 1 (≤500m)', 'color': 'yellow'},
             'non_compliant': {'max': float('inf'), 'label': 'Non-compliant (>500m)', 'color': 'red'}
         }
     vmin, vmax : float
         Overall data range for plotting
-    
+
     Returns:
     --------
     cmap : matplotlib colormap
         Custom colormap with specified colors
-    norm : matplotlib normalization  
+    norm : matplotlib normalization
         BoundaryNorm for discrete color mapping
     bounds : array
         Array of boundaries between color regions
     labels : list
         List of range labels for colorbar
     """
-    
+
     # Sort specs by max value to ensure proper ordering
-    sorted_specs = sorted(spec_dict.items(), key=lambda x: x[1]['max'])
-    
+    sorted_specs = sorted(spec_dict.items(), key=lambda x: x[1]["max"])
+
     # Create boundaries starting with vmin
     bounds = [vmin]
     colors = []
     labels = []
-    
+
     for spec_name, spec_info in sorted_specs:
         # Add boundary (but don't exceed vmax for finite values)
-        if spec_info['max'] != float('inf'):
-            bounds.append(min(spec_info['max'], vmax))
-        
+        if spec_info["max"] != float("inf"):
+            bounds.append(min(spec_info["max"], vmax))
+
         # Store color and label
-        colors.append(spec_info['color'])
-        labels.append(spec_info['label'])
-    
+        colors.append(spec_info["color"])
+        labels.append(spec_info["label"])
+
     # Add final boundary if the last spec didn't reach vmax
     if bounds[-1] < vmax:
         bounds.append(vmax)
-    
+
     # Create custom discrete colormap
     cmap = mcolors.ListedColormap(colors)
-    
+
     # Create boundary normalization
     norm = mcolors.BoundaryNorm(bounds, len(colors))
-    
+
     return cmap, norm, bounds, labels
 
 
@@ -949,8 +959,8 @@ COLUMN_DISPLAY_NAMES = {
 def analyze_variable(
     df: pd.DataFrame,
     variable: str,
-    variable_display_name,
-    region_name,
+    variable_display_name: str,
+    region_name: str,
     units: str = "m/s",
     percentiles: List[float] = [0.95, 0.99, 0.9999],
     output_path: Union[Path, None] = None,
@@ -961,8 +971,8 @@ def analyze_variable(
     Args:
         df: DataFrame containing the variable data
         variable: Column name of the variable to analyze
-        variable_display_name: Display name for the variable (defaults to variable name if None)
-        region_name: Name of the region/area being analyzed (optional)
+        variable_display_name: Display name for the variable
+        region_name: Name of the region/area being analyzed
         units: Units for the variable (for axis labels)
         percentiles: List of percentiles to calculate and display
         output_path: Path to save the output plots (if None, plots are displayed)
@@ -970,12 +980,20 @@ def analyze_variable(
     Returns:
         Dictionary containing statistics and metadata for meta-analysis
     """
-    # Set display name if not provided
-    if variable_display_name is None:
-        variable_display_name = variable
-
-    # Set region name if not provided
-    region_label = f"{region_name} - " if region_name else ""
+    # Check if variable exists in dataframe
+    if variable not in df.columns:
+        print(
+            f"Warning: Variable '{variable}' not found in dataframe for region {region_name}"
+        )
+        return {
+            "variable": variable,
+            "variable_display_name": variable_display_name,
+            "region": region_name,
+            "units": units,
+            "stats": {},
+            "df": None,
+            "error": f"Variable '{variable}' not found in dataframe",
+        }
 
     # Create figure
     fig, ax = plt.subplots(figsize=(16, 8))
@@ -996,9 +1014,12 @@ def analyze_variable(
         p_label = f"p{int(p*100)}" if p < 1 else f"p{int(p*10000)/100}"
         percentile_values[p_label] = df[variable].quantile(p)
 
-    # Add min and max
+    # Add basic statistics
     percentile_values["min"] = df[variable].min()
     percentile_values["max"] = df[variable].max()
+    percentile_values["mean"] = df[variable].mean()
+    percentile_values["std"] = df[variable].std()
+    percentile_values["count"] = len(df[variable])
 
     # Store statistics
     results["stats"] = percentile_values
@@ -1032,19 +1053,27 @@ def analyze_variable(
         )
 
     # Set title and labels
+    region_label = f"{region_name} - " if region_name else ""
     ax.set_title(f"{region_label}{variable_display_name} ({units})")
     ax.set_xlabel(f"{variable_display_name} ({units})")
     ax.set_ylabel("Frequency")
 
-    # Tight layout and show/save
+    # Tight layout and save/show
     plt.tight_layout()
     if output_path is not None:
-        plt.savefig(Path(output_path, f"{variable}_analysis.png"))
+        # Create safe filename
+        safe_variable_name = (
+            variable_display_name.lower().replace(" ", "_").replace("%", "percentile")
+        )
+        safe_region_name = (
+            region_name.lower().replace(" ", "_") if region_name else "unknown"
+        )
+        filename = f"{safe_region_name}_{safe_variable_name}_analysis.png"
+        plt.savefig(Path(output_path, filename))
     else:
         plt.show()
 
     plt.close()
-
     return results
 
 
@@ -1065,18 +1094,27 @@ def analyze_variable_across_regions(
         print("No region statistics provided for analysis.")
         return {}
 
+    # Filter out any None or invalid entries
+    valid_stats = [
+        stat for stat in region_stats if stat and "stats" in stat and stat["stats"]
+    ]
+
+    if not valid_stats:
+        print("No valid statistics found for cross-region analysis.")
+        return {}
+
     # Extract variable info and standardize units
-    variable = region_stats[0]["variable"]
-    variable_display_name = region_stats[0]["variable_display_name"]
-    units = standardize_units(variable, region_stats[0].get("units", ""))
-    regions = [stat["region"] for stat in region_stats if stat["region"] is not None]
+    variable = valid_stats[0]["variable"]
+    variable_display_name = valid_stats[0]["variable_display_name"]
+    units = valid_stats[0].get("units", "")
+    regions = [stat["region"] for stat in valid_stats if stat["region"] is not None]
 
     # Collect all data and regional data
     all_data = []
     regional_data = {}
 
-    for stat in region_stats:
-        if stat["region"] is not None and "df" in stat:
+    for stat in valid_stats:
+        if stat["region"] is not None and "df" in stat and stat["df"] is not None:
             region_data = stat["df"][variable].values
             all_data.extend(region_data)
             regional_data[stat["region"]] = region_data
@@ -1101,12 +1139,12 @@ def analyze_variable_across_regions(
 
     # Create standard comparison visualizations (existing functionality)
     create_standard_comparison_plots(
-        region_stats, variable, variable_display_name, units, regions, output_path
+        valid_stats, variable, variable_display_name, units, regions, output_path
     )
 
     # Return results with validation metrics
     return compile_results(
-        variable, variable_display_name, units, regions, region_stats, all_data, viz_max
+        variable, variable_display_name, units, regions, valid_stats, all_data, viz_max
     )
 
 
@@ -2189,10 +2227,12 @@ def generate_markdown_specification(
     return output_file
 
 
-def process_variable(df, region, output_path, var_key, var_config, bypass_visualizations=False):
+def process_variable(
+    df, region, output_path, var_key, var_config, bypass_visualizations=False
+):
     """Process a single variable - analyze and optionally plot"""
     action = "Analyzing" if bypass_visualizations else "Plotting"
-    print(f"\t{action} {region} {var_config['filename_suffix']}...")
+    print(f"\t{action} {region} {var_config['title']}...")
 
     # Always analyze variable
     stats = analyze_variable(
@@ -2200,54 +2240,76 @@ def process_variable(df, region, output_path, var_key, var_config, bypass_visual
         var_config["column_name"],
         var_config["title"],
         region,
+        units=var_config["units"],  # Pass units from config
         output_path=output_path,
     )
 
     # Only plot if visualizations are enabled
     color_data = None
     if not bypass_visualizations:
+        # Create visualization filename using title converted to snake_case
+        filename_suffix = (
+            var_config["title"].lower().replace(" ", "_").replace("%", "percentile")
+        )
+
         fig, ax, color_data = plot_tidal_variable(
             df,
             region,
-            var_config["column"],
+            var_config["column_name"],  # Use column_name consistently
             var_config["title"],
             var_config["units"],
-            var_config["cbar_min"],
-            var_config["cbar_max"],
+            var_config["range_min"],
+            var_config["range_max"],
             is_aleutian="aleutian" in region,
-            cmap=var_config["cmap"],
-            save_path=Path(
-                output_path, f"{region}_{var_config['filename_suffix']}.png"
-            ),
-            n_colors=var_config["n_colors"],
+            cmap=var_config["colormap"],
+            save_path=Path(output_path, f"{region}_{filename_suffix}.png"),
+            n_colors=var_config["levels"],
         )
         plt.close()
 
     return stats, color_data
 
 
-def analyze_all_variables_across_regions(
-    output_path, variables_config, bypass_visualizations=False
-):
+def analyze_all_variables_across_regions(all_stats, output_path, viz_specs):
     """Generate summary analysis for all variables across regions"""
     summaries = {}
 
-    for var_config in variables_config:
-        stats_key = var_config["stats_key"]
+    # Reorganize stats by variable for cross-region analysis
+    stats_by_variable = organize_stats_by_variable(all_stats)
+
+    for var_key, var_config in viz_specs.items():
         print(f"Calculating {var_config['title']} variable summary...")
 
-        summaries[stats_key] = analyze_variable_across_regions(
-            stats_key,
-            output_path=output_path,
-            viz_max=var_config["viz_max"],
-        )
+        # Get region stats for this variable
+        region_stats = stats_by_variable.get(var_key, [])
+
+        if region_stats:
+            # Determine viz_max from config
+            viz_max = var_config.get("range_max")
+
+            summaries[var_key] = analyze_variable_across_regions(
+                region_stats,
+                output_path=output_path,
+                viz_max=viz_max,
+            )
+        else:
+            print(f"Warning: No data found for variable {var_key}")
+            summaries[var_key] = None
 
     return summaries
 
 
-def get_summary_value(summaries, key):
-    """Safely get summary value, handling None case when visualizations are bypassed"""
-    return summaries.get(key) if summaries else None
+def organize_stats_by_variable(all_stats):
+    """Convert region->variable structure to variable->region structure for cross-region analysis"""
+    stats_by_variable = {}
+
+    for region_name, region_data in all_stats.items():
+        for var_key, var_stats in region_data.items():
+            if var_key not in stats_by_variable:
+                stats_by_variable[var_key] = []
+            stats_by_variable[var_key].append(var_stats)
+
+    return stats_by_variable
 
 
 if __name__ == "__main__":
@@ -2267,6 +2329,7 @@ if __name__ == "__main__":
     # Initialize data structures
     color_level_data = {}
     parquet_paths = {}
+    all_stats = {}  # Structure: {region: {var_key: stats_dict}}
 
     # Process each region
     for this_region in regions:
@@ -2281,32 +2344,51 @@ if __name__ == "__main__":
         this_output_path = Path(VIZ_OUTPUT_DIR, this_region)
         this_output_path.mkdir(parents=True, exist_ok=True)
 
+        # Initialize region stats
+        all_stats[this_region] = {}
+
         # Process all variables for this region
         for var_key, var_config in VIZ_SPECS.items():
-            stats, color_data = process_variable(
-                df,
-                this_region,
-                this_output_path,
-                var_config,
-                bypass_visualizations=BYPASS_VISUALIZATIONS,
-            )
-            all_stats[var_config["stats_key"]].append(stats)
+            try:
+                stats, color_data = process_variable(
+                    df,
+                    this_region,
+                    this_output_path,
+                    var_key,
+                    var_config,
+                    bypass_visualizations=BYPASS_VISUALIZATIONS,
+                )
 
-            # Store color data if not already stored and if we have it
-            # if not BYPASS_VISUALIZATIONS and color_data is not None:
-            if var_config["stats_key"] not in color_level_data:
-                color_level_data[var_config["stats_key"]] = color_data
+                # Store stats for this region and variable
+                all_stats[this_region][var_key] = stats
+
+                # Store color data if not already stored and if we have it
+                if not BYPASS_VISUALIZATIONS and color_data is not None:
+                    if var_key not in color_level_data:
+                        color_level_data[var_key] = color_data
+
+            except Exception as e:
+                print(f"Error processing {var_key} for {this_region}: {str(e)}")
+                # Store error info
+                all_stats[this_region][var_key] = {
+                    "variable": var_config["column_name"],
+                    "variable_display_name": var_config["title"],
+                    "region": this_region,
+                    "units": var_config["units"],
+                    "stats": {},
+                    "error": str(e),
+                }
 
     # Set theme for summary plots (only if doing visualizations)
     if not BYPASS_VISUALIZATIONS:
         sns.set_theme()
 
     # Generate summary analysis for all variables
+    print("Generating cross-region analysis...")
     summaries = analyze_all_variables_across_regions(
         all_stats,
         VIZ_OUTPUT_DIR,
-        variables_config,
-        bypass_visualizations=BYPASS_VISUALIZATIONS,
+        VIZ_SPECS,
     )
 
     # Generate markdown specification
@@ -2314,7 +2396,7 @@ if __name__ == "__main__":
     generate_markdown_specification(
         regions_processed=regions,
         output_dir=VIZ_OUTPUT_DIR,
-        summaries=summaries,  # Now pass the entire summaries dict
+        summaries=summaries,
         parquet_paths=parquet_paths,
         color_level_data=color_level_data,
     )
