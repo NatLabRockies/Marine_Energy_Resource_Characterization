@@ -504,6 +504,15 @@ class VAPSummaryCalculator:
         self.batch_index_start = batch_index_start
         self.batch_number = batch_index_start
 
+        self.face_indexes = None
+
+        if self.face_batch_size is not None:
+            start_index = self.batch_index_start * self.face_batch_size
+            end_index = (
+                self.batch_index_start * self.face_batch_size + self.face_batch_size
+            )
+            self.face_indexes = range(start_index, end_index)
+
         # Common paths
         self.vap_path = file_manager.get_vap_output_dir(config, self.location)
         self.vap_nc_files = sorted(list(self.vap_path.rglob("*.nc")))
@@ -1158,15 +1167,7 @@ class VAPSummaryCalculator:
 
         # Add face batch information to filename if batching is used
         if self.face_batch_size is not None:
-            end_face = (
-                self.batch_index_start
-                + min(
-                    self.face_batch_size,
-                    dataset.dims.get("face", self.face_batch_size),
-                )
-                - 1
-            )
-            batch_info = f"_faces_{self.batch_index_start}_{end_face}"
+            batch_info = f"batch_{self.batch_index_start}_faces_{self.face_indexes[0]}_{self.face_indexes[-1]}"
             # Insert before file extension
             parts = data_level_file_name.rsplit(".", 1)
             if len(parts) == 2:
