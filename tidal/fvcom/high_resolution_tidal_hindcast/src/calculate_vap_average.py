@@ -502,6 +502,7 @@ class VAPSummaryCalculator:
         # Face batching parameters
         self.face_batch_size = face_batch_size
         self.batch_index_start = batch_index_start
+        self.batch_number = batch_index_start
 
         # Common paths
         self.vap_path = file_manager.get_vap_output_dir(config, self.location)
@@ -535,29 +536,23 @@ class VAPSummaryCalculator:
     def _calculate_face_batch_slice(self, total_faces):
         """
         Calculate the face slice for the current batch configuration.
-
         Args:
             total_faces: Total number of faces in the dataset
-
         Returns:
             slice: Python slice object for face dimension, or None for full dataset
         """
         if self.face_batch_size is None:
             return None
 
-        if self.batch_index_start >= total_faces:
+        start_index = self.batch_number * self.face_batch_size
+        end_index = min(start_index + self.face_batch_size, total_faces)
+
+        if start_index >= total_faces:
             raise ValueError(
-                f"batch_index_start ({self.batch_index_start}) >= total_faces ({total_faces})"
+                f"Batch {self.batch_number} starts at face {start_index}, but only {total_faces} faces available"
             )
 
-        end_index = min(self.batch_index_start + self.face_batch_size, total_faces)
-
-        # print(
-        #     f"Face batching: processing faces {self.batch_index_start} to {end_index-1} "
-        #     f"out of {total_faces} total faces"
-        # )
-
-        return slice(self.batch_index_start, end_index)
+        return slice(start_index, end_index)
 
     def _load_dataset_with_face_batch(self, nc_file):
         """
@@ -1166,7 +1161,8 @@ class VAPSummaryCalculator:
             end_face = (
                 self.batch_index_start
                 + min(
-                    self.face_batch_size, dataset.dims.get("face", self.face_batch_size)
+                    self.face_batch_size,
+                    dataset.dims.get("face", self.face_batch_size),
                 )
                 - 1
             )
@@ -1357,9 +1353,7 @@ class VAPSummaryCalculator:
         return output_path
 
 
-def calculate_vap_yearly_average(
-    config, location, batch_size=None, batch_number=0
-):
+def calculate_vap_yearly_average(config, location, batch_size=None, batch_number=0):
     """
     Calculate yearly averages, max values, and 95th percentiles for VAP variables.
 
@@ -1369,15 +1363,11 @@ def calculate_vap_yearly_average(
         batch_size: Number of faces to process in this batch (None = process all)
         batch_number: Starting face index for this batch
     """
-    averager = VAPSummaryCalculator(
-        config, location, batch_size, batch_number
-    )
+    averager = VAPSummaryCalculator(config, location, batch_size, batch_number)
     return averager.calculate_yearly_average()
 
 
-def calculate_vap_monthly_average(
-    config, location, batch_size=None, batch_number=0
-):
+def calculate_vap_monthly_average(config, location, batch_size=None, batch_number=0):
     """
     Calculate monthly averages, max values, and 95th percentiles for VAP variables.
 
@@ -1387,9 +1377,7 @@ def calculate_vap_monthly_average(
         batch_size: Number of faces to process in this batch (None = process all)
         batch_number: Starting face index for this batch
     """
-    averager = VAPSummaryCalculator(
-        config, location, batch_size, batch_number
-    )
+    averager = VAPSummaryCalculator(config, location, batch_size, batch_number)
     return averager.calculate_monthly_averages()
 
 
