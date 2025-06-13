@@ -20,8 +20,8 @@ if __name__ == "__main__":
     batch_number = args.batch_num
 
     if batch_number == 0:
-        print("Combining monthly face files")
-        combine_monthly_face_files(config, location)
-    else:
         print("Combining yearly face files")
         combine_yearly_face_files(config, location)
+    else:
+        print("Combining monthly face files")
+        combine_monthly_face_files(config, location)

@@ -49,10 +49,10 @@ if [ $SLURM_ARRAY_TASK_ID -eq 2 ]; then
 
     echo "All summarize jobs complete. Starting concatenation..."
 
-    python concat_summarized_datasets.py cook_inlet --batch-num 0  # 0 does monthly files
+    python concat_summarized_datasets.py cook_inlet --batch-num 0  # 0 does yearly files
     # Run both concat jobs in parallel
-    # python concat_summarized_datasets.py cook_inlet --batch-num 0 &  # 0 does monthly files
-    # python concat_summarized_datasets.py cook_inlet --batch-num 1 &  # 1 does yearly files
+    # python concat_summarized_datasets.py cook_inlet --batch-num 0 &  # 0 does yearly files
+    # python concat_summarized_datasets.py cook_inlet --batch-num 1 &  # 1 does monthly files
     # wait
 
     # Cleanup

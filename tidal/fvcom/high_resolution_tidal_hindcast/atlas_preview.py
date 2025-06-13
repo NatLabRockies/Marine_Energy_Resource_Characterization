@@ -2189,86 +2189,7 @@ def generate_markdown_specification(
     return output_file
 
 
-def create_variables_config():
-    """Convert global VIZ_SPECS to processing configuration format with equation_variables as lists"""
-
-    # Convert equation_variables strings to lists for bullet rendering
-    def convert_equation_variables_to_list(equation_variables):
-        """Convert equation variables string/list to clean list, removing 'Where' prefix"""
-        if not equation_variables:
-            return []
-
-        # If already a list, return as-is
-        if isinstance(equation_variables, list):
-            return equation_variables
-
-        # Handle string format
-        text = equation_variables
-        if text.startswith("Where "):
-            text = text[6:]  # Remove 'Where '
-
-        # Split on common delimiters and clean up
-        parts = []
-        current_part = ""
-        paren_depth = 0
-
-        for char in text:
-            if char == "$":
-                current_part += char
-            elif char in "({[":
-                paren_depth += 1
-                current_part += char
-            elif char in ")}]":
-                paren_depth -= 1
-                current_part += char
-            elif char == "," and paren_depth == 0:
-                # Safe to split here
-                if current_part.strip():
-                    parts.append(current_part.strip())
-                current_part = ""
-            else:
-                current_part += char
-
-        # Add the last part
-        if current_part.strip():
-            parts.append(current_part.strip())
-
-        return parts
-
-    # Convert to processing configuration format
-    variables_config = []
-
-    for stats_key, spec in VIZ_SPECS.items():
-        # Convert equation_variables to list format
-        equation_vars_list = convert_equation_variables_to_list(
-            spec.get("equation_variables", [])
-        )
-
-        config = {
-            "column": spec["column_name"],
-            "title": spec["title"],
-            "units": spec["units"],
-            "cbar_min": spec["range_min"],
-            "cbar_max": spec["range_max"],
-            "cmap": spec["colormap"],
-            "cmap_name": spec["colormap"].name,
-            "filename_suffix": stats_key,
-            "n_colors": spec["levels"],
-            "stats_key": stats_key,
-            "viz_max": spec["range_max"],
-            # Keep all the rich metadata from VIZ_SPECS
-            "physical_meaning": spec["physical_meaning"],
-            "intended_usage": spec["intended_usage"],
-            "intended_usage_detail": spec["intended_usage_detail"],
-            "equation": spec["equation"],
-            "equation_variables": equation_vars_list,
-        }
-        variables_config.append(config)
-
-    return variables_config, VIZ_SPECS
-
-
-def process_variable(df, region, output_path, var_config, bypass_visualizations=False):
+def process_variable(df, region, output_path, var_key, var_config, bypass_visualizations=False):
     """Process a single variable - analyze and optionally plot"""
     action = "Analyzing" if bypass_visualizations else "Plotting"
     print(f"\t{action} {region} {var_config['filename_suffix']}...")
@@ -2276,7 +2197,7 @@ def process_variable(df, region, output_path, var_config, bypass_visualizations=
     # Always analyze variable
     stats = analyze_variable(
         df,
-        var_config["column"],
+        var_config["column_name"],
         var_config["title"],
         region,
         output_path=output_path,
@@ -2306,24 +2227,20 @@ def process_variable(df, region, output_path, var_config, bypass_visualizations=
 
 
 def analyze_all_variables_across_regions(
-    all_stats, output_path, variables_config, bypass_visualizations=False
+    output_path, variables_config, bypass_visualizations=False
 ):
     """Generate summary analysis for all variables across regions"""
     summaries = {}
 
     for var_config in variables_config:
         stats_key = var_config["stats_key"]
-        if stats_key in all_stats and all_stats[stats_key]:
-            action = (
-                "Calculating" if bypass_visualizations else "Calculating and plotting"
-            )
-            print(f"{action} {var_config['title']} variable summary...")
+        print(f"Calculating {var_config['title']} variable summary...")
 
-            summaries[stats_key] = analyze_variable_across_regions(
-                all_stats[stats_key],
-                output_path=output_path,
-                viz_max=var_config["viz_max"],
-            )
+        summaries[stats_key] = analyze_variable_across_regions(
+            stats_key,
+            output_path=output_path,
+            viz_max=var_config["viz_max"],
+        )
 
     return summaries
 
@@ -2337,9 +2254,6 @@ if __name__ == "__main__":
     # Configuration - set this to skip visualization generation
     BYPASS_VISUALIZATIONS = False  # Set to True to skip all plotting
 
-    # Create configuration from VIZ_SPECS
-    variables_config, viz_specs = create_variables_config()
-
     # Display available regions
     regions = get_available_regions()
     regions.reverse()
@@ -2351,7 +2265,6 @@ if __name__ == "__main__":
         print("Visualization generation is DISABLED - only performing analysis")
 
     # Initialize data structures
-    all_stats = {config["stats_key"]: [] for config in variables_config}
     color_level_data = {}
     parquet_paths = {}
 
@@ -2369,7 +2282,7 @@ if __name__ == "__main__":
         this_output_path.mkdir(parents=True, exist_ok=True)
 
         # Process all variables for this region
-        for var_config in variables_config:
+        for var_key, var_config in VIZ_SPECS.items():
             stats, color_data = process_variable(
                 df,
                 this_region,
