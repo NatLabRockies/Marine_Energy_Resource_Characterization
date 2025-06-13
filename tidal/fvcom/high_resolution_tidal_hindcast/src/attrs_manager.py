@@ -619,10 +619,13 @@ def standardize_dataset_global_attrs(
     vertical_attributes = compute_vertical_attributes(ds)
 
     # Use json to encode source files as a dict of lists of source files to track provenance
-    print("Computing input_history_json...")
-    input_history_json = create_input_history_dict(
-        ds, data_level, input_files, input_ds_is_original_model_output
-    )
+    # print("Computing input_history_json...")
+    # if len(input_files) > 0:
+    #     input_history_json = create_input_history_dict(
+    #         ds, data_level, input_files, input_ds_is_original_model_output
+    #     )
+    # else:
+    input_history_json = None
 
     # Global attributes that will be recorded in the output dataset in `attrs` (attributes). These metadata are
     # used to record data provenance information (e.g., location, institution, etc),
