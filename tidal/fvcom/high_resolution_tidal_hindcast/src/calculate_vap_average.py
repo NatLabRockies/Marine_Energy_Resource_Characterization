@@ -1385,15 +1385,13 @@ def calculate_vap_monthly_average(config, location, batch_size=None, batch_numbe
 def parse_face_batch_info(filename):
     """
     Parse face batch information from filename.
-
     Args:
         filename: String filename containing face batch info
-
     Returns:
         tuple: (start_face, end_face) or (None, None) if no batch info found
     """
-    # Look for pattern like "_faces_0_99" in filename
-    match = re.search(r"_faces_(\d+)_(\d+)", filename)
+    # Look for pattern like "batch_0_faces_0_4999" in filename
+    match = re.search(r"batch_\d+_faces_(\d+)_(\d+)", filename)
     if match:
         start_face = int(match.group(1))
         end_face = int(match.group(2))
