@@ -2357,35 +2357,22 @@ if __name__ == "__main__":
 
         # Process all variables for this region
         for var_key, var_config in VIZ_SPECS.items():
-            try:
-                stats, color_data = process_variable(
-                    df,
-                    this_region,
-                    this_output_path,
-                    var_key,
-                    var_config,
-                    bypass_visualizations=BYPASS_VISUALIZATIONS,
-                )
+            stats, color_data = process_variable(
+                df,
+                this_region,
+                this_output_path,
+                var_key,
+                var_config,
+                bypass_visualizations=BYPASS_VISUALIZATIONS,
+            )
 
-                # Store stats for this region and variable
-                all_stats[this_region][var_key] = stats
+            # Store stats for this region and variable
+            all_stats[this_region][var_key] = stats
 
-                # Store color data if not already stored and if we have it
-                if not BYPASS_VISUALIZATIONS and color_data is not None:
-                    if var_key not in color_level_data:
-                        color_level_data[var_key] = color_data
-
-            except Exception as e:
-                print(f"Error processing {var_key} for {this_region}: {str(e)}")
-                # Store error info
-                all_stats[this_region][var_key] = {
-                    "variable": var_config["column_name"],
-                    "variable_display_name": var_config["title"],
-                    "region": this_region,
-                    "units": var_config["units"],
-                    "stats": {},
-                    "error": str(e),
-                }
+            # Store color data if not already stored and if we have it
+            if not BYPASS_VISUALIZATIONS and color_data is not None:
+                if var_key not in color_level_data:
+                    color_level_data[var_key] = color_data
 
     # Set theme for summary plots (only if doing visualizations)
     if not BYPASS_VISUALIZATIONS:
