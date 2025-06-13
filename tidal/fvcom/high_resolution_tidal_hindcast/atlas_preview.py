@@ -177,6 +177,7 @@ VIZ_SPECS = {
         # "colormap": GRID_RESOLUTION_CMAP,
         "range_min": 0,
         "range_max": 500,
+        "levels": 3,
         "spec_ranges": {
             "stage_2": {
                 "max": 50,
@@ -2008,8 +2009,12 @@ def generate_markdown_specification(
 
     for var_key, spec in VIZ_SPECS.items():
         range_str = f"{spec['range_min']} - {spec['range_max']}"
+        colormap_name = "Custom"
+        if "colormap" in spec
+            color_map_name = spec["colormap"].name
+
         md_content.append(
-            f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {spec['colormap'].name} |"
+            f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {color_map_name} |"
         )
 
     md_content.append("")
