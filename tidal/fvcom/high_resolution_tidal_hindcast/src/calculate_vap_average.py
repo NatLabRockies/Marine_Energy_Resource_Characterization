@@ -1575,17 +1575,14 @@ def combine_face_batch_files_in_directory(
             continue
 
         # Combine the files
-        try:
-            combined_file = combine_face_files(file_info_list, output_file_path)
-            created_files.append(combined_file)
-            print(f"  Successfully created: {output_filename}")
-        except Exception as e:
-            print(f"  ERROR combining files for {base_name}: {e}")
+        combined_file = combine_face_files(file_info_list, output_file_path)
+        created_files.append(combined_file)
+        print(f"  Successfully created: {output_filename}")
 
     return created_files
 
 
-def combine_monthly_face_files(monthly_dir, output_dir=None):
+def combine_monthly_face_files(config, location):
     """
     Combine monthly face batch files into complete monthly files.
 
@@ -1597,10 +1594,14 @@ def combine_monthly_face_files(monthly_dir, output_dir=None):
         list: List of paths to created combined files
     """
     print("=== Combining Monthly Face Batch Files ===")
+
+    monthly_dir = file_manager.get_monthly_summary_vap_output_dir(config, location)
+    output_dir = monthly_dir
+
     return combine_face_batch_files_in_directory(monthly_dir, output_dir)
 
 
-def combine_yearly_face_files(yearly_dir, output_dir=None):
+def combine_yearly_face_files(config, location):
     """
     Combine yearly face batch files into complete yearly files.
 
@@ -1612,4 +1613,7 @@ def combine_yearly_face_files(yearly_dir, output_dir=None):
         list: List of paths to created combined files
     """
     print("=== Combining Yearly Face Batch Files ===")
+
+    yearly_dir = file_manager.get_yearly_summary_vap_output_dir(config, location)
+    output_dir = yearly_dir
     return combine_face_batch_files_in_directory(yearly_dir, output_dir)
