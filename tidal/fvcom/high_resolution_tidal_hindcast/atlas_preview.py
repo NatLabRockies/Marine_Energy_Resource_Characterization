@@ -919,9 +919,8 @@ def create_spec_based_colormap_and_norm(spec_dict, vmin=0, vmax=1000):
     bounds : array
         Array of boundaries between color regions
     labels : list
-        List of range labels for colorbar
+        List of range labels for colorbar (only for ranges that have data)
     """
-
     # Sort specs by max value to ensure proper ordering
     sorted_specs = sorted(spec_dict.items(), key=lambda x: x[1]["max"])
 
@@ -931,17 +930,46 @@ def create_spec_based_colormap_and_norm(spec_dict, vmin=0, vmax=1000):
     labels = []
 
     for spec_name, spec_info in sorted_specs:
-        # Add boundary (but don't exceed vmax for finite values)
-        if spec_info["max"] != float("inf"):
-            bounds.append(min(spec_info["max"], vmax))
+        # Determine if this range has any data
+        spec_max = spec_info["max"]
 
-        # Store color and label
-        colors.append(spec_info["color"])
-        labels.append(spec_info["label"])
+        if spec_max == float("inf"):
+            # Infinite range - only include if vmax extends beyond the previous boundary
+            if bounds[-1] < vmax:
+                bounds.append(vmax)
+                colors.append(spec_info["color"])
+                labels.append(spec_info["label"])
+        else:
+            # Finite range - include if it's within our data range
+            if spec_max > vmin and spec_max <= vmax:
+                bounds.append(spec_max)
+                colors.append(spec_info["color"])
+                labels.append(spec_info["label"])
+            elif spec_max > vmax:
+                # This range extends beyond our data, but we still need the color
+                # for the segment from the last boundary to vmax
+                if bounds[-1] < vmax:
+                    bounds.append(vmax)
+                    colors.append(spec_info["color"])
+                    # Modify label to reflect actual range shown
+                    if spec_max == float("inf"):
+                        labels.append(
+                            f"{spec_info['label'].split('(')[0]}(>{bounds[-2]})"
+                        )
+                    else:
+                        labels.append(
+                            f"{spec_info['label'].split('(')[0]}({bounds[-2]}-{vmax})"
+                        )
 
-    # Add final boundary if the last spec didn't reach vmax
+    # Ensure we end at vmax if we haven't already
     if bounds[-1] < vmax:
         bounds.append(vmax)
+
+    print("Debug create_spec_based_colormap_and_norm:")
+    print(f"  Input vmin={vmin}, vmax={vmax}")
+    print(f"  Final bounds: {bounds}")
+    print(f"  Final labels: {labels}")
+    print(f"  Number of colors: {len(colors)}")
 
     # Create custom discrete colormap
     cmap = mcolors.ListedColormap(colors)
