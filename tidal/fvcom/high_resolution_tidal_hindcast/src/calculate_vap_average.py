@@ -389,30 +389,33 @@ def calculate_tidal_levels(surface_positions, msl_tolerance_meters=0.2):
     print(f"Converted mean relative to MSL: {converted_mean:.6f} m")
 
     # Find peaks (high tides) and troughs (low tides) using MSL-relative data
+    tidal_range_calculation_method = "peak_detection"
     high_tide_indices, _ = find_peaks(surface_relative_to_msl, prominence=0.05)
     low_tide_indices, _ = find_peaks(-surface_relative_to_msl, prominence=0.05)
 
+    # Sort the indices chronologically
     # If no peaks or troughs are found, use fallback method
-    # if len(high_tide_indices) == 0 or len(low_tide_indices) == 0:
-    #     print("Warning: Could not detect peaks and troughs. Using simplified method.")
-    #     high_tides = np.sort(surface_relative_to_msl)[
-    #         -int(len(surface_relative_to_msl) * 0.2) :
-    #     ]  # Top 20%
-    #     low_tides = np.sort(surface_relative_to_msl)[
-    #         : int(len(surface_relative_to_msl) * 0.2)
-    #     ]  # Bottom 20%
-    #
-    #     # Create simple indices for reference
-    #     high_tide_indices = np.argsort(surface_relative_to_msl)[
-    #         -int(len(surface_relative_to_msl) * 0.2) :
-    #     ]
-    #     low_tide_indices = np.argsort(surface_relative_to_msl)[
-    #         : int(len(surface_relative_to_msl) * 0.2)
-    #     ]
-    # else:
-    #     # Get the water levels at high and low tides (MSL-relative)
-    high_tides = surface_relative_to_msl[high_tide_indices]
-    low_tides = surface_relative_to_msl[low_tide_indices]
+    if len(high_tide_indices) == 0 or len(low_tide_indices) == 0:
+        tidal_range_calculation_method = "top_20%"
+        print("Warning: Could not detect peaks and troughs. Using simplified method.")
+        high_tides = np.sort(surface_relative_to_msl)[
+            -int(len(surface_relative_to_msl) * 0.2) :
+        ]  # Top 20%
+        low_tides = np.sort(surface_relative_to_msl)[
+            : int(len(surface_relative_to_msl) * 0.2)
+        ]  # Bottom 20%
+
+        # Create simple indices for reference
+        high_tide_indices = np.argsort(surface_relative_to_msl)[
+            -int(len(surface_relative_to_msl) * 0.2) :
+        ]
+        low_tide_indices = np.argsort(surface_relative_to_msl)[
+            : int(len(surface_relative_to_msl) * 0.2)
+        ]
+    else:
+        # Get the water levels at high and low tides (MSL-relative)
+        high_tides = surface_relative_to_msl[high_tide_indices]
+        low_tides = surface_relative_to_msl[low_tide_indices]
 
     # Calculate tidal statistics relative to MSL
     max_high_tide = np.max(high_tides)  # Highest high tide above MSL
@@ -458,6 +461,7 @@ def calculate_tidal_levels(surface_positions, msl_tolerance_meters=0.2):
 
     # Create dictionary with MSL-relative tidal levels
     tidal_data = {
+        "Tidal Range Calculation Method": tidal_range_calculation_method,
         # Tidal levels relative to MSL
         "Max High Tide": max_high_tide,  # Maximum high tide above MSL
         "Min High Tide": min_high_tide,  # Minimum high tide above MSL
@@ -847,9 +851,16 @@ class VAPSummaryCalculator:
 
             # Calculate tidal levels using the provided function
             tidal_levels = calculate_tidal_levels(surface_timeseries)
+            print(
+                f"Face {face_idx}: MSL: {tidal_levels['Mean Water Level']:.3f} m, Max High Tide: {tidal_levels['Max High Tide']:.3f} m, Min Low Tide: {tidal_levels['Min Low Tide']:.3f} m"
+            )
 
             # Calculate tidal periods if timestamps are available
             period_stats = calculate_tidal_periods(surface_timeseries, all_timestamps)
+            print(
+                f"Face {face_idx}: Tidal Periods: Max: {period_stats['max_period_seconds']:.2f}s, Min : {period_stats['min_period_seconds']:.2f}s, Avg: {period_stats['average_period_seconds']:.2f}s"
+            )
+
             avg_periods[face_idx] = period_stats["average_period_seconds"]
             min_periods[face_idx] = period_stats["min_period_seconds"]
             max_periods[face_idx] = period_stats["max_period_seconds"]
