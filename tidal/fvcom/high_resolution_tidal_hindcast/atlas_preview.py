@@ -52,9 +52,9 @@ SEA_FLOOR_DEPTH_LEVELS = 10
 # Per 62600-201 standards
 # * Stage 1 assessments require < 500 m resolution
 # * Stage 2 assessments require < 50 m resolution
-GRID_RESOLUTION_MIN = 0
-GRID_RESOLUTION_MAX = 500
-GRID_RESOLUTION_LEVELS = 10
+# GRID_RESOLUTION_MIN = 0
+# GRID_RESOLUTION_MAX = 500
+# GRID_RESOLUTION_LEVELS = 10
 
 BASEMAP_PROVIDER = ctx.providers.Esri.WorldImagery
 
@@ -174,10 +174,26 @@ VIZ_SPECS = {
         "title": "Grid Resolution",
         "units": "m",
         "column_name": "grid_resolution_meters",
-        "colormap": GRID_RESOLUTION_CMAP,
-        "range_min": GRID_RESOLUTION_MIN,
-        "range_max": GRID_RESOLUTION_MAX,
-        "levels": GRID_RESOLUTION_LEVELS,
+        # "colormap": GRID_RESOLUTION_CMAP,
+        # "range_min": GRID_RESOLUTION_MIN,
+        # "range_max": GRID_RESOLUTION_MAX,
+        "spec_ranges": {
+            "stage_2": {
+                "max": 50,
+                "label": "Stage 2 (≤50m)",
+                "color": "#1f77b4",  # Seaborn Blue
+            },
+            "stage_1": {
+                "max": 500,
+                "label": "Stage 1 (≤500m)",
+                "color": "#ff7f0e",  # Seaborn Orange
+            },
+            "non_compliant": {
+                "max": float("inf"),
+                "label": "Non-compliant (>500m)",
+                "color": "#DC143C",  # Pleasing red
+            },
+        },
         "physical_meaning": "Average edge length of triangular finite volume elements",
         "intended_usage": "Model accuracy assessment and validation",
         "intended_usage_detail": "Indicates the spatial scale at which model results are resolved. Finer resolution (smaller values) provides more detailed results but requires greater computational resources. Used to assess model fidelity, determine appropriate applications for the data, and understand spatial limitations of the model output. Critical for validating model results against observations and determining if resolution is adequate for specific engineering applications. Per IEC 62600-201 standards: Stage 1 assessments require < 500 m resolution, while Stage 2 detailed studies require < 50 m resolution for areas of interest.",
