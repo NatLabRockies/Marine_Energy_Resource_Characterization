@@ -316,6 +316,9 @@ def plot_tidal_variable(
         _calculate_coordinate_bounds(df)
     )
 
+    spec_labels = None
+    discrete_levels = None
+
     if spec_ranges is not None:
         # Use specification-based ranges
         discrete_cmap, discrete_norm, bounds, spec_labels = (
