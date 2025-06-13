@@ -14,7 +14,7 @@
 # Recommended Batch Size: 5000
 # Calculated Tasks = 392002 / 5000 = 78.4004
 ##SBATCH --array=0-78  # Create 79 tasks
-# SBATCH --array=0-1  # For testing, use 2 tasks
+# SBATCH --array=0-2  # For testing, use 2 tasks
 
 # Load necessary modules
 module load anaconda3/2023.07-2
