@@ -2337,7 +2337,7 @@ if __name__ == "__main__":
     all_stats = {}  # Structure: {region: {var_key: stats_dict}}
 
     # Process each region
-    for this_region in regions:
+    for this_region in regions[:1]:
         # Get the parquet file path
         parquet_file = get_parquet_path(this_region)
         print(f"Reading file: {parquet_file}")
