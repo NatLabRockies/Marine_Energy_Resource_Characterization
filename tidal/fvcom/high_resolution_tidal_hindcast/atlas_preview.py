@@ -249,6 +249,7 @@ def plot_tidal_variable(
     show=False,
     save_path=None,
     n_colors=COLOR_BAR_DISCRETE_LEVELS,
+    spec_ranges=None
 ):
     """
     Plot tidal variables with optional discrete color levels.
@@ -285,6 +286,19 @@ def plot_tidal_variable(
         Width of lines for mesh plots
     n_colors : int, default=None
         Number of discrete color levels. If None, continuous colormap is used.
+    spec_ranges : dict, default=None
+        Dictionary defining specification ranges. Each key should have:
+        - 'max': maximum value for this range
+        - 'label': display label for this range  
+        - 'color': color for this range
+        If provided, takes precedence over n_colors.
+        
+    Example spec_ranges:
+    {
+        'stage_2': {'max': 50, 'label': 'Stage 2 (≤50m)', 'color': 'green'},
+        'stage_1': {'max': 500, 'label': 'Stage 1 (≤500m)', 'color': 'yellow'},
+        'non_compliant': {'max': float('inf'), 'label': 'Non-compliant', 'color': 'red'}
+    }
     """
 
     fig = plt.figure(figsize=figsize)
@@ -301,33 +315,55 @@ def plot_tidal_variable(
         _calculate_coordinate_bounds(df)
     )
 
-    # Create a discrete colormap if n_colors is specified
-    discrete_norm = None
-    if n_colors is not None:
-        # Create discrete colormap with n_colors + 1 levels (including the above-max level)
+    if spec_ranges is not None:
+        # Use specification-based ranges
+        discrete_cmap, discrete_norm, bounds, spec_labels = create_spec_based_colormap_and_norm(
+            spec_ranges, vmin, vmax
+        )
+        cmap = discrete_cmap
+        discrete_levels = bounds
+        
+    elif n_colors is not None:
+        # Use existing evenly-spaced discrete levels approach
         base_cmap = plt.get_cmap(cmap)
-
-        # Get n_colors + 1 colors evenly spaced from the colormap
         colors = base_cmap(np.linspace(0, 1, n_colors + 1))
-
-        # Create a new colormap with n_colors + 1 levels
         discrete_cmap = mpl.colors.LinearSegmentedColormap.from_list(
             "discrete_cmap", colors, N=n_colors + 1
         )
-
-        # Create boundaries for n_colors discrete levels within vmin-vmax
         main_bounds = np.linspace(vmin, vmax, n_colors + 1)
-
-        # Add an extra boundary for values above vmax
-        very_large_value = vmax * 1000  # Much larger than vmax but still finite
+        very_large_value = vmax * 1000
         bounds = np.append(main_bounds, very_large_value)
-
-        # Create a BoundaryNorm with n_colors + 1 levels
         discrete_norm = mpl.colors.BoundaryNorm(bounds, n_colors + 1)
+        discrete_levels = main_bounds
         cmap = discrete_cmap
-    else:
-        bounds = None
-        main_bounds = None
+
+    # discrete_norm = None
+
+    # if n_colors is not None:
+    #     # Create discrete colormap with n_colors + 1 levels (including the above-max level)
+    #     base_cmap = plt.get_cmap(cmap)
+    #
+    #     # Get n_colors + 1 colors evenly spaced from the colormap
+    #     colors = base_cmap(np.linspace(0, 1, n_colors + 1))
+    #
+    #     # Create a new colormap with n_colors + 1 levels
+    #     discrete_cmap = mpl.colors.LinearSegmentedColormap.from_list(
+    #         "discrete_cmap", colors, N=n_colors + 1
+    #     )
+    #
+    #     # Create boundaries for n_colors discrete levels within vmin-vmax
+    #     main_bounds = np.linspace(vmin, vmax, n_colors + 1)
+    #
+    #     # Add an extra boundary for values above vmax
+    #     very_large_value = vmax * 1000  # Much larger than vmax but still finite
+    #     bounds = np.append(main_bounds, very_large_value)
+    #
+    #     # Create a BoundaryNorm with n_colors + 1 levels
+    #     discrete_norm = mpl.colors.BoundaryNorm(bounds, n_colors + 1)
+    #     cmap = discrete_cmap
+    # else:
+    #     bounds = None
+    #     main_bounds = None
 
     if is_aleutian:
         ax, projection = _setup_aleutian_projection(
@@ -408,7 +444,10 @@ def plot_tidal_variable(
         units,
         title,
         location,
-        discrete_levels=main_bounds if n_colors is not None else None,
+        # discrete_levels=main_bounds if n_colors is not None else None,
+        discrete_levels=discrete_levels,
+        spec_labels=spec_labels,
+
     )
 
     plt.tight_layout()
@@ -777,69 +816,58 @@ def _add_colorbar_and_title(
         Location identifier
     discrete_levels : array-like, default=None
         Discrete level boundaries for the colorbar
+    spec_labels : list, default=None
+        List of specification labels corresponding to discrete_levels
     """
-    # Create a colorbar with discrete ticks if discrete levels are provided
     if discrete_levels is not None:
-        # Format the tick labels based on the number of decimals needed
-        max_value = max(abs(discrete_levels.min()), abs(discrete_levels.max()))
-        if max_value >= 1000:
-            tick_format = "%.0f"
-        elif max_value >= 100:
-            tick_format = "%.0f"
-        elif max_value >= 10:
-            tick_format = "%.2f"
-        else:
-            tick_format = "%.2f"
-
-        # Calculate the interval between levels
-        interval = (discrete_levels[-1] - discrete_levels[0]) / (
-            len(discrete_levels) - 1
-        )
-
-        # Create the colorbar
         cbar = fig.colorbar(
             scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
-
-        # Create ranges from the discrete levels
-        ranges = []
-        for i in range(len(discrete_levels) - 1):
-            start = discrete_levels[i]
-            end = discrete_levels[i + 1]
-            ranges.append((start, end))
-
-        # Calculate midpoints for tick positions
-        midpoints = [(r[0] + r[1]) / 2 for r in ranges]
-
-        # Create labels showing range intervals
-        tick_labels = []
-        for i, (start, end) in enumerate(ranges):
-            tick_labels.append(f"[{tick_format % start}-{tick_format % end})")
-
-        # Add position and label for the "above max" range
-        # Position it one interval higher (at the same distance as other ticks)
-        above_max_midpoint = discrete_levels[-1] + interval / 2
-        midpoints.append(above_max_midpoint)
-
-        # Add the final "≥ max_value" label
-        tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
-
-        print(f"Midpoints: {midpoints}")
-        print(f"Tick labels: {tick_labels}")
-
-        # First extend the colorbar's axis limits to include our new tick
-        # We need to do this BEFORE setting the ticks
-        ymin, ymax = cbar.ax.get_ylim()
-        new_ymax = max(ymax, above_max_midpoint + interval / 2)
-        cbar.ax.set_ylim(ymin, new_ymax)
-
-        # Now set the ticks and labels
-        cbar.ax.yaxis.set_ticks(midpoints)
-        cbar.ax.yaxis.set_ticklabels(tick_labels)
-
-        # Print the limits after adjustment
-        print(f"Colorbar y-limits after adjustment: {cbar.ax.get_ylim()}")
-
+        
+        if spec_labels is not None:
+            # Use specification labels
+            midpoints = []
+            for i in range(len(discrete_levels)-1):
+                midpoints.append((discrete_levels[i] + discrete_levels[i+1]) / 2)
+            
+            cbar.ax.yaxis.set_ticks(midpoints)
+            cbar.ax.yaxis.set_ticklabels(spec_labels)
+            
+        else:
+            # Use existing discrete level logic
+            max_value = max(abs(discrete_levels.min()), abs(discrete_levels.max()))
+            if max_value >= 1000:
+                tick_format = "%.0f"
+            elif max_value >= 100:
+                tick_format = "%.0f"
+            elif max_value >= 10:
+                tick_format = "%.2f"
+            else:
+                tick_format = "%.2f"
+                
+            interval = (discrete_levels[-1] - discrete_levels[0]) / (len(discrete_levels) - 1)
+            
+            ranges = []
+            for i in range(len(discrete_levels) - 1):
+                start = discrete_levels[i]
+                end = discrete_levels[i + 1]
+                ranges.append((start, end))
+                
+            midpoints = [(r[0] + r[1]) / 2 for r in ranges]
+            tick_labels = []
+            for i, (start, end) in enumerate(ranges):
+                tick_labels.append(f"[{tick_format % start}-{tick_format % end})")
+                
+            above_max_midpoint = discrete_levels[-1] + interval / 2
+            midpoints.append(above_max_midpoint)
+            tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
+            
+            ymin, ymax = cbar.ax.get_ylim()
+            new_ymax = max(ymax, above_max_midpoint + interval / 2)
+            cbar.ax.set_ylim(ymin, new_ymax)
+            
+            cbar.ax.yaxis.set_ticks(midpoints)
+            cbar.ax.yaxis.set_ticklabels(tick_labels)
     else:
         # Standard continuous colorbar
         cbar = fig.colorbar(
@@ -850,6 +878,64 @@ def _add_colorbar_and_title(
     if title is None:
         title = f"{location.replace('_', ' ').title()} - {label}"
     plt.title(title)
+
+def create_spec_based_colormap_and_norm(spec_dict, vmin=0, vmax=1000):
+    """
+    Create a colormap and normalization based on specification ranges.
+    
+    Parameters:
+    -----------
+    spec_dict : dict
+        Dictionary defining ranges with 'max', 'label', and 'color' keys.
+        Example:
+        {
+            'stage_2': {'max': 50, 'label': 'Stage 2 (≤50m)', 'color': 'green'},
+            'stage_1': {'max': 500, 'label': 'Stage 1 (≤500m)', 'color': 'yellow'}, 
+            'non_compliant': {'max': float('inf'), 'label': 'Non-compliant (>500m)', 'color': 'red'}
+        }
+    vmin, vmax : float
+        Overall data range for plotting
+    
+    Returns:
+    --------
+    cmap : matplotlib colormap
+        Custom colormap with specified colors
+    norm : matplotlib normalization  
+        BoundaryNorm for discrete color mapping
+    bounds : array
+        Array of boundaries between color regions
+    labels : list
+        List of range labels for colorbar
+    """
+    
+    # Sort specs by max value to ensure proper ordering
+    sorted_specs = sorted(spec_dict.items(), key=lambda x: x[1]['max'])
+    
+    # Create boundaries starting with vmin
+    bounds = [vmin]
+    colors = []
+    labels = []
+    
+    for spec_name, spec_info in sorted_specs:
+        # Add boundary (but don't exceed vmax for finite values)
+        if spec_info['max'] != float('inf'):
+            bounds.append(min(spec_info['max'], vmax))
+        
+        # Store color and label
+        colors.append(spec_info['color'])
+        labels.append(spec_info['label'])
+    
+    # Add final boundary if the last spec didn't reach vmax
+    if bounds[-1] < vmax:
+        bounds.append(vmax)
+    
+    # Create custom discrete colormap
+    cmap = mcolors.ListedColormap(colors)
+    
+    # Create boundary normalization
+    norm = mcolors.BoundaryNorm(bounds, len(colors))
+    
+    return cmap, norm, bounds, labels
 
 
 # Define accurate column display names
