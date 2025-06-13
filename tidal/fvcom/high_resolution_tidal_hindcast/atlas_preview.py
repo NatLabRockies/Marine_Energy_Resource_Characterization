@@ -972,6 +972,10 @@ def create_spec_based_colormap_and_norm(spec_dict, vmin=0, vmax=1000):
     # Create custom discrete colormap
     cmap = mcolors.ListedColormap(colors)
 
+    print("Calculated bounds:", bounds)
+    print("Calculated len:", bounds)
+    print("Colors:", colors)
+
     # Create boundary normalization using extended bounds
     norm = mcolors.BoundaryNorm(bounds, len(colors))
 
@@ -2073,7 +2077,7 @@ def generate_markdown_specification(
                     [
                         f"### {spec['title']} [{spec['units']}], `{spec['column_name']}`",
                         "",
-                        f"* **Colormap:** {spec['colormap']}",
+                        f"* **Colormap:** {colormap_name}",
                         f"* **Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}",
                         f"* **Discrete Levels:** {spec['levels'] + 1} ({spec['levels']} within range + 1 overflow level)",
                         "",
