@@ -32,8 +32,8 @@ python summarize_dataset.py cook_inlet --batch-size 5000 --batch-num $SLURM_ARRA
 # python summarize_dataset.py cook_inlet --batch-size 5000 --batch-num $SLURM_ARRAY_TASK_ID
 
 # Create a completion marker for this task
-mkdir -p /tmp/cook_completion_markers
-touch /tmp/cook_completion_markers/task_${SLURM_ARRAY_TASK_ID}_done
+mkdir -p cook_completion_markers
+touch cook_completion_markers/task_${SLURM_ARRAY_TASK_ID}_done
 
 # Only the last task handles concatenation
 # if [ $SLURM_ARRAY_TASK_ID -eq 78 ]; then
@@ -42,7 +42,8 @@ if [ $SLURM_ARRAY_TASK_ID -eq 2 ]; then
 
     # Wait until all 79 completion markers exist
     # while [ $(ls /tmp/cook_completion_markers/task_*_done 2>/dev/null | wc -l) -lt 79 ]; do
-    while [ $(ls /tmp/cook_completion_markers/task_*_done 2>/dev/null | wc -l) -lt 2 ]; do
+    while [ $(ls cook_completion_markers/task_*_done 2>/dev/null | wc -l) -lt 2 ]; do
+        echo "Checking for completion markers..."
         sleep 10  # check every 10 seconds
     done
 

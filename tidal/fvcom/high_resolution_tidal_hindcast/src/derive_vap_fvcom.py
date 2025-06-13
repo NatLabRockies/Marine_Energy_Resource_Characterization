@@ -121,7 +121,7 @@ def calculate_sea_water_speed(ds, config):
 
 
 def calculate_sea_water_to_direction(
-    ds, config, direction_undefined_speed_threshold_ms=0.0
+    ds, config, direction_undefined_speed_threshold_ms=0.01
 ):
     """
     Calculate the direction sea water is flowing TO in compass convention.
@@ -136,7 +136,7 @@ def calculate_sea_water_to_direction(
     config : dict
         Configuration dictionary
     direction_undefined_speed_threshold_ms : float, optional
-        Speed threshold below which direction is set to NaN, default 0.0 m/s
+        Speed threshold below which direction is set to NaN, default 0.01 m/s
 
     Returns
     -------
