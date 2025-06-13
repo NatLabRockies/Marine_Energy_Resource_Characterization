@@ -1196,13 +1196,15 @@ class VAPSummaryCalculator:
         output_path = file_manager.get_yearly_summary_vap_output_dir(
             self.config, self.location
         )
-        output_nc_files = list(output_path.rglob("*.nc"))
 
-        if len(output_nc_files) > 0:
-            print(
-                f"{len(output_nc_files)} summary files already exist. Skipping yearly averaging."
-            )
-            return None
+        # Temporarily disable existing file check
+        # output_nc_files = list(output_path.rglob("*.nc"))
+
+        # if len(output_nc_files) > 0:
+        #     print(
+        #         f"{len(output_nc_files)} summary files already exist. Skipping yearly averaging."
+        #     )
+        #     return None
 
         # Verify timestamps
         self._verify_timestamps()
