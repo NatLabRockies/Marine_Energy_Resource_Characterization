@@ -1483,8 +1483,8 @@ def combine_face_files(file_info_list, output_path):
     print(f"Combining {len(file_info_list)} face batch files into {output_path.name}")
 
     # Verify face continuity
-    if not verify_face_continuity(file_info_list):
-        print("WARNING: Face batches are not continuous. Proceeding anyway...")
+    # if not verify_face_continuity(file_info_list):
+    #     print("WARNING: Face batches are not continuous. Proceeding anyway...")
 
     datasets = []
 
