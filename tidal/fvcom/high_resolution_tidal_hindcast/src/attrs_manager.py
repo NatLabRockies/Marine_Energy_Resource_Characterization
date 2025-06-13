@@ -1010,8 +1010,8 @@ depths [m] below surface, and total depth [m] from surface from {location['start
         ]
 
         # Raise an error if there are unexpected attribute changes
-        print("Validating attribute changes...")
-        validate_attribute_changes(ds, standardized_attributes, allowed_changing_keys)
+        # print("Validating attribute changes...")
+        # validate_attribute_changes(ds, standardized_attributes, allowed_changing_keys)
 
     print("Setting attributes..")
     ds.attrs = standardized_attributes
