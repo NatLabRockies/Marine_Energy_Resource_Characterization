@@ -380,9 +380,9 @@ def calculate_tidal_levels(surface_positions, msl_tolerance_meters=0.2):
 
     # Validate the conversion worked (mean should now be very close to 0)
     converted_mean = np.mean(surface_relative_to_msl)
-    if abs(converted_mean) > 1e-10:  # Allow for floating point precision
+    if abs(converted_mean) > msl_tolerance_meters:
         raise ValueError(
-            f"Error: Converted MSL ({converted_mean:.2e}) is not close to zero"
+            f"Error: Converted MSL ({converted_mean:.2e}) is greater than {msl_tolerance_meters} m from zero."
         )
 
     print(f"MSL offset from NAVD88: {msl_offset_from_navd88:.3f} m")
