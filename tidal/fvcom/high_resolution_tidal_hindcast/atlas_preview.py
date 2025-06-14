@@ -2293,9 +2293,10 @@ def process_variable(
     color_data = None
     if not bypass_visualizations:
         # Create visualization filename using title converted to snake_case
-        filename_suffix = (
-            var_config["title"].lower().replace(" ", "_").replace("%", "percentile")
-        )
+        # filename_suffix = (
+        #     var_config["title"].lower().replace(" ", "_").replace("%", "percentile")
+        # )
+        filename_suffix = var_config["column_name"].lower().replace(" ", "_")
 
         fig, ax, color_data = plot_tidal_variable(
             df,
