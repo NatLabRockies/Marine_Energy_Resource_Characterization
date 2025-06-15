@@ -1652,4 +1652,4 @@ def combine_yearly_face_files(config, location):
 
     input_dir = file_manager.get_yearly_summary_by_face_vap_output_dir(config, location)
     output_dir = file_manager.get_yearly_summary_vap_output_dir(config, location)
-    return combine_face_batch_files_in_directory(input_dir, output_dir)
+    return combine_face_batch_files_in_directory(input_dir, output_dir, config)
