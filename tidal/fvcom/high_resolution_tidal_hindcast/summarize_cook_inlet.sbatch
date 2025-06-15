@@ -28,7 +28,7 @@ cd /home/asimms/marine_energy_resource_characterization/tidal/fvcom/high_resolut
 export PYTHONUNBUFFERED=1
 
 # Create a Python script that handles the parallelized processing
-python summarize_dataset.py cook_inlet --batch-size 5000 --batch-num $SLURM_ARRAY_TASK_ID 
+python summarize_dataset.py cook_inlet --batch-size 10000 --batch-num $SLURM_ARRAY_TASK_ID 
 # python summarize_dataset.py cook_inlet --batch-size 5000 --batch-num $SLURM_ARRAY_TASK_ID
 
 # Create a completion marker for this task
