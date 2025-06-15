@@ -857,15 +857,17 @@ class VAPSummaryCalculator:
 
             # Calculate tidal levels using the provided function
             tidal_levels = calculate_tidal_levels(surface_timeseries)
-            print(
-                f"Face {face_idx}: MSL: {tidal_levels['Mean Water Level']:.3f} m, Max High Tide: {tidal_levels['Max High Tide']:.3f} m, Min Low Tide: {tidal_levels['Min Low Tide']:.3f} m"
-            )
 
             # Calculate tidal periods if timestamps are available
             period_stats = calculate_tidal_periods(surface_timeseries, all_timestamps)
-            print(
-                f"Face {face_idx}: Tidal Periods: Max: {period_stats['max_period_seconds']:.2f}s, Min : {period_stats['min_period_seconds']:.2f}s, Avg: {period_stats['average_period_seconds']:.2f}s"
-            )
+            debug = False
+            if debug is True:
+                print(
+                    f"Face {face_idx}: MSL: {tidal_levels['Mean Water Level']:.3f} m, Max High Tide: {tidal_levels['Max High Tide']:.3f} m, Min Low Tide: {tidal_levels['Min Low Tide']:.3f} m"
+                )
+                print(
+                    f"Face {face_idx}: Tidal Periods: Max: {period_stats['max_period_seconds']:.2f}s, Min : {period_stats['min_period_seconds']:.2f}s, Avg: {period_stats['average_period_seconds']:.2f}s"
+                )
 
             avg_periods[face_idx] = period_stats["average_period_seconds"]
             min_periods[face_idx] = period_stats["min_period_seconds"]
