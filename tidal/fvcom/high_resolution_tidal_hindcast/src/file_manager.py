@@ -75,6 +75,13 @@ def get_output_dirs(config, location, use_temp_base_path=False):
                 "<location>", output_location_name
             ),
         ),
+        "yearly_summary_vap_by_face": Path(
+            base_path,
+            output_dirs["yearly_summary_vap"].replace(
+                "<location>", output_location_name
+            ),
+            "by_face",
+        ),
         "vap_partition": Path(
             base_path,
             output_dirs["vap_partition"].replace("<location>", output_location_name),
@@ -120,6 +127,10 @@ def get_monthly_summary_vap_output_dir(config, location):
 
 def get_yearly_summary_vap_output_dir(config, location):
     return get_output_dirs(config, location)["yearly_summary_vap"]
+
+
+def get_yearly_summary_by_face_vap_output_dir(config, location):
+    return get_output_dirs(config, location)["yearly_summary_vap_by_face"]
 
 
 def get_vap_partition_output_dir(config, location, use_temp_base_path=False):
