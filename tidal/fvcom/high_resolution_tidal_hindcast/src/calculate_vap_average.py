@@ -385,8 +385,10 @@ def calculate_tidal_levels(surface_positions, msl_tolerance_meters=0.2):
             f"Error: Converted MSL ({converted_mean:.2e}) is greater than {msl_tolerance_meters} m from zero."
         )
 
-    print(f"MSL offset from NAVD88: {msl_offset_from_navd88:.3f} m")
-    print(f"Converted mean relative to MSL: {converted_mean:.6f} m")
+    debug = False
+    if debug is True:
+        print(f"MSL offset from NAVD88: {msl_offset_from_navd88:.3f} m")
+        print(f"Converted mean relative to MSL: {converted_mean:.6f} m")
 
     # Find peaks (high tides) and troughs (low tides) using MSL-relative data
     tidal_range_calculation_method = "peak_detection"
@@ -1252,7 +1254,7 @@ class VAPSummaryCalculator:
             return self._save_dataset(
                 finalized_ds,
                 output_path,
-                f"Batch_{self.batch_number:03d}",
+                f"Batch_{self.batch_number:03d}.{{}}",
                 source_files,
                 "b3",
                 temporal="1_year_summary",
