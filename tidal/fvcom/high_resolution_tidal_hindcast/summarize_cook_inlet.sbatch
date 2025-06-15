@@ -1,61 +1,28 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
-#SBATCH --output=sum_cook_%A_%a.out
-##SBATCH --output=sum_cook_%j.out
-#SBATCH --job-name=sum_cook
+#SBATCH --output=sum_cook_dispatch_%j.out
+#SBATCH --job-name=sum_cook_dispatch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=24:00:00
-##SBATCH --time=59:00
+#SBATCH --time=01:00:00
 #SBATCH --partition=standard
-## SBATCH --partition=debug
-##SBATCH --array=0-78  # Create 79 tasks
-#SBATCH --array=0-2  # For testing, use 2 tasks
-# Faces 392002
-# Time Interval: Hourly
-# Recommended Batch Size: 5000
-# Calculated Tasks = 392002 / 5000 = 78.4004
 
-# Load necessary modules
-module load anaconda3/2023.07-2
-conda init
-conda activate tidal_fvcom
+# Source shared environment setup
+source sbatch_env_setup.sh
 
-# Change to the directory containing the script
-cd /home/asimms/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast
+echo "Starting Cook Inlet processing pipeline..."
 
-# Force Python to flush print statements immediately
-export PYTHONUNBUFFERED=1
+# Submit the parallel processing job array
+echo "Submitting parallel processing jobs..."
+PROCESS_JOB_ID=$(sbatch --parsable sum_cook_inlet_process.sbatch)
+echo "Process job array submitted with ID: $PROCESS_JOB_ID"
 
-# Create a Python script that handles the parallelized processing
-python summarize_dataset.py cook_inlet --batch-size 10000 --batch-num $SLURM_ARRAY_TASK_ID 
-# python summarize_dataset.py cook_inlet --batch-size 5000 --batch-num $SLURM_ARRAY_TASK_ID
+# Submit the concatenation job that depends on the processing jobs
+echo "Submitting concatenation job..."
+CONCAT_JOB_ID=$(sbatch --parsable --dependency=afterok:$PROCESS_JOB_ID sum_cook_inlet_concat.sbatch)
+echo "Concatenation job submitted with ID: $CONCAT_JOB_ID"
 
-# Create a completion marker for this task
-mkdir -p cook_completion_markers
-touch cook_completion_markers/task_${SLURM_ARRAY_TASK_ID}_done
-
-# Only the last task handles concatenation
-# if [ $SLURM_ARRAY_TASK_ID -eq 78 ]; then
-if [ $SLURM_ARRAY_TASK_ID -eq 2 ]; then
-    echo "Waiting for all tasks to complete..."
-
-    # Wait until all 79 completion markers exist
-    # while [ $(ls /tmp/cook_completion_markers/task_*_done 2>/dev/null | wc -l) -lt 79 ]; do
-    while [ $(ls cook_completion_markers/task_*_done 2>/dev/null | wc -l) -lt 2 ]; do
-        echo "Checking for completion markers..."
-        sleep 10  # check every 10 seconds
-    done
-
-    echo "All summarize jobs complete. Starting concatenation..."
-
-    python concat_summarized_datasets.py cook_inlet --batch-num 0  # 0 does yearly files
-    # Run both concat jobs in parallel
-    # python concat_summarized_datasets.py cook_inlet --batch-num 0 &  # 0 does yearly files
-    # python concat_summarized_datasets.py cook_inlet --batch-num 1 &  # 1 does monthly files
-    # wait
-
-    # Cleanup
-    rm -rf /tmp/cook_completion_markers
-    echo "All jobs completed!"
-fi
+echo "All jobs submitted successfully!"
+echo "Process jobs: $PROCESS_JOB_ID"
+echo "Concat job: $CONCAT_JOB_ID"
+echo "Pipeline complete - concatenation will run after all processing jobs finish."
