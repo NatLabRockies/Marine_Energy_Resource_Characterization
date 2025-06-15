@@ -1527,14 +1527,17 @@ def combine_face_files(file_info_list, output_path, config):
             del combined_ds.attrs[attr]
 
     # Add metadata about the combination
-    combined_ds.attrs["combined_from_face_batches"] = True
-    combined_ds.attrs["num_face_batch_files"] = len(file_info_list)
-    combined_ds.attrs["total_faces"] = combined_ds.dims["face"]
+    # combined_ds.attrs["combined_from_face_batches"] = True
+    # combined_ds.attrs["num_face_batch_files"] = len(file_info_list)
+    # combined_ds.attrs["total_faces"] = combined_ds.dims["face"]
 
     # Save the combined dataset
     print(
         f"  Saving combined dataset with {combined_ds.dims['face']} faces to {output_path}"
     )
+
+    print(combined_ds.info())
+
     # combined_ds.to_netcdf(output_path)
     nc_manager.nc_write(combined_ds, output_path, config)
 
