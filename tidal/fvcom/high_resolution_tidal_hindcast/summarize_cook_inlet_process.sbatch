@@ -14,7 +14,7 @@
 # Calculated Tasks = 392002 / 10000 = 39.2
 
 # Source shared environment setup
-source sum_cook_inlet_setup.sh
+source sbatch_env_setup.sh
 
 echo "Starting processing task $SLURM_ARRAY_TASK_ID..."
 
