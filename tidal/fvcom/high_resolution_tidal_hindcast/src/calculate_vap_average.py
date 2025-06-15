@@ -1205,6 +1205,11 @@ class VAPSummaryCalculator:
             self.config, self.location
         )
 
+        if self.face_indexes is not None:
+            output_path = file_manager.get_yearly_summary_by_face_vap_output_dir(
+                self.config, self.location
+            )
+
         # Temporarily disable existing file check
         # output_nc_files = list(output_path.rglob("*.nc"))
 
@@ -1556,6 +1561,9 @@ def combine_face_batch_files_in_directory(input_dir, output_dir, file_pattern="*
     for nc_file in nc_files:
         print(f"  Deleting {nc_file.name}")
         nc_file.unlink()  # Delete the original face batch files
+
+    # Remove the input directory if empty
+    input_dir.rmdir()
     # # Group files by base filename
     # grouped_files = group_files_by_base(nc_files)
     # print(f"Grouped into {len(grouped_files)} base filename groups")
@@ -1621,6 +1629,6 @@ def combine_yearly_face_files(config, location):
     """
     print("=== Combining Yearly Face Batch Files ===")
 
-    yearly_dir = file_manager.get_yearly_summary_vap_output_dir(config, location)
-    output_dir = yearly_dir
-    return combine_face_batch_files_in_directory(yearly_dir, output_dir)
+    input_dir = file_manager.get_yearly_summary_by_face_vap_output_dir(config, location)
+    output_dir = file_manager.get_yearly_summary_vap_output_dir(config, location)
+    return combine_face_batch_files_in_directory(input_dir, output_dir)
