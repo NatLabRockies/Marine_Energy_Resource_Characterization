@@ -1197,6 +1197,15 @@ class VAPSummaryCalculator:
         file_path = Path(output_path, filename.format(data_level_file_name))
         print(f"Saving to {file_path}...")
 
+        dataset = dataset.drop_vars(
+            # ["zeta", "nv", "quantile", "face_node_index"], errors="raise"
+            ["zeta"],
+            errors="raise",
+        )
+        # dataset = dataset.dims(
+        #     ["face_node_index", "face_node", "sigma_level"], errors="raise"
+        # )
+
         nc_manager.nc_write(dataset, file_path, self.config)
 
         return file_path
