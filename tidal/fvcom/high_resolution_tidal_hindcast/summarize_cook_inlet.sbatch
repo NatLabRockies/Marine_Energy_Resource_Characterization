@@ -5,10 +5,10 @@
 #SBATCH --job-name=sum_cook
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-##SBATCH --time=24:00:00
-#SBATCH --time=59:00
-##SBATCH --partition=standard
-#SBATCH --partition=debug
+#SBATCH --time=24:00:00
+##SBATCH --time=59:00
+#SBATCH --partition=standard
+## SBATCH --partition=debug
 ##SBATCH --array=0-78  # Create 79 tasks
 #SBATCH --array=0-2  # For testing, use 2 tasks
 # Faces 392002
