@@ -1576,7 +1576,9 @@ def combine_face_batch_files_in_directory(
     ]  # Remove Number Count and Batch info
     output_file_name = ".".join(output_file_name) + ".nc"
 
-    combined_file = combine_face_files(nc_files, output_dir, config)
+    combined_file = combine_face_files(
+        nc_files, Path(output_dir, output_file_name), config
+    )
     created_files.append(combined_file)
     print(f"  Successfully created: {output_file_name}")
 
