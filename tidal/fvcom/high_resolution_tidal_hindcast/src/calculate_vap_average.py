@@ -1254,6 +1254,8 @@ class VAPSummaryCalculator:
             return self._save_dataset(
                 finalized_ds,
                 output_path,
+                # The fstring curly brackets are used to insert the dataset filename
+                # Do not remove them
                 f"Batch_{self.batch_number:03d}.{{}}",
                 source_files,
                 "b3",
