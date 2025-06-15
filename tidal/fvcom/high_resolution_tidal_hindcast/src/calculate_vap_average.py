@@ -1488,7 +1488,7 @@ def verify_face_continuity(file_info_list):
     return True
 
 
-def combine_face_files(file_info_list, output_path):
+def combine_face_files(file_info_list, output_path, config):
     """
     Combine multiple face batch files into a single file.
 
@@ -1530,8 +1530,11 @@ def combine_face_files(file_info_list, output_path):
     combined_ds.attrs["total_faces"] = combined_ds.dims["face"]
 
     # Save the combined dataset
-    print(f"  Saving combined dataset with {combined_ds.dims['face']} faces...")
-    combined_ds.to_netcdf(output_path)
+    print(
+        f"  Saving combined dataset with {combined_ds.dims['face']} faces to {output_path}"
+    )
+    # combined_ds.to_netcdf(output_path)
+    nc_manager.nc_write(combined_ds, output_path, config)
 
     # Close all datasets
     for ds in datasets:
@@ -1541,7 +1544,9 @@ def combine_face_files(file_info_list, output_path):
     return output_path
 
 
-def combine_face_batch_files_in_directory(input_dir, output_dir, file_pattern="*.nc"):
+def combine_face_batch_files_in_directory(
+    input_dir, output_dir, config, file_pattern="*.nc"
+):
     """
     Combine face batch files in a directory into single files per base filename.
 
@@ -1569,7 +1574,7 @@ def combine_face_batch_files_in_directory(input_dir, output_dir, file_pattern="*
     ]  # Remove Number Count and Batch info
     output_file_name = ".".join(output_file_name) + ".nc"
 
-    combined_file = combine_face_files(nc_files, output_dir)
+    combined_file = combine_face_files(nc_files, output_dir, config)
     created_files.append(combined_file)
     print(f"  Successfully created: {output_file_name}")
 
@@ -1629,7 +1634,7 @@ def combine_monthly_face_files(config, location):
     monthly_dir = file_manager.get_monthly_summary_vap_output_dir(config, location)
     output_dir = monthly_dir
 
-    return combine_face_batch_files_in_directory(monthly_dir, output_dir)
+    return combine_face_batch_files_in_directory(monthly_dir, output_dir, config)
 
 
 def combine_yearly_face_files(config, location):
