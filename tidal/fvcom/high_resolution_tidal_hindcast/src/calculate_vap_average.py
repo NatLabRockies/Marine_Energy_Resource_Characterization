@@ -1248,14 +1248,24 @@ class VAPSummaryCalculator:
         print(finalized_ds.time)
 
         # Save the yearly average
-        return self._save_dataset(
-            finalized_ds,
-            output_path,
-            "001.{}",
-            source_files,
-            "b3",
-            temporal="1_year_average",
-        )
+        if self.face_indexes is not None:
+            return self._save_dataset(
+                finalized_ds,
+                output_path,
+                f"Batch_{self.batch_number:03d}",
+                source_files,
+                "b3",
+                temporal="1_year_summary",
+            )
+        else:
+            return self._save_dataset(
+                finalized_ds,
+                output_path,
+                "001.{}",
+                source_files,
+                "b3",
+                temporal="1_year_summary",
+            )
 
     def calculate_monthly_averages(self):
         """
@@ -1494,8 +1504,9 @@ def combine_face_files(file_info_list, output_path):
     datasets = []
 
     # Load all datasets
-    for path, start_face, end_face in file_info_list:
-        print(f"  Loading {path.name} (faces {start_face}-{end_face})")
+    # for path, start_face, end_face in file_info_list:
+    for path in file_info_list:
+        print(f"  Loading {path.name}")
         ds = xr.open_dataset(path)
         datasets.append(ds)
 
@@ -1539,7 +1550,8 @@ def combine_face_batch_files_in_directory(input_dir, output_dir, file_pattern="*
         list: List of paths to created combined files
     """
     # Find all NetCDF files
-    nc_files = list(input_dir.glob(file_pattern))
+    # Sorting should ensure original order
+    nc_files = sorted(list(input_dir.glob(file_pattern)))
     print(f"Found {len(nc_files)} NetCDF files in {input_dir}")
 
     if not nc_files:
@@ -1549,8 +1561,8 @@ def combine_face_batch_files_in_directory(input_dir, output_dir, file_pattern="*
     created_files = []
 
     output_file_name = nc_files[0].name.split(".")[
-        :-2
-    ]  # Use the first file's name as base
+        1:-2
+    ]  # Remove Number Count and Batch info
     output_file_name = ".".join(output_file_name) + ".nc"
 
     combined_file = combine_face_files(nc_files, output_dir)
