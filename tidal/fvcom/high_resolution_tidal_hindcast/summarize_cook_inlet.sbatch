@@ -14,12 +14,12 @@ echo "Starting Cook Inlet processing pipeline..."
 
 # Submit the parallel processing job array
 echo "Submitting parallel processing jobs..."
-PROCESS_JOB_ID=$(sbatch --parsable sum_cook_inlet_process.sbatch)
+PROCESS_JOB_ID=$(sbatch --parsable summarize_cook_inlet_process.sbatch)
 echo "Process job array submitted with ID: $PROCESS_JOB_ID"
 
 # Submit the concatenation job that depends on the processing jobs
 echo "Submitting concatenation job..."
-CONCAT_JOB_ID=$(sbatch --parsable --dependency=afterok:$PROCESS_JOB_ID sum_cook_inlet_concat.sbatch)
+CONCAT_JOB_ID=$(sbatch --parsable --dependency=afterok:$PROCESS_JOB_ID summarize_cook_inlet_concat.sbatch)
 echo "Concatenation job submitted with ID: $CONCAT_JOB_ID"
 
 echo "All jobs submitted successfully!"
