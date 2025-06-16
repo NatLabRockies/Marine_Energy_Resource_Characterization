@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
+from matplotlib.cm import ScalarMappable
 from PIL import Image, ImageOps
 from pyproj import Transformer
 
