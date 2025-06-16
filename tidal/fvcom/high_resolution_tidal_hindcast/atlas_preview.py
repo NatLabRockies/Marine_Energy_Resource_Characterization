@@ -845,29 +845,54 @@ def _add_colorbar_and_title(
         List of specification labels corresponding to discrete_levels
     """
     if discrete_levels is not None:
-        n_segments = len(discrete_levels) - 1
-
-        # Create evenly spaced positions for equal heights
-        equal_positions = np.linspace(0, 1, n_segments + 1)
-
         cbar = fig.colorbar(
             scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
-
         if spec_labels is not None:
-            # Use specification labels with equal spacing
-            tick_positions = [
-                (equal_positions[i] + equal_positions[i + 1]) / 2
-                for i in range(len(spec_labels))
-            ]
+            # Color-corrected equal-height segments for spec_labels
+            n_segments = len(discrete_levels) - 1
+            equal_positions = np.linspace(0, 1, n_segments + 1)
 
-            # Set the colorbar limits to 0-1 for equal spacing
-            cbar.ax.set_ylim(0, 1)
+            # Get original colors from the scatter plot's colormap
+            original_cmap = scatter.get_cmap()
+            original_norm = scatter.norm
+            if original_norm is None:
+                vmin, vmax = scatter.get_clim()
+
+                original_norm = Normalize(vmin=vmin, vmax=vmax)
+
+            # Sample colors at discrete level midpoints
+            level_midpoints = []
+            for i in range(len(spec_labels)):
+                midpoint = (discrete_levels[i] + discrete_levels[i + 1]) / 2
+                level_midpoints.append(midpoint)
+
+            colors = []
+            for midpoint in level_midpoints:
+                color = original_cmap(original_norm(midpoint))
+                colors.append(color)
+
+            # Create custom colormap with equal spacing but original colors
+            equal_cmap = ListedColormap(colors)
+            equal_norm = BoundaryNorm(equal_positions, len(colors))
+            sm = ScalarMappable(cmap=equal_cmap, norm=equal_norm)
+            sm.set_array([])
+
+            # Replace colorbar with correct colors
+            cbar.remove()
+            cbar = fig.colorbar(
+                sm, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
+            )
+
+            # Set tick positions and labels
+            tick_positions = []
+            for i in range(len(spec_labels)):
+                pos = (equal_positions[i] + equal_positions[i + 1]) / 2
+                tick_positions.append(pos)
+
             cbar.ax.yaxis.set_ticks(tick_positions)
             cbar.ax.yaxis.set_ticklabels(spec_labels)
-
         else:
-            # Use existing discrete level logic but with equal spacing
             max_value = max(abs(discrete_levels.min()), abs(discrete_levels.max()))
             if max_value >= 1000:
                 tick_format = "%.0f"
@@ -877,41 +902,31 @@ def _add_colorbar_and_title(
                 tick_format = "%.2f"
             else:
                 tick_format = "%.2f"
-
-            # Create equal-height segments
-            tick_positions = []
-            tick_labels = []
-
-            for i in range(n_segments):
-                # Position at center of each equal segment
-                pos = (equal_positions[i] + equal_positions[i + 1]) / 2
-                tick_positions.append(pos)
-
+            interval = (discrete_levels[-1] - discrete_levels[0]) / (
+                len(discrete_levels) - 1
+            )
+            ranges = []
+            for i in range(len(discrete_levels) - 1):
                 start = discrete_levels[i]
                 end = discrete_levels[i + 1]
+                ranges.append((start, end))
+            midpoints = [(r[0] + r[1]) / 2 for r in ranges]
+            tick_labels = []
+            for i, (start, end) in enumerate(ranges):
                 tick_labels.append(f"[{tick_format % start}-{tick_format % end})")
-
-            # Add the "above max" category if needed
-            above_max_pos = (
-                equal_positions[-1] + (equal_positions[1] - equal_positions[0]) / 2
-            )
-            if above_max_pos <= 1.2:  # Only add if it fits reasonably
-                tick_positions.append(above_max_pos)
-                tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
-                cbar.ax.set_ylim(
-                    0, above_max_pos + (equal_positions[1] - equal_positions[0]) / 2
-                )
-            else:
-                cbar.ax.set_ylim(0, 1)
-
-            cbar.ax.yaxis.set_ticks(tick_positions)
+            above_max_midpoint = discrete_levels[-1] + interval / 2
+            midpoints.append(above_max_midpoint)
+            tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
+            ymin, ymax = cbar.ax.get_ylim()
+            new_ymax = max(ymax, above_max_midpoint + interval / 2)
+            cbar.ax.set_ylim(ymin, new_ymax)
+            cbar.ax.yaxis.set_ticks(midpoints)
             cbar.ax.yaxis.set_ticklabels(tick_labels)
     else:
         # Standard continuous colorbar
         cbar = fig.colorbar(
             scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
-
     cbar.set_label(f"{label} [{units}]")
     if title is None:
         title = f"{location.replace('_', ' ').title()} - {label}"
