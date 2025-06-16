@@ -4,7 +4,7 @@
 #SBATCH --job-name=sum_cook_process
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=24:00:00
+#SBATCH --time=20:00
 #SBATCH --partition=standard
 #SBATCH --array=0-39  # Create 40 tasks
 
