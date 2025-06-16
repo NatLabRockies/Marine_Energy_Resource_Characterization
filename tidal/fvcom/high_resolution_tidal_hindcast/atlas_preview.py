@@ -821,6 +821,8 @@ def _add_colorbar_and_title(
 ):
     """
     Add colorbar and title to the plot with optional discrete levels.
+    Equal-height segments for discrete levels when values are unevenly spaced.
+
     Parameters:
     -----------
     fig : matplotlib Figure
@@ -843,21 +845,29 @@ def _add_colorbar_and_title(
         List of specification labels corresponding to discrete_levels
     """
     if discrete_levels is not None:
+        n_segments = len(discrete_levels) - 1
+
+        # Create evenly spaced positions for equal heights
+        equal_positions = np.linspace(0, 1, n_segments + 1)
+
         cbar = fig.colorbar(
             scatter, ax=ax, orientation="vertical", pad=0.02, fraction=0.03, shrink=0.7
         )
 
         if spec_labels is not None:
-            # Use specification labels
-            midpoints = []
-            for i in range(len(discrete_levels) - 1):
-                midpoints.append((discrete_levels[i] + discrete_levels[i + 1]) / 2)
+            # Use specification labels with equal spacing
+            tick_positions = [
+                (equal_positions[i] + equal_positions[i + 1]) / 2
+                for i in range(len(spec_labels))
+            ]
 
-            cbar.ax.yaxis.set_ticks(midpoints)
+            # Set the colorbar limits to 0-1 for equal spacing
+            cbar.ax.set_ylim(0, 1)
+            cbar.ax.yaxis.set_ticks(tick_positions)
             cbar.ax.yaxis.set_ticklabels(spec_labels)
 
         else:
-            # Use existing discrete level logic
+            # Use existing discrete level logic but with equal spacing
             max_value = max(abs(discrete_levels.min()), abs(discrete_levels.max()))
             if max_value >= 1000:
                 tick_format = "%.0f"
@@ -868,30 +878,33 @@ def _add_colorbar_and_title(
             else:
                 tick_format = "%.2f"
 
-            interval = (discrete_levels[-1] - discrete_levels[0]) / (
-                len(discrete_levels) - 1
-            )
+            # Create equal-height segments
+            tick_positions = []
+            tick_labels = []
 
-            ranges = []
-            for i in range(len(discrete_levels) - 1):
+            for i in range(n_segments):
+                # Position at center of each equal segment
+                pos = (equal_positions[i] + equal_positions[i + 1]) / 2
+                tick_positions.append(pos)
+
                 start = discrete_levels[i]
                 end = discrete_levels[i + 1]
-                ranges.append((start, end))
-
-            midpoints = [(r[0] + r[1]) / 2 for r in ranges]
-            tick_labels = []
-            for i, (start, end) in enumerate(ranges):
                 tick_labels.append(f"[{tick_format % start}-{tick_format % end})")
 
-            above_max_midpoint = discrete_levels[-1] + interval / 2
-            midpoints.append(above_max_midpoint)
-            tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
+            # Add the "above max" category if needed
+            above_max_pos = (
+                equal_positions[-1] + (equal_positions[1] - equal_positions[0]) / 2
+            )
+            if above_max_pos <= 1.2:  # Only add if it fits reasonably
+                tick_positions.append(above_max_pos)
+                tick_labels.append(f"[≥{tick_format % discrete_levels[-1]})")
+                cbar.ax.set_ylim(
+                    0, above_max_pos + (equal_positions[1] - equal_positions[0]) / 2
+                )
+            else:
+                cbar.ax.set_ylim(0, 1)
 
-            ymin, ymax = cbar.ax.get_ylim()
-            new_ymax = max(ymax, above_max_midpoint + interval / 2)
-            cbar.ax.set_ylim(ymin, new_ymax)
-
-            cbar.ax.yaxis.set_ticks(midpoints)
+            cbar.ax.yaxis.set_ticks(tick_positions)
             cbar.ax.yaxis.set_ticklabels(tick_labels)
     else:
         # Standard continuous colorbar
