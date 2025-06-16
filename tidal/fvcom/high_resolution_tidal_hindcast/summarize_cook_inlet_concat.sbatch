@@ -4,7 +4,7 @@
 #SBATCH --job-name=sum_cook_concat
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=02:00:00
+#SBATCH --time=90
 #SBATCH --partition=standard
 
 # Source shared environment setup
