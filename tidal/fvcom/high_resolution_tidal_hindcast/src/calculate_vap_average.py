@@ -1170,7 +1170,7 @@ class VAPSummaryCalculator:
 
             # Accumulate direction and surface elevation data with timestamps
             to_direction_data.append(ds["vap_sea_water_to_direction"].values)
-            speed_data.append(ds["vap_sea_water_sea_water_speed"].values)
+            speed_data.append(ds["vap_sea_water_speed"].values)
 
             zeta_center_data.append(ds["vap_zeta_center"].values)
 
