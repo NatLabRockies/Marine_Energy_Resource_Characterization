@@ -450,8 +450,9 @@ def calculate_tidal_levels(surface_positions, msl_tolerance_meters=0.2):
         print("Validation warnings:")
         for warning in validation_warnings:
             print(f"  - {warning}")
-    else:
-        print("All tidal level validations passed")
+    # else:
+    #     if debug is True:
+    #         print("All tidal level validations passed")
 
     # Create dictionary with MSL-relative tidal levels
     tidal_data = {
