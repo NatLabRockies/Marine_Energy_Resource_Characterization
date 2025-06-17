@@ -5,8 +5,10 @@
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 #SBATCH --time=20:00
-#SBATCH --partition=standard
-#SBATCH --array=0-39  # Create 40 tasks
+##SBATCH --partition=standard
+#SBATCH --partition=debug
+##SBATCH --array=0-39  # Create 40 tasks
+#SBATCH --array=0-1  # Create 2 tasks
 
 # Faces 392002
 # Time Interval: Hourly
