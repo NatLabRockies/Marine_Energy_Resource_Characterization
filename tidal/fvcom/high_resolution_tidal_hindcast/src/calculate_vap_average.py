@@ -1190,6 +1190,7 @@ class VAPSummaryCalculator:
         # Concatenate along time axis (axis 0)
         combined_to_direction = np.concatenate(to_direction_data, axis=0)
         combined_speed = np.concatenate(speed_data, axis=0)
+        print("Adding direction qoi variables...")
         result_ds = self.calculate_to_direction_qoi(
             result_ds, combined_to_direction, combined_speed
         )
@@ -1200,6 +1201,7 @@ class VAPSummaryCalculator:
         # Combine timestamps
         combined_timestamps = np.concatenate(all_timestamps, axis=0)
 
+        print("Adding surface elevation qoi variables...")
         result_ds = self.calculate_surface_elevation_qoi(
             result_ds, combined_zeta_center, combined_timestamps
         )
