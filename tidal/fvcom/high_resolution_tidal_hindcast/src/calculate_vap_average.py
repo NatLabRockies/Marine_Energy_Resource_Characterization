@@ -217,25 +217,17 @@ def calculate_tidal_periods(surface_elevation, times):
             tidal_cycles_data.append(cycle_data)
 
         # Calculate time difference between consecutive high tides
-        if times is not None:
-            try:
-                if isinstance(times, pd.DatetimeIndex):
-                    time_diff = (times[curr_idx] - times[prev_idx]).total_seconds()
-                elif hasattr(times, "iloc"):
-                    time_diff = (
-                        times.iloc[curr_idx] - times.iloc[prev_idx]
-                    ).total_seconds()
-                else:
-                    time_diff = (times[curr_idx] - times[prev_idx]).total_seconds()
+        times = pd.to_datetime(times)
+        if isinstance(times, pd.DatetimeIndex):
+            time_diff = (times[curr_idx] - times[prev_idx]).total_seconds()
+        elif hasattr(times, "iloc"):
+            time_diff = (times.iloc[curr_idx] - times.iloc[prev_idx]).total_seconds()
+        else:
+            time_diff = (times[curr_idx] - times[prev_idx]).total_seconds()
 
-                # Only include reasonable periods (10-14 hours for semi-diurnal, 20-26 hours for diurnal)
-                if (
-                    10 * 3600 < time_diff < 14 * 3600
-                    or 20 * 3600 < time_diff < 26 * 3600
-                ):
-                    high_tide_periods.append(time_diff)
-            except Exception:
-                continue
+        # Only include reasonable periods (10-14 hours for semi-diurnal, 20-26 hours for diurnal)
+        if 10 * 3600 < time_diff < 14 * 3600 or 20 * 3600 < time_diff < 26 * 3600:
+            high_tide_periods.append(time_diff)
 
     # Calculate statistics for tidal periods
     all_periods = high_tide_periods + low_tide_periods
