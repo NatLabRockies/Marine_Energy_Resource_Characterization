@@ -78,7 +78,7 @@ def verify_constant_variables(ds1, ds2, constant_vars):
 
 
 def calculate_single_primary_and_secondary_direction(
-    direction_timeseries, bin_width_degrees=1, mask_width_degrees=180
+    direction_timeseries, speed_timeseries, bin_width_degrees=1, mask_width_degrees=180
 ):
     """
     Calculate primary and secondary flow directions from a time series of directions.
@@ -108,7 +108,32 @@ def calculate_single_primary_and_secondary_direction(
     # Find secondary direction
     secondary_bin_idx = np.argmax(masked_histogram)
     secondary_direction = bin_centers[secondary_bin_idx]
-    return primary_direction, secondary_direction
+
+    # Calculate mean speeds for primary and secondary directions
+    # Find data points that fall within each direction's bin
+    primary_bin_mask = (direction_timeseries >= bin_edges[primary_bin_idx]) & (
+        direction_timeseries < bin_edges[primary_bin_idx + 1]
+    )
+    secondary_bin_mask = (direction_timeseries >= bin_edges[secondary_bin_idx]) & (
+        direction_timeseries < bin_edges[secondary_bin_idx + 1]
+    )
+
+    # Calculate mean speeds (handle empty bins)
+    primary_mean_speed = (
+        np.mean(speed_timeseries[primary_bin_mask]) if np.any(primary_bin_mask) else 0.0
+    )
+    secondary_mean_speed = (
+        np.mean(speed_timeseries[secondary_bin_mask])
+        if np.any(secondary_bin_mask)
+        else 0.0
+    )
+
+    return (
+        primary_direction,
+        primary_mean_speed,
+        secondary_direction,
+        secondary_mean_speed,
+    )
 
 
 def calculate_tidal_periods(surface_elevation, times):
@@ -724,7 +749,7 @@ class VAPSummaryCalculator:
 
         return result_ds
 
-    def calculate_to_direction_qoi(self, result_ds, to_direction_data):
+    def calculate_to_direction_qoi(self, result_ds, to_direction_data, speed_data):
         """
         Calculate direction quantities of interest (QOI) using accumulated direction data.
 
@@ -745,7 +770,9 @@ class VAPSummaryCalculator:
 
         # Initialize arrays for primary and secondary directions
         primary_directions = np.full((n_sigma_layers, n_faces), np.nan)
+        primary_speeds = np.full((n_sigma_layers, n_faces), np.nan)
         secondary_directions = np.full((n_sigma_layers, n_faces), np.nan)
+        secondary_speeds = np.full((n_sigma_layers, n_faces), np.nan)
         bin_width_degrees = 2
         mask_width_degrees = 180
 
@@ -754,6 +781,7 @@ class VAPSummaryCalculator:
             for face_idx in range(n_faces):
                 # Extract time series for this sigma_layer-face combination
                 direction_timeseries = to_direction_data[:, layer_idx, face_idx]
+                speed_timeseries = speed_data[:, layer_idx, face_idx]
 
                 # Remove NaN values
                 valid_mask = ~np.isnan(direction_timeseries)
@@ -763,15 +791,19 @@ class VAPSummaryCalculator:
                 valid_directions = direction_timeseries[valid_mask]
 
                 # Calculate primary and secondary directions
-                primary_dir, secondary_dir = (
+                primary_dir, primary_mean_speed, secondary_dir, secondary_mean_speed = (
                     calculate_single_primary_and_secondary_direction(
                         valid_directions,
+                        speed_timeseries[valid_mask],
                         bin_width_degrees=bin_width_degrees,
                         mask_width_degrees=mask_width_degrees,
                     )
                 )
+
                 primary_directions[layer_idx, face_idx] = primary_dir
+                primary_speeds[layer_idx, face_idx] = primary_mean_speed
                 secondary_directions[layer_idx, face_idx] = secondary_dir
+                secondary_speeds[layer_idx, face_idx] = secondary_mean_speed
 
         # Add direction QOI variables to result dataset using correct dimension names
         # Create new variables for direction QOI with CF-compliant attributes
@@ -789,6 +821,19 @@ class VAPSummaryCalculator:
             },
         )
 
+        result_ds["vap_sea_water_primary_to_direction_mean_speed"] = xr.DataArray(
+            primary_speeds,
+            dims=["sigma_layer", "face"],
+            attrs={
+                "long_name": "Sea Water Primary To Direction Mean Speed",
+                "units": "m s-1",
+                "description": "Mean speed in primary flow direction at each location and depth based on directional histogram analysis",
+                "computation": f"calculate using values in the primary direction bins with {bin_width_degrees}-degree wide bins with {mask_width_degrees}-degree masking",
+                "input_variables": "vap_sea_water_to_direction, vap_sea_water_speed",
+                "cell_methods": "time: histogram_mode",
+            },
+        )
+
         result_ds["vap_sea_water_secondary_to_direction"] = xr.DataArray(
             secondary_directions,
             dims=["sigma_layer", "face"],
@@ -802,6 +847,79 @@ class VAPSummaryCalculator:
                 "input_variables": "vap_sea_water_to_direction",
                 "cell_methods": "time: histogram_mode",
             },
+        )
+
+        result_ds["vap_sea_water_secondary_to_direction_mean_speed"] = xr.DataArray(
+            secondary_speeds,
+            dims=["sigma_layer", "face"],
+            attrs={
+                "long_name": "Sea Water secondary To Direction Mean Speed",
+                "units": "m s-1",
+                "description": "Mean speed in secondary flow direction at each location and depth based on directional histogram analysis",
+                "computation": f"calculate using values in the secondary direction bins with {bin_width_degrees}-degree wide bins with {mask_width_degrees}-degree masking",
+                "input_variables": "vap_sea_water_to_direction, vap_sea_water_speed",
+                "cell_methods": "time: histogram_mode",
+            },
+        )
+
+        depth_avg_primary_directions = np.nanmean(
+            primary_directions, axis=0
+        )  # Shape: [n_faces]
+        depth_avg_primary_speeds = np.nanmean(primary_speeds, axis=0)
+        depth_avg_secondary_directions = np.nanmean(secondary_directions, axis=0)
+        depth_avg_secondary_speeds = np.nanmean(secondary_speeds, axis=0)
+
+        # Add depth-averaged variables to the dataset
+        result_ds["vap_sea_water_primary_to_direction_depth_avg"] = xr.DataArray(
+            depth_avg_primary_directions,
+            dims=["face"],
+            attrs={
+                "long_name": "Sea Water Primary To Direction (Depth Averaged)",
+                "units": "degrees",
+                "valid_range": [0.0, 360.0],
+                "description": "Depth-averaged primary flow direction at each location",
+                "computation": "depth average of primary directions across all sigma layers",
+                "cell_methods": "sigma_layer: mean",
+            },
+        )
+
+        result_ds["vap_sea_water_primary_to_direction_mean_speed_depth_avg"] = (
+            xr.DataArray(
+                depth_avg_primary_speeds,
+                dims=["face"],
+                attrs={
+                    "long_name": "Sea Water Primary To Direction Mean Speed (Depth Averaged)",
+                    "units": "m s-1",
+                    "description": "Depth-averaged mean speed in primary flow direction",
+                    "cell_methods": "sigma_layer: mean",
+                },
+            )
+        )
+
+        # Similar for secondary directions
+        result_ds["vap_sea_water_secondary_to_direction_depth_avg"] = xr.DataArray(
+            depth_avg_secondary_directions,
+            dims=["face"],
+            attrs={
+                "long_name": "Sea Water Secondary To Direction (Depth Averaged)",
+                "units": "degrees",
+                "valid_range": [0.0, 360.0],
+                "description": "Depth-averaged secondary flow direction at each location",
+                "cell_methods": "sigma_layer: mean",
+            },
+        )
+
+        result_ds["vap_sea_water_secondary_to_direction_mean_speed_depth_avg"] = (
+            xr.DataArray(
+                depth_avg_secondary_speeds,
+                dims=["face"],
+                attrs={
+                    "long_name": "Sea Water Secondary To Direction Mean Speed (Depth Averaged)",
+                    "units": "m s-1",
+                    "description": "Depth-averaged mean speed in secondary flow direction",
+                    "cell_methods": "sigma_layer: mean",
+                },
+            )
         )
 
         return result_ds
@@ -1018,6 +1136,7 @@ class VAPSummaryCalculator:
 
         # Initialize lists to accumulate direction and surface elevation data with timestamps
         to_direction_data = []
+        speed_data = []
         zeta_center_data = []
         all_timestamps = []
 
@@ -1051,6 +1170,7 @@ class VAPSummaryCalculator:
 
             # Accumulate direction and surface elevation data with timestamps
             to_direction_data.append(ds["vap_sea_water_to_direction"].values)
+            speed_data.append(ds["vap_sea_water_sea_water_speed"].values)
 
             zeta_center_data.append(ds["vap_zeta_center"].values)
 
@@ -1069,7 +1189,10 @@ class VAPSummaryCalculator:
         # Combine accumulated data and calculate QOI
         # Concatenate along time axis (axis 0)
         combined_to_direction = np.concatenate(to_direction_data, axis=0)
-        result_ds = self.calculate_to_direction_qoi(result_ds, combined_to_direction)
+        combined_speed = np.concatenate(speed_data, axis=0)
+        result_ds = self.calculate_to_direction_qoi(
+            result_ds, combined_to_direction, combined_speed
+        )
 
         # Concatenate along time axis (axis 0)
         combined_zeta_center = np.concatenate(zeta_center_data, axis=0)
