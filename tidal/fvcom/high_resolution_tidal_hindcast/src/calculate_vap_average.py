@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from collections import defaultdict
 import re
@@ -136,40 +137,42 @@ def calculate_single_primary_and_secondary_direction(
     )
 
 
-def calculate_tidal_periods(surface_elevation, times):
-    """
-    Calculate tidal period statistics and ranges between consecutive tidal cycles.
+def calculate_tidal_periods_profiled(surface_elevation, times):
+    start_time = time.perf_counter()
 
-    Parameters:
-    -----------
-    surface_elevation : array-like
-        Array of modeled water surface elevations
-    times : array-like
-        Array of timestamps corresponding to surface positions
-
-    Returns:
-    --------
-    dict
-        Dictionary containing tidal period statistics and cycle-specific data
-    """
+    print(
+        f"[PROFILE] Function start - Input sizes: elevation={len(surface_elevation)}, times={len(times)}"
+    )
 
     # Find peaks (high tides) with appropriate prominence
+    peak_start = time.perf_counter()
     high_tide_indices, _ = find_peaks(surface_elevation, prominence=0.05)
+    peak_high_time = time.perf_counter() - peak_start
 
     # Also find troughs (low tides)
+    trough_start = time.perf_counter()
     low_tide_indices, _ = find_peaks(-surface_elevation, prominence=0.05)
+    peak_low_time = time.perf_counter() - trough_start
+
+    print(
+        f"[PROFILE] Peak finding: high_tides={peak_high_time*1000:.3f}ms ({len(high_tide_indices)} peaks), low_tides={peak_low_time*1000:.3f}ms ({len(low_tide_indices)} troughs)"
+    )
 
     # Sort the indices chronologically
+    sort_start = time.perf_counter()
     high_tide_indices = np.sort(high_tide_indices)
     low_tide_indices = np.sort(low_tide_indices)
+    sort_time = time.perf_counter() - sort_start
+    print(f"[PROFILE] Sorting indices: {sort_time*1000:.3f}ms")
 
-    # Calculate time differences between consecutive high tides (semi-diurnal period)
+    # Initialize variables
     high_tide_periods = []
     low_tide_periods = []
     tidal_ranges = []
     tidal_cycles_data = []
 
     if len(high_tide_indices) < 2:
+        print(f"[PROFILE] Early return - insufficient peaks ({len(high_tide_indices)})")
         # Not enough peaks to calculate periods
         return {
             "average_period_seconds": 0,
@@ -189,17 +192,30 @@ def calculate_tidal_periods(surface_elevation, times):
         }
 
     # Calculate high tide periods and tidal ranges for consecutive cycles
+    loop_start = time.perf_counter()
+    time_conversion_total = 0
+    range_calc_total = 0
+    between_search_total = 0
+    cycle_data_total = 0
+
+    print(f"[PROFILE] Starting main loop with {len(high_tide_indices)-1} iterations")
+
     for i in range(1, len(high_tide_indices)):
+        iteration_start = time.perf_counter()
+
         prev_idx = high_tide_indices[i - 1]
         curr_idx = high_tide_indices[i]
 
         # Find the low tide(s) between consecutive high tides
+        between_start = time.perf_counter()
         between_low_indices = low_tide_indices[
             (low_tide_indices > prev_idx) & (low_tide_indices < curr_idx)
         ]
+        between_search_total += time.perf_counter() - between_start
 
         # Only process valid tidal cycles with low tides between consecutive high tides
         if len(between_low_indices) > 0:
+            range_start = time.perf_counter()
             # Use the lowest low tide between consecutive high tides
             lowest_low_idx = between_low_indices[
                 np.argmin(surface_elevation[between_low_indices])
@@ -210,8 +226,10 @@ def calculate_tidal_periods(surface_elevation, times):
             low_tide_value = surface_elevation[lowest_low_idx]
             tidal_range = high_tide_value - low_tide_value
             tidal_ranges.append(tidal_range)
+            range_calc_total += time.perf_counter() - range_start
 
             # Get timestamps if available
+            cycle_start = time.perf_counter()
             high_tide_time = None
             low_tide_time = None
 
@@ -240,9 +258,11 @@ def calculate_tidal_periods(surface_elevation, times):
                 "tidal_range": tidal_range,
             }
             tidal_cycles_data.append(cycle_data)
+            cycle_data_total += time.perf_counter() - cycle_start
 
         # Calculate time difference between consecutive high tides
-        times = pd.to_datetime(times)
+        time_conv_start = time.perf_counter()
+        times = pd.to_datetime(times)  # This line looks suspicious - modifying input!
         if isinstance(times, pd.DatetimeIndex):
             time_diff = (times[curr_idx] - times[prev_idx]).total_seconds()
         elif hasattr(times, "iloc"):
@@ -254,7 +274,25 @@ def calculate_tidal_periods(surface_elevation, times):
         if 10 * 3600 < time_diff < 14 * 3600 or 20 * 3600 < time_diff < 26 * 3600:
             high_tide_periods.append(time_diff)
 
+        time_conversion_total += time.perf_counter() - time_conv_start
+
+        if (
+            i <= 3 or i % max(1, (len(high_tide_indices) - 1) // 5) == 0
+        ):  # Log first few and every 20%
+            iteration_time = time.perf_counter() - iteration_start
+            print(
+                f"[PROFILE] Loop iteration {i}: {iteration_time*1000:.3f}ms (between_lows={len(between_low_indices)})"
+            )
+
+    loop_total = time.perf_counter() - loop_start
+    print(f"[PROFILE] Main loop completed: {loop_total*1000:.3f}ms total")
+    print(f"[PROFILE]   - Between search: {between_search_total*1000:.3f}ms")
+    print(f"[PROFILE]   - Range calc: {range_calc_total*1000:.3f}ms")
+    print(f"[PROFILE]   - Time conversion: {time_conversion_total*1000:.3f}ms")
+    print(f"[PROFILE]   - Cycle data: {cycle_data_total*1000:.3f}ms")
+
     # Calculate statistics for tidal periods
+    stats_start = time.perf_counter()
     all_periods = high_tide_periods + low_tide_periods
 
     # Calculate statistics if we have valid periods
@@ -271,6 +309,7 @@ def calculate_tidal_periods(surface_elevation, times):
         else:
             tide_type = "Mixed Pattern Tides"
     else:
+        print("[PROFILE] No valid periods found, returning empty result")
         # No valid periods found
         return {
             "average_period_seconds": 0,
@@ -288,8 +327,10 @@ def calculate_tidal_periods(surface_elevation, times):
             "tidal_ranges": [],
             "cycle_data": tidal_cycles_data,
         }
+    stats_time = time.perf_counter() - stats_start
 
     # Calculate tidal range statistics
+    range_stats_start = time.perf_counter()
     if tidal_ranges:
         avg_range = np.mean(tidal_ranges)
         min_range = np.min(tidal_ranges)
@@ -316,15 +357,21 @@ def calculate_tidal_periods(surface_elevation, times):
         max_range = 0
         min_range_cycle = None
         max_range_cycle = None
+    range_stats_time = time.perf_counter() - range_stats_start
+
+    # Format function
+    format_start = time.perf_counter()
 
     def format_seconds_to_decimal_hours(seconds):
         # Convert seconds to hours (as a float)
         hours = seconds / 3600
-
         # Format to 2 decimal places and add 'h' suffix
         return f"{hours:.2f}h"
 
+    format_time = time.perf_counter() - format_start
+
     # Create the return dictionary with all needed keys
+    result_start = time.perf_counter()
     period_stats = {
         "average_period_seconds": avg_period if all_periods else 0,
         "min_period_seconds": min_period if all_periods else 0,
@@ -347,6 +394,20 @@ def calculate_tidal_periods(surface_elevation, times):
         "tidal_ranges": tidal_ranges,
         "cycle_data": tidal_cycles_data,
     }
+    result_time = time.perf_counter() - result_start
+
+    total_time = time.perf_counter() - start_time
+
+    print("[PROFILE] Final timing breakdown:")
+    print(f"[PROFILE]   - Statistics calc: {stats_time*1000:.3f}ms")
+    print(f"[PROFILE]   - Range statistics: {range_stats_time*1000:.3f}ms")
+    print(f"[PROFILE]   - Format function: {format_time*1000:.3f}ms")
+    print(f"[PROFILE]   - Result creation: {result_time*1000:.3f}ms")
+    print(f"[PROFILE] TOTAL FUNCTION TIME: {total_time*1000:.3f}ms")
+    print(
+        f"[PROFILE] Results: {len(high_tide_periods)} periods, {len(tidal_ranges)} ranges, {len(tidal_cycles_data)} cycles"
+    )
+    print("=" * 80)
 
     return period_stats
 
