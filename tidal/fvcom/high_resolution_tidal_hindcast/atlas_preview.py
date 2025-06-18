@@ -252,7 +252,11 @@ VIZ_SPECS = {
 def get_available_regions():
     """Get list of available regions based on directory structure"""
     return sorted(
-        [d.name for d in BASE_DIR.iterdir() if d.is_dir() and "me_atlas" not in d.name]
+        [
+            d.name
+            for d in BASE_DIR.iterdir()
+            if d.is_dir() and "me_atlas" not in d.name and "puget_sound" not in d.name
+        ]
     )
 
 
