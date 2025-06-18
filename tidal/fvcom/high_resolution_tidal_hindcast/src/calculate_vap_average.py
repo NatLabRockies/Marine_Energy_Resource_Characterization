@@ -961,7 +961,6 @@ class VAPSummaryCalculator:
 
         # Calculate tidal statistics for each face
         for face_idx in range(n_faces):
-            print(f"Calculating tidal statistics for face {face_idx}...")
             # Extract time series for this face
             surface_timeseries = zeta_center_data[:, face_idx]
 
