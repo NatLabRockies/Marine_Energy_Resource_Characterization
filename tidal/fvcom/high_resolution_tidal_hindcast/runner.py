@@ -39,31 +39,31 @@ if __name__ == "__main__":
 
     print(f"Standardizing {location} tidal dataset for output type {output_type}....")
 
-    print("Finding nc files...")
-    try:
-        nc_files = get_specified_nc_files(config, location)
-        print(f"Found {len(nc_files)} files!")
-    except PermissionError:
-        print("Permissions error accessing original files")
-        nc_files = []
-
-    print("Step 1: Verifying Dataset Integrity...")
-    valid_timestamps_df = verify_dataset(config, location, nc_files)
-
-    print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
-    valid_std_files_df = standardize_dataset(config, args.location, valid_timestamps_df)
-
-    print("Step 3: Partitioning Standardized Dataset by Time...")
-    partition_by_time(config, args.location, valid_std_files_df)
-
-    print("Step 4: Calculating Derived Value Added Products...")
-    derive_vap(config, args.location)
-
-    print("Step 5: Calculating Monthly Averages...")
-    calculate_vap_monthly_average(config, args.location)
-
-    print("Step 6: Calculating Yearly Average...")
-    calculate_vap_yearly_average(config, args.location)
+    # print("Finding nc files...")
+    # try:
+    #     nc_files = get_specified_nc_files(config, location)
+    #     print(f"Found {len(nc_files)} files!")
+    # except PermissionError:
+    #     print("Permissions error accessing original files")
+    #     nc_files = []
+    #
+    # print("Step 1: Verifying Dataset Integrity...")
+    # valid_timestamps_df = verify_dataset(config, location, nc_files)
+    #
+    # print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
+    # valid_std_files_df = standardize_dataset(config, args.location, valid_timestamps_df)
+    #
+    # print("Step 3: Partitioning Standardized Dataset by Time...")
+    # partition_by_time(config, args.location, valid_std_files_df)
+    #
+    # print("Step 4: Calculating Derived Value Added Products...")
+    # derive_vap(config, args.location)
+    #
+    # print("Step 5: Calculating Monthly Averages...")
+    # calculate_vap_monthly_average(config, args.location)
+    #
+    # print("Step 6: Calculating Yearly Average...")
+    # calculate_vap_yearly_average(config, args.location)
 
     # print("Step 7: Create Parquet Partition Dataset...")
     # partition_vap_into_parquet_dataset(config, args.location)
