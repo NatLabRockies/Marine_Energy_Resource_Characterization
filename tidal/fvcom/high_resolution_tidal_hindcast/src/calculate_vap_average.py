@@ -137,7 +137,7 @@ def calculate_single_primary_and_secondary_direction(
     )
 
 
-def calculate_tidal_periods_profiled(surface_elevation, times):
+def calculate_tidal_periods(surface_elevation, times):
     start_time = time.perf_counter()
 
     print(
