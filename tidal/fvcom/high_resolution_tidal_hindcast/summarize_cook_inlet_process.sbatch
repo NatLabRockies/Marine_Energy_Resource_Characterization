@@ -4,11 +4,13 @@
 #SBATCH --job-name=sum_cook_process
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=20:00
-##SBATCH --partition=standard
-#SBATCH --partition=debug
-##SBATCH --array=0-39  # Create 40 tasks
-#SBATCH --array=0-1  # Create 2 tasks
+#SBATCH --time=2:00:00
+#SBATCH --partition=shared
+#SBATCH --ntasks=1
+#SBATCH --mem=64G # Request 64 GB of RAM for memory-intensive processing
+#SBATCH --array=0-39
+##SBATCH --partition=debug
+##SBATCH --array=0-1  # Create 2 tasks
 
 # Faces 392002
 # Time Interval: Hourly
