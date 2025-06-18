@@ -961,6 +961,7 @@ class VAPSummaryCalculator:
 
         # Calculate tidal statistics for each face
         for face_idx in range(n_faces):
+            print(f"Calculating tidal statistics for face {face_idx}...")
             # Extract time series for this face
             surface_timeseries = zeta_center_data[:, face_idx]
 
@@ -971,6 +972,7 @@ class VAPSummaryCalculator:
 
             # Calculate tidal periods if timestamps are available
             period_stats = calculate_tidal_periods(surface_timeseries, all_timestamps)
+
             debug = False
             if debug is True:
                 print(
@@ -994,6 +996,7 @@ class VAPSummaryCalculator:
                 tidal_levels["Max High Tide"] - tidal_levels["Min Low Tide"]
             )
 
+        print("Adding surface elevation QOI variables to result dataset...")
         # Add surface elevation QOI variables to result dataset with CF-compliant attributes
         result_ds["vap_sea_surface_elevation_mean"] = xr.DataArray(
             mean_water_levels,
