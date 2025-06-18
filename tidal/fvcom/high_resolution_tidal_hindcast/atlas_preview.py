@@ -209,6 +209,42 @@ VIZ_SPECS = {
             r"$R = 6378137.0$ m is the Earth radius (WGS84)",
         ],
     },
+    "primary_direction": {
+        "title": "Primary Sea Water To Direction",
+        "units": "m/s",
+        "column_name": "vap_sea_water_primary_to_direction_depth_avg",
+        "colormap": "cmocean.cm.phase",
+        "range_min": 0,
+        "range_max": 360,
+        "levels": 16,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
+    "secondary_direction": {
+        "title": "Secondary Sea Water To Direction",
+        "units": "m/s",
+        "column_name": "vap_sea_water-secondary_to_direction_depth_avg",
+        "colormap": "cmocean.cm.phase",
+        "range_min": 0,
+        "range_max": 360,
+        "levels": 16,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
 }
 
 
