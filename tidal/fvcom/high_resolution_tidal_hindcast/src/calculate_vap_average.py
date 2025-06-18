@@ -149,6 +149,8 @@ def calculate_tidal_periods(surface_elevation, times):
     high_tide_indices, _ = find_peaks(surface_elevation, prominence=0.05)
     peak_high_time = time.perf_counter() - peak_start
 
+    # times = pd.to_datetime(times)
+
     # Also find troughs (low tides)
     trough_start = time.perf_counter()
     low_tide_indices, _ = find_peaks(-surface_elevation, prominence=0.05)
@@ -262,7 +264,6 @@ def calculate_tidal_periods(surface_elevation, times):
 
         # Calculate time difference between consecutive high tides
         time_conv_start = time.perf_counter()
-        times = pd.to_datetime(times)  # This line looks suspicious - modifying input!
         if isinstance(times, pd.DatetimeIndex):
             time_diff = (times[curr_idx] - times[prev_idx]).total_seconds()
         elif hasattr(times, "iloc"):
@@ -1019,6 +1020,8 @@ class VAPSummaryCalculator:
         avg_periods = np.full(n_faces, np.nan)
         min_periods = np.full(n_faces, np.nan)
         max_periods = np.full(n_faces, np.nan)
+
+        all_timestamps = pd.to_datetime(all_timestamps)
 
         # Calculate tidal statistics for each face
         for face_idx in range(n_faces):
