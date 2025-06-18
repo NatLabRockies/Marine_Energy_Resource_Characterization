@@ -152,26 +152,10 @@ def calculate_sea_water_to_direction(
         )
 
     # Calculate cartesian angle (counterclockwise from east)
+    # - np.arctan2(y, x) takes arguments as (northward, eastward) = (v, u)
+    # - Returns angle in radians with range [-π, π]
+    # - Convert to degrees with range [-180°, 180°]
     cartesian_angle_degrees = np.rad2deg(np.arctan2(ds.v, ds.u))
-
-    # Validate direction ranges
-    cartesian_angle_degrees_expected_max = 180.0  # arctan2 range is [-180, 180]
-    cartesian_angle_degrees_expected_min = -180.0
-
-    cartesian_angle_degrees_max = np.max(cartesian_angle_degrees)
-    cartesian_angle_degrees_min = np.min(cartesian_angle_degrees)
-
-    if cartesian_angle_degrees_max > cartesian_angle_degrees_expected_max:
-        raise ValueError(
-            f"Maximum mathematical direction value {cartesian_angle_degrees_max}° "
-            f"exceeds expected maximum of {cartesian_angle_degrees_expected_max}°"
-        )
-
-    if cartesian_angle_degrees_min < cartesian_angle_degrees_expected_min:
-        raise ValueError(
-            f"Minimum mathematical direction value {cartesian_angle_degrees_min}° "
-            f"is below expected minimum of {cartesian_angle_degrees_expected_min}°"
-        )
 
     # Convert from cartesian angle to compass 'to' direction:
     # Example: u=1, v=0 (east) has cartesian angle 0°
