@@ -230,7 +230,7 @@ VIZ_SPECS = {
     "secondary_direction": {
         "title": "Secondary Sea Water To Direction",
         "units": "m/s",
-        "column_name": "vap_sea_water-secondary_to_direction_depth_avg",
+        "column_name": "vap_sea_water_secondary_to_direction_depth_avg",
         "colormap": cmocean.cm.phase,
         "range_min": 0,
         "range_max": 360,
