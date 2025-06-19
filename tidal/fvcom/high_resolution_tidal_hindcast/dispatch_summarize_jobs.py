@@ -41,6 +41,7 @@ for location, config in LOCATIONS.items():
     temporal_resolution = config["temporal_resolution"]
     batch_size = BATCH_SIZE_MAP[temporal_resolution]
     array_size = calculate_array_size(faces, batch_size)
+    process_runtime_hours = config["process_runtime_hours"]
 
     print(f"Submitting pipeline for {location}:")
     print(
@@ -55,6 +56,8 @@ for location, config in LOCATIONS.items():
         f"--array=0-{array_size}",
         f"--output={location}_process_%A_%a.out",
         f"--job-name={location}_process",
+        # Time in minutes
+        f"--time={process_runtime_hours * 60}",
         "summarize_single_location_batch.sbatch",
     ]
 
