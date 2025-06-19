@@ -212,7 +212,7 @@ VIZ_SPECS = {
     "primary_direction": {
         "title": "Primary Sea Water To Direction",
         "units": "m/s",
-        "column_name": "vap_sea_water_primary_to_direction_sigma_level_1",
+        "column_name": "vap_sea_water_primary_to_direction_sigma_level_3",
         "colormap": cmocean.cm.phase,
         "range_min": 0,
         "range_max": 360,
@@ -230,7 +230,7 @@ VIZ_SPECS = {
     "secondary_direction": {
         "title": "Secondary Sea Water To Direction",
         "units": "m/s",
-        "column_name": "vap_sea_water_secondary_to_direction_sigma_level_1",
+        "column_name": "vap_sea_water_secondary_to_direction_sigma_level_3",
         "colormap": cmocean.cm.phase,
         "range_min": 0,
         "range_max": 360,
