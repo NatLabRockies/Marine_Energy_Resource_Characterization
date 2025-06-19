@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
 #SBATCH --output=%x_%A_%a.out
-#SBATCH --mail-type=FAIL
+#SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 #SBATCH --time=2:00:00
 #SBATCH --partition=shared
@@ -19,6 +19,6 @@ echo "Starting processing task $SLURM_ARRAY_TASK_ID for $LOCATION..."
 echo "Location: $LOCATION, Batch size: $BATCH_SIZE, Task ID: $SLURM_ARRAY_TASK_ID"
 
 # Run the Python script with location-specific parameters
-python summarize_dataset.py $LOCATION --batch-size $BATCH_SIZE --batch-num $SLURM_ARRAY_TASK_ID 
+python summarize_dataset.py $LOCATION --batch-size $BATCH_SIZE --batch-num $SLURM_ARRAY_TASK_ID
 
 echo "Task $SLURM_ARRAY_TASK_ID for $LOCATION completed successfully."

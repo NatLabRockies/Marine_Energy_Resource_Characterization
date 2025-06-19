@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
 #SBATCH --output=%x_%j.out
-#SBATCH --mail-type=FAIL
+#SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 #SBATCH --time=1:00:00
 #SBATCH --partition=shared
@@ -17,7 +17,7 @@ source sbatch_env_setup.sh
 echo "Starting concatenation for $LOCATION..."
 
 # Run your concatenation script here
-python concatenate_results.py $LOCATION --batch-num 0
+python concat_summarized_datasets.py $LOCATION --batch-num 0
 # python concatenate_results.py $LOCATION --batch-num 1
 
 echo "Concatenation for $LOCATION completed successfully."
