@@ -382,7 +382,8 @@ def get_available_regions():
             d.name
             for d in BASE_DIR.iterdir()
             # if d.is_dir() and "me_atlas" not in d.name and "puget_sound" not in d.name
-            if d.is_dir() and "me_atlas" not in d.name
+            if d.is_dir() and "me_atlas" not in d.name and "aleutian" not in d.name
+            # if d.is_dir() and "me_atlas" not in d.name
         ]
     )
 
