@@ -305,7 +305,7 @@ VIZ_SPECS = {
         "column_name": "vap_tidal_range",
         "colormap": cmocean.cm.haline,
         "range_min": 0,
-        "range_max": 20,
+        "range_max": 10,
         "levels": 10,
         "physical_meaning": "Yearly average of depth averaged current speed",
         "intended_usage": "Site screening and turbine selection for power generation",
