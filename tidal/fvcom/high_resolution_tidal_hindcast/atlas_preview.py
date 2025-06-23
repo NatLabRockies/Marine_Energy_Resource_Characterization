@@ -84,7 +84,7 @@ VIZ_SPECS = {
         "title": "Mean Sea Water Speed",
         "units": "m/s",
         "column_name": "vap_water_column_mean_sea_water_speed",
-        "colormap": "cmocean.cm.thermal",
+        "colormap": cmocean.cm.thermal,
         "range_min": 0,
         "range_max": 1.5,
         "levels": 10,
