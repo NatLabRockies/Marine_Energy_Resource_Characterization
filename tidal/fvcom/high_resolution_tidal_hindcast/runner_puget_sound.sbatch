@@ -6,8 +6,10 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 ##SBATCH --time=120:00:00 # 5 days
-#SBATCH --time=47:00:00 # Max for standard job
-#SBATCH --mem=230G # Max for non bigmem job
+##SBATCH --time=47:00:00 # Max for standard job
+##SBATCH --mem=230G # Max for non bigmem job
+#SBATCH --time=59:00
+#SBATCH --partition=debug
 
 # Load necessary modules (if any)
 module load anaconda3/2023.07-2
