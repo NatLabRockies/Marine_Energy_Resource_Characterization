@@ -69,27 +69,27 @@ for location, config in LOCATIONS.items():
         f"  faces={faces}, temporal_resolution={temporal_resolution}, batch_size={batch_size}, array=0-{array_size}"
     )
 
-    # Submit the processing job array directly
-    print(f"Submitting parallel processing jobs for {location}...")
-
-    process_args = [
-        f"--export=LOCATION={location},FACES={faces},BATCH_SIZE={batch_size}",
-        f"--array=0-{array_size}",
-        f"--output={location}_process_%A_%a.out",
-        f"--job-name={location}_process",
-        # Time in minutes
-        f"--time={process_runtime_hours * 60}",
-        "summarize_single_location_batch.sbatch",
-    ]
-
-    process_job_id = submit_sbatch(process_args)
-    print(f"Process job array submitted with ID: {process_job_id}")
+    # # Submit the processing job array directly
+    # print(f"Submitting parallel processing jobs for {location}...")
+    #
+    # process_args = [
+    #     f"--export=LOCATION={location},FACES={faces},BATCH_SIZE={batch_size}",
+    #     f"--array=0-{array_size}",
+    #     f"--output={location}_process_%A_%a.out",
+    #     f"--job-name={location}_process",
+    #     # Time in minutes
+    #     f"--time={process_runtime_hours * 60}",
+    #     "summarize_single_location_batch.sbatch",
+    # ]
+    #
+    # process_job_id = submit_sbatch(process_args)
+    # print(f"Process job array submitted with ID: {process_job_id}")
 
     # Submit the concatenation job that depends on the processing jobs
     print(f"Submitting concatenation job for {location}...")
 
     concat_args = [
-        f"--dependency=afterok:{process_job_id}",
+        # f"--dependency=afterok:{process_job_id}",
         f"--export=LOCATION={location}",
         f"--output={location}_concat_%j.out",
         f"--job-name={location}_concat",
@@ -99,7 +99,7 @@ for location, config in LOCATIONS.items():
     concat_job_id = submit_sbatch(concat_args)
     print(f"Concatenation job submitted with ID: {concat_job_id}")
     print(f"All jobs submitted successfully for {location}!")
-    print(f"Process jobs: {process_job_id}")
+    # print(f"Process jobs: {process_job_id}")
     print(f"Concat job: {concat_job_id}")
     print("---")
 
