@@ -317,6 +317,60 @@ VIZ_SPECS = {
             r"$T = 1$ year",
         ],
     },
+    "min_tidal_period": {
+        "title": "Shortest Tidal Period",
+        "units": "hours",
+        "column_name": "vap_min_tidal_period",
+        "colormap": cmocean.cm.haline,
+        "range_min": 10,
+        "range_max": 14,
+        "levels": 8,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
+    "max_tidal_period": {
+        "title": "Longest Tidal Period",
+        "units": "hours",
+        "column_name": "vap_max_tidal_period",
+        "colormap": cmocean.cm.haline,
+        "range_min": 10,
+        "range_max": 14,
+        "levels": 8,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
+    "mean_tidal_period": {
+        "title": "Average Tidal Period",
+        "units": "h",
+        "column_name": "vap_average_tidal_period",
+        "colormap": cmocean.cm.haline,
+        "range_min": 10,
+        "range_max": 14,
+        "levels": 8,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
 }
 
 
@@ -2530,6 +2584,16 @@ if __name__ == "__main__":
 
         # Read the parquet file
         df = pd.read_parquet(parquet_file)
+
+        df["vap_min_tidal_period"] = (
+            df["vap_min_tidal_period"] / 60 / 60
+        )  # Convert seconds to hours
+        df["vap_max_tidal_period"] = (
+            df["vap_max_tidal_period"] / 60 / 60
+        )  # Convert seconds to hours
+        df["vap_average_tidal_period"] = (
+            df["vap_average_tidal_period"] / 60 / 60
+        )  # Convert seconds to hours
 
         this_output_path = Path(VIZ_OUTPUT_DIR, this_region)
         this_output_path.mkdir(parents=True, exist_ok=True)
