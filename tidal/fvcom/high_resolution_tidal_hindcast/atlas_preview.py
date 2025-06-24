@@ -2188,7 +2188,7 @@ def generate_markdown_specification(
                 "",
                 f"{var['equation']}",
                 "",
-                "Variables:",
+                "Where:",
                 "",
             ]
         )
