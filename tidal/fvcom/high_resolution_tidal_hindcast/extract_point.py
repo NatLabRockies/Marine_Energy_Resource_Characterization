@@ -373,9 +373,7 @@ if __name__ == "__main__":
     from config import config
 
     location_key = "puget_sound"
-    output_path = (
-        Path("/projects/hindcastra/Tidal/datasets/projects/katie_puget_sound"),
-    )
+    output_path = Path("/projects/hindcastra/Tidal/datasets/projects/katie_puget_sound")
     output_path.mkdir(parents=True, exist_ok=True)
     n_closest = 10
 
