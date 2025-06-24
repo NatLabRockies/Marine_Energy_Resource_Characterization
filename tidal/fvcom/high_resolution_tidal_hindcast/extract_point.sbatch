@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
-#SBATCH --output=runner_cook_inlet_%j.out
-#SBATCH --job-name=runner_cook_inlet
+#SBATCH --output=extract_point_%j.out
+#SBATCH --job-name=extract_point
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
