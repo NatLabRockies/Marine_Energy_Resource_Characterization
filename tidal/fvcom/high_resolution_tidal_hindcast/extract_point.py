@@ -10,6 +10,8 @@ import time
 from datetime import datetime
 import os
 
+from src.file_manager import get_vap_output_dir
+
 
 def find_closest_faces(
     nc_file: str, target_lat: float, target_lon: float, n_closest: int = 10
@@ -289,7 +291,7 @@ def extract_point_data(
 
     # This would need to be adapted based on your file_manager structure
     # For now, assuming input_dir is in the location config
-    input_dir = Path(location.get("input_dir", "."))
+    input_dir = get_vap_output_dir(config, location)
 
     # Find NC files
     nc_files = sorted(list(input_dir.glob("*.nc")))
