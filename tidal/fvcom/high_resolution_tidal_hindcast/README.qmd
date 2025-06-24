@@ -124,19 +124,19 @@ display(Markdown(tabulate(df, tablefmt="markdown", headers="keys", showindex=Fal
 
 ## Model Configuration
 
-| Model Configuration      | Specification                                                                                                                  |
-| ------------             | -------------                                                                                                                  |
-| Model                    | [Finite Volume Community Ocean Model (FVCOM)](htpps://www.fvcom.org)                                                           |
-| Documentation            | [FVCOM Publicly Available Manual - 3.1.6](https://etchellsfleet27.com/wp-content/uploads/2020/06/FVCOM_User_Manual_v3.1.6.pdf) |
-| Dimensions               | 3D, over time                                                                                                                  |
-| Horizontal Resolution    | Unstructured grid node and element points                                                                                                   |
-| Vertical Resolution      | 10 uniform sigma-stretched coordinate                                                                                          |
-| Horizontal Coordinates   | lat and lon, UTM zone, State Plane                                                                                             |
-| Vertical Datum           | mean sea level (MSL), NAVD88                                                                                                   |
-| Temporal Resolution      | hourly (Alaska), half-hourly                                                                                                            |
-| Wetting & drying feature | activated                                                                                                                      |
-| Boundary forcing         | 12 tidal constituents from OSU TPXO Tide Models                                                                                |
-| Wind                     | ERA5 or CFSv2                                                                                                                  |
+| Model Configuration            | Specification                                                                                                                                    |
+| ------------                   | -------------                                                                                                                                    |
+| Model                          | [Finite Volume Community Ocean Model (FVCOM) `{python} model['model_version'].replace("FVCOM_", "")`](htpps://www.fvcom.org)                     |
+| Documentation                  | [Publicly Available Manual](https://etchellsfleet27.com/wp-content/uploads/2020/06/FVCOM_User_Manual_v3.1.6.pdf)                                 |
+| Dimensions                     | time, element, depth                                                                                                                             |
+| Horizontal Resolution          | Unstructured grid of triangles designed to fit complex shorelines. Majority of resolution within 50 to 500m for IEC 62600-201 Stage 1 Compliance |
+| Vertical Resolution            | 10 uniform sigma (depth) layers from the water surface to seafloor that vary the thickness of each layer as the surface water level changes      |
+| Horizontal Coordinates         | Latitude, Longitude (EPGS:4386)                                                                                                                  |
+| Vertical Datum                 | Mean sea level (MSL), NAVD88                                                                                                                     |
+| Temporal Resolution            | 1 year at half-hourly or hourly (Cook Inlet, Aleutian Islands) intervals                                                                         |
+| Model Wetting & drying Feature | Activated                                                                                                                                        |
+| Mdel Boundary forcing          | 12 tidal constituents from OSU TPXO Tide Models                                                                                                  |
+| Model Wind                     | ERA5 or CFSv2                                                                                                                                    |
 
 : High Resolution Tidal Hindcast FVCOM Specification and Configuration {#tbl-model-config}
 
@@ -151,7 +151,7 @@ display(Markdown(tabulate(df, tablefmt="markdown", headers="keys", showindex=Fal
 
 : High Resolution Tidal Hindcast IEC Standards Compliance {#tbl-iec-compliance}
 
-## Available Data Overview
+## Available Data Variables
 
 | Long Name                             | Units                      | Dimensions              | Description                                         |
 | ---                                   | ---                        | ---                     | ---                                                 |
@@ -205,7 +205,7 @@ display(Markdown(tabulate(df, tablefmt="markdown", headers="keys", showindex=Fal
 | `b2_summary_vap`               | Summary statistics of value-added products                            | NetCDF (nc)  | HPC Kestrel                               | No            |
 | `b3_vap_partition`             | Point data timeseries in a coordinate parquet partition               | Parquet      | HPC Kestrel                               | No            |
 | `b4_vap_summary_parquet`       | Summary data in Parquet format for analytics                          | Parquet      | HPC Kestrel / OpenEI AWS                  | Yes           |
-| `b5_vap_atlas_summary_parquet` | Atlas-ready summary data for visualization                            | Parquet      | HPC Kestrel                               | No            |
+| `b5_vap_atlas_summary_parquet` | Subset of summary data for Marine Energy Atlas                        | Parquet      | HPC Kestrel                               | No            |
 
 # Location Details
 
@@ -934,8 +934,6 @@ The processing pipeline for the tidal hindcast data follows a structured approac
   - Calculation of sea water speed (vector magnitude from u, v)
   - Calculation of flow direction (to/from directions)
   - Calculation of power density (½ρv³)
-  - Calculation of element volumes
-  - Calculation of volume flux
   - Calculation of depth at sigma levels
   - Interpolation of surface elevation to element centers
 - **New Variables**:
@@ -951,10 +949,8 @@ The processing pipeline for the tidal hindcast data follows a structured approac
   - `vap_water_column_mean_to_direction`
   - `vap_water_column_mean_sea_water_speed`
   - `vap_water_column_max_sea_water_speed`
-  - `vap_water_column_p95_sea_water_speed`
   - `vap_water_column_mean_sea_water_power_density`
   - `vap_water_column_max_sea_water_power_density`
-  - `vap_water_column_p95_sea_water_power_density`
 - **File Format**: NetCDF4
 - **Temporal Coverage**: Same as a2 partitions
 - **File Naming**: Marine Energy Data Pipeline convention
@@ -1044,16 +1040,30 @@ Each step in the workflow adds value to the dataset, either through standardizat
 
 The project follows a structured directory organization with clearly defined paths for each data processing level. All outputs are organized by location.
 
-| Label                      | Path                                                                | Description                                             |
-| -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------- |
-| Tracking                   | `/projects/hindcastra/Tidal/datasets/<location>/z99_tracking`      | Logs and processing metadata                            |
-| Standardized (a1)          | `/projects/hindcastra/Tidal/datasets/<location>/a1_std`            | Standardized data with quality control                  |
-| Standardized Partition (a2)| `/projects/hindcastra/Tidal/datasets/<location>/a2_std_partition`  | Standardized data partitioned for efficient processing  |
-| VAP (b1)                   | `/projects/hindcastra/Tidal/datasets/<location>/b1_vap`            | Value-added products including derived variables        |
-| Summary VAP (b2)           | `/projects/hindcastra/Tidal/datasets/<location>/b2_summary_vap`    | Summary statistics of value-added products              |
-| VAP Partition (b3)         | `/projects/hindcastra/Tidal/datasets/<location>/b3_vap_partition`  | Value-added products partitioned by time chunks         |
-| VAP Summary Parquet (b5)   | `/projects/hindcastra/Tidal/datasets/<location>/b5_vap_summary_parquet` | Summary data in Parquet format for analytics      |
-| VAP Atlas Summary (b6)     | `/projects/hindcastra/Tidal/datasets/<location>/b6_vap_atlas_summary_parquet` | Atlas-ready summary data in Parquet format   |
+| Label                       | Path                                                                          | Description                                             |
+| --------------------------  | -------------------------------------------------------------------           | ------------------------------------------------------- |
+| Standardized (a1)           | `/projects/hindcastra/Tidal/datasets/<location>/a1_std`                       | Standardized data with quality control                  |
+| Standardized Partition (a2) | `/projects/hindcastra/Tidal/datasets/<location>/a2_std_partition`             | Standardized data partitioned into monthly data         |
+| VAP (b1)                    | `/projects/hindcastra/Tidal/datasets/<location>/b1_vap`                       | Value-added products including derived variables        |
+| Summary VAP (b2)            | `/projects/hindcastra/Tidal/datasets/<location>/b2_summary_vap`               | Summary statistics of value-added products              |
+| VAP Partition (b3)          | `/projects/hindcastra/Tidal/datasets/<location>/b3_vap_partition`             | Value-added products partitioned by location            |
+| VAP Summary Parquet (b5)    | `/projects/hindcastra/Tidal/datasets/<location>/b5_vap_summary_parquet`       | Summary data in Parquet format for analytics            |
+| VAP Atlas Summary (b6)      | `/projects/hindcastra/Tidal/datasets/<location>/b6_vap_atlas_summary_parquet` | Atlas-ready summary data in Parquet format              |
+| Tracking                    | `/projects/hindcastra/Tidal/datasets/<location>/z99_tracking`                 | Logs and processing metadata                            |
+
+## Data Levels
+
+| Data Level                     | Description                                                           | Format       |
+| ----------                     | ------------------------------------------------------------------    | ------------ |
+| `00_raw`                       | Original NetCDF files from FVCOM model                                | NetCDF (nc)  |
+| `a1_std`                       | Standardized data with consistent naming and attributes               | NetCDF (nc)  |
+| `a2_std_partition`             | Standardized data partitioned by time chunks for processing           | NetCDF (nc)  |
+| `b1_vap`                       | Value-added products with derived variables, full temporal resolution | NetCDF (nc)  |
+| `b2_summary_vap`               | Summary statistics of value-added products                            | NetCDF (nc)  |
+| `b3_vap_partition`             | Partitioned VAP data for efficient processing                         | NetCDF (nc)  |
+| `b4_vap_summary_parquet`       | Summary data in Parquet format for analytics                          | Parquet      |
+| `b5_vap_atlas_summary_parquet` | Atlas-ready summary data for visualization                            | Parquet      |
+
 
 ## File Naming Convention
 
@@ -1074,19 +1084,6 @@ Where:
 - `date`: Date in YYYYMMDD format
 - `time`: Time in HHMMSS format
 - `ext`: File extension (nc for NetCDF, parquet for Parquet files)
-
-## Data Levels
-
-| Data Level                     | Description                                                           | Format       | Storage Location            | Public Access |
-| ----------                     | ------------------------------------------------------------------    | ------------ | --------------------------- | ------------- |
-| `00_raw`                       | Original NetCDF files from FVCOM model                                | NetCDF (nc)  | HPC Kestrel / AWS Archive   | No            |
-| `a1_std`                       | Standardized data with consistent naming and attributes               | NetCDF (nc)  | HPC Kestrel                 | No            |
-| `a2_std_partition`             | Standardized data partitioned by time chunks for processing           | NetCDF (nc)  | HPC Kestrel                 | No            |
-| `b1_vap`                       | Value-added products with derived variables, full temporal resolution | NetCDF (nc)  | HPC Kestrel / OpenEI AWS    | Yes           |
-| `b2_summary_vap`               | Summary statistics of value-added products                            | NetCDF (nc)  | HPC Kestrel / OpenEI AWS    | Yes           |
-| `b3_vap_partition`             | Partitioned VAP data for efficient processing                         | NetCDF (nc)  | HPC Kestrel / OpenEI AWS    | Yes           |
-| `b4_vap_summary_parquet`       | Summary data in Parquet format for analytics                          | Parquet      | HPC Kestrel / OpenEI AWS    | Yes           |
-| `b5_vap_atlas_summary_parquet` | Atlas-ready summary data for visualization                            | Parquet      | HPC Kestrel / OpenEI AWS    | Yes           |
 
 
 # Running Standardization Code
