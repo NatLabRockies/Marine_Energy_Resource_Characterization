@@ -193,9 +193,9 @@ def extract_faces_to_parquet(
 
     # Pre-fetch static data for all faces
     batch_data = {
-        "lat_center": dataset.lat_center.values[face_indices],
-        "lon_center": dataset.lon_center.values[face_indices],
-        "nv": dataset["nv"].isel(time=0).isel(face=face_indices).values.T,
+        "lat_center": dataset.lat_center.values,
+        "lon_center": dataset.lon_center.values,
+        "nv": dataset["nv"].isel(time=0).values.T,
     }
 
     # Pre-fetch lat_node and lon_node if they exist
@@ -206,7 +206,7 @@ def extract_faces_to_parquet(
     # Variables to skip in extraction
     vars_to_skip = ["nv", "h_center"]
 
-    # Pre-fetch all variable data
+    vars_to_include = list(dataset.variables.keys())
     for var_name in vars_to_include:
         if var_name in vars_to_skip:
             continue
@@ -217,7 +217,8 @@ def extract_faces_to_parquet(
         if "sigma_layer" in var.dims and "face" in var.dims and "time" in var.dims:
             # 3D variables (time, sigma_layer, face)
             print(f"Extracting 4D variable {var_name} with dims {var.dims}")
-            selected_data = var.isel(face=face_indices)
+            # selected_data = var.isel(face=face_indices)
+            selected_data = var
 
             batch_data[var_name] = {}
             for layer_idx in range(len(dataset.sigma_layer)):
@@ -234,7 +235,8 @@ def extract_faces_to_parquet(
         elif "face" in var.dims and "time" in var.dims:
             # 2D variables (time, face)
             print(f"Extracting 3D variable {var_name} with dims {var.dims}")
-            faces_data = var.isel(face=face_indices)
+            # faces_data = var.isel(face=face_indices)
+            faces_data = var
 
             # Ensure time dimension is first
             if "time" in faces_data.dims:
@@ -249,6 +251,7 @@ def extract_faces_to_parquet(
 
     # Create DataFrames for each face
     face_dataframes = {}
+    face_indices = range(dataset.dims["face"])
     for i, face_idx in enumerate(face_indices):
         data_dict = {}
 
@@ -746,11 +749,17 @@ def extract_point_data_incremental(
     print("\n" + "=" * 60)
     print("STEP 3: Converting to individual parquet files")
     print("=" * 60)
-    convert_combined_to_parquet(
-        str(combined_nc_path),
-        closest_faces,
-        str(output_dir),
-        skip_existing=not force_recreate,
+    # convert_combined_to_parquet(
+    #     str(combined_nc_path),
+    #     closest_faces,
+    #     str(output_dir),
+    #     skip_existing=not force_recreate,
+    # )
+    extract_faces_to_parquet(
+        combined_nc_path,
+        output_dir,
+        config,
+        location,
     )
 
     # Save final metadata
