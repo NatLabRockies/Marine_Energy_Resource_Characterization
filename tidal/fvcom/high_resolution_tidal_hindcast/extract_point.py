@@ -123,6 +123,55 @@ def create_subset_netcdf(
     combined_ds.close()
 
 
+def create_subset_netcdf_mfdataset(
+    input_files: List[Path], face_indices: List[int], output_file: str
+) -> None:
+    """
+    Create a subset NetCDF file using xarray open_mfdataset for more efficient processing.
+
+    This version opens all files at once and leverages xarray's lazy loading and
+    parallel processing capabilities.
+
+    Parameters:
+    -----------
+    input_files : List[Path]
+        List of input NC files
+    face_indices : List[int]
+        Face indices to extract
+    output_file : str
+        Output NetCDF file path
+    """
+    print(f"Creating subset NetCDF with {len(face_indices)} faces using open_mfdataset")
+    print(f"Processing {len(input_files)} files simultaneously")
+
+    # Convert Path objects to strings for xarray
+    file_paths = [str(f) for f in input_files]
+
+    # Open all files as a single dataset with time concatenation
+    print("Opening multiple files with xarray...")
+    with xr.open_mfdataset(
+        file_paths,
+        concat_dim="time",
+        chunks={"time": "auto"},  # Enable chunking for large datasets
+        decode_times=True,
+    ) as mf_ds:
+        print(f"Opened combined dataset with shape: {mf_ds.dims}")
+        print(f"Time range: {mf_ds.time.min().values} to {mf_ds.time.max().values}")
+
+        # Create subset by selecting only the specified faces
+        print(f"Selecting {len(face_indices)} faces from dataset...")
+
+        # Create the subset dataset
+        print("Creating subset dataset...")
+        subset_ds = mf_ds.isel(face=face_indices)
+
+        print(f"Subset dataset shape: {subset_ds.size}")
+
+        subset_ds.to_netcdf(output_file)
+
+        print(f"Successfully created subset NetCDF: {output_file}")
+
+
 def extract_faces_to_parquet(
     input_files: List[Path],
     face_indices: List[int],
@@ -316,7 +365,8 @@ def extract_point_data(
 
     # Create subset NetCDF
     subset_nc_path = output_dir / f"subset_{n_closest}_faces.nc"
-    create_subset_netcdf(nc_files, closest_faces, str(subset_nc_path))
+    # create_subset_netcdf(nc_files, closest_faces, str(subset_nc_path))
+    create_subset_netcdf_mfdataset(nc_files, closest_faces, str(subset_nc_path))
 
     # Create parquet files
     parquet_dir = output_dir / "parquet_files"
