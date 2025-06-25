@@ -57,7 +57,7 @@ def find_closest_faces(
         print(f"Closest faces: {closest_indices.tolist()}")
         print(f"Distances: {closest_distances.tolist()}")
 
-        return closest_indices.tolist(), closest_distances.tolist()
+        return closest_indices, closest_distances.tolist()
 
 
 def create_subset_netcdf(
