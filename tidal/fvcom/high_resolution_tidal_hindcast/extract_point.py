@@ -427,283 +427,227 @@ def get_dataset_info(h5_file):
     return dataset_info
 
 
-def get_file_hash(file_path: Path) -> str:
-    """Generate a hash of the input files to detect changes."""
-    hash_md5 = hashlib.md5()
-    with open(file_path, "rb") as f:
-        # Read first and last 1MB to create a quick hash
-        chunk = f.read(1024 * 1024)
-        hash_md5.update(chunk)
-        try:
-            f.seek(-1024 * 1024, 2)  # Seek to last 1MB
-            chunk = f.read(1024 * 1024)
-            hash_md5.update(chunk)
-        except:
-            pass  # File smaller than 2MB
-    return hash_md5.hexdigest()
-
-
-def create_individual_face_files(
+def create_face_subset_files(
     input_files: List[Path],
     face_indices: List[int],
     output_dir: str,
     force_recreate: bool = False,
 ) -> List[Path]:
     """
-    Create individual NetCDF files for each face, with progress tracking.
+    Extract specified faces from each input file and save as individual NetCDF files.
 
     Parameters:
     -----------
     input_files : List[Path]
         List of input NC files
     face_indices : List[int]
-        Face indices to extract
+        Face indices to extract from each file
     output_dir : str
-        Output directory for individual face files
+        Output directory for subset files
     force_recreate : bool
         Force recreation of existing files
 
     Returns:
     --------
     List[Path]
-        List of created face file paths
+        List of created subset file paths
     """
     output_dir = Path(output_dir)
-    face_files_dir = output_dir / "individual_faces"
-    face_files_dir.mkdir(parents=True, exist_ok=True)
+    subset_files_dir = output_dir / "face_subset_files"
+    subset_files_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create metadata file to track progress
-    metadata_file = face_files_dir / "processing_metadata.json"
-
-    # Load existing metadata if it exists
-    if metadata_file.exists() and not force_recreate:
-        with open(metadata_file, "r") as f:
-            metadata = json.load(f)
-        print("Found existing processing metadata")
-    else:
-        metadata = {
-            "input_files_hashes": {},
-            "completed_faces": [],
-            "face_file_paths": {},
-            "processing_started": datetime.now().isoformat(),
-            "last_updated": datetime.now().isoformat(),
-        }
-
-    # Check if input files have changed
-    current_hashes = {}
-    for input_file in input_files:
-        current_hashes[str(input_file)] = get_file_hash(input_file)
-
-    files_changed = current_hashes != metadata.get("input_files_hashes", {})
-    if files_changed and not force_recreate:
-        print("Input files have changed since last run")
-        metadata["completed_faces"] = []  # Reset progress
-
-    metadata["input_files_hashes"] = current_hashes
+    print(f"Extracting {len(face_indices)} faces from {len(input_files)} files")
+    print(f"Face indices: {face_indices}")
 
     created_files = []
 
-    for i, face_id in enumerate(face_indices):
-        face_filename = f"face_{face_id:06d}.nc"
-        face_file_path = face_files_dir / face_filename
+    for i, input_file in enumerate(input_files):
+        # Create output filename based on input filename
+        input_stem = input_file.stem
+        subset_filename = f"{input_stem}_faces_{len(face_indices)}.nc"
+        subset_file_path = subset_files_dir / subset_filename
 
-        # Skip if already processed and files haven't changed
-        if (
-            face_id in metadata["completed_faces"]
-            and face_file_path.exists()
-            and not force_recreate
-            and not files_changed
-        ):
-            print(f"Face {face_id} already processed, skipping...")
-            created_files.append(face_file_path)
+        # Skip if already exists and not forcing recreation
+        if subset_file_path.exists() and not force_recreate:
+            print(f"Subset file already exists, skipping: {subset_file_path.name}")
+            created_files.append(subset_file_path)
             continue
 
-        print(f"Processing face {face_id} ({i+1}/{len(face_indices)})")
+        print(f"Processing file {i+1}/{len(input_files)}: {input_file.name}")
+        print(f"  Creating: {subset_filename}")
 
         try:
-            # Create dataset for this single face
-            datasets = []
+            # Open the input file
+            with xr.open_dataset(input_file, engine="h5netcdf") as ds:
+                print(f"  Original dataset shape: {ds.sizes}")
 
-            for j, nc_file in enumerate(input_files):
-                print(f"  Reading from file {j+1}/{len(input_files)}: {nc_file.name}")
+                subset_ds = ds.isel(face=face_indices)
+                # Drop problematic variables if they exist
+                subset_ds = subset_ds.drop_vars(["zeta"], errors="ignore")
 
-                with xr.open_dataset(nc_file, engine="h5netcdf") as ds:
-                    # Select only this specific face
-                    face_vars = {}
+                print(f"  Subset dataset shape: {subset_ds.sizes}")
 
-                    for var_name, var in ds.data_vars.items():
-                        if "face" in var.dims:
-                            # Extract only this face
-                            face_vars[var_name] = var.isel(
-                                face=[face_indices.index(face_id)]
-                            )
-                        else:
-                            # Keep non-face variables as-is
-                            face_vars[var_name] = var
+                # Save subset file
+                subset_ds.to_netcdf(subset_file_path, engine="h5netcdf")
+                subset_ds.close()
 
-                    # Handle coordinates
-                    coords = {}
-                    for coord_name, coord in ds.coords.items():
-                        if "face" in coord.dims:
-                            coords[coord_name] = coord.isel(
-                                face=[face_indices.index(face_id)]
-                            )
-                        else:
-                            coords[coord_name] = coord
-
-                    # Create dataset for this face
-                    face_ds = xr.Dataset(face_vars, coords=coords, attrs=ds.attrs)
-
-                    # Drop problematic variables if they exist
-                    face_ds = face_ds.drop_vars(["zeta"], errors="ignore")
-
-                    datasets.append(face_ds)
-
-            # Concatenate along time if multiple files
-            if len(datasets) > 1:
-                combined_ds = xr.concat(datasets, dim="time")
-            else:
-                combined_ds = datasets[0]
-
-            # Save individual face file
-            print(f"  Saving {face_file_path}")
-            combined_ds.to_netcdf(face_file_path, engine="h5netcdf")
-            combined_ds.close()
-
-            # Update metadata
-            metadata["completed_faces"].append(face_id)
-            metadata["face_file_paths"][str(face_id)] = str(face_file_path)
-            metadata["last_updated"] = datetime.now().isoformat()
-
-            # Save metadata after each face
-            with open(metadata_file, "w") as f:
-                json.dump(metadata, f, indent=2)
-
-            created_files.append(face_file_path)
-            print(f"  ✓ Completed face {face_id}")
+                created_files.append(subset_file_path)
+                print(f"  ✓ Saved: {subset_file_path.name}")
 
         except Exception as e:
-            print(f"  ✗ Error processing face {face_id}: {e}")
-            # Remove from completed list if it was there
-            if face_id in metadata["completed_faces"]:
-                metadata["completed_faces"].remove(face_id)
+            print(f"  ✗ Error processing {input_file.name}: {e}")
+            # Remove partial file if it exists
+            if subset_file_path.exists():
+                subset_file_path.unlink()
             continue
 
-    print(f"\nCompleted processing {len(created_files)} face files")
+    print(f"\nCompleted creating {len(created_files)} subset files")
     return created_files
 
 
-def combine_face_files_to_netcdf(
-    face_files: List[Path], output_file: str, skip_if_exists: bool = True
+def combine_subset_files(
+    subset_files: List[Path], output_file: str, skip_if_exists: bool = True
 ) -> None:
     """
-    Combine individual face files into a single NetCDF file.
+    Combine face subset files along time dimension into a single NetCDF file.
 
     Parameters:
     -----------
-    face_files : List[Path]
-        List of individual face NetCDF files
+    subset_files : List[Path]
+        List of face subset NetCDF files (one per time period)
     output_file : str
         Output combined NetCDF file path
     skip_if_exists : bool
         Skip if output file already exists
     """
-    if skip_if_exists and Path(output_file).exists():
+    output_path = Path(output_file)
+
+    if skip_if_exists and output_path.exists():
         print(f"Combined NetCDF already exists: {output_file}")
         return
 
-    print(f"Combining {len(face_files)} face files into {output_file}")
+    print(f"Combining {len(subset_files)} subset files into {output_file}")
 
-    # Open all face files and combine along face dimension
-    datasets = []
-    for face_file in face_files:
-        print(f"Loading {face_file.name}")
-        ds = xr.open_dataset(face_file, engine="h5netcdf")
-        datasets.append(ds)
+    # Sort files to ensure proper time ordering
+    subset_files = sorted(subset_files)
 
-    # Combine along face dimension
-    print("Combining datasets...")
-    combined_ds = xr.concat(datasets, dim="face")
+    try:
+        # Use xarray's open_mfdataset for efficient concatenation
+        print("Opening multiple subset files...")
+        with xr.open_mfdataset(
+            subset_files,
+            concat_dim="time",
+            combine="nested",
+            engine="h5netcdf",
+            # parallel=True,  # Uncomment if you want parallel processing
+        ) as combined_ds:
+            print(f"Combined dataset shape: {combined_ds.sizes}")
+            print(
+                f"Time range: {combined_ds.time.min().values} to {combined_ds.time.max().values}"
+            )
 
-    # Save combined file
-    print(f"Saving combined NetCDF to {output_file}")
-    combined_ds.to_netcdf(output_file, engine="h5netcdf")
+            # Save combined file
+            print(f"Saving combined NetCDF to {output_file}")
+            combined_ds.to_netcdf(output_file, engine="h5netcdf")
 
-    # Clean up
-    for ds in datasets:
-        ds.close()
-    combined_ds.close()
+    except Exception as e:
+        print(f"Error combining files: {e}")
+        # Try alternative approach with manual concatenation
+        print("Trying manual concatenation approach...")
+
+        datasets = []
+        for subset_file in subset_files:
+            print(f"Loading {subset_file.name}")
+            ds = xr.open_dataset(subset_file, engine="h5netcdf")
+            datasets.append(ds)
+
+        # Combine along time dimension
+        print("Concatenating datasets...")
+        combined_ds = xr.concat(datasets, dim="time")
+
+        # Save combined file
+        print(f"Saving combined NetCDF to {output_file}")
+        combined_ds.to_netcdf(output_file, engine="h5netcdf")
+
+        # Clean up
+        for ds in datasets:
+            ds.close()
+        combined_ds.close()
 
     print(f"✓ Combined NetCDF saved: {output_file}")
 
 
-def convert_face_files_to_parquet(
-    face_files: List[Path],
+def convert_combined_to_parquet(
+    combined_nc_file: str,
     face_indices: List[int],
     output_dir: str,
-    config: Dict,
-    location: Dict,
     skip_existing: bool = True,
 ) -> None:
     """
-    Convert individual face NetCDF files to parquet format.
+    Convert combined NetCDF to individual parquet files for each face.
 
     Parameters:
     -----------
-    face_files : List[Path]
-        List of individual face NetCDF files
+    combined_nc_file : str
+        Path to combined NetCDF file
     face_indices : List[int]
-        Corresponding face indices
+        Original face indices (for naming)
     output_dir : str
         Output directory for parquet files
-    config : Dict
-        Configuration dictionary
-    location : Dict
-        Location configuration
     skip_existing : bool
-        Skip conversion if parquet file already exists
+        Skip conversion if parquet files already exist
     """
     parquet_dir = Path(output_dir) / "parquet_files"
     parquet_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Converting {len(face_files)} face files to parquet format")
+    print("Converting combined NetCDF to parquet files")
+    print(f"Input: {combined_nc_file}")
+    print(f"Output directory: {parquet_dir}")
 
-    for i, (face_file, face_id) in enumerate(zip(face_files, face_indices)):
-        output_parquet = parquet_dir / f"face_{face_id:06d}.parquet"
+    # Open the combined NetCDF file
+    with xr.open_dataset(combined_nc_file, engine="h5netcdf") as ds:
+        print(f"Dataset shape: {ds.sizes}")
 
-        if skip_existing and output_parquet.exists():
-            print(f"Parquet file already exists for face {face_id}, skipping...")
-            continue
+        # Convert each face to a separate parquet file
+        for i, original_face_id in enumerate(face_indices):
+            output_parquet = parquet_dir / f"face_{original_face_id:06d}.parquet"
 
-        print(f"Converting face {face_id} ({i+1}/{len(face_files)})")
+            if skip_existing and output_parquet.exists():
+                print(
+                    f"Parquet file already exists for face {original_face_id}, skipping..."
+                )
+                continue
 
-        try:
-            # Load the face NetCDF file
-            with xr.open_dataset(face_file, engine="h5netcdf") as ds:
+            print(f"Converting face {original_face_id} (index {i})")
+
+            try:
+                # Select this specific face (using index i, not original_face_id)
+                face_ds = ds.isel(face=i)
+
                 # Convert to DataFrame
-                df = ds.to_dataframe()
+                df = face_ds.to_dataframe()
 
-                # Reset index to make time a column
-                df = df.reset_index()
+                # Reset index to make time a column if it's in the index
+                if "time" in df.index.names:
+                    df = df.reset_index()
 
-                # Convert time if needed
+                # Ensure time is datetime
                 if "time" in df.columns:
                     if not pd.api.types.is_datetime64_any_dtype(df["time"]):
                         df["time"] = pd.to_datetime(df["time"], unit="s", origin="unix")
 
-                # Set time as index and sort
-                if "time" in df.columns:
+                    # Set time as index and sort
                     df = df.set_index("time").sort_index()
 
                 # Save as parquet
                 table = pa.Table.from_pandas(df)
                 pq.write_table(table, output_parquet)
 
-                print(f"  ✓ Saved {output_parquet}")
+                print(f"  ✓ Saved {output_parquet.name}")
 
-        except Exception as e:
-            print(f"  ✗ Error converting face {face_id}: {e}")
-            continue
+            except Exception as e:
+                print(f"  ✗ Error converting face {original_face_id}: {e}")
+                continue
 
     print("✓ Parquet conversion complete")
 
@@ -720,12 +664,10 @@ def extract_point_data_incremental(
     """
     Extract data for points closest to target coordinates using incremental processing.
 
-    This version breaks the process into steps:
-    1. Create individual face files
-    2. Combine face files into single NetCDF
-    3. Convert to parquet files
-
-    Each step can be resumed if interrupted.
+    Process:
+    1. Extract specified faces from each input file -> subset files
+    2. Combine subset files along time dimension -> single NetCDF
+    3. Convert to individual parquet files for each face
     """
     start_time = time.time()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -734,7 +676,7 @@ def extract_point_data_incremental(
     print(f"Number of closest points: {n_closest}")
     print(f"Output path: {output_path}")
 
-    # Get location config (you'll need to adapt this)
+    # Get location config
     location = config["location_specification"][location_key]
 
     # Get input files (adapt based on your file_manager structure)
@@ -760,33 +702,34 @@ def extract_point_data_incremental(
     output_dir = Path(output_path)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Step 1: Create individual face files
-    print("\n" + "=" * 50)
-    print("STEP 1: Creating individual face files")
-    print("=" * 50)
-    face_files = create_individual_face_files(
+    # Step 1: Create face subset files (extract faces from each input file)
+    print("\n" + "=" * 60)
+    print("STEP 1: Creating face subset files from each input file")
+    print("=" * 60)
+    subset_files = create_face_subset_files(
         nc_files, closest_faces, str(output_dir), force_recreate
     )
 
-    # Step 2: Combine face files into single NetCDF
-    print("\n" + "=" * 50)
-    print("STEP 2: Combining face files")
-    print("=" * 50)
+    if not subset_files:
+        raise ValueError("No subset files were created!")
+
+    # Step 2: Combine subset files into single NetCDF along time dimension
+    print("\n" + "=" * 60)
+    print("STEP 2: Combining subset files along time dimension")
+    print("=" * 60)
     combined_nc_path = output_dir / f"combined_{n_closest}_faces.nc"
-    combine_face_files_to_netcdf(
-        face_files, str(combined_nc_path), skip_if_exists=not force_recreate
+    combine_subset_files(
+        subset_files, str(combined_nc_path), skip_if_exists=not force_recreate
     )
 
     # Step 3: Convert to parquet files
-    print("\n" + "=" * 50)
-    print("STEP 3: Converting to parquet files")
-    print("=" * 50)
-    convert_face_files_to_parquet(
-        face_files,
+    print("\n" + "=" * 60)
+    print("STEP 3: Converting to individual parquet files")
+    print("=" * 60)
+    convert_combined_to_parquet(
+        str(combined_nc_path),
         closest_faces,
         str(output_dir),
-        config,
-        location,
         skip_existing=not force_recreate,
     )
 
@@ -798,12 +741,12 @@ def extract_point_data_incremental(
         "face_indices": closest_faces,
         "distances": distances,
         "input_files": [str(f) for f in nc_files],
-        "face_files": [str(f) for f in face_files],
+        "subset_files": [str(f) for f in subset_files],
         "combined_netcdf": str(combined_nc_path),
         "extraction_time": datetime.now().isoformat(),
     }
 
-    metadata_file = output_dir / "final_extraction_metadata.json"
+    metadata_file = output_dir / "extraction_metadata.json"
     with open(metadata_file, "w") as f:
         json.dump(metadata, f, indent=2)
 
@@ -813,7 +756,7 @@ def extract_point_data_incremental(
     print(f"Total time: {elapsed_time:.2f} seconds")
     print(f"Outputs saved to: {output_path}")
     print("\nFiles created:")
-    print(f"  - Individual face files: {len(face_files)} files")
+    print(f"  - Face subset files: {len(subset_files)} files in face_subset_files/")
     print(f"  - Combined NetCDF: {combined_nc_path}")
     print(f"  - Parquet files: {output_dir}/parquet_files/")
 
