@@ -5,8 +5,10 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=2870 # 2 days, 23 hours, 50 minutes
-#SBATCH --partition=standard
+##SBATCH --time=2870 # 2 days, 23 hours, 50 minutes
+##SBATCH --partition=standard
+#SBATCH --time=59 # 59 minutes
+# SBATCH --partition=debug
 
 # Source shared environment setup
 source sbatch_env_setup.sh
