@@ -152,6 +152,8 @@ def create_subset_netcdf_mfdataset(
     with xr.open_mfdataset(
         file_paths,
         concat_dim="time",
+        combine="nested",
+        parallel=True,  # Enable parallel processing if dask is available
         chunks={"time": "auto"},  # Enable chunking for large datasets
         decode_times=True,
     ) as mf_ds:
