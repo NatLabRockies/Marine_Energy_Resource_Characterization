@@ -185,7 +185,6 @@ def extract_faces_to_parquet(
     config: Dict,
     location: Dict,
 ) -> None:
-
     dataset = xr.open_dataset(combined_nc_file_path, engine="h5netcdf")
 
     # Common variables needed for all faces
@@ -298,10 +297,7 @@ def extract_faces_to_parquet(
 
                     data_dict[col_name] = var_data
 
-            elif (
-                "face" in dataset[var_name].dims
-                and "time" in dataset[var_name].dims
-            ):
+            elif "face" in dataset[var_name].dims and "time" in dataset[var_name].dims:
                 # Handle 2D variables
                 var_data = batch_data[var_name][:, i]
 
@@ -323,17 +319,17 @@ def extract_faces_to_parquet(
         lat = f"{df['lat_center'].iloc[0]:.6f}"
         lon = f"{df['lat_center'].iloc[0]:.6f}"
         input_filename = Path(combined_nc_file_path).stem
-        loc_name = config["location_specification"]["puget_sound"]['output_name']
-        temporal_resolution = config["location_specification"]["puget_sound"]['temporal_resolution']
+        loc_name = config["location_specification"]["puget_sound"]["output_name"]
+        temporal_resolution = config["location_specification"]["puget_sound"][
+            "temporal_resolution"
+        ]
         ds_name = config["dataset"]["name"]
         start_time = dataframe.index.min().strftime("%Y%m%d.%H%M")
-        temporal_resolution = 
 
         # Create a unique filename based on lat/lon and face index
         output_filename = f"{loc_name}.{ds_name}.lat={lat}.lon={lon}.b4.{start_time}.{temporal_resolution}.1-year.parquet"
 
     return face_dataframes
-
 
 
 def extract_point_data(
@@ -401,9 +397,7 @@ def extract_point_data(
 
     # Create parquet files
     parquet_dir = output_dir / "parquet_files"
-    extract_faces_to_parquet(
-        subset_nc_path, str(parquet_dir), config, location
-    )
+    extract_faces_to_parquet(subset_nc_path, str(parquet_dir), config, location)
 
     # Save metadata
     metadata = {
