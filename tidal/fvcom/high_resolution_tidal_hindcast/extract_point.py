@@ -320,7 +320,7 @@ def extract_faces_to_parquet(
 
     for dataframe in face_dataframes.values():
         lat = f"{df['lat_center'].iloc[0]:.6f}"
-        lon = f"{df['lat_center'].iloc[0]:.6f}"
+        lon = f"{df['lon_center'].iloc[0]:.6f}"
         input_filename = Path(combined_nc_file_path).stem
         loc_name = config["location_specification"]["puget_sound"]["output_name"]
         temporal_resolution = config["location_specification"]["puget_sound"][
