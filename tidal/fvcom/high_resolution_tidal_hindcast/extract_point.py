@@ -147,7 +147,7 @@ def create_subset_netcdf_mfdataset(
     # Open all files as a single dataset with time concatenation
     print("Opening multiple files with xarray...")
     with xr.open_mfdataset(
-        input_files[:2],
+        input_files,
         concat_dim="time",
         combine="nested",
         engine="h5netcdf",
