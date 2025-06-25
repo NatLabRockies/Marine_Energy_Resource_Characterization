@@ -51,7 +51,7 @@ def find_closest_faces(
         )
 
         # Get indices of n closest faces
-        closest_indices = np.argsort(distances)[:n_closest]
+        closest_indices = sorted(list(np.argsort(distances)[:n_closest]))
         closest_distances = distances[closest_indices]
 
         print(f"Closest faces: {closest_indices.tolist()}")
