@@ -151,8 +151,8 @@ def create_subset_netcdf_mfdataset(
     print("Opening multiple files with xarray...")
     with xr.open_mfdataset(
         file_paths,
-        # concat_dim="time",
-        # combine="nested",
+        concat_dim="time",
+        combine="nested",
         engine="h5netcdf",
         # parallel=True,
         # chunks={"time": "auto"},  # Enable chunking for large datasets
