@@ -18,7 +18,6 @@ from src.config import config
 
 
 from src.file_manager import get_vap_output_dir
-from src.vap_create_parquet_all_time_partition import 
 
 
 def find_closest_faces(
