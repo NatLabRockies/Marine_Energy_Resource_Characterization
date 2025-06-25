@@ -144,13 +144,10 @@ def create_subset_netcdf_mfdataset(
     print(f"Creating subset NetCDF with {len(face_indices)} faces using open_mfdataset")
     print(f"Processing {len(input_files)} files simultaneously")
 
-    # Convert Path objects to strings for xarray
-    file_paths = [str(f) for f in input_files]
-
     # Open all files as a single dataset with time concatenation
     print("Opening multiple files with xarray...")
     with xr.open_mfdataset(
-        file_paths,
+        input_files[:2],
         concat_dim="time",
         combine="nested",
         engine="h5netcdf",
