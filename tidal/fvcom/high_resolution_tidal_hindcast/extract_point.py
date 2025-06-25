@@ -14,8 +14,11 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from src.config import config
+
 
 from src.file_manager import get_vap_output_dir
+from src.vap_create_parquet_all_time_partition import 
 
 
 def find_closest_faces(
@@ -178,136 +181,160 @@ def create_subset_netcdf_mfdataset(
 
 
 def extract_faces_to_parquet(
-    input_files: List[Path],
-    face_indices: List[int],
+    combined_nc_file_path: Path,
     output_dir: str,
     config: Dict,
     location: Dict,
 ) -> None:
-    """
-    Extract specified faces and save as individual parquet files using the existing logic.
-    This is a simplified version of the batched conversion.
-    """
-    print(f"Extracting {len(face_indices)} faces to parquet files")
 
-    # Get dataset info from first file
-    print("Reading dataset information...")
-    dataset_info = get_dataset_info(input_files[0])
+    dataset = xr.open_dataset(combined_nc_file_path, engine="h5netcdf")
 
-    # Read element corners for the selected faces
-    print("Reading element corner coordinates...")
-    element_corners = {}
+    # Common variables needed for all faces
+    time_values = dataset.time.values
+    time_dim_len = len(time_values)
 
-    with h5py.File(input_files[0], "r") as f:
-        lat_node = f["lat_node"][:]
-        lon_node = f["lon_node"][:]
-        nv = f["nv"][0, :, :] - 1  # Convert to 0-based indexing
+    # Pre-fetch static data for all faces
+    batch_data = {
+        "lat_center": dataset.lat_center.values[face_indices],
+        "lon_center": dataset.lon_center.values[face_indices],
+        "nv": dataset["nv"].isel(time=0).isel(face=face_indices).values.T,
+    }
 
-        for face_id in face_indices:
-            node_indices = nv[:, face_id]
-            element_corners[face_id] = {
-                "element_corner_1_lat": lat_node[node_indices[0]],
-                "element_corner_1_lon": lon_node[node_indices[0]],
-                "element_corner_2_lat": lat_node[node_indices[1]],
-                "element_corner_2_lon": lon_node[node_indices[1]],
-                "element_corner_3_lat": lat_node[node_indices[2]],
-                "element_corner_3_lon": lon_node[node_indices[2]],
-            }
+    # Pre-fetch lat_node and lon_node if they exist
+    if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
+        batch_data["lat_node"] = dataset["lat_node"].values
+        batch_data["lon_node"] = dataset["lon_node"].values
 
-    # Initialize data structure for each face
-    print("Initializing data structures...")
-    all_face_data = {}
+    # Variables to skip in extraction
+    vars_to_skip = ["nv", "h_center"]
 
-    for face_id in face_indices:
-        all_face_data[face_id] = {
-            "time": [],
-            "lat": None,
-            "lon": None,
-            **element_corners[face_id],
-        }
+    # Pre-fetch all variable data
+    for var_name in vars_to_include:
+        if var_name in vars_to_skip:
+            continue
 
-        # Initialize dataset arrays
-        for dataset_name in dataset_info["2d_datasets"]:
-            if dataset_name not in ["lat_center", "lon_center"]:
-                all_face_data[face_id][dataset_name] = []
+        var = dataset[var_name]
 
-        for dataset_name, num_layers in dataset_info["3d_datasets"]:
-            for layer_idx in range(num_layers):
-                col_name = f"{dataset_name}_layer_{layer_idx}"
-                all_face_data[face_id][col_name] = []
+        # Extract data based on variable dimensions
+        if "sigma_layer" in var.dims and "face" in var.dims and "time" in var.dims:
+            # 3D variables (time, sigma_layer, face)
+            print(f"Extracting 4D variable {var_name} with dims {var.dims}")
+            selected_data = var.isel(face=face_indices)
 
-    # Process each file
-    for file_idx, h5_file in enumerate(input_files):
-        print(f"Processing file {file_idx+1}/{len(input_files)}: {h5_file.name}")
+            batch_data[var_name] = {}
+            for layer_idx in range(len(dataset.sigma_layer)):
+                layer_data = selected_data.isel(sigma_layer=layer_idx)
 
-        with h5py.File(h5_file, "r") as f:
-            # Get time values
-            time_values = f["time"][:]
+                # Ensure time dimension is first
+                if layer_data.dims[0] == "time" and layer_data.dims[1] == "face":
+                    data_array = layer_data.values
+                else:
+                    data_array = layer_data.transpose("time", "face").values
 
-            # Add time to all faces
-            for face_id in face_indices:
-                all_face_data[face_id]["time"].extend(time_values)
+                batch_data[var_name][layer_idx] = data_array
 
-            # Get lat/lon (only from first file)
-            if file_idx == 0:
-                if "lat_center" in f:
-                    lat_values = f["lat_center"][face_indices]
-                    for i, face_id in enumerate(face_indices):
-                        all_face_data[face_id]["lat"] = lat_values[i]
+        elif "face" in var.dims and "time" in var.dims:
+            # 2D variables (time, face)
+            print(f"Extracting 3D variable {var_name} with dims {var.dims}")
+            faces_data = var.isel(face=face_indices)
 
-                if "lon_center" in f:
-                    lon_values = f["lon_center"][face_indices]
-                    for i, face_id in enumerate(face_indices):
-                        all_face_data[face_id]["lon"] = lon_values[i]
+            # Ensure time dimension is first
+            if "time" in faces_data.dims:
+                time_dim_idx = faces_data.dims.index("time")
+                if time_dim_idx != 0:
+                    dim_order = list(faces_data.dims)
+                    dim_order.remove("time")
+                    dim_order.insert(0, "time")
+                    faces_data = faces_data.transpose(*dim_order)
 
-            # Read 2D datasets
-            for dataset_name in dataset_info["2d_datasets"]:
-                if dataset_name in f and dataset_name not in [
-                    "lat_center",
-                    "lon_center",
-                    "nv",
-                ]:
-                    data_subset = f[dataset_name][:, face_indices]
-                    for i, face_id in enumerate(face_indices):
-                        all_face_data[face_id][dataset_name].extend(data_subset[:, i])
+            batch_data[var_name] = faces_data.values
 
-            # Read 3D datasets
-            for dataset_name, num_layers in dataset_info["3d_datasets"]:
-                if dataset_name in f and dataset_name not in ["nv"]:
-                    for layer_idx in range(num_layers):
-                        col_name = f"{dataset_name}_layer_{layer_idx}"
-                        data_subset = f[dataset_name][:, layer_idx, face_indices]
-                        for i, face_id in enumerate(face_indices):
-                            all_face_data[face_id][col_name].extend(data_subset[:, i])
+    # Create DataFrames for each face
+    face_dataframes = {}
+    for i, face_idx in enumerate(face_indices):
+        data_dict = {}
 
-    # Write parquet files
-    print("Writing parquet files...")
-    os.makedirs(output_dir, exist_ok=True)
+        # Add center coordinates
+        data_dict["lat_center"] = [batch_data["lat_center"][i]] * time_dim_len
+        data_dict["lon_center"] = [batch_data["lon_center"][i]] * time_dim_len
 
-    for face_id in face_indices:
-        # Create DataFrame
-        df_data = {}
+        # Process node vertex data
+        nv_data = batch_data["nv"][i]
+        node_indices = [int(idx - 1) if idx > 0 else int(idx) for idx in nv_data]
 
-        for key, value in all_face_data[face_id].items():
-            if key in ["lat", "lon"] + [
-                k for k in all_face_data[face_id].keys() if "element_corner" in k
-            ]:
-                # Repeat scalar values
-                time_length = len(all_face_data[face_id]["time"])
-                df_data[key] = np.repeat(value, time_length)
-            else:
-                df_data[key] = np.array(value)
+        # Add corner node data if available
+        if "lat_node" in dataset.variables and "lon_node" in dataset.variables:
+            for j, node_idx in enumerate(node_indices):
+                corner_num = j + 1
+                lat_node_val = float(batch_data["lat_node"][node_idx])
+                lon_node_val = float(batch_data["lon_node"][node_idx])
 
-        df = pd.DataFrame(df_data)
-        df["time"] = pd.to_datetime(df["time"], unit="s", origin="unix")
-        df = df.set_index("time").sort_index()
+                data_dict[f"element_corner_{corner_num}_lat"] = np.repeat(  # type: ignore
+                    lat_node_val, time_dim_len
+                )
+                data_dict[f"element_corner_{corner_num}_lon"] = np.repeat(  # type: ignore
+                    lon_node_val, time_dim_len
+                )
 
-        # Write parquet file
-        output_file = Path(output_dir) / f"face_{face_id:06d}.parquet"
-        table = pa.Table.from_pandas(df)
-        pq.write_table(table, output_file)
+        # Add variable data for this face
+        for var_name in vars_to_include:
+            if var_name in vars_to_skip or var_name not in batch_data:
+                continue
 
-        print(f"Wrote: {output_file}")
+            if (
+                "sigma_layer" in dataset[var_name].dims
+                and "face" in dataset[var_name].dims
+            ):
+                # Handle layered variables
+                for layer_idx in range(len(dataset.sigma_layer)):
+                    col_name = f"{var_name}_layer_{layer_idx}"
+                    var_data = batch_data[var_name][layer_idx][:, i]
+
+                    # Verify data length
+                    if len(var_data) != time_dim_len:
+                        print(
+                            f"Warning: {col_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
+                        )
+                        continue
+
+                    data_dict[col_name] = var_data
+
+            elif (
+                "face" in dataset[var_name].dims
+                and "time" in dataset[var_name].dims
+            ):
+                # Handle 2D variables
+                var_data = batch_data[var_name][:, i]
+
+                # Verify data length
+                if len(var_data) != time_dim_len:
+                    print(
+                        f"Warning: {var_name} for face {face_idx} has time dimension {len(var_data)} != {time_dim_len}"
+                    )
+                    continue
+
+                data_dict[var_name] = var_data
+
+        # Create DataFrame with time index
+        df = pd.DataFrame(data_dict, index=time_values)
+        df.index.name = "time"
+        face_dataframes[face_idx] = df
+
+    for dataframe in face_dataframes.values():
+        lat = f"{df['lat_center'].iloc[0]:.6f}"
+        lon = f"{df['lat_center'].iloc[0]:.6f}"
+        input_filename = Path(combined_nc_file_path).stem
+        loc_name = config["location_specification"]["puget_sound"]['output_name']
+        temporal_resolution = config["location_specification"]["puget_sound"]['temporal_resolution']
+        ds_name = config["dataset"]["name"]
+        start_time = dataframe.index.min().strftime("%Y%m%d.%H%M")
+        temporal_resolution = 
+
+        # Create a unique filename based on lat/lon and face index
+        output_filename = f"{loc_name}.{ds_name}.lat={lat}.lon={lon}.b4.{start_time}.{temporal_resolution}.1-year.parquet"
+
+    return face_dataframes
+
 
 
 def extract_point_data(
@@ -376,7 +403,7 @@ def extract_point_data(
     # Create parquet files
     parquet_dir = output_dir / "parquet_files"
     extract_faces_to_parquet(
-        nc_files, closest_faces, str(parquet_dir), config, location
+        subset_nc_path, str(parquet_dir), config, location
     )
 
     # Save metadata
