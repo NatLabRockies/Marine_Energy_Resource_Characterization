@@ -14,7 +14,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from src.config import config
+from config import config
 
 
 from src.file_manager import get_vap_output_dir
