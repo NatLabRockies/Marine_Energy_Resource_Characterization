@@ -167,7 +167,7 @@ def create_subset_netcdf_mfdataset(
         print("Creating subset dataset...")
         subset_ds = mf_ds.isel(face=face_indices)
 
-        print(f"Subset dataset shape: {subset_ds.size}")
+        print(f"Subset dataset shape: {subset_ds.sizes}")
 
         subset_ds.to_netcdf(output_file)
 
