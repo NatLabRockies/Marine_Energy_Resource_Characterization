@@ -318,23 +318,23 @@ def extract_faces_to_parquet(
         df.index.name = "time"
         face_dataframes[face_idx] = df
 
-    for dataframe in face_dataframes.values():
-        lat = f"{df['lat_center'].iloc[0]:.6f}"
-        lon = f"{df['lon_center'].iloc[0]:.6f}"
+    for this_df in face_dataframes.values():
+        lat = f"{this_df['lat_center'].iloc[0]:.6f}"
+        lon = f"{this_df['lon_center'].iloc[0]:.6f}"
         input_filename = Path(combined_nc_file_path).stem
         loc_name = config["location_specification"]["puget_sound"]["output_name"]
         temporal_resolution = config["location_specification"]["puget_sound"][
             "temporal_resolution"
         ]
         ds_name = config["dataset"]["name"]
-        start_time = dataframe.index.min().strftime("%Y%m%d.%H%M")
+        start_time = this_df.index.min().strftime("%Y%m%d.%H%M")
 
         # Create a unique filename based on lat/lon and face index
         output_filename = f"{loc_name}.{ds_name}.lat={lat}.lon={lon}.b4.{start_time}.{temporal_resolution}.1-year.parquet"
 
         output_file_path = Path(output_dir, output_filename)
         print("Saving Face DataFrame to parquet:", output_file_path)
-        df.to_parquet(output_file_path, index=True)
+        this_df.to_parquet(output_file_path, index=True)
         print("Save Successful")
 
     return face_dataframes
