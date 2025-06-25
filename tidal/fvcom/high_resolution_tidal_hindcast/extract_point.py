@@ -151,12 +151,12 @@ def create_subset_netcdf_mfdataset(
     print("Opening multiple files with xarray...")
     with xr.open_mfdataset(
         file_paths,
-        concat_dim="time",
-        combine="nested",
+        # concat_dim="time",
+        # combine="nested",
         engine="h5netcdf",
-        parallel=True,
-        chunks={"time": "auto"},  # Enable chunking for large datasets
-        decode_times=True,
+        # parallel=True,
+        # chunks={"time": "auto"},  # Enable chunking for large datasets
+        # decode_times=True,
     ) as mf_ds:
         print(f"Opened combined dataset with shape: {mf_ds.dims}")
         print(f"Time range: {mf_ds.time.min().values} to {mf_ds.time.max().values}")
