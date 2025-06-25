@@ -105,6 +105,9 @@ def create_subset_netcdf(
 
             # Create new dataset with subset
             subset_ds = xr.Dataset(face_vars, coords=coords, attrs=ds.attrs)
+
+            subset_ds = subset_ds.drop_vars(["zeta"], errors="raise")
+
             datasets.append(subset_ds)
 
     # Concatenate along time dimension if multiple files
