@@ -170,7 +170,7 @@ def create_subset_netcdf_mfdataset(
 
         print(f"Subset dataset shape: {subset_ds.sizes}")
 
-        subset_ds.to_netcdf(output_file)
+        subset_ds.to_netcdf(output_file, engine="h5netcdf")
 
         print(f"Successfully created subset NetCDF: {output_file}")
 
