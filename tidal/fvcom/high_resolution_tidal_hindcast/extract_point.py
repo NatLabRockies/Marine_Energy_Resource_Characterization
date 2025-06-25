@@ -332,6 +332,11 @@ def extract_faces_to_parquet(
         # Create a unique filename based on lat/lon and face index
         output_filename = f"{loc_name}.{ds_name}.lat={lat}.lon={lon}.b4.{start_time}.{temporal_resolution}.1-year.parquet"
 
+        output_file_path = Path(output_dir, output_filename)
+        print("Saving Face DataFrame to parquet:", output_file_path)
+        df.to_parquet(output_file_path, index=True)
+        print("Save Successful")
+
     return face_dataframes
 
 
