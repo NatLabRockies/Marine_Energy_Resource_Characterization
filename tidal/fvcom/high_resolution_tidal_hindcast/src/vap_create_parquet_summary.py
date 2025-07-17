@@ -309,6 +309,37 @@ def convert_nc_summary_to_parquet(config, location_key):
 
         print("Creating individual GeoDataFrame...")
         geo_output_df = create_geo_dataframe(output_df)
+
+        # Filter geodf columns
+        geo_output_df = geo_output_df.drop(
+            [
+                "element_corner_1_lon",
+                "element_corner_1_lat",
+                "element_corner_2_lat",
+                "element_corner_2_lon",
+                "element_corner_3_lat",
+                "element_corner_3_lon",
+            ],
+            axis="columns",
+        )
+        geo_output_df = geo_output_df.rename(
+            columns={
+                "lat_center": "Center Latitude",
+                "lon_center": "Center Longitude",
+                "vap_water_column_mean_sea_water_speed": "Mean Sea Water Speed [m/s]",
+                "vap_water_column_95th_percentile_sea_water_speed": "95th Percentile Sea Water Speed [m/s]",
+                "vap_water_column_sea_water_speed_max_to_mean_ratio": "Speed Max to Mean Ratio",
+                "vap_water_column_mean_sea_water_power_density": "Mean Sea Water Power Density [W/m^2]",
+                "vap_water_column_95th_percentile_sea_water_power_density": "95th Percentile Sea Water Power Density [W/m^2]",
+                "vap_water_column_sea_water_power_density_max_to_mean_ratio": "Power Density Max to Mean Ratio",
+            }
+        )
+
+        print(geo_output_df.columns)
+        print(geo_output_df.info())
+        print(geo_output_df.head())
+        print(geo_output_df.tail())
+
         save_geo_dataframe(
             geo_output_df, output_path, output_filename.replace(".parquet", "")
         )
