@@ -1,8 +1,11 @@
 from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
+
+from shapely.geometry import Point, Polygon
 
 from . import file_manager, file_name_convention_manager
 
@@ -60,6 +63,95 @@ def compute_max_to_mean_ratio(df):
     return df
 
 
+def create_geo_dataframe(df, geometry_type="polygon"):
+    """
+    Create a GeoDataFrame from FVCOM DataFrame
+
+    Args:
+        df: DataFrame with FVCOM data (must have lat_center, lon_center, element_corner_*_lat/lon)
+        geometry_type: 'polygon' for triangular elements or 'point' for center points
+
+    Returns:
+        GeoDataFrame with appropriate geometry
+    """
+
+    if geometry_type == "polygon":
+        # Create triangular polygons from element corners
+        def make_triangle(row):
+            coords = [
+                (row["element_corner_1_lon"], row["element_corner_1_lat"]),
+                (row["element_corner_2_lon"], row["element_corner_2_lat"]),
+                (row["element_corner_3_lon"], row["element_corner_3_lat"]),
+                (
+                    row["element_corner_1_lon"],
+                    row["element_corner_1_lat"],
+                ),  # Close triangle
+            ]
+            return Polygon(coords)
+
+        gdf = gpd.GeoDataFrame(df.copy())
+        gdf["geometry"] = df.apply(make_triangle, axis=1)
+
+    elif geometry_type == "point":
+        # Create points from center coordinates
+        def make_point(row):
+            return Point(row["lon_center"], row["lat_center"])
+
+        gdf = gpd.GeoDataFrame(df.copy())
+        gdf["geometry"] = df.apply(make_point, axis=1)
+
+    else:
+        raise ValueError("geometry_type must be 'polygon' or 'point'")
+
+    # Set coordinate system (WGS84)
+    gdf.set_crs(epsg=4326, inplace=True)
+
+    return gdf
+
+
+def save_geo_dataframe(
+    gdf, output_path, filename_base, formats=["shp", "geojson", "gpkg", "parquet"]
+):
+    """
+    Save GeoDataFrame in multiple formats including GeoPackage
+
+    Args:
+        gdf: GeoDataFrame to save
+        output_path: Directory to save files
+        filename_base: Base filename (without extension)
+        formats: List of formats to save ['shp', 'geojson', 'gpkg', 'parquet']
+    """
+
+    output_path = Path(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    saved_files = []
+
+    for fmt in formats:
+        if fmt == "shp":
+            filepath = output_path / f"{filename_base}.shp"
+            gdf.to_file(filepath)
+            saved_files.append(filepath)
+
+        elif fmt == "geojson":
+            filepath = output_path / f"{filename_base}.geojson"
+            gdf.to_file(filepath, driver="GeoJSON")
+            saved_files.append(filepath)
+
+        elif fmt == "gpkg":
+            filepath = output_path / f"{filename_base}.gpkg"
+            gdf.to_file(filepath, driver="GPKG")
+            saved_files.append(filepath)
+
+        elif fmt == "parquet":
+            filepath = output_path / f"{filename_base}_geo.parquet"
+            gdf.to_parquet(filepath)
+            saved_files.append(filepath)
+
+    print(f"Saved {len(saved_files)} files for {filename_base}")
+    return saved_files
+
+
 def convert_tidal_summary_nc_to_dataframe(ds):
     face_vars = []
     sigma_vars = []
@@ -96,8 +188,8 @@ def convert_tidal_summary_nc_to_dataframe(ds):
         corner_indices = nv[:, i]
 
         # Add lat/lon for each corner
-        data_dict[f"element_corner_{i+1}_lat"] = ds.lat_node.values[corner_indices]
-        data_dict[f"element_corner_{i+1}_lon"] = ds.lon_node.values[corner_indices]
+        data_dict[f"element_corner_{i + 1}_lat"] = ds.lat_node.values[corner_indices]
+        data_dict[f"element_corner_{i + 1}_lon"] = ds.lon_node.values[corner_indices]
 
     # Add face-only variables
     if face_vars:
@@ -136,6 +228,28 @@ def convert_nc_summary_to_parquet(config, location_key):
 
     input_nc_files = sorted(list(input_path.rglob("*.nc")))
 
+    cols_for_atlas = [
+        "lat_center",
+        "lon_center",
+        "element_corner_1_lat",
+        "element_corner_1_lon",
+        "element_corner_2_lat",
+        "element_corner_2_lon",
+        "element_corner_3_lat",
+        "element_corner_3_lon",
+        "vap_water_column_mean_sea_water_speed",
+        "vap_water_column_95th_percentile_sea_water_speed",
+        "vap_water_column_sea_water_speed_max_to_mean_ratio",
+        "vap_water_column_mean_sea_water_power_density",
+        "vap_water_column_95th_percentile_sea_water_power_density",
+        "vap_water_column_sea_water_power_density_max_to_mean_ratio",
+        "vap_sea_floor_depth",
+        "grid_resolution_meters",
+    ]
+
+    dfs = []
+    atlas_dfs = []
+
     for nc_file in input_nc_files:
         ds = xr.open_dataset(nc_file)
         output_df = convert_tidal_summary_nc_to_dataframe(ds)
@@ -155,38 +269,110 @@ def convert_nc_summary_to_parquet(config, location_key):
         )
 
         output_df.to_parquet(Path(output_path, output_filename))
+        geo_output_df = create_geo_dataframe(output_df)
+        save_geo_dataframe(geo_output_df, output_path, output_filename)
 
         for col in output_df.columns:
             print(f"{col}: {output_df[col].dtype}")
 
-        cols_for_atlas = [
-            "lat_center",
-            "lon_center",
-            "element_corner_1_lat",
-            "element_corner_1_lon",
-            "element_corner_2_lat",
-            "element_corner_2_lon",
-            "element_corner_3_lat",
-            "element_corner_3_lon",
-            "vap_water_column_mean_sea_water_speed",
-            "vap_water_column_95th_percentile_sea_water_speed",
-            "vap_water_column_mean_sea_water_power_density",
-            "vap_water_column_95th_percentile_sea_water_power_density",
-            "vap_sea_floor_depth",
-            "grid_resolution_meters",
-        ]
-
         atlas_df = output_df[cols_for_atlas]
 
-        output_path = file_manager.get_vap_atlas_summary_parquet_dir(config, location)
-        output_filename = file_name_convention_manager.generate_filename_for_data_level(
-            output_df,
-            location["output_name"],
-            config["dataset"]["name"],
-            "b5",
-            temporal="year_average",
-            ext="parquet",
-            static_time=date_time_parts,
+        atlas_output_path = file_manager.get_vap_atlas_summary_parquet_dir(
+            config, location
+        )
+        atlas_output_filename = (
+            file_name_convention_manager.generate_filename_for_data_level(
+                output_df,
+                location["output_name"],
+                config["dataset"]["name"],
+                "b5",
+                temporal="year_average",
+                ext="parquet",
+                static_time=date_time_parts,
+            )
         )
 
-        atlas_df.to_parquet(Path(output_path, output_filename))
+        atlas_df.to_parquet(Path(atlas_output_path, atlas_output_filename))
+        geo_atlas_df = create_geo_dataframe(atlas_df)
+        save_geo_dataframe(geo_atlas_df, atlas_output_path, atlas_output_filename)
+
+        # Append to lists for combined output
+        dfs.append(output_df)
+        atlas_dfs.append(atlas_df)
+
+    # Calculate number of locations dynamically
+    num_locations = len(config["location_specification"])
+
+    # Create combined outputs
+    combined_output_path = file_manager.get_combined_vap_atlas(config, location)
+
+    # Combine all dataframes
+    combined_df = pd.concat(dfs, ignore_index=True)
+    combined_atlas_df = pd.concat(atlas_dfs, ignore_index=True)
+
+    # Generate combined filenames
+    combined_output_filename = (
+        file_name_convention_manager.generate_filename_for_data_level(
+            combined_df,
+            f"all_{num_locations}_tidal_locations",
+            config["dataset"]["name"],
+            "b7",
+            temporal="year_average",
+            ext=None,
+        )
+    )
+
+    combined_atlas_filename = (
+        file_name_convention_manager.generate_filename_for_data_level(
+            combined_atlas_df,
+            f"all_{num_locations}_tidal_locations_atlas",
+            config["dataset"]["name"],
+            "b7",
+            temporal="year_average",
+            ext=None,
+        )
+    )
+
+    # Save combined parquet files
+    print("Saving combined parquet files...")
+    combined_df.to_parquet(
+        Path(combined_output_path, f"{combined_output_filename}.parquet")
+    )
+    combined_atlas_df.to_parquet(
+        Path(combined_output_path, f"{combined_atlas_filename}.parquet")
+    )
+
+    # Create and save complete GIS outputs (all columns)
+    print(f"Creating complete GIS outputs with {combined_df.shape[1]} columns...")
+    geo_combined_df = create_geo_dataframe(combined_df, geometry_type="polygon")
+    save_geo_dataframe(
+        geo_combined_df,
+        combined_output_path,
+        f"{combined_output_filename}_complete",
+        formats=["shp", "geojson", "gpkg", "parquet"],
+    )
+
+    # Create and save atlas subset GIS outputs (atlas columns only)
+    print(
+        f"Creating atlas subset GIS outputs with {combined_atlas_df.shape[1]} columns..."
+    )
+    geo_combined_atlas_df = create_geo_dataframe(
+        combined_atlas_df, geometry_type="polygon"
+    )
+    save_geo_dataframe(
+        geo_combined_atlas_df,
+        combined_output_path,
+        f"{combined_atlas_filename}_atlas_subset",
+        formats=["shp", "geojson", "gpkg", "parquet"],
+    )
+
+    print("Combined processing complete:")
+    print(
+        f"  - Complete dataset: {combined_df.shape[0]} rows, {combined_df.shape[1]} columns"
+    )
+    print(
+        f"  - Atlas subset: {combined_atlas_df.shape[0]} rows, {combined_atlas_df.shape[1]} columns"
+    )
+    print(f"  - Number of locations: {num_locations}")
+
+    return combined_df, combined_atlas_df
