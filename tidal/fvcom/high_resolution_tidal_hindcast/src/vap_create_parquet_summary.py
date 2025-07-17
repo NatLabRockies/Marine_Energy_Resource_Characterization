@@ -136,6 +136,8 @@ def save_geo_dataframe(
     output_path = Path(output_path)
     output_path.mkdir(parents=True, exist_ok=True)
 
+    filename_base = filename_base.replace(".parquet", "")  # Remove .parquet if present
+
     print(f"Saving GeoDataFrame to {len(formats)} formats: {', '.join(formats)}")
     saved_files = []
 
