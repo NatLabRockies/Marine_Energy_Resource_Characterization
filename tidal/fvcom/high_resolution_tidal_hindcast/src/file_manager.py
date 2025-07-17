@@ -35,7 +35,7 @@ def get_output_dirs(config, location, use_temp_base_path=False):
         temp_dir = Path(kestrel_tmp_dir).resolve()
         print(f"Temporary directory resolved to: {temp_dir}...")
 
-        if base_path.exists() is False:
+        if temp_dir.exists() is False:
             print(
                 f"Temporary directory {temp_dir} does not exist! "
                 "Please check your environment variables."
