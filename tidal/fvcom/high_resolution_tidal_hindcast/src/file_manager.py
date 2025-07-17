@@ -98,6 +98,7 @@ def get_output_dirs(config, location, use_temp_base_path=False):
                 "<location>", output_location_name
             ),
         ),
+        "combined_vap_atlas": Path(base_path, output_dirs["combined_vap_atlas"]),
     }
     for path in paths.values():
         path.mkdir(parents=True, exist_ok=True)
@@ -143,3 +144,7 @@ def get_vap_summary_parquet_dir(config, location):
 
 def get_vap_atlas_summary_parquet_dir(config, location):
     return get_output_dirs(config, location)["vap_atlas_summary_parquet"]
+
+
+def get_combined_vap_atlas(config, location):
+    return get_output_dirs(config, location)["combined_vap_atlas"]
