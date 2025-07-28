@@ -164,7 +164,8 @@ def save_geo_dataframe(
     gdf,
     output_path,
     filename_base,
-    formats=["geojson", "gpkg", "parquet"],
+    # formats=["geojson", "gpkg", "parquet"],
+    formats=["gpkg", "parquet"],
 ):
     """
     Save GeoDataFrame in multiple formats including GeoPackage
