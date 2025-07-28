@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 import xarray as xr
@@ -44,7 +44,8 @@ def generate_filename_for_data_level(
     ext="nc",
     static_time=None,
     version=None,
-    include_timestamp=None,
+    include_creation_timestamp=None,
+    include_dataset_timestamp=True,
 ):
     """Generate filename for processed data following ME naming convention.
 
@@ -62,10 +63,6 @@ def generate_filename_for_data_level(
     Returns:
         Formatted filename string: location_id.dataset_name[-qualifier][-temporal].data_level.date.time[.v{version}][.timestamp].ext
     """
-    if static_time is None:
-        date_str, time_str = _format_datetime(ds)
-    else:
-        date_str, time_str = static_time[0], static_time[1]
 
     components = [location_id, dataset_name]
 
@@ -74,16 +71,24 @@ def generate_filename_for_data_level(
     if temporal:
         components[-1] += f"-{temporal}"
 
-    components.extend([data_level, date_str, time_str])
+    components.append(data_level)
+
+    if include_dataset_timestamp is True:
+        if static_time is None:
+            date_str, time_str = _format_datetime(ds)
+        else:
+            date_str, time_str = static_time[0], static_time[1]
+
+        components.extend([date_str, time_str])
 
     # Add version if provided
     if version:
         components.append(f"v{version}")
 
     # Generate and add timestamp if requested
-    if include_timestamp:
-        timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M")
-        components.append(timestamp)
+    if include_creation_timestamp:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%MZ")
+        components.append(f"created={timestamp}")
 
     if ext is not None:
         return ".".join(components + [ext])
