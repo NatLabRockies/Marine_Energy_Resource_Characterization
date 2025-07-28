@@ -527,8 +527,6 @@ def convert_nc_summary_to_parquet(
 
     input_nc_files = sorted(list(input_path.rglob("*.nc")))
 
-    cols_for_atlas = ATLAS_COLUMNS.keys()
-
     dfs = []
     atlas_dfs = []
 
@@ -543,6 +541,10 @@ def convert_nc_summary_to_parquet(
         if split_polygons_that_cross_dateline is True:
             print("  Detecting dateline crossings...")
             output_df = detect_dateline_violations(output_df)
+            num_dateline_crossers = output_df["row_crosses_dateline"].sum()
+            print(
+                f"  Found {num_dateline_crossers} polygons crossing the dateline ({num_dateline_crossers / len(output_df) * 100:.2f}%)"
+            )
 
         # 001.AK_cook_inlet.tidal_hindcast_fvcom-1_year_average.b2.20050101.000000.nc
         # Get the last 2 parts of the filename
@@ -566,7 +568,6 @@ def convert_nc_summary_to_parquet(
 
         if split_polygons_that_cross_dateline is True:
             # For Aleutian Islands, we need to split polygons that cross the dateline
-            geo_output_df = detect_dateline_violations(geo_output_df)
             print("  Splitting dateline-crossing polygons...")
             geo_output_df = split_dateline_polygons(
                 geo_output_df, method="separate_rows"
