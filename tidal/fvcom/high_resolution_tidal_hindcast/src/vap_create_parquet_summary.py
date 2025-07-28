@@ -20,7 +20,7 @@ POLYGON_COLUMNS = {
     "element_corner_3_lon": "Element Corner 3 Longitude",
 }
 
-ATLAS_COLUMNS = {
+ATLAS_COLUMNS = {**POLYGON_COLUMNS
     "lat_center": "Center Latitude",
     "lon_center": "Center Longitude",
     "vap_water_column_mean_sea_water_speed": "Mean Sea Water Speed [m/s]",
@@ -32,8 +32,6 @@ ATLAS_COLUMNS = {
     "vap_grid_resolution": "Grid Resolution [m]",
     "vap_sea_floor_depth": "Sea Floor Depth from Mean Surface Elevation [m]",
 }
-
-GDF_POLYGON_COLUMNS = [col for col in ATLAS_COLUMNS.keys() if "element_corner" in col]
 
 
 def compute_grid_resolution(df):
@@ -165,7 +163,8 @@ def save_geo_dataframe(
     output_path,
     filename_base,
     # formats=["geojson", "gpkg", "parquet"],
-    formats=["gpkg", "parquet"],
+    # formats=["gpkg", "parquet"],
+    formats=["parquet"],
 ):
     """
     Save GeoDataFrame in multiple formats including GeoPackage
@@ -345,9 +344,7 @@ def convert_nc_summary_to_parquet(
         for col in output_df.columns:
             print(f"{col}: {output_df[col].dtype}")
 
-        atlas_df = output_df[
-            cols_for_atlas.keys().extend(POLYGON_COLUMNS.keys())
-        ].copy()
+        atlas_df = output_df[list(ATLAS_COLUMNS.keys())].copy()
 
         atlas_output_path = file_manager.get_vap_atlas_summary_parquet_dir(
             config, location
