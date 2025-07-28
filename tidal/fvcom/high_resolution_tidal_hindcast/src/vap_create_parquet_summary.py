@@ -545,6 +545,8 @@ def convert_nc_summary_to_parquet(
             print(
                 f"  Found {num_dateline_crossers} polygons crossing the dateline ({num_dateline_crossers / len(output_df) * 100:.2f}%)"
             )
+            # Remove rows that cross the dateline
+            output_df = output_df[~output_df["row_crosses_dateline"]]
 
         # 001.AK_cook_inlet.tidal_hindcast_fvcom-1_year_average.b2.20050101.000000.nc
         # Get the last 2 parts of the filename
