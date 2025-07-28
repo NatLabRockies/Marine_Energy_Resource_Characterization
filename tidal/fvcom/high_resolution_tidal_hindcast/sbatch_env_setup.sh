@@ -4,8 +4,8 @@
 echo "Initializing tidal hindcast sbatch environment..."
 
 # Load necessary modules
-module load anaconda3/2023.07-2
-conda init
+module load conda/2024.06.1
+conda deactivate
 conda activate tidal_fvcom
 
 # Change to the directory containing the script
