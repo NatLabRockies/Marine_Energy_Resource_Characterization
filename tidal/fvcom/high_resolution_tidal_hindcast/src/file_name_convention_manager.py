@@ -73,7 +73,10 @@ def generate_filename_for_data_level(
 
     components.extend([data_level, date_str, time_str])
 
-    return ".".join(components + [ext])
+    if ext is not None:
+        return ".".join(components + [ext])
+    else:
+        return ".".join(components)
 
 
 def generate_filename_for_viz(
