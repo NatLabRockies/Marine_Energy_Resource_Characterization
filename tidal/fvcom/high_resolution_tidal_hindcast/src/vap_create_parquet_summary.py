@@ -174,6 +174,8 @@ def save_geo_dataframe(
         print(f"    Longest columns: {long_columns[:3]}...")
 
     for fmt in formats:
+        this_output_path = Path(output_path, format)
+        this_output_path.mkdir(parents=True, exist_ok=True)
         print(f"  Saving {fmt.upper()} format...", end=" ")
 
         if fmt == "shp":
