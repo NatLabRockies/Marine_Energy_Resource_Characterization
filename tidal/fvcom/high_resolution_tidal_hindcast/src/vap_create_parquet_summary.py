@@ -20,7 +20,8 @@ POLYGON_COLUMNS = {
     "element_corner_3_lon": "Element Corner 3 Longitude",
 }
 
-ATLAS_COLUMNS = {**POLYGON_COLUMNS
+ATLAS_COLUMNS = {
+    **POLYGON_COLUMNS,
     "lat_center": "Center Latitude",
     "lon_center": "Center Longitude",
     "vap_water_column_mean_sea_water_speed": "Mean Sea Water Speed [m/s]",
