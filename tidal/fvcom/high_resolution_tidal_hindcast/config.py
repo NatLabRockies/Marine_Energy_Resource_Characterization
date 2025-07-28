@@ -5,6 +5,8 @@ config = {
         "label": "High Resolution Tidal Hindcast",
         "name": "wpto_high_res_tidal",
         "version": "0.3.0",
+        "gis_output_version": "0.3.1",
+        "development_version": "0.4.0",
         "issue_date": "2025-02-01",
         "encoding": {
             "time": {
