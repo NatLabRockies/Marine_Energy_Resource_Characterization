@@ -13,7 +13,8 @@ from . import file_manager, file_name_convention_manager
 
 # Default optimized for Aleutian Islands (~52-55°N latitude)
 # At 53°N, 0.0002° ≈ 13 meters (cos(53°) * 111000 * 0.0002 ≈ 13.4m)
-DATELINE_GAP_DEGREES = 0.0002
+# DATELINE_GAP_DEGREES = 0.0002
+DATELINE_GAP_DEGREES = 0.0010  # 65 meters?
 
 POLYGON_COLUMNS = {
     "element_corner_1_lat": "Element Corner 1 Latitude",
@@ -605,7 +606,8 @@ def convert_nc_summary_to_parquet(
             geo_output_df = split_dateline_polygons(
                 # geo_output_df, method="separate_rows"
                 geo_output_df,
-                method="multipolygon",
+                # method="multipolygon",
+                method="separate_rows",
             )
 
             geo_output_df = geo_output_df.drop(
