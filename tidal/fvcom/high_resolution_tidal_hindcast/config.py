@@ -40,7 +40,7 @@ config = {
             "vap_partition": "<location>/b4_vap_partition",
             "vap_summary_parquet": "<location>/b5_vap_summary_parquet",
             "vap_atlas_summary_parquet": "<location>/b6_vap_atlas_summary_parquet",
-            "combined_vap_atlas": "combined_gis_files_for_me_atlas",
+            "combined_vap_atlas": "all_locations_combined_gis",
             "tracking": "<location>/metadata/time_validation_and_tracking",
             "attributes": "<location>/metadata/dataset_attributes",
             "sha_256": "<location>/metadata/sha_256",
