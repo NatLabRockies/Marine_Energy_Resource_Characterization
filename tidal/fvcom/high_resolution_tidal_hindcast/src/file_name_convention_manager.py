@@ -43,6 +43,8 @@ def generate_filename_for_data_level(
     temporal=None,
     ext="nc",
     static_time=None,
+    version=None,
+    include_timestamp=None,
 ):
     """Generate filename for processed data following ME naming convention.
 
@@ -55,9 +57,10 @@ def generate_filename_for_data_level(
                   Must not end in number
         temporal: Optional string indicating temporal resolution (e.g., '10hz', '30s', '5m', '1h')
         ext: File extension
-
+        version: Optional version string (e.g., '1.0', '2.1')
+        include_timestamp: Boolean flag to include creation timestamp
     Returns:
-        Formatted filename string: location_id.dataset_name[-qualifier][-temporal].data_level.date.time.ext
+        Formatted filename string: location_id.dataset_name[-qualifier][-temporal].data_level.date.time[.v{version}][.timestamp].ext
     """
     if static_time is None:
         date_str, time_str = _format_datetime(ds)
@@ -72,6 +75,15 @@ def generate_filename_for_data_level(
         components[-1] += f"-{temporal}"
 
     components.extend([data_level, date_str, time_str])
+
+    # Add version if provided
+    if version:
+        components.append(f"v{version}")
+
+    # Generate and add timestamp if requested
+    if include_timestamp:
+        timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M")
+        components.append(timestamp)
 
     if ext is not None:
         return ".".join(components + [ext])
