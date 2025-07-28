@@ -61,8 +61,8 @@ def compute_grid_resolution(df):
     edge2 = haversine_vectorized(lat2_rad, lon2_rad, lat3_rad, lon3_rad)
     edge3 = haversine_vectorized(lat3_rad, lon3_rad, lat1_rad, lon1_rad)
 
-    # Grid resolution as average edge length
-    df["grid_resolution_meters"] = (edge1 + edge2 + edge3) / 3
+    # Grid resolution as average edge length, units are meters
+    df["vap_grid_resolution"] = (edge1 + edge2 + edge3) / 3
 
     return df
 

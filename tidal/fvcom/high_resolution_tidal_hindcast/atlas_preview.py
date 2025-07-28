@@ -175,7 +175,7 @@ VIZ_SPECS = {
     "grid_resolution_meters": {
         "title": "Grid Resolution",
         "units": "m",
-        "column_name": "grid_resolution_meters",
+        "column_name": "vap_grid_resolution",
         # "colormap": GRID_RESOLUTION_CMAP,
         "range_min": 0,
         "range_max": 500,
