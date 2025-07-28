@@ -123,6 +123,19 @@ def create_geo_dataframe(df, geometry_type="polygon"):
         geometry_series = df.apply(make_triangle, axis=1)
         gdf = gpd.GeoDataFrame(df.copy(), geometry=geometry_series)
 
+        # Filter columns use to create geometry that are not needed in the GeoDataFrame
+        gdf = gdf.drop(
+            [
+                "element_corner_1_lon",
+                "element_corner_1_lat",
+                "element_corner_2_lat",
+                "element_corner_2_lon",
+                "element_corner_3_lat",
+                "element_corner_3_lon",
+            ],
+            axis="columns",
+        )
+
     elif geometry_type == "point":
         # Create points from center coordinates
         print("  Building point geometries from center coordinates...")
