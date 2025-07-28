@@ -9,6 +9,30 @@ from shapely.geometry import Point, Polygon
 
 from . import file_manager, file_name_convention_manager
 
+POLYGON_COLUMNS = {
+    "element_corner_1_lat": "Element Corner 1 Latitude",
+    "element_corner_1_lon": "Element Corner 1 Longitude",
+    "element_corner_2_lat": "Element Corner 2 Latitude",
+    "element_corner_2_lon": "Element Corner 2 Longitude",
+    "element_corner_3_lat": "Element Corner 3 Latitude",
+    "element_corner_3_lon": "Element Corner 3 Longitude",
+}
+
+ATLAS_COLUMNS = {
+    "lat_center": "Center Latitude",
+    "lon_center": "Center Longitude",
+    "vap_water_column_mean_sea_water_speed": "Mean Sea Water Speed [m/s]",
+    "vap_water_column_95th_percentile_sea_water_speed": "95th Percentile Sea Water Speed [m/s]",
+    "vap_water_column_sea_water_speed_max_to_mean_ratio": "Speed Max to Mean Ratio",
+    "vap_water_column_mean_sea_water_power_density": "Mean Sea Water Power Density [W/m^2]",
+    "vap_water_column_95th_percentile_sea_water_power_density": "95th Percentile Sea Water Power Density [W/m^2]",
+    # "vap_water_column_sea_water_power_density_max_to_mean_ratio": "Power Density Max to Mean Ratio",
+    "vap_grid_resolution": "Grid Resolution [m]",
+    "vap_sea_floor_depth": "Sea Floor Depth from Mean Surface Elevation [m]",
+}
+
+GDF_POLYGON_COLUMNS = [col for col in ATLAS_COLUMNS.keys() if "element_corner" in col]
+
 
 def compute_grid_resolution(df):
     """Compute FVCOM grid resolution as average edge length"""
