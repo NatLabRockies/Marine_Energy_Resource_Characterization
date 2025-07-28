@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point, Polygon, MultiPolygon
 
 from . import file_manager, file_name_convention_manager
 
@@ -88,6 +88,226 @@ def compute_max_to_mean_ratio(df):
     return df
 
 
+def detect_dateline_violations(df):
+    """
+    Add a column to detect which triangular elements cross the dateline
+    Args:
+        df: DataFrame with element_corner_*_lon columns
+    Returns:
+        DataFrame with added 'crosses_dateline' boolean column
+    """
+
+    def check_triangle_dateline_crossing(row):
+        """Check if a single triangle crosses the dateline"""
+        lons = [
+            row["element_corner_1_lon"],
+            row["element_corner_2_lon"],
+            row["element_corner_3_lon"],
+        ]
+
+        # Check all pairs of vertices for longitude jumps > 180°
+        for i in range(3):
+            for j in range(i + 1, 3):
+                if abs(lons[i] - lons[j]) > 180:
+                    return True
+        return False
+
+    df = df.copy()
+    df["row_crosses_dateline"] = df.apply(check_triangle_dateline_crossing, axis=1)
+    return df
+
+
+def split_dateline_triangle_coords(coords):
+    """
+    Split a triangle that crosses the dateline into multiple polygons
+    Preserves original coordinates - uses geometric splitting
+    Args:
+        coords: List of (lon, lat) tuples for triangle vertices
+    Returns:
+        List of Polygon objects
+    """
+    # Find dateline crossings and intersection points
+    intersections = []
+
+    for i in range(3):  # Check all 3 edges
+        j = (i + 1) % 3
+        lon1, lat1 = coords[i]
+        lon2, lat2 = coords[j]
+
+        if abs(lon2 - lon1) > 180:
+            # Calculate intersection with dateline
+            if lon1 > 0 and lon2 < 0:  # East to west crossing
+                t = (180 - lon1) / ((lon2 + 360) - lon1)
+                int_lat = lat1 + t * (lat2 - lat1)
+                intersections.extend(
+                    [
+                        (180.0, int_lat),  # Eastern dateline point
+                        (-180.0, int_lat),  # Western dateline point
+                    ]
+                )
+            elif lon1 < 0 and lon2 > 0:  # West to east crossing
+                t = (-180 - lon1) / ((lon2 - 360) - lon1)
+                int_lat = lat1 + t * (lat2 - lat1)
+                intersections.extend(
+                    [
+                        (180.0, int_lat),  # Eastern dateline point
+                        (-180.0, int_lat),  # Western dateline point
+                    ]
+                )
+
+    if not intersections:
+        return [Polygon(coords)]
+
+    # Separate vertices by hemisphere and add intersection points
+    eastern_vertices = []
+    western_vertices = []
+
+    # Add original vertices to appropriate hemispheres
+    for lon, lat in coords[:-1]:  # Exclude closing vertex
+        if lon >= 0:
+            eastern_vertices.append((lon, lat))
+        else:
+            western_vertices.append((lon, lat))
+
+    # Add intersection points
+    dateline_intersections = list(set(intersections))  # Remove duplicates
+    for lon, lat in dateline_intersections:
+        if lon > 0:  # Eastern dateline (+180)
+            eastern_vertices.append((lon, lat))
+        else:  # Western dateline (-180)
+            western_vertices.append((lon, lat))
+
+    # Create polygons from vertices
+    polygons = []
+
+    if len(eastern_vertices) >= 3:
+        # Sort vertices to form proper polygon (counterclockwise)
+        eastern_vertices = sorted(
+            eastern_vertices,
+            key=lambda p: np.arctan2(
+                p[1] - np.mean([v[1] for v in eastern_vertices]),
+                p[0] - np.mean([v[0] for v in eastern_vertices]),
+            ),
+        )
+        eastern_vertices.append(eastern_vertices[0])  # Close polygon
+        polygons.append(Polygon(eastern_vertices))
+
+    if len(western_vertices) >= 3:
+        # Sort vertices to form proper polygon (counterclockwise)
+        western_vertices = sorted(
+            western_vertices,
+            key=lambda p: np.arctan2(
+                p[1] - np.mean([v[1] for v in western_vertices]),
+                p[0] - np.mean([v[0] for v in western_vertices]),
+            ),
+        )
+        western_vertices.append(western_vertices[0])  # Close polygon
+        polygons.append(Polygon(western_vertices))
+
+    return polygons if polygons else [Polygon(coords)]
+
+
+def split_dateline_polygons(gdf, method="multipolygon"):
+    """
+    Split polygons that cross the international dateline
+    Args:
+        gdf: GeoDataFrame with polygon geometries and 'row_crosses_dateline' column
+        method: 'multipolygon' (creates MultiPolygon geometries) or
+                'separate_rows' (creates separate rows for each split polygon)
+    Returns:
+        GeoDataFrame with split polygons (original coordinates preserved)
+    """
+    print(f"Splitting dateline-crossing polygons using method: {method}")
+
+    # Check for the expected column
+    if "row_crosses_dateline" not in gdf.columns:
+        raise ValueError(
+            "GeoDataFrame must have 'row_crosses_dateline' column. Create this column in your input DataFrame before calling create_geo_dataframe()."
+        )
+
+    violations = gdf["row_crosses_dateline"].sum()
+    total = len(gdf)
+    print(
+        f"  Found {violations:,} polygons crossing dateline ({violations / total * 100:.2f}%)"
+    )
+
+    if violations == 0:
+        print("  No dateline crossings found - returning original GeoDataFrame")
+        return gdf
+
+    if method == "multipolygon":
+
+        def split_geometry(row):
+            """Split geometry if it crosses dateline, otherwise return original"""
+            if not row["row_crosses_dateline"]:
+                return row.geometry
+
+            # Get coordinates from polygon
+            coords = list(row.geometry.exterior.coords)
+
+            # Split the polygon
+            split_polygons = split_dateline_triangle_coords(coords)
+
+            if len(split_polygons) == 1:
+                return split_polygons[0]
+            else:
+                return MultiPolygon(split_polygons)
+
+        gdf_split = gdf.copy()
+        gdf_split.geometry = gdf_split.apply(split_geometry, axis=1)
+
+        multipolygons = gdf_split.geometry.apply(
+            lambda g: isinstance(g, MultiPolygon)
+        ).sum()
+        print(f"  Created {multipolygons} MultiPolygon geometries")
+
+        return gdf_split
+
+    elif method == "separate_rows":
+        rows_data = []
+
+        for idx, row in gdf.iterrows():
+            if not row["row_crosses_dateline"]:
+                # No splitting needed
+                rows_data.append((row, row.geometry))
+            else:
+                # Split this polygon
+                coords = list(row.geometry.exterior.coords)
+                split_polygons = split_dateline_triangle_coords(coords)
+
+                for i, polygon in enumerate(split_polygons):
+                    new_row = row.copy()
+                    if len(split_polygons) > 1:
+                        # Add metadata about the split
+                        new_row["split_part"] = i
+                        new_row["split_total"] = len(split_polygons)
+                    rows_data.append((new_row, polygon))
+
+        # Create new GeoDataFrame
+        new_rows = []
+        geometries = []
+        for row_data, geometry in rows_data:
+            new_rows.append(row_data)
+            geometries.append(geometry)
+
+        new_df = pd.DataFrame(new_rows)
+        gdf_split = gpd.GeoDataFrame(new_df, geometry=geometries, crs=gdf.crs)
+
+        original_crossers = violations
+        total_polygons = len(gdf_split)
+        split_polygons = len([r for r, g in rows_data if "split_part" in r])
+
+        print(
+            f"  Split {original_crossers} triangles into {total_polygons} total polygons"
+        )
+        print(f"  Added {split_polygons} new split polygon parts")
+
+        return gdf_split
+
+    else:
+        raise ValueError("method must be 'multipolygon' or 'separate_rows'")
+
+
 def create_geo_dataframe(df, geometry_type="polygon"):
     """
     Create a GeoDataFrame from FVCOM DataFrame
@@ -124,18 +344,18 @@ def create_geo_dataframe(df, geometry_type="polygon"):
         geometry_series = df.apply(make_triangle, axis=1)
         gdf = gpd.GeoDataFrame(df.copy(), geometry=geometry_series)
 
-        # Filter columns use to create geometry that are not needed in the GeoDataFrame
-        gdf = gdf.drop(
-            [
-                "element_corner_1_lon",
-                "element_corner_1_lat",
-                "element_corner_2_lat",
-                "element_corner_2_lon",
-                "element_corner_3_lat",
-                "element_corner_3_lon",
-            ],
-            axis="columns",
-        )
+        # Filter columns used to create geometry that are not needed in the GeoDataFrame
+        coord_cols = [
+            "element_corner_1_lon",
+            "element_corner_1_lat",
+            "element_corner_2_lat",
+            "element_corner_2_lon",
+            "element_corner_3_lat",
+            "element_corner_3_lon",
+        ]
+        existing_cols = [col for col in coord_cols if col in gdf.columns]
+        if existing_cols:
+            gdf = gdf.drop(existing_cols, axis="columns")
 
     elif geometry_type == "point":
         # Create points from center coordinates
@@ -312,10 +532,17 @@ def convert_nc_summary_to_parquet(
     dfs = []
     atlas_dfs = []
 
+    is_aleutian = "aleutian" in location["output_name"].lower()
+    split_polygons_that_cross_dateline = is_aleutian
+
     for nc_file in input_nc_files:
         print(f"\nProcessing NetCDF file: {nc_file.name}")
         ds = xr.open_dataset(nc_file)
         output_df = convert_tidal_summary_nc_to_dataframe(ds)
+
+        if split_polygons_that_cross_dateline is True:
+            print("  Detecting dateline crossings...")
+            output_df = detect_dateline_violations(output_df)
 
         # 001.AK_cook_inlet.tidal_hindcast_fvcom-1_year_average.b2.20050101.000000.nc
         # Get the last 2 parts of the filename
@@ -336,6 +563,19 @@ def convert_nc_summary_to_parquet(
 
         print("Creating individual GeoDataFrame...")
         geo_output_df = create_geo_dataframe(output_df)
+
+        if split_polygons_that_cross_dateline is True:
+            # For Aleutian Islands, we need to split polygons that cross the dateline
+            geo_output_df = detect_dateline_violations(geo_output_df)
+            print("  Splitting dateline-crossing polygons...")
+            geo_output_df = split_dateline_polygons(
+                geo_output_df, method="separate_rows"
+            )
+
+            geo_output_df = geo_output_df.drop(
+                columns=["row_crosses_dateline", "split_part", "split_total"],
+                errors="ignore",
+            )
 
         print("OUTPUT_PATH:", output_path)
         save_geo_dataframe(
