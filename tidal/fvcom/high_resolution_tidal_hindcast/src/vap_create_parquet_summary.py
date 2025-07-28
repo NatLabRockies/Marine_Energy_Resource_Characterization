@@ -344,7 +344,7 @@ def convert_nc_summary_to_parquet(
         for col in output_df.columns:
             print(f"{col}: {output_df[col].dtype}")
 
-        atlas_df = output_df[cols_for_atlas]
+        atlas_df = output_df[cols_for_atlas.extend(POLYGON_COLUMNS.keys())].copy()
 
         atlas_output_path = file_manager.get_vap_atlas_summary_parquet_dir(
             config, location
