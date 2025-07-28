@@ -336,6 +336,7 @@ def convert_nc_summary_to_parquet(
         print("Creating individual GeoDataFrame...")
         geo_output_df = create_geo_dataframe(output_df)
 
+        print("OUTPUT_PATH:", output_path)
         save_geo_dataframe(
             geo_output_df, output_path, output_filename.replace(".parquet", "")
         )
