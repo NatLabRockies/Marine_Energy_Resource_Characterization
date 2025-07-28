@@ -135,100 +135,118 @@ def split_dateline_triangle_coords(coords, dateline_gap=None):
     if dateline_gap is None:
         dateline_gap = DATELINE_GAP_DEGREES
 
-    # Find dateline crossings and intersection points
-    intersections = []
+    # Remove closing coordinate if present
+    if len(coords) > 3 and coords[0] == coords[-1]:
+        coords = coords[:-1]
 
-    for i in range(3):  # Check all 3 edges
+    if len(coords) != 3:
+        return [Polygon(coords + [coords[0]])]
+
+    lons = [c[0] for c in coords]
+    lats = [c[1] for c in coords]
+
+    # Check if triangle actually crosses dateline
+    crosses_dateline = False
+    for i in range(3):
+        j = (i + 1) % 3
+        if abs(lons[i] - lons[j]) > 180:
+            crosses_dateline = True
+            break
+
+    if not crosses_dateline:
+        return [Polygon(coords + [coords[0]])]
+
+    # Find vertices on each side of dateline
+    eastern_vertices = []  # lon >= 0 (or lon > 90 to handle edge cases)
+    western_vertices = []  # lon < 0 (or lon < -90 to handle edge cases)
+
+    for lon, lat in coords:
+        if lon > 90:  # Clearly eastern hemisphere
+            eastern_vertices.append((lon, lat))
+        elif lon < -90:  # Clearly western hemisphere
+            western_vertices.append((lon, lat))
+        else:
+            # For edge cases near 0°, use original logic
+            if lon >= 0:
+                eastern_vertices.append((lon, lat))
+            else:
+                western_vertices.append((lon, lat))
+
+    # Find intersection points where edges cross the dateline
+    intersection_lats = []
+
+    for i in range(3):
         j = (i + 1) % 3
         lon1, lat1 = coords[i]
         lon2, lat2 = coords[j]
 
         if abs(lon2 - lon1) > 180:
-            # Calculate intersection with dateline
-            if lon1 > 0 and lon2 < 0:  # East to west crossing
+            # Calculate intersection latitude at dateline
+            if lon1 > 0 and lon2 < 0:  # East to west
                 t = (180 - lon1) / ((lon2 + 360) - lon1)
-                int_lat = lat1 + t * (lat2 - lat1)
-                intersections.extend(
-                    [
-                        (
-                            180.0 - dateline_gap,
-                            int_lat,
-                        ),  # Eastern dateline point (with gap)
-                        (
-                            -180.0 + dateline_gap,
-                            int_lat,
-                        ),  # Western dateline point (with gap)
-                    ]
-                )
-            elif lon1 < 0 and lon2 > 0:  # West to east crossing
+            elif lon1 < 0 and lon2 > 0:  # West to east
                 t = (-180 - lon1) / ((lon2 - 360) - lon1)
-                int_lat = lat1 + t * (lat2 - lat1)
-                intersections.extend(
-                    [
-                        (
-                            180.0 - dateline_gap,
-                            int_lat,
-                        ),  # Eastern dateline point (with gap)
-                        (
-                            -180.0 + dateline_gap,
-                            int_lat,
-                        ),  # Western dateline point (with gap)
-                    ]
-                )
+            else:
+                continue
 
-    if not intersections:
-        return [Polygon(coords)]
+            int_lat = lat1 + t * (lat2 - lat1)
+            intersection_lats.append(int_lat)
 
-    # Separate vertices by hemisphere and add intersection points
-    eastern_vertices = []
-    western_vertices = []
+    if not intersection_lats:
+        return [Polygon(coords + [coords[0]])]
 
-    # Add original vertices to appropriate hemispheres
-    for lon, lat in coords[:-1]:  # Exclude closing vertex
-        if lon >= 0:
-            eastern_vertices.append((lon, lat))
-        else:
-            western_vertices.append((lon, lat))
-
-    # Add intersection points with gap
-    dateline_intersections = list(set(intersections))  # Remove duplicates
-    for lon, lat in dateline_intersections:
-        if lon > 0:  # Eastern dateline (179.9998)
-            eastern_vertices.append((lon, lat))
-        else:  # Western dateline (-179.9998)
-            western_vertices.append((lon, lat))
-
-    # Create polygons from vertices
+    # Create polygons for each hemisphere
     polygons = []
 
-    if len(eastern_vertices) >= 3:
-        # Sort vertices to form proper polygon (counterclockwise)
-        eastern_vertices = sorted(
-            eastern_vertices,
-            key=lambda p: np.arctan2(
-                p[1] - np.mean([v[1] for v in eastern_vertices]),
-                p[0] - np.mean([v[0] for v in eastern_vertices]),
-            ),
-        )
-        eastern_vertices.append(eastern_vertices[0])  # Close polygon
-        polygons.append(Polygon(eastern_vertices))
+    # Eastern hemisphere polygon
+    if eastern_vertices and intersection_lats:
+        eastern_coords = list(eastern_vertices)
+        # Add intersection points at eastern dateline (with gap)
+        for int_lat in intersection_lats:
+            eastern_coords.append((180.0 - dateline_gap, int_lat))
 
-    if len(western_vertices) >= 3:
-        # Sort vertices to form proper polygon (counterclockwise)
-        western_vertices = sorted(
-            western_vertices,
-            key=lambda p: np.arctan2(
-                p[1] - np.mean([v[1] for v in western_vertices]),
-                p[0] - np.mean([v[0] for v in western_vertices]),
-            ),
-        )
-        western_vertices.append(western_vertices[0])  # Close polygon
-        polygons.append(Polygon(western_vertices))
+        if len(eastern_coords) >= 3:
+            # Sort points to form a proper polygon (counterclockwise)
+            center_lon = np.mean([c[0] for c in eastern_coords])
+            center_lat = np.mean([c[1] for c in eastern_coords])
+            eastern_coords.sort(
+                key=lambda p: np.arctan2(p[1] - center_lat, p[0] - center_lon)
+            )
+            eastern_coords.append(eastern_coords[0])  # Close polygon
 
-    return polygons if polygons else [Polygon(coords)]
+            # Validate: ensure no longitude spans > 180°
+            lons = [c[0] for c in eastern_coords[:-1]]
+            if max(lons) - min(lons) <= 180:
+                polygons.append(Polygon(eastern_coords))
+
+    # Western hemisphere polygon
+    if western_vertices and intersection_lats:
+        western_coords = list(western_vertices)
+        # Add intersection points at western dateline (with gap)
+        for int_lat in intersection_lats:
+            western_coords.append((-180.0 + dateline_gap, int_lat))
+
+        if len(western_coords) >= 3:
+            # Sort points to form a proper polygon (counterclockwise)
+            center_lon = np.mean([c[0] for c in western_coords])
+            center_lat = np.mean([c[1] for c in western_coords])
+            western_coords.sort(
+                key=lambda p: np.arctan2(p[1] - center_lat, p[0] - center_lon)
+            )
+            western_coords.append(western_coords[0])  # Close polygon
+
+            # Validate: ensure no longitude spans > 180°
+            lons = [c[0] for c in western_coords[:-1]]
+            if max(lons) - min(lons) <= 180:
+                polygons.append(Polygon(western_coords))
+
+    # Fallback: if splitting failed, return original
+    return polygons if polygons else [Polygon(coords + [coords[0]])]
 
 
-def split_dateline_polygons(gdf, method="multipolygon", dateline_gap=None):
+def split_dateline_polygons(
+    gdf, method="multipolygon", dateline_gap=None, validate_splits=True
+):
     """
     Split polygons that cross the international dateline
     Args:
@@ -236,6 +254,7 @@ def split_dateline_polygons(gdf, method="multipolygon", dateline_gap=None):
         method: 'multipolygon' (creates MultiPolygon geometries) or
                 'separate_rows' (creates separate rows for each split polygon)
         dateline_gap: Small gap in degrees to add at dateline (default uses DATELINE_GAP_DEGREES)
+        validate_splits: bool, whether to validate split results and report issues
     Returns:
         GeoDataFrame with split polygons (original coordinates preserved, gap added at dateline)
     """
@@ -263,6 +282,10 @@ def split_dateline_polygons(gdf, method="multipolygon", dateline_gap=None):
         print("  No dateline crossings found - returning original GeoDataFrame")
         return gdf
 
+    # Tracking for validation
+    split_issues = []
+    successful_splits = 0
+
     if method == "multipolygon":
 
         def split_geometry(row):
@@ -278,6 +301,24 @@ def split_dateline_polygons(gdf, method="multipolygon", dateline_gap=None):
                 coords, dateline_gap=dateline_gap
             )
 
+            # Validate split results
+            if validate_splits:
+                nonlocal successful_splits, split_issues
+                if len(split_polygons) > 1:
+                    successful_splits += 1
+                    # Check if any split polygon still crosses dateline
+                    for i, poly in enumerate(split_polygons):
+                        poly_coords = list(poly.exterior.coords)
+                        poly_lons = [c[0] for c in poly_coords[:-1]]
+                        if max(poly_lons) - min(poly_lons) > 180:
+                            split_issues.append(
+                                f"Split polygon {i} still spans >180° longitude"
+                            )
+                else:
+                    split_issues.append(
+                        "Triangle splitting failed - no split polygons created"
+                    )
+
             if len(split_polygons) == 1:
                 return split_polygons[0]
             else:
@@ -290,8 +331,6 @@ def split_dateline_polygons(gdf, method="multipolygon", dateline_gap=None):
             lambda g: isinstance(g, MultiPolygon)
         ).sum()
         print(f"  Created {multipolygons} MultiPolygon geometries")
-
-        return gdf_split
 
     elif method == "separate_rows":
         rows_data = []
@@ -306,6 +345,21 @@ def split_dateline_polygons(gdf, method="multipolygon", dateline_gap=None):
                 split_polygons = split_dateline_triangle_coords(
                     coords, dateline_gap=dateline_gap
                 )
+
+                # Validate split results
+                if validate_splits:
+                    if len(split_polygons) > 1:
+                        successful_splits += 1
+                        # Check if any split polygon still crosses dateline
+                        for i, poly in enumerate(split_polygons):
+                            poly_coords = list(poly.exterior.coords)
+                            poly_lons = [c[0] for c in poly_coords[:-1]]
+                            if max(poly_lons) - min(poly_lons) > 180:
+                                split_issues.append(
+                                    f"Row {idx}, split polygon {i} still spans >180° longitude"
+                                )
+                    else:
+                        split_issues.append(f"Row {idx}: Triangle splitting failed")
 
                 for i, polygon in enumerate(split_polygons):
                     new_row = row.copy()
@@ -334,10 +388,22 @@ def split_dateline_polygons(gdf, method="multipolygon", dateline_gap=None):
         )
         print(f"  Added {split_polygons} new split polygon parts")
 
-        return gdf_split
+        gdf_split = gdf_split
 
     else:
         raise ValueError("method must be 'multipolygon' or 'separate_rows'")
+
+    # Report validation results
+    if validate_splits:
+        print(f"  Successfully split: {successful_splits}/{violations} triangles")
+        if split_issues:
+            print(f"  WARNING: {len(split_issues)} split validation issues:")
+            for issue in split_issues[:5]:  # Show first 5 issues
+                print(f"    - {issue}")
+            if len(split_issues) > 5:
+                print(f"    ... and {len(split_issues) - 5} more issues")
+
+    return gdf_split
 
 
 def create_geo_dataframe(df, geometry_type="polygon"):
