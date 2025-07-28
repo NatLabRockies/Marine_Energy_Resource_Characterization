@@ -19,6 +19,7 @@ config = {
     },
     "code": {
         "version": "0.3.0",
+        "development_version": "0.4.0",
     },
     "dir": {
         # Data Input and Output Directories
