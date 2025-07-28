@@ -189,20 +189,16 @@ def save_geo_dataframe(
         print(f"    Longest columns: {long_columns[:3]}...")
 
     for fmt in formats:
-        this_output_path = Path(output_path, format)
+        print(
+            f"Planning to make this_output_path from {output_path} and {fmt} with types {type(output_path)} and {type(fmt)}"
+        )
+        this_output_path = Path(output_path, fmt)
         this_output_path.mkdir(parents=True, exist_ok=True)
         print(f"  Saving {fmt.upper()} format...", end=" ")
 
         if fmt == "shp":
             filepath = output_path / f"{filename_base}.shp"
-            # Suppress the column name warning since we already warned about it
-            import warnings
-
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", message="Column names longer than 10 characters"
-                )
-                gdf.to_file(filepath)
+            gdf.to_file(filepath)
             saved_files.append(filepath)
             print("✓")
 
