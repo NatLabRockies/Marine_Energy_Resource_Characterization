@@ -160,7 +160,11 @@ def create_geo_dataframe(df, geometry_type="polygon"):
 
 
 def save_geo_dataframe(
-    gdf, output_path, filename_base, formats=["shp", "geojson", "gpkg", "parquet"]
+    # gdf, output_path, filename_base, formats=["shp", "geojson", "gpkg", "parquet"]
+    gdf,
+    output_path,
+    filename_base,
+    formats=["geojson", "gpkg", "parquet"],
 ):
     """
     Save GeoDataFrame in multiple formats including GeoPackage
