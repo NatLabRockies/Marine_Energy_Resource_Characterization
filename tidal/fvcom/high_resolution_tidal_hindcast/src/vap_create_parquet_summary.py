@@ -1,3 +1,5 @@
+import shutil
+
 from pathlib import Path
 
 import geopandas as gpd
@@ -295,31 +297,16 @@ def convert_tidal_summary_nc_to_dataframe(ds):
     return result_df
 
 
-def convert_nc_summary_to_parquet(config, location_key):
+def convert_nc_summary_to_parquet(
+    config, location_key, create_combined_atlas_output=False
+):
     location = config["location_specification"][location_key]
     input_path = file_manager.get_yearly_summary_vap_output_dir(config, location)
     output_path = file_manager.get_vap_summary_parquet_dir(config, location)
 
     input_nc_files = sorted(list(input_path.rglob("*.nc")))
 
-    cols_for_atlas = [
-        "lat_center",
-        "lon_center",
-        "element_corner_1_lat",
-        "element_corner_1_lon",
-        "element_corner_2_lat",
-        "element_corner_2_lon",
-        "element_corner_3_lat",
-        "element_corner_3_lon",
-        "vap_water_column_mean_sea_water_speed",
-        "vap_water_column_95th_percentile_sea_water_speed",
-        "vap_water_column_sea_water_speed_max_to_mean_ratio",
-        "vap_water_column_mean_sea_water_power_density",
-        "vap_water_column_95th_percentile_sea_water_power_density",
-        "vap_water_column_sea_water_power_density_max_to_mean_ratio",
-        "vap_sea_floor_depth",
-        "grid_resolution_meters",
-    ]
+    cols_for_atlas = ATLAS_COLUMNS.keys()
 
     dfs = []
     atlas_dfs = []
@@ -349,36 +336,6 @@ def convert_nc_summary_to_parquet(config, location_key):
         print("Creating individual GeoDataFrame...")
         geo_output_df = create_geo_dataframe(output_df)
 
-        # Filter geodf columns
-        geo_output_df = geo_output_df.drop(
-            [
-                "element_corner_1_lon",
-                "element_corner_1_lat",
-                "element_corner_2_lat",
-                "element_corner_2_lon",
-                "element_corner_3_lat",
-                "element_corner_3_lon",
-            ],
-            axis="columns",
-        )
-        geo_output_df = geo_output_df.rename(
-            columns={
-                "lat_center": "Center Latitude",
-                "lon_center": "Center Longitude",
-                "vap_water_column_mean_sea_water_speed": "Mean Sea Water Speed [m/s]",
-                "vap_water_column_95th_percentile_sea_water_speed": "95th Percentile Sea Water Speed [m/s]",
-                "vap_water_column_sea_water_speed_max_to_mean_ratio": "Speed Max to Mean Ratio",
-                "vap_water_column_mean_sea_water_power_density": "Mean Sea Water Power Density [W/m^2]",
-                "vap_water_column_95th_percentile_sea_water_power_density": "95th Percentile Sea Water Power Density [W/m^2]",
-                "vap_water_column_sea_water_power_density_max_to_mean_ratio": "Power Density Max to Mean Ratio",
-            }
-        )
-
-        print(geo_output_df.columns)
-        print(geo_output_df.info())
-        print(geo_output_df.head())
-        print(geo_output_df.tail())
-
         save_geo_dataframe(
             geo_output_df, output_path, output_filename.replace(".parquet", "")
         )
@@ -391,6 +348,7 @@ def convert_nc_summary_to_parquet(config, location_key):
         atlas_output_path = file_manager.get_vap_atlas_summary_parquet_dir(
             config, location
         )
+
         atlas_output_filename = (
             file_name_convention_manager.generate_filename_for_data_level(
                 output_df,
@@ -408,9 +366,10 @@ def convert_nc_summary_to_parquet(config, location_key):
 
         print("Creating atlas GeoDataFrame...")
         geo_atlas_df = create_geo_dataframe(atlas_df)
+
         save_geo_dataframe(
             geo_atlas_df,
-            atlas_output_path,
+            Path(atlas_output_path, "gis"),
             atlas_output_filename.replace(".parquet", ""),
         )
 
@@ -419,91 +378,150 @@ def convert_nc_summary_to_parquet(config, location_key):
         atlas_dfs.append(atlas_df)
         print(f"Added to combined datasets (Total files processed: {len(dfs)})")
 
-    print("\n=== CREATING COMBINED OUTPUTS ===")
-    # Calculate number of locations dynamically
-    num_locations = len(config["location_specification"])
-    print(f"Processing {num_locations} total locations in configuration")
+    if create_combined_atlas_output is True:
+        # We need to create complete and atlas datasets for all locations
+        # To do this we first find all of the complete summary parquet file for each locations
+        # and combine them into a single dataframe
+        # Then we save a "full" dataset with all columns to the complete directory and a "atlas" dataset with only the atlas columns to the "atlas_subset" directory
 
-    # Create combined outputs
-    combined_output_path = file_manager.get_combined_vap_atlas(config, location)
+        print("\n=== CREATING COMBINED OUTPUTS ===")
+        # Calculate number of locations dynamically
+        num_locations = len(config["location_specification"])
+        print(f"Creating atlas GIS outputs for {num_locations} locations")
 
-    # Combine all dataframes
-    print("Concatenating all individual DataFrames...")
-    combined_df = pd.concat(dfs, ignore_index=True)
-    combined_atlas_df = pd.concat(atlas_dfs, ignore_index=True)
-    print(
-        f"Combined complete dataset: {combined_df.shape[0]} rows, {combined_df.shape[1]} columns"
-    )
-    print(
-        f"Combined atlas dataset: {combined_atlas_df.shape[0]} rows, {combined_atlas_df.shape[1]} columns"
-    )
+        summary_dfs = []
 
-    # Generate combined filenames
-    combined_output_filename = (
-        file_name_convention_manager.generate_filename_for_data_level(
+        for location_key, location in config["location_specification"].items():
+            summary_parquet_output_path = file_manager.get_vap_summary_parquet_dir(
+                config, location
+            )
+
+            # We put the gis files is a gis subdirectory, so this should only pick up the parquet file
+            # This is easier in pandas than trying to combine gis files
+            complete_summary_parquet = sorted(
+                list(summary_parquet_output_path.glob("*.parquet"))
+            )[0]
+
+            print(f"Processing atlas file: {complete_summary_parquet.name}")
+            this_summary_df = pd.read_parquet(complete_summary_parquet)
+            this_summary_df["name"] = location["output_name"]
+            this_summary_df["label"] = location["label"]
+            this_summary_df["location_face_index"] = this_summary_df.index
+            summary_dfs.append(this_summary_df)
+
+        # Combine all dataframes
+        combined_df = pd.concat(summary_dfs, ignore_index=True)
+        combined_df = combined_df.reset_index(drop=True)
+
+        print(
+            f"Combined complete dataset: {combined_df.shape[0]} rows, {combined_df.shape[1]} columns"
+        )
+
+        geo_combined_df = create_geo_dataframe(combined_df, geometry_type="polygon")
+
+        geo_atlas_df = geo_combined_df[[ATLAS_COLUMNS.keys()]]
+
+        # Now we need to save the complete dataset
+
+        this_output_path = file_manager.get_combined_vap_atlas(config, location)
+        this_complete_output_path = Path("complete", this_output_path)
+        this_atlas_output_path = Path("atlas_subset", this_output_path)
+
+        complete_file_name = (
+            file_name_convention_manager.generate_filename_for_data_level(
+                combined_df,
+                f"all_columns_{num_locations}_tidal_locations_atlas",
+                config["dataset"]["name"],
+                "b7",
+                temporal="year_average",
+                ext=None,
+                version=config["dataset"]["gis_output_version"],
+                include_creation_timestamp=True,
+                include_dataset_time=False,
+            )
+        )
+
+        atlas_file_name = file_name_convention_manager.generate_filename_for_data_level(
             combined_df,
-            f"all_{num_locations}_tidal_locations",
+            f"atlas_subset_{num_locations}_tidal_locations_atlas",
             config["dataset"]["name"],
             "b7",
             temporal="year_average",
             ext=None,
+            version=config["dataset"]["gis_output_version"],
+            include_creation_timestamp=True,
+            include_dataset_time=False,
         )
-    )
 
-    combined_atlas_filename = (
-        file_name_convention_manager.generate_filename_for_data_level(
-            combined_atlas_df,
-            f"all_{num_locations}_tidal_locations_atlas",
-            config["dataset"]["name"],
-            "b7",
-            temporal="year_average",
-            ext=None,
+        # Archive existing files in complete directory before creating new ones
+        complete_archive_dir = this_complete_output_path / "archive"
+        if this_complete_output_path.exists():
+            existing_complete_files = [
+                f
+                for f in this_complete_output_path.rglob("*")
+                if f.is_file() and "archive" not in f.parts
+            ]
+            if existing_complete_files:
+                complete_archive_dir.mkdir(parents=True, exist_ok=True)
+                print(
+                    f"Archiving {len(existing_complete_files)} files from {this_complete_output_path}"
+                )
+                for file_path in existing_complete_files:
+                    rel_path = file_path.relative_to(this_complete_output_path)
+                    archive_path = complete_archive_dir / rel_path
+                    archive_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(file_path, archive_path)
+
+        # Create and save complete GIS outputs (all columns)
+        print("\n=== CREATING COMPLETE GIS OUTPUTS ===")
+        print(f"Processing complete dataset with {combined_df.shape[1]} columns...")
+        save_geo_dataframe(
+            geo_combined_df,
+            this_complete_output_path,
+            complete_file_name,
+            formats=["geojson", "gpkg", "parquet"],
         )
-    )
 
-    # Save combined parquet files
-    print(f"\nSaving combined parquet files to: {combined_output_path}")
-    combined_df.to_parquet(
-        Path(combined_output_path, f"{combined_output_filename}.parquet")
-    )
-    combined_atlas_df.to_parquet(
-        Path(combined_output_path, f"{combined_atlas_filename}.parquet")
-    )
-    print("✓ Combined parquet files saved")
+        # Archive existing files in atlas_subset directory before creating new ones
+        atlas_archive_dir = this_atlas_output_path / "archive"
+        if this_atlas_output_path.exists():
+            existing_atlas_subset_files = [
+                f
+                for f in this_atlas_output_path.rglob("*")
+                if f.is_file() and "archive" not in f.parts
+            ]
+            if existing_atlas_subset_files:
+                atlas_archive_dir.mkdir(parents=True, exist_ok=True)
+                print(
+                    f"Archiving {len(existing_atlas_subset_files)} files from {this_atlas_output_path}"
+                )
+                for file_path in existing_atlas_subset_files:
+                    rel_path = file_path.relative_to(this_atlas_output_path)
+                    archive_path = atlas_archive_dir / rel_path
+                    archive_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(file_path, archive_path)
 
-    # Create and save complete GIS outputs (all columns)
-    print("\n=== CREATING COMPLETE GIS OUTPUTS ===")
-    print(f"Processing complete dataset with {combined_df.shape[1]} columns...")
-    geo_combined_df = create_geo_dataframe(combined_df, geometry_type="polygon")
-    save_geo_dataframe(
-        geo_combined_df,
-        combined_output_path,
-        f"{combined_output_filename}_complete",
-        formats=["shp", "geojson", "gpkg", "parquet"],
-    )
+        # Create and save atlas subset GIS outputs (atlas columns only)
+        print("\n=== CREATING ATLAS SUBSET GIS OUTPUTS ===")
+        print(f"Processing atlas subset with {geo_atlas_df.shape[1]} columns...")
 
-    # Create and save atlas subset GIS outputs (atlas columns only)
-    print("\n=== CREATING ATLAS SUBSET GIS OUTPUTS ===")
-    print(f"Processing atlas subset with {combined_atlas_df.shape[1]} columns...")
-    geo_combined_atlas_df = create_geo_dataframe(
-        combined_atlas_df, geometry_type="polygon"
-    )
-    save_geo_dataframe(
-        geo_combined_atlas_df,
-        combined_output_path,
-        f"{combined_atlas_filename}_atlas_subset",
-        formats=["shp", "geojson", "gpkg", "parquet"],
-    )
+        save_geo_dataframe(
+            geo_atlas_df,
+            this_atlas_output_path,
+            atlas_file_name,
+            formats=["geojson", "gpkg", "parquet"],
+        )
 
-    print("\n=== PROCESSING SUMMARY ===")
-    print(
-        f"✓ Complete dataset: {combined_df.shape[0]} rows, {combined_df.shape[1]} columns"
-    )
-    print(
-        f"✓ Atlas subset: {combined_atlas_df.shape[0]} rows, {combined_atlas_df.shape[1]} columns"
-    )
-    print(f"✓ Number of locations processed: {num_locations}")
-    print(f"✓ Files processed per location: {len(dfs)}")
-    print(f"✓ Output directory: {combined_output_path}")
+        print("\n=== PROCESSING SUMMARY ===")
+        print(
+            f"✓ Complete dataset: {geo_combined_df.shape[0]} rows, {geo_combined_df.shape[1]} columns"
+        )
+        print(
+            f"✓ Atlas subset: {geo_atlas_df.shape[0]} rows, {geo_atlas_df.shape[1]} columns"
+        )
+        print(f"✓ Number of locations processed: {num_locations}")
+        print(f"✓ Files processed per location: {len(dfs)}")
+        print(f"✓ Combined Output directory: {this_complete_output_path}")
+        print(f"✓ Atlas Output directory: {this_atlas_output_path}")
 
-    return combined_df, combined_atlas_df
+    # return combined_df, combined_atlas_df
