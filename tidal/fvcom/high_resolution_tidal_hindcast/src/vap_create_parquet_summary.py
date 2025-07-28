@@ -202,25 +202,25 @@ def save_geo_dataframe(
         print(f"  Saving {fmt.upper()} format...", end=" ")
 
         if fmt == "shp":
-            filepath = output_path / f"{filename_base}.shp"
+            filepath = this_output_path / f"{filename_base}.shp"
             gdf.to_file(filepath)
             saved_files.append(filepath)
             print("✓")
 
         elif fmt == "geojson":
-            filepath = output_path / f"{filename_base}.geojson"
+            filepath = this_output_path / f"{filename_base}.geojson"
             gdf.to_file(filepath, driver="GeoJSON")
             saved_files.append(filepath)
             print("✓")
 
         elif fmt == "gpkg":
-            filepath = output_path / f"{filename_base}.gpkg"
+            filepath = this_output_path / f"{filename_base}.gpkg"
             gdf.to_file(filepath, driver="GPKG")
             saved_files.append(filepath)
             print("✓")
 
         elif fmt == "parquet":
-            filepath = output_path / f"{filename_base}_geo.parquet"
+            filepath = this_output_path / f"{filename_base}_geo.parquet"
             gdf.to_parquet(filepath)
             saved_files.append(filepath)
             print("✓")
@@ -339,7 +339,9 @@ def convert_nc_summary_to_parquet(
 
         print("OUTPUT_PATH:", output_path)
         save_geo_dataframe(
-            geo_output_df, output_path, output_filename.replace(".parquet", "")
+            geo_output_df,
+            Path(output_path, "gis"),
+            output_filename.replace(".parquet", ""),
         )
 
         for col in output_df.columns:
