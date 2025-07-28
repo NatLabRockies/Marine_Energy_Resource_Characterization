@@ -11,6 +11,10 @@ from shapely.geometry import Point, Polygon, MultiPolygon
 
 from . import file_manager, file_name_convention_manager
 
+# Default optimized for Aleutian Islands (~52-55°N latitude)
+# At 53°N, 0.0002° ≈ 13 meters (cos(53°) * 111000 * 0.0002 ≈ 13.4m)
+DATELINE_GAP_DEGREES = 0.0002
+
 POLYGON_COLUMNS = {
     "element_corner_1_lat": "Element Corner 1 Latitude",
     "element_corner_1_lon": "Element Corner 1 Longitude",
@@ -117,15 +121,19 @@ def detect_dateline_violations(df):
     return df
 
 
-def split_dateline_triangle_coords(coords):
+def split_dateline_triangle_coords(coords, dateline_gap=None):
     """
     Split a triangle that crosses the dateline into multiple polygons
-    Preserves original coordinates - uses geometric splitting
+    Preserves original coordinates - uses geometric splitting with small gap at dateline
     Args:
         coords: List of (lon, lat) tuples for triangle vertices
+        dateline_gap: Small gap in degrees to add at dateline (default uses DATELINE_GAP_DEGREES)
     Returns:
         List of Polygon objects
     """
+    if dateline_gap is None:
+        dateline_gap = DATELINE_GAP_DEGREES
+
     # Find dateline crossings and intersection points
     intersections = []
 
@@ -141,8 +149,14 @@ def split_dateline_triangle_coords(coords):
                 int_lat = lat1 + t * (lat2 - lat1)
                 intersections.extend(
                     [
-                        (180.0, int_lat),  # Eastern dateline point
-                        (-180.0, int_lat),  # Western dateline point
+                        (
+                            180.0 - dateline_gap,
+                            int_lat,
+                        ),  # Eastern dateline point (with gap)
+                        (
+                            -180.0 + dateline_gap,
+                            int_lat,
+                        ),  # Western dateline point (with gap)
                     ]
                 )
             elif lon1 < 0 and lon2 > 0:  # West to east crossing
@@ -150,8 +164,14 @@ def split_dateline_triangle_coords(coords):
                 int_lat = lat1 + t * (lat2 - lat1)
                 intersections.extend(
                     [
-                        (180.0, int_lat),  # Eastern dateline point
-                        (-180.0, int_lat),  # Western dateline point
+                        (
+                            180.0 - dateline_gap,
+                            int_lat,
+                        ),  # Eastern dateline point (with gap)
+                        (
+                            -180.0 + dateline_gap,
+                            int_lat,
+                        ),  # Western dateline point (with gap)
                     ]
                 )
 
@@ -169,12 +189,12 @@ def split_dateline_triangle_coords(coords):
         else:
             western_vertices.append((lon, lat))
 
-    # Add intersection points
+    # Add intersection points with gap
     dateline_intersections = list(set(intersections))  # Remove duplicates
     for lon, lat in dateline_intersections:
-        if lon > 0:  # Eastern dateline (+180)
+        if lon > 0:  # Eastern dateline (179.9998)
             eastern_vertices.append((lon, lat))
-        else:  # Western dateline (-180)
+        else:  # Western dateline (-179.9998)
             western_vertices.append((lon, lat))
 
     # Create polygons from vertices
@@ -207,17 +227,24 @@ def split_dateline_triangle_coords(coords):
     return polygons if polygons else [Polygon(coords)]
 
 
-def split_dateline_polygons(gdf, method="multipolygon"):
+def split_dateline_polygons(gdf, method="multipolygon", dateline_gap=None):
     """
     Split polygons that cross the international dateline
     Args:
         gdf: GeoDataFrame with polygon geometries and 'row_crosses_dateline' column
         method: 'multipolygon' (creates MultiPolygon geometries) or
                 'separate_rows' (creates separate rows for each split polygon)
+        dateline_gap: Small gap in degrees to add at dateline (default uses DATELINE_GAP_DEGREES)
     Returns:
-        GeoDataFrame with split polygons (original coordinates preserved)
+        GeoDataFrame with split polygons (original coordinates preserved, gap added at dateline)
     """
+    if dateline_gap is None:
+        dateline_gap = DATELINE_GAP_DEGREES
+
     print(f"Splitting dateline-crossing polygons using method: {method}")
+    print(
+        f"  Using dateline gap: {dateline_gap}° (≈{dateline_gap * 111000 * 0.6:.0f}m at Aleutian latitude)"
+    )
 
     # Check for the expected column
     if "row_crosses_dateline" not in gdf.columns:
@@ -245,8 +272,10 @@ def split_dateline_polygons(gdf, method="multipolygon"):
             # Get coordinates from polygon
             coords = list(row.geometry.exterior.coords)
 
-            # Split the polygon
-            split_polygons = split_dateline_triangle_coords(coords)
+            # Split the polygon with gap
+            split_polygons = split_dateline_triangle_coords(
+                coords, dateline_gap=dateline_gap
+            )
 
             if len(split_polygons) == 1:
                 return split_polygons[0]
@@ -271,9 +300,11 @@ def split_dateline_polygons(gdf, method="multipolygon"):
                 # No splitting needed
                 rows_data.append((row, row.geometry))
             else:
-                # Split this polygon
+                # Split this polygon with gap
                 coords = list(row.geometry.exterior.coords)
-                split_polygons = split_dateline_triangle_coords(coords)
+                split_polygons = split_dateline_triangle_coords(
+                    coords, dateline_gap=dateline_gap
+                )
 
                 for i, polygon in enumerate(split_polygons):
                     new_row = row.copy()
