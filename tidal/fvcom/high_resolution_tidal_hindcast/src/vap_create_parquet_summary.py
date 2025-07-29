@@ -768,8 +768,6 @@ def convert_nc_summary_to_parquet(
 
         geo_combined_df = create_geo_dataframe(combined_df, geometry_type="polygon")
 
-        geo_atlas_df = geo_combined_df[list(ATLAS_COLUMNS.keys())]
-
         # Now we need to save the complete dataset
 
         this_output_path = file_manager.get_combined_vap_atlas(config, location)
@@ -852,6 +850,10 @@ def convert_nc_summary_to_parquet(
 
         # Create and save atlas subset GIS outputs (atlas columns only)
         print("\n=== CREATING ATLAS SUBSET GIS OUTPUTS ===")
+
+        combined_atlas_df = combined_df[list(ATLAS_COLUMNS.keys())].copy()
+        geo_atlas_df = create_geo_dataframe(combined_atlas_df, geometry_type="polygon")
+
         print(f"Processing atlas subset with {geo_atlas_df.shape[1]} columns...")
 
         save_geo_dataframe(
