@@ -768,7 +768,7 @@ def convert_nc_summary_to_parquet(
 
         geo_combined_df = create_geo_dataframe(combined_df, geometry_type="polygon")
 
-        geo_atlas_df = geo_combined_df[[ATLAS_COLUMNS.keys()]]
+        geo_atlas_df = geo_combined_df[list(ATLAS_COLUMNS.keys())]
 
         # Now we need to save the complete dataset
 
