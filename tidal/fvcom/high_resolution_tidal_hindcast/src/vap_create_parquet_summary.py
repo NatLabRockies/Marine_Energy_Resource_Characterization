@@ -826,7 +826,8 @@ def convert_nc_summary_to_parquet(
             geo_combined_df,
             this_complete_output_path,
             complete_file_name,
-            formats=["geojson", "gpkg", "parquet"],
+            # formats=["geojson", "gpkg", "parquet"],
+            formats=["gpkg", "parquet"],
         )
 
         # Archive existing files in atlas_subset directory before creating new ones
