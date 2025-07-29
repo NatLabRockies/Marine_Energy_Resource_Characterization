@@ -617,7 +617,7 @@ def convert_tidal_summary_nc_to_dataframe(ds):
 
 
 def convert_nc_summary_to_parquet(
-    config, location_key, create_combined_atlas_output=False
+    config, location_key, create_combined_atlas_output=True
 ):
     location = config["location_specification"][location_key]
     input_path = file_manager.get_yearly_summary_vap_output_dir(config, location)
