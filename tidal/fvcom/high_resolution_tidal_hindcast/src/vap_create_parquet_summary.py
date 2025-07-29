@@ -629,7 +629,8 @@ def convert_nc_summary_to_parquet(
     atlas_dfs = []
 
     is_aleutian = "aleutian" in location["output_name"].lower()
-    split_polygons_that_cross_dateline = is_aleutian
+    # split_polygons_that_cross_dateline = is_aleutian
+    split_polygons_that_cross_dateline = False
 
     for nc_file in input_nc_files:
         print(f"\nProcessing NetCDF file: {nc_file.name}")
