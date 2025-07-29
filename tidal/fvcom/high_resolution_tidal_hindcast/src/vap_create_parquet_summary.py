@@ -797,7 +797,7 @@ def convert_nc_summary_to_parquet(
             ext=None,
             version=config["dataset"]["gis_output_version"],
             include_creation_timestamp=True,
-            include_dataset_time=False,
+            include_dataset_timestamp=False,
         )
 
         # Archive existing files in complete directory before creating new ones
