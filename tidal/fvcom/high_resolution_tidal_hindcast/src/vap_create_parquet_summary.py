@@ -2,6 +2,7 @@ import shutil
 
 from pathlib import Path
 
+import pyarrow as pa
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -492,7 +493,7 @@ def save_geo_dataframe(
         gdf: GeoDataFrame to save
         output_path: Directory to save files
         filename_base: Base filename (without extension)
-        formats: List of formats to save ['shp', 'geojson', 'gpkg', 'parquet']
+        formats: List of formats to save ['shp', 'geojson', 'gpkg', 'parquet', 'arrow']
     """
 
     output_path = Path(output_path)
@@ -540,6 +541,15 @@ def save_geo_dataframe(
         elif fmt == "parquet":
             filepath = this_output_path / f"{filename_base}_geo.parquet"
             gdf.to_parquet(filepath)
+            saved_files.append(filepath)
+            print("✓")
+        elif fmt == "arrow":
+            filepath = this_output_path / f"{filename_base}_geo.arrow"
+            # Convert to Arrow table and save as IPC format
+            table = pa.Table.from_pandas(gdf, preserve_index=False)
+            with pa.OSFile(str(filepath), "wb") as sink:
+                with pa.ipc.new_file(sink, table.schema) as writer:
+                    writer.write_table(table)
             saved_files.append(filepath)
             print("✓")
 
@@ -617,7 +627,7 @@ def convert_tidal_summary_nc_to_dataframe(ds):
 
 
 def convert_nc_summary_to_parquet(
-    config, location_key, create_combined_atlas_output=True
+    config, location_key, create_combined_atlas_output=False
 ):
     location = config["location_specification"][location_key]
     input_path = file_manager.get_yearly_summary_vap_output_dir(config, location)
@@ -720,6 +730,7 @@ def convert_nc_summary_to_parquet(
             geo_atlas_df,
             Path(atlas_output_path, "gis"),
             atlas_output_filename.replace(".parquet", ""),
+            formats=["geojson", "gpkg", "parquet", "arrow"],
         )
 
         # Append to lists for combined output
