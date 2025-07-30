@@ -546,7 +546,11 @@ def save_geo_dataframe(
         elif fmt == "arrow":
             filepath = this_output_path / f"{filename_base}_geo.arrow"
             # Convert to Arrow table and save as IPC format
-            table = pa.Table.from_pandas(gdf, preserve_index=False)
+            gdf_arrow = gdf.copy()
+            gdf_arrow["geometry"] = gdf_arrow["geometry"].to_wkb()
+
+            table = pa.Table.from_pandas(gdf_arrow, preserve_index=False)
+
             with pa.OSFile(str(filepath), "wb") as sink:
                 with pa.ipc.new_file(sink, table.schema) as writer:
                     writer.write_table(table)
