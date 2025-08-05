@@ -60,16 +60,24 @@ if __name__ == "__main__":
     surface_elevation_offset_path = calculate_and_save_mean_navd88_offset(
         config, args.location
     )
-    derive_vap(config, args.location, surface_elevation_offset_path)
-    #
-    print("Step 5: Calculating Monthly Averages...")
-    calculate_vap_monthly_average(config, args.location)
+    derive_vap(
+        config,
+        args.location,
+        surface_elevation_offset_path,
+        skip_if_output_files_exist=False,
+    )
 
-    print("Step 6: Calculating Yearly Average...")
-    calculate_vap_yearly_average(config, args.location)
+    # The following doesn't work anymore due to memory issues
+    # Summary computations must use dispatch_summarize_jobs.py
+    #
+    # print("Step 5: Calculating Monthly Averages...")
+    # calculate_vap_monthly_average(config, args.location)
+    #
+    # print("Step 6: Calculating Yearly Average...")
+    # calculate_vap_yearly_average(config, args.location)
 
     # print("Step 7: Create Parquet Partition Dataset...")
     # partition_vap_into_parquet_dataset(config, args.location)
 
-    print("Step 8: Create Summary Parquet Dataset...")
-    convert_nc_summary_to_parquet(config, args.location)
+    # print("Step 8: Create Summary Parquet Dataset...")
+    # convert_nc_summary_to_parquet(config, args.location)
