@@ -9,8 +9,12 @@
 # Faces 392002
 # Time Interval: Hourly
 # Recommended Batch Size: 5000
+# 5000 failed with OOM
+# Reducing to 2500
 # Calculated Tasks = 392002 / 5000 = 78.4004
-#SBATCH --array=0-78  # Create 79 tasks
+# Calculated Tasks = 392002 / 2500 = 156.8
+##SBATCH --array=0-78  # Create 79 tasks
+##SBATCH --array=0-156  # Create 157 tasks
 #SBATCH --mem=64G
 #SBATCH --partition=shared
 
@@ -26,4 +30,4 @@ cd /home/asimms/marine_energy_resource_characterization/tidal/fvcom/high_resolut
 export PYTHONUNBUFFERED=1
 
 # Create a Python script that handles the parallelized processing
-python partition_dataset.py cook_inlet --batch-size 5000 --batch-num $SLURM_ARRAY_TASK_ID 
+python partition_dataset.py cook_inlet --batch-size 2500 --batch-num $SLURM_ARRAY_TASK_ID 
