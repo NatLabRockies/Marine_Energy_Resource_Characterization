@@ -56,14 +56,15 @@ if __name__ == "__main__":
     # print("Step 3: Partitioning Standardized Dataset by Time...")
     # partition_by_time(config, args.location, valid_std_files_df)
     #
-    # print("Step 4: Calculating Derived Value Added Products...")
-    # derive_vap(config, args.location)
+    print("Step 4: Calculating Derived Value Added Products...")
+    surface_elevation_offset_path = calculate_and_save_mean_navd88_offset(config, args.location)
+    derive_vap(config, args.location, surface_elevation_offset_path)
     #
-    # print("Step 5: Calculating Monthly Averages...")
-    # calculate_vap_monthly_average(config, args.location)
-    #
-    # print("Step 6: Calculating Yearly Average...")
-    # calculate_vap_yearly_average(config, args.location)
+    print("Step 5: Calculating Monthly Averages...")
+    calculate_vap_monthly_average(config, args.location)
+
+    print("Step 6: Calculating Yearly Average...")
+    calculate_vap_yearly_average(config, args.location)
 
     # print("Step 7: Create Parquet Partition Dataset...")
     # partition_vap_into_parquet_dataset(config, args.location)

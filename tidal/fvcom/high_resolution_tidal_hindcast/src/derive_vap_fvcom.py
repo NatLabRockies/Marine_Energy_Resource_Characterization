@@ -1,5 +1,4 @@
 import gc
-import multiprocessing as mp
 import time
 
 from datetime import datetime, timedelta
@@ -24,6 +23,7 @@ output_names = {
     "volume_flux": "vap_volume_flux",
     "volume_flux_average": "vap_water_column_volume_mean_flux",
     "zeta_center": "vap_zeta_center",
+    "surface_elevation": "vap_surface_elevation",
     "depth": "vap_sigma_depth",
     "sea_floor_depth": "vap_sea_floor_depth",
     "mean": "vap_water_column_mean",
@@ -31,6 +31,164 @@ output_names = {
     "max": "vap_water_column_max",
     "p95": "vap_water_column_<PERCENTILE>th_percentile",
 }
+
+
+def calculate_and_save_mean_navd88_offset(config, location_key):
+    """
+    Calculate mean NAVD88 offset across all files and save for later use.
+
+    This function processes all NetCDF files to calculate zeta_center, then computes
+    the temporal mean across all files for each face location. This mean represents
+    the NAVD88 offset that needs to be subtracted to get surface elevation relative
+    to mean sea level.
+
+    Returns
+    -------
+    Path
+        Path to the saved offset file
+
+    Raises
+    ------
+    ValueError
+        If files have inconsistent face coordinates or dimensions
+    FileNotFoundError
+        If no NC files found in the specified path
+    """
+
+    location = config["location_specification"][location_key]
+    location_name = location["label"]
+    input_path = file_manager.get_standardized_partition_output_dir(config, location)
+
+    output_path = file_manager.get_tracking_output_dir(config, location)
+    output_file_path = Path(
+        output_path, f"{location['output_name']}_mean_navd88_offset.nc"
+    )
+
+    # Find all NC files
+    nc_files = sorted(list(input_path.rglob("*.nc")))
+    if not nc_files:
+        raise FileNotFoundError(f"No NetCDF files found in {input_path}")
+
+    print(f"Processing {len(nc_files)} files to calculate mean NAVD88 offset...")
+
+    zeta_center_data = []
+    reference_coords = None
+
+    for i, nc_file in enumerate(nc_files):
+        print(f"Processing file {i + 1}/{len(nc_files)}: {nc_file.name}")
+
+        with xr.open_dataset(nc_file) as ds:
+            # Calculate zeta_center for this file
+            ds_with_zeta = calculate_zeta_center(ds)
+
+            # Extract zeta_center data
+            zeta_center = ds_with_zeta[output_names["zeta_center"]]
+
+            # Validate coordinates consistency
+            current_coords = {
+                "lon_center": zeta_center.lon_center.values,
+                "lat_center": zeta_center.lat_center.values,
+                "n_faces": len(zeta_center.face),
+            }
+
+            if reference_coords is None:
+                reference_coords = current_coords
+                print(f"Reference coordinates set: {current_coords['n_faces']} faces")
+            else:
+                # Check face count
+                if current_coords["n_faces"] != reference_coords["n_faces"]:
+                    raise ValueError(
+                        f"File {nc_file.name} has {current_coords['n_faces']} faces, "
+                        f"but reference has {reference_coords['n_faces']} faces"
+                    )
+
+                # Check coordinate consistency (within tolerance for floating point)
+                if not np.allclose(
+                    current_coords["lon_center"],
+                    reference_coords["lon_center"],
+                    rtol=1e-10,
+                ):
+                    raise ValueError(
+                        f"File {nc_file.name} has inconsistent lon_center coordinates"
+                    )
+
+                if not np.allclose(
+                    current_coords["lat_center"],
+                    reference_coords["lat_center"],
+                    rtol=1e-10,
+                ):
+                    raise ValueError(
+                        f"File {nc_file.name} has inconsistent lat_center coordinates"
+                    )
+
+            # Store the zeta_center data
+            zeta_center_data.append(zeta_center.values)
+
+    # Concatenate all data along time axis
+    print("Concatenating data and calculating temporal mean...")
+    all_zeta_data = np.concatenate(zeta_center_data, axis=0)  # (total_time, n_faces)
+
+    # Calculate mean across all time steps for each face
+    mean_navd88_offset = np.mean(all_zeta_data, axis=0)  # (n_faces,)
+
+    # Create xarray DataArray for the offset
+    with xr.open_dataset(nc_files[0]) as first_ds:
+        first_ds_with_zeta = calculate_zeta_center(first_ds)
+        reference_zeta = first_ds_with_zeta[output_names["zeta_center"]]
+
+        offset_da = xr.DataArray(
+            mean_navd88_offset,
+            dims=("face",),
+            coords={
+                "face": reference_zeta.face,
+                "lon_center": reference_zeta.lon_center,
+                "lat_center": reference_zeta.lat_center,
+            },
+        )
+
+        # Add comprehensive metadata
+        offset_da.attrs = {
+            "long_name": "Mean NAVD88 Offset for Surface Elevation Calculation",
+            "standard_name": "mean_sea_surface_height_offset_above_geoid",
+            "units": "m",
+            "description": (
+                "Temporal mean of zeta_center values across all input files. "
+                "This offset represents the mean deviation from NAVD88 datum "
+                "and should be subtracted from instantaneous zeta_center values "
+                "to obtain surface elevation relative to mean sea level."
+            ),
+            "computation": "mean(zeta_center) across all timesteps and files",
+            "input_files_count": len(nc_files),
+            "total_timesteps": all_zeta_data.shape[0],
+            "coordinate_reference": "NAVD88",
+            "mesh": "cell_centered",
+            "coordinates": "face lon_center lat_center",
+        }
+
+    # Create dataset and save
+    offset_ds = xr.Dataset(
+        {"mean_navd88_offset": offset_da},
+        attrs={
+            "title": f"Mean NAVD88 Offset Data for {location_name}",
+            "description": "Pre-computed mean NAVD88 offset for surface elevation calculations",
+            "location": location_name,
+            "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+            "input_files_count": len(nc_files),
+            "total_timesteps_processed": all_zeta_data.shape[0],
+            "source_directory": str(input_path),
+        },
+    )
+
+    # Save to file
+    offset_ds.to_netcdf(output_file_path)
+    print(f"Mean NAVD88 offset saved to: {output_file_path}")
+    print(
+        f"Offset statistics: min={mean_navd88_offset.min():.3f}m, "
+        f"max={mean_navd88_offset.max():.3f}m, "
+        f"mean={mean_navd88_offset.mean():.3f}m"
+    )
+
+    return output_file_path
 
 
 def validate_u_and_v(ds):
@@ -367,9 +525,273 @@ def calculate_sea_water_power_density(ds, config, rho: float = 1025.0):
     return ds
 
 
-def calculate_element_areas(ds):
+def calculate_zeta_center(ds):
     """
-    Calculate the areas of triangular elements in an FVCOM mesh
+    Calculate sea surface elevation at cell centers from node values.
+    """
+
+    # Get raw nv values from first timestep to avoid coordinate conflicts
+    nv_values = ds.nv.isel(time=0).values - 1  # shape (3, n_faces)
+
+    # Get raw zeta values (all timesteps)
+    zeta_values = ds.zeta.values  # shape (n_times, n_nodes)
+
+    # Create empty result array
+    n_times = zeta_values.shape[0]
+    n_faces = nv_values.shape[1]
+    result_array = np.zeros((n_times, n_faces), dtype=ds.zeta.dtype)
+
+    # For each of the 3 nodes of each face
+    for i in range(3):
+        # Get indices for the i-th node of all faces
+        node_indices = nv_values[i, :]  # shape (n_faces,)
+
+        # For all timesteps, add zeta values at these nodes to result
+        # This vectorized operation processes all timesteps at once
+        result_array += zeta_values[:, node_indices]
+
+    # Divide by 3 to get the average
+    result_array /= 3.0
+
+    # Create DataArray with the results
+    zeta_center = xr.DataArray(
+        result_array,
+        dims=("time", "face"),
+        coords={
+            "time": ds.time,
+            "lon_center": ds.lon_center,
+            "lat_center": ds.lat_center,
+        },
+    )
+
+    # Add attributes
+    zeta_center.attrs = {
+        **ds.zeta.attrs,
+        "long_name": "Sea Surface Height at Cell Centers from NAVD88",
+        "standard_name": "sea_surface_elevation_above_geoid",
+        "coordinates": "time face",
+        "mesh": "cell_centered",
+        "units": "m from NAVD88",
+        "interpolation": (
+            "Computed by averaging the surface elevation values from the three "
+            "nodes that define each triangular cell using the node-to-cell "
+            "connectivity array (nv)"
+        ),
+        "computation": "zeta_center = mean(zeta[nv(t=0) - 1], axis=1)",
+        "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
+    }
+
+    ds[output_names["zeta_center"]] = zeta_center
+
+    return ds
+
+
+def calculate_surface_elevation_and_depths(ds, offset_file_path):
+    """
+    Calculate surface elevation and depths using pre-computed NAVD88 offset.
+
+    This function loads the pre-computed mean NAVD88 offset and:
+    1. Calculates surface elevation relative to mean sea level
+    2. Converts bathymetry to MSL reference frame
+    3. Calculates sigma-level depths and seafloor depth using consistent MSL reference
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing:
+        - zeta_center (must be calculated first)
+        - h_center: bathymetry at cell centers
+        - sigma_layer: sigma level coordinates (for depth calculation)
+    offset_file_path : str or Path
+        Path to the stored mean NAVD88 offset NetCDF file
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added variables:
+        - 'surface_elevation': surface height relative to MSL
+        - 'depth': sigma-level depths (if sigma_layer present)
+        - 'seafloor_depth': total water column depth
+
+    Raises
+    ------
+    ValueError
+        If required variables not found or coordinates mismatch
+    FileNotFoundError
+        If offset file doesn't exist
+    """
+
+    # Check required variables
+    if output_names["zeta_center"] not in ds.variables:
+        raise ValueError(
+            f"Dataset must contain '{output_names['zeta_center']}' variable"
+        )
+
+    if output_names["h_center"] not in ds.variables:
+        raise ValueError(f"Dataset must contain '{output_names['h_center']}' variable")
+
+    # Load the stored offset
+    if not offset_file_path.exists():
+        raise FileNotFoundError(f"Offset file not found: {offset_file_path}")
+
+    print(f"Loading mean NAVD88 offset from: {offset_file_path}")
+    with xr.open_dataset(offset_file_path) as offset_ds:
+        mean_offset = offset_ds.mean_navd88_offset
+
+        # Validate coordinate consistency
+        zeta_center = ds[output_names["zeta_center"]]
+
+        if len(mean_offset.face) != len(zeta_center.face):
+            raise ValueError(
+                f"Face dimension mismatch: offset file has {len(mean_offset.face)} faces, "
+                f"but dataset has {len(zeta_center.face)} faces"
+            )
+
+        # Check coordinate consistency
+        if not np.allclose(
+            mean_offset.lon_center.values, zeta_center.lon_center.values, rtol=1e-10
+        ):
+            raise ValueError(
+                "Longitude coordinates mismatch between dataset and offset file"
+            )
+
+        if not np.allclose(
+            mean_offset.lat_center.values, zeta_center.lat_center.values, rtol=1e-10
+        ):
+            raise ValueError(
+                "Latitude coordinates mismatch between dataset and offset file"
+            )
+
+        # 1. Calculate surface elevation relative to MSL
+        surface_elevation_values = zeta_center - mean_offset
+
+        surface_elevation = xr.DataArray(
+            surface_elevation_values.values,
+            dims=("time", "face"),
+            coords={
+                "time": ds.time,
+                "lon_center": ds.lon_center,
+                "lat_center": ds.lat_center,
+                "face": zeta_center.face,
+            },
+        )
+
+        surface_elevation.attrs = {
+            "long_name": "Sea Surface Elevation Relative to Mean Sea Level",
+            "name": "sea_surface_height_above_mean_sea_level",
+            "units": "m",
+            "coordinates": "time face lon_center lat_center",
+            "mesh": "cell_centered",
+            "description": (
+                "Sea surface elevation calculated by subtracting the temporal mean "
+                "NAVD88 offset from instantaneous zeta_center values. This represents "
+                "surface elevation fluctuations relative to mean sea level and should "
+                "have a temporal mean near zero (when using complete yearly data)."
+            ),
+            "computation": "surface_elevation = zeta_center - mean_navd88_offset",
+            "offset_source": str(offset_file_path),
+            "reference_level": "mean_sea_level",
+            "input_variables": (
+                f"zeta_center: {output_names['zeta_center']}, "
+                "mean_navd88_offset: pre-computed temporal mean"
+            ),
+        }
+
+        ds[output_names["surface_elevation"]] = surface_elevation
+
+        # 2. Convert bathymetry to MSL reference and calculate total water depth
+        h_center_msl = ds[output_names["h_center"]] - mean_offset
+        total_water_depth = h_center_msl + surface_elevation
+
+        # 3. Calculate seafloor depth (total water column depth)
+        seafloor_depth = total_water_depth.copy()
+        seafloor_depth.attrs = {
+            "long_name": "Sea Floor Depth Below Sea Surface",
+            "standard_name": "sea_floor_depth_below_sea_surface",
+            "units": ds[output_names["h_center"]].attrs["units"],
+            "positive": "down",
+            "coordinates": "time face lon_center lat_center",
+            "mesh": "cell_centered",
+            "description": (
+                "The vertical distance between the sea surface and the seabed, "
+                "calculated using bathymetry and surface elevation both referenced "
+                "to mean sea level. This represents the actual physical water depth."
+            ),
+            "computation": "seafloor_depth = (h_center - navd88_offset) + surface_elevation",
+            "reference_level": "mean_sea_level",
+            "input_variables": (
+                "h_center: sea_floor_depth_below_geoid (m), "
+                "surface_elevation: sea_surface_height_above_mean_sea_level (m), "
+                "mean_navd88_offset: pre-computed temporal mean"
+            ),
+        }
+
+        ds[output_names["sea_floor_depth"]] = seafloor_depth
+
+        # 4. Calculate sigma-level depths if sigma coordinates are available
+        if "sigma_layer" in ds:
+            print("Calculating sigma-level depths...")
+
+            # Extract sigma levels
+            sigma_layer = ds.sigma_layer.T.values[0]
+            sigma_3d = sigma_layer.reshape(1, -1, 1)
+
+            # Expand total depth for sigma calculation
+            total_depth_3d = total_water_depth.expand_dims(
+                dim={"sigma_layer": len(sigma_layer)}, axis=1
+            )
+
+            # Calculate depth at each sigma level (positive down from surface)
+            sigma_depths = -(total_depth_3d * sigma_3d)
+
+            sigma_depths.attrs = {
+                "long_name": "Depth Below Sea Surface at Sigma Levels",
+                "standard_name": "depth",
+                "units": ds[output_names["h_center"]].attrs["units"],
+                "positive": "down",
+                "coordinates": "time sigma_layer face lon_center lat_center",
+                "mesh": "cell_centered",
+                "description": (
+                    "Depth at each sigma level calculated using bathymetry and surface "
+                    "elevation both referenced to mean sea level. This represents the "
+                    "actual physical depth that would be measured with an instrument."
+                ),
+                "computation": "depth = -((h_center - navd88_offset) + surface_elevation) * sigma",
+                "reference_level": "mean_sea_level",
+                "input_variables": (
+                    "h_center: sea_floor_depth_below_geoid (m), "
+                    "surface_elevation: sea_surface_height_above_mean_sea_level (m), "
+                    "sigma: ocean_sigma_coordinate, "
+                    "mean_navd88_offset: pre-computed temporal mean"
+                ),
+            }
+
+            ds[output_names["depth"]] = sigma_depths
+            print("Sigma-level depths calculated successfully")
+        else:
+            print("No sigma_layer found - skipping sigma-level depth calculation")
+
+        print("Surface elevation and depths calculated successfully")
+        print(
+            f"Surface elevation statistics: "
+            f"min={surface_elevation.min().values:.3f}m, "
+            f"max={surface_elevation.max().values:.3f}m, "
+            f"temporal_mean={surface_elevation.mean().values:.6f}m"
+        )
+        print(
+            f"Seafloor depth statistics: "
+            f"min={seafloor_depth.min().values:.3f}m, "
+            f"max={seafloor_depth.max().values:.3f}m"
+        )
+
+    return ds
+
+
+def calculate_top_face_area_of_fvcom_volume_from_coordinates(ds):
+    """
+    Calculate the top face area of the of the FVCOM triangular prism volumes
+
+    The top face area is also the bottom face area
 
     Parameters
     ----------
@@ -432,9 +854,9 @@ def calculate_element_areas(ds):
     crossz = v1x * v2y - v1y * v2x
 
     # Calculate area using magnitude of cross product
-    element_areas = 0.5 * np.sqrt(crossx**2 + crossy**2 + crossz**2)
+    top_face_areas = 0.5 * np.sqrt(crossx**2 + crossy**2 + crossz**2)
 
-    return element_areas
+    return top_face_areas
 
 
 def calculate_element_volume(ds):
@@ -452,7 +874,7 @@ def calculate_element_volume(ds):
         Original dataset with added 'element_volume' variable
     """
     # Calculate element areas
-    element_areas = calculate_element_areas(ds)
+    top_face_areas = calculate_top_face_area_of_fvcom_volume_from_coordinates(ds)
 
     # Get dimensions
     n_time = len(ds.time)
@@ -460,9 +882,9 @@ def calculate_element_volume(ds):
     n_face = len(ds.face)
 
     # Get bathymetry and sea surface height
-    h_center = ds[output_names["h_center"]].values  # Bathymetry at element centers
+    h_center = ds[output_names["sea_floor_depth"]].values  # Bathymetry at element centers
     zeta_center = ds[
-        output_names["zeta_center"]
+        output_names["surface_elevation"]
     ].values  # Surface elevation at element centers
 
     # Get node indices for each element (face) - first time index only
@@ -506,7 +928,7 @@ def calculate_element_volume(ds):
 
     # Reshape arrays for broadcasting
     # element_areas: (n_face) -> (1, n_sigma_layer, n_face)
-    element_areas_broadcast = element_areas.reshape(1, 1, n_face).repeat(
+    element_areas_broadcast = top_face_areas.reshape(1, 1, n_face).repeat(
         n_sigma_layer, axis=1
     )
 
@@ -540,65 +962,6 @@ def calculate_element_volume(ds):
             "input_variables": "h_center: bathymetry (m), zeta_center: surface elevation (m), sigma_layer: sigma coordinate",
         },
     )
-
-    return ds
-
-
-def calculate_zeta_center(ds):
-    """
-    Calculate sea surface elevation at cell centers from node values.
-    """
-
-    # Get raw nv values from first timestep to avoid coordinate conflicts
-    nv_values = ds.nv.isel(time=0).values - 1  # shape (3, n_faces)
-
-    # Get raw zeta values (all timesteps)
-    zeta_values = ds.zeta.values  # shape (n_times, n_nodes)
-
-    # Create empty result array
-    n_times = zeta_values.shape[0]
-    n_faces = nv_values.shape[1]
-    result_array = np.zeros((n_times, n_faces), dtype=ds.zeta.dtype)
-
-    # For each of the 3 nodes of each face
-    for i in range(3):
-        # Get indices for the i-th node of all faces
-        node_indices = nv_values[i, :]  # shape (n_faces,)
-
-        # For all timesteps, add zeta values at these nodes to result
-        # This vectorized operation processes all timesteps at once
-        result_array += zeta_values[:, node_indices]
-
-    # Divide by 3 to get the average
-    result_array /= 3.0
-
-    # Create DataArray with the results
-    zeta_center = xr.DataArray(
-        result_array,
-        dims=("time", "face"),
-        coords={
-            "time": ds.time,
-            "lon_center": ds.lon_center,
-            "lat_center": ds.lat_center,
-        },
-    )
-
-    # Add attributes
-    zeta_center.attrs = {
-        **ds.zeta.attrs,
-        "long_name": "Sea Surface Height at Cell Centers",
-        "coordinates": "time face",
-        "mesh": "cell_centered",
-        "interpolation": (
-            "Computed by averaging the surface elevation values from the three "
-            "nodes that define each triangular cell using the node-to-cell "
-            "connectivity array (nv)"
-        ),
-        "computation": "zeta_center = mean(zeta[nv(t=0) - 1], axis=1)",
-        "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
-    }
-
-    ds[output_names["zeta_center"]] = zeta_center
 
     return ds
 
@@ -996,7 +1359,14 @@ def calculate_depth_statistics(
 
 
 def process_single_file(
-    nc_file, config, location, output_dir, file_index, total_files=None, start_time=None
+    nc_file,
+    config,
+    location,
+    surface_elevation_offset_path,
+    output_dir,
+    file_index,
+    total_files=None,
+    start_time=None,
 ):
     """Process a single netCDF file and save the results."""
 
@@ -1019,11 +1389,16 @@ def process_single_file(
         print(f"\t[{file_index}] Calculating zeta_center...")
         this_ds = calculate_zeta_center(this_ds)
 
-        print(f"\t[{file_index}] Calculating depth...")
-        this_ds = calculate_depth(this_ds)
+        print(f"\t[{file_index}] Calculating surface_elevation...")
+        this_ds = calculate_surface_elevation_and_depths(
+            this_ds, surface_elevation_offset_path
+        )
 
-        print(f"\t[{file_index}] Calculating sea_floor_depth...")
-        this_ds = calculate_sea_floor_depth(this_ds)
+        # print(f"\t[{file_index}] Calculating depth...")
+        # this_ds = calculate_depth(this_ds)
+        #
+        # print(f"\t[{file_index}] Calculating sea_floor_depth...")
+        # this_ds = calculate_sea_floor_depth(this_ds)
 
         print(f"\t[{file_index}] Calculating u water column average")
         this_ds = calculate_depth_statistics(this_ds, "u", stats_to_calculate=["mean"])
@@ -1037,10 +1412,14 @@ def process_single_file(
         )
 
         print(f"\t[{file_index}] Calculating speed depth average statistics")
-        this_ds = calculate_depth_statistics(this_ds, "speed")
+        this_ds = calculate_depth_statistics(
+            this_ds, "speed", stats_to_calculate=["mean", "max"]
+        )
 
         print(f"\t[{file_index}] Calculating power_density depth average statistics")
-        this_ds = calculate_depth_statistics(this_ds, "power_density")
+        this_ds = calculate_depth_statistics(
+            this_ds, "power_density", stats_to_calculate=["mean", "max"]
+        )
 
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
         if expected_delta_t_seconds == 3600:
@@ -1072,7 +1451,8 @@ def process_single_file(
 
         output_path = Path(
             output_dir,
-            f"{file_index:03d}.{data_level_file_name}",
+            # f"{file_index:03d}.{data_level_file_name}",
+            data_level_file_name,
         )
 
         print(f"\t[{file_index}] Saving final results to {output_path}...")
@@ -1110,10 +1490,10 @@ def process_single_file(
             est_completion_time = datetime.now() + timedelta(seconds=est_time_remaining)
 
             print(
-                f"\t[{file_index}] Progress: {files_completed}/{total_files} files ({files_completed/total_files*100:.1f}%)"
+                f"\t[{file_index}] Progress: {files_completed}/{total_files} files ({files_completed / total_files * 100:.1f}%)"
             )
             print(
-                f"\t[{file_index}] Average time per file: {int(avg_time_per_file//60):02d}:{int(avg_time_per_file%60):02d} (mm:ss)"
+                f"\t[{file_index}] Average time per file: {int(avg_time_per_file // 60):02d}:{int(avg_time_per_file % 60):02d} (mm:ss)"
             )
             print(
                 f"\t[{file_index}] Estimated time remaining: {int(est_hours):02d}:{int(est_minutes):02d}:{int(est_seconds):02d} (hh:mm:ss)"
@@ -1128,6 +1508,7 @@ def process_single_file(
 def derive_vap(
     config,
     location_key,
+    surface_elevation_offset_path,
     single_file_to_process_index=None,
     skip_if_output_files_exist=True,
 ):
@@ -1180,6 +1561,7 @@ def derive_vap(
             nc_file,
             config,
             location,
+            surface_elevation_offset_path,
             vap_output_dir,
             idx,
             total_files=total_files,
@@ -1199,7 +1581,7 @@ def derive_vap(
     print(
         f"Total processing time: {int(total_hours):02d}:{int(total_minutes):02d}:{int(total_seconds):02d} (hh:mm:ss)"
     )
-    print(f"Average time per file: {total_elapsed_time/len(results):.2f} seconds")
+    print(f"Average time per file: {total_elapsed_time / len(results):.2f} seconds")
 
     # Check for any errors in processing (for both approaches)
     failed_files = [i for i in results if i < 0]
