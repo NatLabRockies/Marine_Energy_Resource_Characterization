@@ -16,22 +16,22 @@ LOCATIONS = {
     #     "temporal_resolution": "hourly",
     #     "process_runtime_hours": 2,
     # },
-    # "cook_inlet": {
-    #     "faces": 392002,
-    #     "temporal_resolution": "hourly",
-    #     "process_runtime_hours": 2,
-    # },
+    "cook_inlet": {
+        "faces": 392002,
+        "temporal_resolution": "hourly",
+        "process_runtime_hours": 2,
+    },
     # "piscataqua_river": {
     #     "faces": 292927,
     #     "temporal_resolution": "half_hourly",
     #     "process_runtime_hours": 2,
     # },
-    "puget_sound": {
-        "faces": 1734765,
-        "temporal_resolution": "half_hourly",
-        # This is 73 half hourly files and is relatively slow
-        "process_runtime_hours": 4,
-    },
+    # "puget_sound": {
+    #     "faces": 1734765,
+    #     "temporal_resolution": "half_hourly",
+    #     # This is 73 half hourly files and is relatively slow
+    #     "process_runtime_hours": 4,
+    # },
     # "western_passage": {
     #     "faces": 231208,
     #     "temporal_resolution": "half_hourly",
@@ -69,27 +69,27 @@ for location, config in LOCATIONS.items():
         f"  faces={faces}, temporal_resolution={temporal_resolution}, batch_size={batch_size}, array=0-{array_size}"
     )
 
-    # # Submit the processing job array directly
-    # print(f"Submitting parallel processing jobs for {location}...")
-    #
-    # process_args = [
-    #     f"--export=LOCATION={location},FACES={faces},BATCH_SIZE={batch_size}",
-    #     f"--array=0-{array_size}",
-    #     f"--output={location}_process_%A_%a.out",
-    #     f"--job-name={location}_process",
-    #     # Time in minutes
-    #     f"--time={process_runtime_hours * 60}",
-    #     "summarize_single_location_batch.sbatch",
-    # ]
-    #
-    # process_job_id = submit_sbatch(process_args)
-    # print(f"Process job array submitted with ID: {process_job_id}")
+    # Submit the processing job array directly
+    print(f"Submitting parallel processing jobs for {location}...")
+
+    process_args = [
+        f"--export=LOCATION={location},FACES={faces},BATCH_SIZE={batch_size}",
+        f"--array=0-{array_size}",
+        f"--output={location}_process_%A_%a.out",
+        f"--job-name={location}_process",
+        # Time in minutes
+        f"--time={process_runtime_hours * 60}",
+        "summarize_single_location_batch.sbatch",
+    ]
+
+    process_job_id = submit_sbatch(process_args)
+    print(f"Process job array submitted with ID: {process_job_id}")
 
     # Submit the concatenation job that depends on the processing jobs
     print(f"Submitting concatenation job for {location}...")
 
     concat_args = [
-        # f"--dependency=afterok:{process_job_id}",
+        f"--dependency=afterok:{process_job_id}",
         f"--export=LOCATION={location}",
         f"--output={location}_concat_%j.out",
         f"--job-name={location}_concat",
