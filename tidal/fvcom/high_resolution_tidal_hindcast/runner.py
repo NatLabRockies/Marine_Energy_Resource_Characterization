@@ -57,7 +57,9 @@ if __name__ == "__main__":
     # partition_by_time(config, args.location, valid_std_files_df)
     #
     print("Step 4: Calculating Derived Value Added Products...")
-    surface_elevation_offset_path = calculate_and_save_mean_navd88_offset(config, args.location)
+    surface_elevation_offset_path = calculate_and_save_mean_navd88_offset(
+        config, args.location
+    )
     derive_vap(config, args.location, surface_elevation_offset_path)
     #
     print("Step 5: Calculating Monthly Averages...")
