@@ -14,7 +14,7 @@
 # Calculated Tasks = 392002 / 5000 = 78.4004
 # Calculated Tasks = 392002 / 2500 = 156.8
 ##SBATCH --array=0-78  # Create 79 tasks
-##SBATCH --array=0-156  # Create 157 tasks
+#SBATCH --array=0-156  # Create 157 tasks
 #SBATCH --mem=64G
 #SBATCH --partition=shared
 
