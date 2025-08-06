@@ -882,7 +882,9 @@ def calculate_element_volume(ds):
     n_face = len(ds.face)
 
     # Get bathymetry and sea surface height
-    h_center = ds[output_names["sea_floor_depth"]].values  # Bathymetry at element centers
+    h_center = ds[
+        output_names["sea_floor_depth"]
+    ].values  # Bathymetry at element centers
     zeta_center = ds[
         output_names["surface_elevation"]
     ].values  # Surface elevation at element centers
@@ -1505,6 +1507,24 @@ def process_single_file(
         return file_index
 
 
+def get_processed_file_indices(output_dir):
+    """
+    Extract file indices from existing output files.
+    Assumes output files are named like: "123.nc", "456.nc", etc.
+    """
+    processed_indices = set()
+    existing_files = list(output_dir.rglob("*.nc"))
+
+    for file_path in existing_files:
+        filename = file_path.name
+        # Extract the number before the first dot
+        base_name = filename.split(".")[0]
+        if base_name.isdigit():
+            processed_indices.add(int(base_name))
+
+    return processed_indices
+
+
 def derive_vap(
     config,
     location_key,
@@ -1512,58 +1532,73 @@ def derive_vap(
     single_file_to_process_index=None,
     skip_if_output_files_exist=True,
 ):
+    # Get location and paths
     location = config["location_specification"][location_key]
     std_partition_path = file_manager.get_standardized_partition_output_dir(
         config, location
     )
-    std_partition_nc_files = sorted(list(std_partition_path.rglob("*.nc")))
-
     vap_output_dir = Path(file_manager.get_vap_output_dir(config, location))
 
+    # Find all input files to potentially process
+    input_nc_files = sorted(list(std_partition_path.rglob("*.nc")))
+    if not input_nc_files:
+        print("No input .nc files found to process.")
+        return
+
+    # Check if we should skip processing entirely
     if skip_if_output_files_exist:
-        existing_vap_nc_files = sorted(list(vap_output_dir.rglob("*.nc")))
-        if len(existing_vap_nc_files) >= 12:
+        existing_output_files = sorted(list(vap_output_dir.rglob("*.nc")))
+        if len(existing_output_files) >= 12:
             print(
-                f"Found {len(existing_vap_nc_files)} files in {vap_output_dir}. Skipping derive vap!"
+                f"Found {len(existing_output_files)} files in {vap_output_dir}. Skipping derive vap!"
             )
             return
 
-    # Create a list of files to be processed, with their indices
-    # Filter out files that might already be processed
+    # Determine which files need processing
     files_to_process = []
-    existing_indices = set(
-        int(f.name.split(".")[0])
-        for f in existing_vap_nc_files
-        if f.name.split(".")[0].isdigit()
-    )
 
-    for count, nc_file in enumerate(std_partition_nc_files, start=1):
-        if count not in existing_indices:
-            files_to_process.append((nc_file, count))
+    if skip_if_output_files_exist:
+        # Get indices of files that have already been processed
+        processed_indices = get_processed_file_indices(vap_output_dir)
+
+        # Only add files that haven't been processed yet
+        for file_index, nc_file in enumerate(input_nc_files, start=1):
+            if file_index not in processed_indices:
+                files_to_process.append((nc_file, file_index))
+    else:
+        # Process all files
+        files_to_process = [
+            (nc_file, idx) for idx, nc_file in enumerate(input_nc_files, start=1)
+        ]
 
     if not files_to_process:
         print("No new files to process.")
         return
 
+    # Handle single file processing if specified
     if single_file_to_process_index is not None:
-        files_to_process = [files_to_process[single_file_to_process_index]]
+        if single_file_to_process_index < len(files_to_process):
+            files_to_process = [files_to_process[single_file_to_process_index]]
+        else:
+            print(f"Single file index {single_file_to_process_index} out of range.")
+            return
 
-    results = []
+    # Process the files
     total_files = len(files_to_process)
     print(f"Processing {total_files} vap data files sequentially")
 
-    # Record start time for overall processing
+    results = []
     overall_start_time = time.time()
 
-    for i, (nc_file, idx) in enumerate(files_to_process, 1):
-        print(f"Processing file {idx}/{total_files}: {nc_file}")
+    for i, (nc_file, file_index) in enumerate(files_to_process, 1):
+        print(f"Processing file {i}/{total_files}: {nc_file}")
         result = process_single_file(
             nc_file,
             config,
             location,
             surface_elevation_offset_path,
             vap_output_dir,
-            idx,
+            file_index,
             total_files=total_files,
             start_time=overall_start_time,
         )
