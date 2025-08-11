@@ -28,6 +28,11 @@ config = {
                 # face together. Effectively this speeds up queries by point.
                 "preferred_dim": "face",
             },
+            "numeric_encoding": {
+                # Define the float32 as the default float type for the dataset.
+                # This will convert all float64 to float32 when saving data
+                "default_float_type": "float32",
+            },
         },
         "xarray_netcdf4_engine": "h5netcdf",
     },

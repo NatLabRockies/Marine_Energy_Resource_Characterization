@@ -1,5 +1,6 @@
 import math
 
+import numpy as np
 import xarray as xr
 
 
@@ -41,7 +42,9 @@ def define_ds_encoding(ds, config, compression_strategy):
 
         this_encoding = define_compression_encoding(this_encoding, compression_strategy)
 
-        this_encoding = define_chunk_size(ds, var_name, config, this_encoding)
+        this_encoding = define_chunk_size_encoding(ds, var_name, config, this_encoding)
+
+        this_encoding = define_numeric_encoding(ds, var_name, config, this_encoding)
 
         result[var_name] = this_encoding
 
@@ -72,7 +75,7 @@ def define_compression_encoding(this_encoding, compression_strategy):
     return this_encoding
 
 
-def define_chunk_size(ds, var_name, config, this_encoding):
+def define_chunk_size_encoding(ds, var_name, config, this_encoding):
     # Get chunking spec from config
     chunk_spec = config["dataset"]["encoding"]["chunk_spec"]
     target_chunk_size_mb = chunk_spec["target_size_mb"]
@@ -133,5 +136,18 @@ def define_chunk_size(ds, var_name, config, this_encoding):
             chunking_spec.append(size)
 
     this_encoding["chunksizes"] = tuple(chunking_spec)
+
+    return this_encoding
+
+
+def define_numeric_encoding(ds, var_name, config, this_encoding):
+    numeric_config = config["dataset"]["encoding"]["numeric"]
+    float_type = numeric_config["default_float_type"]
+
+    var = ds[var_name]
+
+    # Set dtype for floating point variables
+    if np.issubdtype(var.dtype, np.floating):
+        this_encoding["dtype"] = float_type
 
     return this_encoding
