@@ -1,6 +1,10 @@
+from pathlib import Path
+
+import pandas as pd
+
 from config import config
 from src.cli import parse_args
-from src.file_manager import get_specified_nc_files
+from src.file_manager import get_specified_nc_files, get_tracking_output_dir
 
 from src.verify import verify_dataset
 from src.standardize import standardize_dataset
@@ -37,8 +41,8 @@ if __name__ == "__main__":
     location = config["location_specification"][args.location]
     output_type = args.output_type
 
-    print(f"Standardizing {location} tidal dataset for output type {output_type}....")
-
+    # print(f"Standardizing {location} tidal dataset for output type {output_type}....")
+    #
     # print("Finding nc files...")
     # try:
     #     nc_files = get_specified_nc_files(config, location)
@@ -49,13 +53,19 @@ if __name__ == "__main__":
     #
     # print("Step 1: Verifying Dataset Integrity...")
     # valid_timestamps_df = verify_dataset(config, location, nc_files)
-    #
-    # print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
-    # valid_std_files_df = standardize_dataset(config, args.location, valid_timestamps_df)
-    #
-    # print("Step 3: Partitioning Standardized Dataset by Time...")
-    # partition_by_time(config, args.location, valid_std_files_df)
-    #
+
+    tracking_folder = get_tracking_output_dir(config, location)
+    tracking_path = Path(
+        tracking_folder, f"{location['output_name']}_verify_step_tracking.parquet"
+    )
+    valid_timestamps_df = pd.read_parquet(tracking_path)
+
+    print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
+    valid_std_files_df = standardize_dataset(config, args.location, valid_timestamps_df)
+
+    print("Step 3: Partitioning Standardized Dataset by Time...")
+    partition_by_time(config, args.location, valid_std_files_df)
+
     print("Step 4: Calculating Derived Value Added Products...")
     surface_elevation_offset_path = calculate_and_save_mean_navd88_offset(
         config, args.location
