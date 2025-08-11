@@ -62,7 +62,33 @@ def process_single_period(period_data, config, location, output_dir, count):
     if len(datasets) > 0:
         # Concatenate datasets
         print(f"[{count}] Concatenating {len(datasets)} datasets...")
-        combined_ds = xr.concat(datasets, dim="time")
+
+        # combined_ds = xr.concat(datasets, dim="time")
+
+        # Separate dataset into time-varying and time-invariant variables
+        # Xarray adds a "time" dimension to some variables ('nv' not sure why?)
+        # This causes a massive size increase in the output file size and is incorrect
+        # To fix we concat time variables only and just add back the time-invariant variables
+        time_varying_vars = []
+        time_invariant_vars = {}
+
+        first_ds = datasets[0]
+        for var_name in first_ds.data_vars:
+            if "time" in first_ds[var_name].dims:
+                time_varying_vars.append(var_name)
+            else:
+                time_invariant_vars[var_name] = first_ds[var_name]
+
+        # Concatenate only time-varying variables
+        if time_varying_vars:
+            datasets_time_vars = [ds[time_varying_vars] for ds in datasets]
+            combined_ds = xr.concat(datasets_time_vars, dim="time")
+
+            # Add back time-invariant variables
+            for var_name, var_data in time_invariant_vars.items():
+                combined_ds[var_name] = var_data
+        else:
+            raise ValueError("No time-varying variables found in concat datasets.")
 
         combined_ds = attrs_manager.standardize_dataset_global_attrs(
             combined_ds, config, location, "a2", [str(f) for f in source_filenames]
