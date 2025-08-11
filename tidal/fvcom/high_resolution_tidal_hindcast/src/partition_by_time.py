@@ -32,91 +32,77 @@ def process_single_period(period_data, config, location, output_dir, count):
     datasets = []
     source_filenames = set()
 
-    try:
-        for std_file in unique_std_files:
-            print(f"[{count}] Adding {std_file} to {period_start} output dataset")
+    for std_file in unique_std_files:
+        print(f"[{count}] Adding {std_file} to {period_start} output dataset")
 
-            print(f"[{count}] Opening dataset...")
+        print(f"[{count}] Opening dataset...")
 
-            ds = nc_manager.nc_open(std_file, config)
+        ds = nc_manager.nc_open(std_file, config)
 
-            # Track source filenames
-            if "source_files" in ds.attrs:
-                filenames = [Path(f).name for f in ds.attrs["source_files"]]
-                source_filenames.update(filenames)
+        # Track source filenames
+        if "source_files" in ds.attrs:
+            filenames = [Path(f).name for f in ds.attrs["source_files"]]
+            source_filenames.update(filenames)
 
-            # Get timestamps for this file and period
-            file_timestamps = period_df[period_df["std_files"] == std_file][
-                "timestamp"
-            ].values
-            print(f"[{count}] file_timestamps:", file_timestamps)
+        # Get timestamps for this file and period
+        file_timestamps = period_df[period_df["std_files"] == std_file][
+            "timestamp"
+        ].values
+        print(f"[{count}] file_timestamps:", file_timestamps)
 
-            # Subset the dataset
-            time_indices = np.isin(ds.time.values, file_timestamps)
-            print(f"[{count}] Subsetting dataset by time_indicies...")
-            ds_subset = ds.isel(time=time_indices)
+        # Subset the dataset
+        time_indices = np.isin(ds.time.values, file_timestamps)
+        print(f"[{count}] Subsetting dataset by time_indicies...")
+        ds_subset = ds.isel(time=time_indices)
 
-            if ds_subset.time.size > 0:
-                print(f"[{count}] Appending dataset...")
-                datasets.append(ds_subset)
+        if ds_subset.time.size > 0:
+            print(f"[{count}] Appending dataset...")
+            datasets.append(ds_subset)
 
-        if len(datasets) > 0:
-            # Concatenate datasets
-            print(f"[{count}] Concatenating {len(datasets)} datasets...")
-            combined_ds = xr.concat(datasets, dim="time")
+    if len(datasets) > 0:
+        # Concatenate datasets
+        print(f"[{count}] Concatenating {len(datasets)} datasets...")
+        combined_ds = xr.concat(datasets, dim="time")
 
-            combined_ds = attrs_manager.standardize_dataset_global_attrs(
-                combined_ds, config, location, "a2", [str(f) for f in source_filenames]
+        combined_ds = attrs_manager.standardize_dataset_global_attrs(
+            combined_ds, config, location, "a2", [str(f) for f in source_filenames]
+        )
+
+        temporal_string = time_manager.generate_temporal_attrs(combined_ds)[
+            "standard_name"
+        ]
+
+        # Generate output filename
+        data_level_file_name = (
+            file_name_convention_manager.generate_filename_for_data_level(
+                combined_ds,
+                location["output_name"],
+                config["dataset"]["name"],
+                "a2",
+                temporal=temporal_string,
             )
+        )
 
-            temporal_string = time_manager.generate_temporal_attrs(combined_ds)[
-                "standard_name"
-            ]
+        # output_path = Path(output_dir, f"{count:03d}.{data_level_file_name}")
+        output_path = Path(output_dir, data_level_file_name)
 
-            # Generate output filename
-            data_level_file_name = (
-                file_name_convention_manager.generate_filename_for_data_level(
-                    combined_ds,
-                    location["output_name"],
-                    config["dataset"]["name"],
-                    "a2",
-                    temporal=temporal_string,
-                )
-            )
+        print(f"[{count}] Saving partition file: {output_path}...")
+        nc_manager.nc_write(combined_ds, output_path, config)
 
-            output_path = Path(output_dir, f"{count:03d}.{data_level_file_name}")
+        # Verify the file exists before continuing
+        wait_count = 0
+        while not output_path.exists() and wait_count < 10:
+            time.sleep(0.5)
+            wait_count += 1
 
-            print(f"[{count}] Saving partition file: {output_path}...")
-            nc_manager.nc_write(combined_ds, output_path, config)
+        if output_path.exists():
+            print(f"[{count}] Saved partition file: {output_path}!")
+        else:
+            print(f"[{count}] Warning: Could not verify file was saved: {output_path}")
 
-            # Verify the file exists before continuing
-            wait_count = 0
-            while not output_path.exists() and wait_count < 10:
-                time.sleep(0.5)
-                wait_count += 1
-
-            if output_path.exists():
-                print(f"[{count}] Saved partition file: {output_path}!")
-            else:
-                print(
-                    f"[{count}] Warning: Could not verify file was saved: {output_path}"
-                )
-
-            # Close the combined dataset
-            combined_ds.close()
-            combined_ds = None
-
-    except Exception as e:
-        print(f"[{count}] Error in process_single_period: {e}")
-    finally:
-        # Clean up all datasets
-        for ds in datasets:
-            try:
-                ds.close()
-            except:
-                pass
-        datasets.clear()
-        gc.collect()
+        # Close the combined dataset
+        combined_ds.close()
+        combined_ds = None
 
     # Return the output path only if it was successfully created
     return str(output_path) if output_path and output_path.exists() else None
@@ -181,7 +167,7 @@ def partition_by_time(
             for i in range(0, len(process_args), chunk_size):
                 chunk = process_args[i : i + chunk_size]
                 print(
-                    f"Processing chunk {i//chunk_size + 1}/{(len(process_args)-1)//chunk_size + 1}"
+                    f"Processing chunk {i // chunk_size + 1}/{(len(process_args) - 1) // chunk_size + 1}"
                 )
 
                 # Process this chunk
