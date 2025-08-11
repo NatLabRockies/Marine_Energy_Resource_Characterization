@@ -1,3 +1,5 @@
+import math
+
 import xarray as xr
 
 
@@ -11,27 +13,42 @@ def nc_write(ds, output_path, config, compression_strategy="none"):
     ds.to_netcdf(
         output_path,
         engine=config["dataset"]["xarray_netcdf4_engine"],
-        encoding=define_compression_encoding(
-            ds,
-            base_encoding=config["dataset"]["encoding"],
-            compression_strategy="none",
-        ),
+        encoding=define_ds_encoding(ds, config, compression_strategy),
     )
 
 
-def define_compression_encoding(
-    this_ds, base_encoding=None, compression_strategy="standard", exclude_vars=None
-):
-    if exclude_vars is None:
-        exclude_vars = []
+# Encoding configures the xarray engine specification for writing data
+# This seems like it defined per variable. There is a lack of documentation regarding this step,
+# But this step is important for defining how exactly the output netCDF (h5) files are structured
+# The xarray defaults seem to be derived from the input nc files and this dataset has original data with
+# questionable defaults.
+# https://docs.xarray.dev/en/latest/generated/xarray.DataArray.encoding.html
+# https://docs.unidata.ucar.edu/nug/current/netcdf_perf_chunking.html
+def define_ds_encoding(ds, config, compression_strategy):
+    encoding_config = config["dataset"]["encoding"]
+    if "var" in encoding_config:
+        base_encoding = encoding_config["var"].copy()
+    else:
+        base_encoding = None
 
-    # Start with empty encoding dict if none provided
-    encoding = {}
+    if base_encoding is None:
+        result = {}
+    else:
+        result = base_encoding.copy()
 
-    # Copy base encoding if provided
-    if base_encoding is not None:
-        encoding = base_encoding.copy()
+    for var_name in ds.variables:
+        this_encoding = {}
 
+        this_encoding = define_compression_encoding(this_encoding, compression_strategy)
+
+        this_encoding = define_chunk_size(ds, var_name, config, this_encoding)
+
+        result[var_name] = this_encoding
+
+    return result
+
+
+def define_compression_encoding(this_encoding, compression_strategy):
     # Determine compression level based on strategy
     complevel = 4  # Default standard compression
 
@@ -42,23 +59,79 @@ def define_compression_encoding(
     elif compression_strategy.lower() == "archival":
         complevel = 9
 
-    # Apply compression to all variables in the this_ds
-    for var_name in this_ds.variables:
-        # Skip variables in the exclude list
-        if var_name in exclude_vars:
-            continue
+    # Apply compression settings based on the strategy
+    this_encoding["complevel"] = complevel
 
-        # Initialize encoding for this variable if it doesn't exist
-        if var_name not in encoding:
-            encoding[var_name] = {}
+    if complevel == 0:
+        # No compression
+        this_encoding["zlib"] = False
+    else:
+        # Add compression with the determined level
+        this_encoding["zlib"] = True
 
-        # Apply compression settings based on the strategy
-        if complevel == 0:
-            # No compression
-            encoding[var_name]["zlib"] = False
+    return this_encoding
+
+
+def define_chunk_size(ds, var_name, config, this_encoding):
+    # Get chunking spec from config
+    chunk_spec = config["dataset"]["encoding"]["chunk_spec"]
+    target_chunk_size_mb = chunk_spec["target_size_mb"]
+    target_chunk_size_bytes = target_chunk_size_mb / 1024 / 1024
+    target_chunk_multiple = chunk_spec["multiple"]
+    preferred_chunking_dimension = chunk_spec["preferred_dim"]
+
+    var = ds[var_name]
+
+    bytes_per_element = var.dtype.itemsize
+    total_bytes = var.size * bytes_per_element
+
+    # If the actual size is less than the target chunk size
+    # no chunking is necessary and we just need to return the original shape
+    if total_bytes < target_chunk_size_bytes:
+        this_encoding["chunksizes"] = var.shape
+        return this_encoding
+
+    dimension_sizes = {}
+    for dim, size in zip(var.dims, var.shape):
+        dimension_sizes[dim] = size
+
+    if preferred_chunking_dimension in var.dims:
+        chunking_dim = preferred_chunking_dimension
+    else:
+        chunking_dim = None
+        max_size = 0
+        for this_dim, this_size in dimension_sizes.items():
+            if this_size > max_size:
+                max_size = this_size
+                chunking_dim = this_dim
+
+    # Create an array of sizes that are not the target chunking dim
+    sizes = []
+    for key, value in dimension_sizes.items():
+        if key != chunking_dim:
+            sizes.append(value)
+
+    bytes_per_one_face = math.prod(sizes) * bytes_per_element
+
+    optimal_chunks_per_face = target_chunk_size_bytes / bytes_per_one_face
+
+    # Calculate a chunk size for the target dimension that makes each chunk less than the target size
+    # floor rounded to the multiple
+    chunk_size = int(
+        max(
+            target_chunk_multiple,
+            (optimal_chunks_per_face // target_chunk_multiple) * target_chunk_multiple,
+        )
+    )
+
+    # Chunking spec is a tuple of sizes for each chunk
+    chunking_spec = []
+    for dim, size in dimension_sizes.items():
+        if dim == chunking_dim:
+            chunking_spec.append(chunk_size)
         else:
-            # Add compression with the determined level
-            encoding[var_name]["zlib"] = True
-            encoding[var_name]["complevel"] = complevel
+            chunking_spec.append(size)
 
-    return encoding
+    this_encoding["chunksizes"] = tuple(chunking_spec)
+
+    return this_encoding

@@ -9,11 +9,25 @@ config = {
         "development_version": "0.4.0",
         "issue_date": "2025-02-01",
         "encoding": {
-            "time": {
-                "units": "seconds since 1970-01-01",
-                "calendar": "proleptic_gregorian",
-                "dtype": "int64",
-            }
+            "var": {
+                "time": {
+                    "units": "seconds since 1970-01-01",
+                    "calendar": "proleptic_gregorian",
+                    "dtype": "int64",
+                },
+            },
+            "chunk_spec": {
+                # https://docs.unidata.ucar.edu/nug/current/netcdf_perf_chunking.html
+                # https://docs.h5py.org/en/stable/high/dataset.html#chunked-storage
+                # There is a lack of clarity on exactly how to set this target size
+                # Per the unidata spec by default the cache size is 64MB and the default chunks in the cache is 10
+                # Based on this we should set the target size per chunk to 64 / 10 MB.
+                "target_size_mb": 6.4,
+                "multiple": 100,
+                # Data can be chunked in any way. This defines that we chunk by face which keeps all data per
+                # face together. Effectively this speeds up queries by point.
+                "preferred_dim": "face",
+            },
         },
         "xarray_netcdf4_engine": "h5netcdf",
     },
