@@ -54,17 +54,17 @@ if __name__ == "__main__":
     # print("Step 1: Verifying Dataset Integrity...")
     # valid_timestamps_df = verify_dataset(config, location, nc_files)
 
-    tracking_folder = get_tracking_output_dir(config, location)
-    tracking_path = Path(
-        tracking_folder, f"{location['output_name']}_verify_step_tracking.parquet"
-    )
-    valid_timestamps_df = pd.read_parquet(tracking_path)
-
-    print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
-    valid_std_files_df = standardize_dataset(config, args.location, valid_timestamps_df)
-
-    print("Step 3: Partitioning Standardized Dataset by Time...")
-    partition_by_time(config, args.location, valid_std_files_df)
+    # tracking_folder = get_tracking_output_dir(config, location)
+    # tracking_path = Path(
+    #     tracking_folder, f"{location['output_name']}_verify_step_tracking.parquet"
+    # )
+    # valid_timestamps_df = pd.read_parquet(tracking_path)
+    #
+    # print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
+    # valid_std_files_df = standardize_dataset(config, args.location, valid_timestamps_df)
+    #
+    # print("Step 3: Partitioning Standardized Dataset by Time...")
+    # partition_by_time(config, args.location, valid_std_files_df)
 
     print("Step 4: Calculating Derived Value Added Products...")
     surface_elevation_offset_path = calculate_and_save_mean_navd88_offset(
