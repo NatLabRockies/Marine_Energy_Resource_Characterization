@@ -503,6 +503,175 @@ def calculate_tidal_levels(surface_positions, msl_tolerance_meters=0.2):
     return tidal_data
 
 
+def calculate_flood_ebb_directions(
+    direction_timeseries,
+    speed_timeseries,
+    surface_elevation,
+    datetime_array,
+    speed_threshold=0.5,  # Based on IEC 62600-201 typical cut-in speed
+    bin_width_degrees=1,
+    mask_width_degrees=180,
+):
+    """
+    Calculate flood and ebb flow directions from tidal current data.
+    Optimized for half-hourly model data following coastal engineering best practices.
+
+    Parameters:
+    -----------
+    direction_timeseries : array-like
+        Time series of flow directions in degrees (0-360)
+    speed_timeseries : array-like
+        Time series of flow speeds in m/s
+    surface_elevation : array-like
+        Time series of water surface elevation (to determine rising/falling tide)
+    datetime_array : array-like of pd.datetime
+        Corresponding datetime stamps (assumes half-hourly intervals)
+    speed_threshold : float, default=0.5
+        Minimum speed threshold in m/s (based on IEC 62600-201)
+        Typical tidal turbine cut-in speeds range 0.5-1.0 m/s
+    bin_width_degrees : float, default=1
+        Width of directional bins in degrees
+    mask_width_degrees : float, default=180
+        Angular mask width to separate opposing directions
+
+    Returns:
+    --------
+    dict containing:
+        - flood_direction: Primary direction during rising tide (degrees)
+        - flood_mean_speed: Mean speed during flood direction (m/s)
+        - ebb_direction: Primary direction during falling tide (degrees)
+        - ebb_mean_speed: Mean speed during ebb direction (m/s)
+        - hours_above_threshold_flood: Hours above threshold in flood direction
+        - hours_above_threshold_ebb: Hours above threshold in ebb direction
+
+    Notes:
+    ------
+    Half-hourly resolution is adequate for tidal analysis as it satisfies
+    Nyquist criterion for M2 constituent (12.42h period requires <6.2h sampling).
+    """
+
+    # Convert inputs to numpy arrays
+    directions = np.array(direction_timeseries)
+    speeds = np.array(speed_timeseries)
+    elevation = np.array(surface_elevation)
+    timestamps = pd.to_datetime(datetime_array)
+
+    # Calculate elevation gradient to determine rising/falling tide
+    elevation_gradient = np.gradient(elevation)
+
+    # Classify each measurement as flood (rising) or ebb (falling)
+    is_flood = elevation_gradient > 0
+    is_ebb = elevation_gradient < 0
+
+    # Separate data by tidal phase
+    flood_directions = directions[is_flood]
+    flood_speeds = speeds[is_flood]
+    flood_timestamps = timestamps[is_flood]
+
+    ebb_directions = directions[is_ebb]
+    ebb_speeds = speeds[is_ebb]
+    ebb_timestamps = timestamps[is_ebb]
+
+    def analyze_directional_flow(dirs, spds, timestamps):
+        """Helper function to analyze flow in one direction"""
+        if len(dirs) == 0:
+            return 0, 0, 0
+
+        # Create histogram of directions
+        min_degrees = 0
+        max_degrees = 360
+        n_bins = int(max_degrees / bin_width_degrees)
+
+        dir_histogram, bin_edges = np.histogram(
+            dirs, bins=n_bins, range=(min_degrees, max_degrees), density=True
+        )
+
+        # Find primary direction (highest peak)
+        primary_bin_idx = np.argmax(dir_histogram)
+        primary_direction = bin_edges[primary_bin_idx]
+
+        # Calculate mean speed for primary direction
+        primary_bin_mask = (dirs >= bin_edges[primary_bin_idx]) & (
+            dirs < bin_edges[primary_bin_idx + 1]
+        )
+        primary_mean_speed = (
+            np.mean(spds[primary_bin_mask]) if np.any(primary_bin_mask) else 0.0
+        )
+
+        # Calculate hours above threshold (optimized for half-hourly data)
+        above_threshold_mask = spds >= speed_threshold
+        if len(timestamps) > 1:
+            # For half-hourly data, each measurement represents 0.5 hours
+            # Count measurements above threshold and multiply by 0.5
+            hours_above_threshold = np.sum(above_threshold_mask) * 0.5
+        else:
+            hours_above_threshold = 0
+
+        return primary_direction, primary_mean_speed, hours_above_threshold
+
+    # Analyze flood and ebb flows
+    flood_direction, flood_mean_speed, flood_hours = analyze_directional_flow(
+        flood_directions, flood_speeds, flood_timestamps
+    )
+
+    ebb_direction, ebb_mean_speed, ebb_hours = analyze_directional_flow(
+        ebb_directions, ebb_speeds, ebb_timestamps
+    )
+
+    return {
+        "flood_direction": flood_direction,
+        "flood_mean_speed": flood_mean_speed,
+        "ebb_direction": ebb_direction,
+        "ebb_mean_speed": ebb_mean_speed,
+        "hours_above_threshold_flood": flood_hours,
+        "hours_above_threshold_ebb": ebb_hours,
+        "speed_threshold_used": speed_threshold,
+    }
+
+
+# Example usage and test
+if __name__ == "__main__":
+    # Create sample data
+    np.random.seed(42)
+    n_points = 100
+
+    # Simulate tidal elevation (sinusoidal with proper period)
+    time_hours = np.linspace(0, 25, n_points)  # ~25 hours to show complete cycle
+    elevation = 2 * np.sin(2 * np.pi * time_hours / 12.42)  # 12.42h M2 tidal period
+
+    # Simulate directions that switch with tide
+    directions = (
+        np.where(
+            np.gradient(elevation) > 0,
+            np.random.normal(45, 10, n_points),  # Flood: ~45°
+            np.random.normal(225, 10, n_points),  # Ebb: ~225° (opposite)
+        )
+        % 360
+    )
+
+    # Simulate speeds correlated with tidal strength
+    speeds = np.abs(np.gradient(elevation)) * 2 + np.random.normal(0, 0.1, n_points)
+    speeds = np.clip(speeds, 0, None)  # No negative speeds
+
+    # Create datetime array
+    base_time = pd.Timestamp("2024-01-01")
+    datetime_array = [base_time + pd.Timedelta(hours=h) for h in time_hours]
+
+    # Test the function
+    result = calculate_flood_ebb_directions(
+        directions, speeds, elevation, datetime_array
+    )
+
+    print("Tidal Flow Analysis Results:")
+    print(f"Flood Direction: {result['flood_direction']:.1f}°")
+    print(f"Flood Mean Speed: {result['flood_mean_speed']:.2f} m/s")
+    print(f"Ebb Direction: {result['ebb_direction']:.1f}°")
+    print(f"Ebb Mean Speed: {result['ebb_mean_speed']:.2f} m/s")
+    print(f"Hours above {result['speed_threshold_used']} m/s threshold:")
+    print(f"  Flood: {result['hours_above_threshold_flood']:.1f} hours")
+    print(f"  Ebb: {result['hours_above_threshold_ebb']:.1f} hours")
+
+
 class VAPSummaryCalculator:
     """
     Class for calculating averages, max values, and 95th percentiles across VAP NetCDF files.
@@ -747,7 +916,9 @@ class VAPSummaryCalculator:
 
         return result_ds
 
-    def calculate_to_direction_qoi(self, result_ds, to_direction_data, speed_data):
+    def calculate_to_direction_qoi(
+        self, result_ds, to_direction_data, speed_data, surface_elevation_data, time
+    ):
         """
         Calculate direction quantities of interest (QOI) using accumulated direction data.
 
@@ -767,10 +938,10 @@ class VAPSummaryCalculator:
         n_sigma_layers, n_faces = to_direction_data.shape[1], to_direction_data.shape[2]
 
         # Initialize arrays for primary and secondary directions
-        primary_directions = np.full((n_sigma_layers, n_faces), np.nan)
-        primary_speeds = np.full((n_sigma_layers, n_faces), np.nan)
-        secondary_directions = np.full((n_sigma_layers, n_faces), np.nan)
-        secondary_speeds = np.full((n_sigma_layers, n_faces), np.nan)
+        flood_directions = np.full((n_sigma_layers, n_faces), np.nan)
+        flood_speeds = np.full((n_sigma_layers, n_faces), np.nan)
+        ebb_directions = np.full((n_sigma_layers, n_faces), np.nan)
+        ebb_speeds = np.full((n_sigma_layers, n_faces), np.nan)
         bin_width_degrees = 2
         mask_width_degrees = 180
 
@@ -780,6 +951,7 @@ class VAPSummaryCalculator:
                 # Extract time series for this sigma_layer-face combination
                 direction_timeseries = to_direction_data[:, layer_idx, face_idx]
                 speed_timeseries = speed_data[:, layer_idx, face_idx]
+                surface_elevation_timeseries = surface_elevation_data[:, face_idx]
 
                 # Remove NaN values
                 valid_mask = ~np.isnan(direction_timeseries)
@@ -788,28 +960,35 @@ class VAPSummaryCalculator:
 
                 valid_directions = direction_timeseries[valid_mask]
 
-                # Calculate primary and secondary directions
-                primary_dir, primary_mean_speed, secondary_dir, secondary_mean_speed = (
-                    calculate_single_primary_and_secondary_direction(
-                        valid_directions,
-                        speed_timeseries[valid_mask],
-                        bin_width_degrees=bin_width_degrees,
-                        mask_width_degrees=mask_width_degrees,
-                    )
+                # Calculate ebb and flood directions
+                dir_qoi = calculate_flood_ebb_directions(
+                    valid_directions,
+                    speed_timeseries[valid_mask],
+                    surface_elevation_timeseries,
+                    bin_width_degrees=bin_width_degrees,
+                    mask_width_degrees=mask_width_degrees,
                 )
 
-                primary_directions[layer_idx, face_idx] = primary_dir
-                primary_speeds[layer_idx, face_idx] = primary_mean_speed
-                secondary_directions[layer_idx, face_idx] = secondary_dir
-                secondary_speeds[layer_idx, face_idx] = secondary_mean_speed
+                flood_dir = dir_qoi["flood_direction"]
+                flood_mean_speed = dir_qoi["flood_mean_speed"]
+                flood_hours_above_threshold = dir_qoi["hours_above_threshold_flood"]
+                ebb_dir = dir_qoi["ebb_direction"]
+                ebb_mean_speed = dir_qoi["ebb_mean_speed"]
+                ebb_hours_above_threshold = dir_qoi["hours_above_threshold_ebb"]
+                speed_threshold = dir_qoi["speed_threshold_used"]
+
+                flood_directions[layer_idx, face_idx] = flood_dir
+                flood_speeds[layer_idx, face_idx] = flood_mean_speed
+                ebb_directions[layer_idx, face_idx] = ebb_dir
+                ebb_speeds[layer_idx, face_idx] = ebb_mean_speed
 
         # Add direction QOI variables to result dataset using correct dimension names
         # Create new variables for direction QOI with CF-compliant attributes
-        result_ds["vap_sea_water_primary_to_direction"] = xr.DataArray(
-            primary_directions,
+        result_ds["vap_sea_water_flood_to_direction"] = xr.DataArray(
+            flood_directions,
             dims=["sigma_layer", "face"],
             attrs={
-                "long_name": "Sea Water Primary To Direction",
+                "long_name": "Sea Water flood To Direction",
                 "units": "degrees",
                 "valid_range": [0.0, 360.0],
                 "description": "Most frequent flow direction at each location and depth based on directional histogram analysis",
@@ -819,105 +998,103 @@ class VAPSummaryCalculator:
             },
         )
 
-        result_ds["vap_sea_water_primary_to_direction_mean_speed"] = xr.DataArray(
-            primary_speeds,
+        result_ds["vap_sea_water_flood_to_direction_mean_speed"] = xr.DataArray(
+            flood_speeds,
             dims=["sigma_layer", "face"],
             attrs={
-                "long_name": "Sea Water Primary To Direction Mean Speed",
+                "long_name": "Sea Water flood To Direction Mean Speed",
                 "units": "m s-1",
-                "description": "Mean speed in primary flow direction at each location and depth based on directional histogram analysis",
-                "computation": f"calculate using values in the primary direction bins with {bin_width_degrees}-degree wide bins with {mask_width_degrees}-degree masking",
+                "description": "Mean speed in flood flow direction at each location and depth based on directional histogram analysis",
+                "computation": f"calculate using values in the flood direction bins with {bin_width_degrees}-degree wide bins with {mask_width_degrees}-degree masking",
                 "input_variables": "vap_sea_water_to_direction, vap_sea_water_speed",
                 "cell_methods": "time: histogram_mode",
             },
         )
 
-        result_ds["vap_sea_water_secondary_to_direction"] = xr.DataArray(
-            secondary_directions,
+        result_ds["vap_sea_water_ebb_to_direction"] = xr.DataArray(
+            ebb_directions,
             dims=["sigma_layer", "face"],
             attrs={
-                "long_name": "sea water secondary flow direction",
+                "long_name": "sea water ebb flow direction",
                 "standard_name": "sea_water_to_direction",
                 "units": "degrees",
                 "valid_range": [0.0, 360.0],
-                "description": "Second most frequent flow direction at each location and depth, excluding directions within 90 degrees of primary direction",
+                "description": "Second most frequent flow direction at each location and depth, excluding directions within 90 degrees of flood direction",
                 "computation": f"calculated using directional histogram with {bin_width_degrees}-degree wide bins with {mask_width_degrees}-degree masking",
                 "input_variables": "vap_sea_water_to_direction",
                 "cell_methods": "time: histogram_mode",
             },
         )
 
-        result_ds["vap_sea_water_secondary_to_direction_mean_speed"] = xr.DataArray(
-            secondary_speeds,
+        result_ds["vap_sea_water_ebb_to_direction_mean_speed"] = xr.DataArray(
+            ebb_speeds,
             dims=["sigma_layer", "face"],
             attrs={
-                "long_name": "Sea Water secondary To Direction Mean Speed",
+                "long_name": "Sea Water ebb To Direction Mean Speed",
                 "units": "m s-1",
-                "description": "Mean speed in secondary flow direction at each location and depth based on directional histogram analysis",
-                "computation": f"calculate using values in the secondary direction bins with {bin_width_degrees}-degree wide bins with {mask_width_degrees}-degree masking",
+                "description": "Mean speed in ebb flow direction at each location and depth based on directional histogram analysis",
+                "computation": f"calculate using values in the ebb direction bins with {bin_width_degrees}-degree wide bins with {mask_width_degrees}-degree masking",
                 "input_variables": "vap_sea_water_to_direction, vap_sea_water_speed",
                 "cell_methods": "time: histogram_mode",
             },
         )
 
-        depth_avg_primary_directions = np.nanmean(
-            primary_directions, axis=0
+        depth_avg_flood_directions = np.nanmean(
+            flood_directions, axis=0
         )  # Shape: [n_faces]
-        depth_avg_primary_speeds = np.nanmean(primary_speeds, axis=0)
-        depth_avg_secondary_directions = np.nanmean(secondary_directions, axis=0)
-        depth_avg_secondary_speeds = np.nanmean(secondary_speeds, axis=0)
+        depth_avg_flood_speeds = np.nanmean(flood_speeds, axis=0)
+        depth_avg_ebb_directions = np.nanmean(ebb_directions, axis=0)
+        depth_avg_ebb_speeds = np.nanmean(ebb_speeds, axis=0)
 
         # Add depth-averaged variables to the dataset
-        result_ds["vap_sea_water_primary_to_direction_depth_avg"] = xr.DataArray(
-            depth_avg_primary_directions,
+        result_ds["vap_sea_water_flood_to_direction_depth_avg"] = xr.DataArray(
+            depth_avg_flood_directions,
             dims=["face"],
             attrs={
-                "long_name": "Sea Water Primary To Direction (Depth Averaged)",
+                "long_name": "Sea Water flood To Direction (Depth Averaged)",
                 "units": "degrees",
                 "valid_range": [0.0, 360.0],
-                "description": "Depth-averaged primary flow direction at each location",
-                "computation": "depth average of primary directions across all sigma layers",
+                "description": "Depth-averaged flood flow direction at each location",
+                "computation": "depth average of flood directions across all sigma layers",
                 "cell_methods": "sigma_layer: mean",
             },
         )
 
-        result_ds["vap_sea_water_primary_to_direction_mean_speed_depth_avg"] = (
+        result_ds["vap_sea_water_flood_to_direction_mean_speed_depth_avg"] = (
             xr.DataArray(
-                depth_avg_primary_speeds,
+                depth_avg_flood_speeds,
                 dims=["face"],
                 attrs={
-                    "long_name": "Sea Water Primary To Direction Mean Speed (Depth Averaged)",
+                    "long_name": "Sea Water flood To Direction Mean Speed (Depth Averaged)",
                     "units": "m s-1",
-                    "description": "Depth-averaged mean speed in primary flow direction",
+                    "description": "Depth-averaged mean speed in flood flow direction",
                     "cell_methods": "sigma_layer: mean",
                 },
             )
         )
 
-        # Similar for secondary directions
-        result_ds["vap_sea_water_secondary_to_direction_depth_avg"] = xr.DataArray(
-            depth_avg_secondary_directions,
+        # Similar for ebb directions
+        result_ds["vap_sea_water_ebb_to_direction_depth_avg"] = xr.DataArray(
+            depth_avg_ebb_directions,
             dims=["face"],
             attrs={
-                "long_name": "Sea Water Secondary To Direction (Depth Averaged)",
+                "long_name": "Sea Water ebb To Direction (Depth Averaged)",
                 "units": "degrees",
                 "valid_range": [0.0, 360.0],
-                "description": "Depth-averaged secondary flow direction at each location",
+                "description": "Depth-averaged ebb flow direction at each location",
                 "cell_methods": "sigma_layer: mean",
             },
         )
 
-        result_ds["vap_sea_water_secondary_to_direction_mean_speed_depth_avg"] = (
-            xr.DataArray(
-                depth_avg_secondary_speeds,
-                dims=["face"],
-                attrs={
-                    "long_name": "Sea Water Secondary To Direction Mean Speed (Depth Averaged)",
-                    "units": "m s-1",
-                    "description": "Depth-averaged mean speed in secondary flow direction",
-                    "cell_methods": "sigma_layer: mean",
-                },
-            )
+        result_ds["vap_sea_water_ebb_to_direction_mean_speed_depth_avg"] = xr.DataArray(
+            depth_avg_ebb_speeds,
+            dims=["face"],
+            attrs={
+                "long_name": "Sea Water ebb To Direction Mean Speed (Depth Averaged)",
+                "units": "m s-1",
+                "description": "Depth-averaged mean speed in ebb flow direction",
+                "cell_methods": "sigma_layer: mean",
+            },
         )
 
         return result_ds
@@ -1140,6 +1317,7 @@ class VAPSummaryCalculator:
         to_direction_data = []
         speed_data = []
         zeta_center_data = []
+        surface_elevation_data = []
         all_timestamps = []
 
         # Process each file
@@ -1175,6 +1353,7 @@ class VAPSummaryCalculator:
             speed_data.append(ds["vap_sea_water_speed"].values)
 
             zeta_center_data.append(ds["vap_zeta_center"].values)
+            surface_elevation_data.append(ds["vap_surface_elevation"].values)
 
             all_timestamps.append(ds.time.values)
 
@@ -1194,7 +1373,11 @@ class VAPSummaryCalculator:
         combined_speed = np.concatenate(speed_data, axis=0)
         print("Adding direction qoi variables...")
         result_ds = self.calculate_to_direction_qoi(
-            result_ds, combined_to_direction, combined_speed
+            result_ds,
+            combined_to_direction,
+            combined_speed,
+            surface_elevation_data,
+            all_timestamps,
         )
 
         # Concatenate along time axis (axis 0)
