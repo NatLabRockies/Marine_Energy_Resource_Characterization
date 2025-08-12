@@ -209,24 +209,44 @@ VIZ_SPECS = {
             r"$R = 6378137.0$ m is the Earth radius (WGS84)",
         ],
     },
-    # "primary_direction": {
-    #     "title": "Primary Sea Water To Direction",
-    #     "units": "m/s",
-    #     "column_name": "vap_sea_water_primary_to_direction_sigma_level_3",
-    #     "colormap": cmocean.cm.phase,
-    #     "range_min": 0,
-    #     "range_max": 360,
-    #     "levels": 16,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
+    "ebb_direction": {
+        "title": "Sea Water Ebb Tide To Direction",
+        "units": "m/s",
+        # "column_name": "vap_sea_water_primary_to_direction_sigma_level_3",
+        "column_name": "vap_sea_water_ebb_to_direction_sigma_level_3",
+        "colormap": cmocean.cm.phase,
+        "range_min": 0,
+        "range_max": 360,
+        "levels": 16,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
+    "flood_direction": {
+        "title": "Sea Water Flood Tide To Direction",
+        "units": "m/s",
+        # "column_name": "vap_sea_water_primary_to_direction_sigma_level_3",
+        "column_name": "vap_sea_water_flood_to_direction_sigma_level_3",
+        "colormap": cmocean.cm.phase,
+        "range_min": 0,
+        "range_max": 360,
+        "levels": 16,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
     # "secondary_direction": {
     #     "title": "Secondary Sea Water To Direction",
     #     "units": "m/s",
@@ -245,24 +265,24 @@ VIZ_SPECS = {
     #         r"$T = 1$ year",
     #     ],
     # },
-    # "surface_elevation_mean": {
-    #     "title": "Mean Sea Surface Elevation",
-    #     "units": "m",
-    #     "column_name": "vap_sea_surface_elevation_mean",
-    #     "colormap": cmocean.cm.deep,
-    #     "range_min": 0,
-    #     "range_max": 1,
-    #     "levels": 10,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
+    "surface_elevation_mean": {
+        "title": "Mean Sea Surface Elevation",
+        "units": "m",
+        "column_name": "vap_sea_surface_elevation",
+        "colormap": cmocean.cm.deep,
+        "range_min": 0,
+        "range_max": 1,
+        "levels": 10,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
     # "surface_elevation_high_tide_max": {
     #     "title": "High Tide Maximum Sea Surface Elevation",
     #     "units": "m",
@@ -299,60 +319,60 @@ VIZ_SPECS = {
     #         r"$T = 1$ year",
     #     ],
     # },
-    # "surface_elevation_range": {
-    #     "title": "Range of Sea Surface Elevation",
-    #     "units": "m",
-    #     "column_name": "vap_tidal_range",
-    #     "colormap": cmocean.cm.haline,
-    #     "range_min": 0,
-    #     "range_max": 10,
-    #     "levels": 10,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
-    # "min_tidal_period": {
-    #     "title": "Shortest Tidal Period",
-    #     "units": "hours",
-    #     "column_name": "vap_min_tidal_period",
-    #     "colormap": cmocean.cm.haline,
-    #     "range_min": 10,
-    #     "range_max": 12,
-    #     "levels": 10,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
-    # "max_tidal_period": {
-    #     "title": "Longest Tidal Period",
-    #     "units": "hours",
-    #     "column_name": "vap_max_tidal_period",
-    #     "colormap": cmocean.cm.haline,
-    #     "range_min": 12,
-    #     "range_max": 14,
-    #     "levels": 10,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
+    "surface_elevation_range": {
+        "title": "Range of Sea Surface Elevation",
+        "units": "m",
+        "column_name": "vap_tidal_range",
+        "colormap": cmocean.cm.haline,
+        "range_min": 0,
+        "range_max": 10,
+        "levels": 10,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
+    "min_tidal_period": {
+        "title": "Shortest Tidal Period",
+        "units": "hours",
+        "column_name": "vap_min_tidal_period",
+        "colormap": cmocean.cm.haline,
+        "range_min": 10,
+        "range_max": 12,
+        "levels": 10,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
+    "max_tidal_period": {
+        "title": "Longest Tidal Period",
+        "units": "hours",
+        "column_name": "vap_max_tidal_period",
+        "colormap": cmocean.cm.haline,
+        "range_min": 12,
+        "range_max": 14,
+        "levels": 10,
+        "physical_meaning": "Yearly average of depth averaged current speed",
+        "intended_usage": "Site screening and turbine selection for power generation",
+        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
+        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation_variables": [
+            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
+            r"$N_{\sigma} = 10$ levels",
+            r"$T = 1$ year",
+        ],
+    },
     # "mean_tidal_period": {
     #     "title": "Average Tidal Period",
     #     "units": "h",
@@ -1248,7 +1268,7 @@ def analyze_variable(
     # Calculate key percentiles
     percentile_values = {}
     for p in percentiles:
-        p_label = f"p{int(p*100)}" if p < 1 else f"p{int(p*10000)/100}"
+        p_label = f"p{int(p * 100)}" if p < 1 else f"p{int(p * 10000) / 100}"
         percentile_values[p_label] = df[variable].quantile(p)
 
     # Add basic statistics
@@ -1271,14 +1291,14 @@ def analyze_variable(
     y_positions = np.linspace(0.9, 0.7, len(percentiles))
 
     for i, p in enumerate(percentiles):
-        p_label = f"p{int(p*100)}" if p < 1 else f"p{int(p*10000)/100}"
+        p_label = f"p{int(p * 100)}" if p < 1 else f"p{int(p * 10000) / 100}"
         value = percentile_values[p_label]
 
         # Add vertical line
         ax.axvline(value, color=colors[i % len(colors)], linestyle="--")
 
         # Format percentile for display
-        display_p = f"{p*100:.0f}%" if p < 1 else f"{p*100:.2f}%"
+        display_p = f"{p * 100:.0f}%" if p < 1 else f"{p * 100:.2f}%"
 
         # Add annotation
         ax.annotate(
@@ -1566,15 +1586,15 @@ def create_viz_max_justification_plot(
     # Create enhanced statistics table
     stats_data = [
         ["Metric", "Value", "% of Viz Max"],
-        ["99th percentile", f"{p99:.2f}", f"{(p99/viz_max)*100:.2f}%"],
-        ["99.9th percentile", f"{p999:.2f}", f"{(p999/viz_max)*100:.2f}%"],
-        ["Maximum", f"{data_max:.2f}", f"{(data_max/viz_max)*100:.2f}%"],
+        ["99th percentile", f"{p99:.2f}", f"{(p99 / viz_max) * 100:.2f}%"],
+        ["99.9th percentile", f"{p999:.2f}", f"{(p999 / viz_max) * 100:.2f}%"],
+        ["Maximum", f"{data_max:.2f}", f"{(data_max / viz_max) * 100:.2f}%"],
         ["", "", ""],
         ["Points Retained", f"{retained_points:,}", f"{retention_rate:.2f}%"],
         [
             "Points Filtered",
-            f"{total_points-retained_points:,}",
-            f"{100-retention_rate:.1f}%",
+            f"{total_points - retained_points:,}",
+            f"{100 - retention_rate:.1f}%",
         ],
     ]
 
@@ -1632,7 +1652,7 @@ def create_viz_max_justification_plot(
         ax4.set_xlabel(f"{var_name} ({units})", fontsize=12)
         ax4.set_ylabel("Frequency", fontsize=12)
         ax4.set_title(
-            f"Filtered Outliers: {len(outliers):,} points ({((len(outliers)/total_points)*100):.2f}% of data)",
+            f"Filtered Outliers: {len(outliers):,} points ({((len(outliers) / total_points) * 100):.2f}% of data)",
             fontsize=14,
             pad=10,
         )
@@ -1876,7 +1896,7 @@ def optimize_image(src_path, dst_path, max_width=1200, quality=85):
         reduction = (1 - optimized_size / original_size) * 100
 
         print(
-            f"Optimized {src_path.name}: {original_size/1024:.1f}KB → {optimized_size/1024:.1f}KB ({reduction:.1f}% reduction)"
+            f"Optimized {src_path.name}: {original_size / 1024:.1f}KB → {optimized_size / 1024:.1f}KB ({reduction:.1f}% reduction)"
         )
 
 
@@ -2303,7 +2323,7 @@ def generate_markdown_specification(
                         int(hex_clean[2:4], 16),
                         int(hex_clean[4:6], 16),
                     )
-                    latex_rgb = f"{r/255:.3f}, {g/255:.3f}, {b/255:.3f}"
+                    latex_rgb = f"{r / 255:.3f}, {g / 255:.3f}, {b / 255:.3f}"
 
                     color_preview = (
                         f"$\\color[rgb]{{{latex_rgb}}}\\rule{{40pt}}{{15pt}}$"
@@ -2566,8 +2586,9 @@ if __name__ == "__main__":
     regions = get_available_regions()
     regions.reverse()
     print("Available regions:")
+    regions = [region for region in regions if "cook" in region]
     for i, region in enumerate(regions):
-        print(f"{i+1}. {region}")
+        print(f"{i + 1}. {region}")
 
     if BYPASS_VISUALIZATIONS:
         print("Visualization generation is DISABLED - only performing analysis")
