@@ -619,6 +619,10 @@ def convert_tidal_summary_nc_to_dataframe(ds):
                 column_name = f"{var_name}_sigma_level_{sigma_level}"
                 data_dict[column_name] = ds[var_name].values[sigma_idx, :]
 
+    print("Creating dataset...")
+    for key, value in data_dict.items():
+        print(f"  {key}: {value.shape} ({value.dtype})")
+
     # Create dataframe all at once
     result_df = pd.DataFrame(data_dict)
 
