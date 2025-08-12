@@ -41,24 +41,24 @@ if __name__ == "__main__":
     location = config["location_specification"][args.location]
     output_type = args.output_type
 
-    print(f"Standardizing {location} tidal dataset for output type {output_type}....")
+    # print(f"Standardizing {location} tidal dataset for output type {output_type}....")
 
-    print("Finding nc files...")
-    try:
-        nc_files = get_specified_nc_files(config, location)
-        print(f"Found {len(nc_files)} files!")
-    except PermissionError:
-        print("Permissions error accessing original files")
-        nc_files = []
+    # print("Finding nc files...")
+    # try:
+    #     nc_files = get_specified_nc_files(config, location)
+    #     print(f"Found {len(nc_files)} files!")
+    # except PermissionError:
+    #     print("Permissions error accessing original files")
+    #     nc_files = []
+    #
+    # print("Step 1: Verifying Dataset Integrity...")
+    # valid_timestamps_df = verify_dataset(config, location, nc_files)
 
-    print("Step 1: Verifying Dataset Integrity...")
-    valid_timestamps_df = verify_dataset(config, location, nc_files)
-
-    # tracking_folder = get_tracking_output_dir(config, location)
-    # tracking_path = Path(
-    #     tracking_folder, f"{location['output_name']}_verify_step_tracking.parquet"
-    # )
-    # valid_timestamps_df = pd.read_parquet(tracking_path)
+    tracking_folder = get_tracking_output_dir(config, location)
+    tracking_path = Path(
+        tracking_folder, f"{location['output_name']}_verify_step_tracking.parquet"
+    )
+    valid_timestamps_df = pd.read_parquet(tracking_path)
 
     print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
     valid_std_files_df = standardize_dataset(config, args.location, valid_timestamps_df)
