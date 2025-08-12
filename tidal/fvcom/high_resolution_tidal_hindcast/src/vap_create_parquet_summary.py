@@ -614,6 +614,10 @@ def convert_tidal_summary_nc_to_dataframe(ds):
         n_sigma = len(ds.sigma_layer)
 
         for var_name in sigma_vars:
+            if "vap_sigma_depth" in var_name:
+                # TODO: Fix this
+                print(f"  Skipping {var_name} - not needed in final output")
+                continue
             for sigma_idx in range(n_sigma):
                 sigma_level = sigma_idx + 1
                 column_name = f"{var_name}_sigma_level_{sigma_level}"
