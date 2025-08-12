@@ -84,13 +84,24 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
     preferred_chunking_dimension = chunk_spec["preferred_dim"]
 
     var = ds[var_name]
-
     bytes_per_element = var.dtype.itemsize
     total_bytes = var.size * bytes_per_element
+
+    print(f"DEBUG: Processing variable '{var_name}'")
+    print(f"DEBUG: Variable shape: {var.shape}, dims: {var.dims}")
+    print(
+        f"DEBUG: Target chunk size: {target_chunk_size_mb} MB ({target_chunk_size_bytes} bytes)"
+    )
+    print(
+        f"DEBUG: Total variable size: {total_bytes} bytes ({total_bytes / 1024 / 1024:.2f} MB)"
+    )
 
     # If the actual size is less than the target chunk size
     # no chunking is necessary and we just need to return the original shape
     if total_bytes < target_chunk_size_bytes:
+        print(
+            f"DEBUG: Variable smaller than target chunk size, using original shape: {var.shape}"
+        )
         this_encoding["chunksizes"] = var.shape
         return this_encoding
 
@@ -98,8 +109,12 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
     for dim, size in zip(var.dims, var.shape):
         dimension_sizes[dim] = size
 
+    print(f"DEBUG: Dimension sizes: {dimension_sizes}")
+    print(f"DEBUG: Preferred chunking dimension: '{preferred_chunking_dimension}'")
+
     if preferred_chunking_dimension in var.dims:
         chunking_dim = preferred_chunking_dimension
+        print(f"DEBUG: Using preferred chunking dimension: '{chunking_dim}'")
     else:
         chunking_dim = None
         max_size = 0
@@ -107,6 +122,9 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
             if this_size > max_size:
                 max_size = this_size
                 chunking_dim = this_dim
+        print(
+            f"DEBUG: Preferred dim not found, using largest dimension: '{chunking_dim}' (size: {max_size})"
+        )
 
     # Create an array of sizes that are not the target chunking dim
     sizes = []
@@ -114,9 +132,13 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
         if key != chunking_dim:
             sizes.append(value)
 
-    bytes_per_one_face = math.prod(sizes) * bytes_per_element
+    print(f"DEBUG: Non-chunking dimension sizes: {sizes}")
 
+    bytes_per_one_face = math.prod(sizes) * bytes_per_element
     optimal_chunks_per_face = target_chunk_size_bytes / bytes_per_one_face
+
+    print(f"DEBUG: Bytes per face: {bytes_per_one_face}")
+    print(f"DEBUG: Optimal chunks per face: {optimal_chunks_per_face}")
 
     # Calculate a chunk size for the target dimension that makes each chunk less than the target size
     # floor rounded to the multiple
@@ -127,6 +149,14 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
         )
     )
 
+    # CRITICAL FIX: Ensure chunk size doesn't exceed dimension size
+    actual_dim_size = dimension_sizes[chunking_dim]
+    chunk_size = min(chunk_size, actual_dim_size)
+
+    print(f"DEBUG: Calculated chunk size: {chunk_size}")
+    print(f"DEBUG: Actual dimension '{chunking_dim}' size: {actual_dim_size}")
+    print(f"DEBUG: Final chunk size (capped): {chunk_size}")
+
     # Chunking spec is a tuple of sizes for each chunk
     chunking_spec = []
     for dim, size in dimension_sizes.items():
@@ -135,8 +165,9 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
         else:
             chunking_spec.append(size)
 
-    this_encoding["chunksizes"] = tuple(chunking_spec)
+    print(f"DEBUG: Final chunking spec: {tuple(chunking_spec)}")
 
+    this_encoding["chunksizes"] = tuple(chunking_spec)
     return this_encoding
 
 
