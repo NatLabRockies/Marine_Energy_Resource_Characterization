@@ -933,7 +933,7 @@ class VAPSummaryCalculator:
         print("To Direction Shape:", to_direction_data.shape)
         print("Speed Shape:", speed_data.shape)
         print("Surface Elevation Shape:", surface_elevation_data.shape)
-        print("Time Len:", len(time))
+        print("Time Len:", time.shape)
 
         # Direction data shape is [time, sigma_layer, face]
         # We'll calculate QOI for each face and sigma_layer combination
@@ -1375,13 +1375,14 @@ class VAPSummaryCalculator:
         combined_to_direction = np.concatenate(to_direction_data, axis=0)
         combined_speed = np.concatenate(speed_data, axis=0)
         combined_surface_elevation = np.concatenate(surface_elevation_data, axis=0)
+        combined_time = np.concatenate(all_timestamps, axis=0)
         print("Calculating direction qoi variables...")
         result_ds = self.calculate_to_direction_qoi(
             result_ds,
             combined_to_direction,
             combined_speed,
             combined_surface_elevation,
-            all_timestamps,
+            combined_time,
         )
 
         # Concatenate along time axis (axis 0)
