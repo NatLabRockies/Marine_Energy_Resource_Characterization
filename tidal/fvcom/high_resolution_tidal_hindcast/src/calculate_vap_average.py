@@ -629,49 +629,6 @@ def calculate_flood_ebb_directions(
     }
 
 
-# Example usage and test
-if __name__ == "__main__":
-    # Create sample data
-    np.random.seed(42)
-    n_points = 100
-
-    # Simulate tidal elevation (sinusoidal with proper period)
-    time_hours = np.linspace(0, 25, n_points)  # ~25 hours to show complete cycle
-    elevation = 2 * np.sin(2 * np.pi * time_hours / 12.42)  # 12.42h M2 tidal period
-
-    # Simulate directions that switch with tide
-    directions = (
-        np.where(
-            np.gradient(elevation) > 0,
-            np.random.normal(45, 10, n_points),  # Flood: ~45°
-            np.random.normal(225, 10, n_points),  # Ebb: ~225° (opposite)
-        )
-        % 360
-    )
-
-    # Simulate speeds correlated with tidal strength
-    speeds = np.abs(np.gradient(elevation)) * 2 + np.random.normal(0, 0.1, n_points)
-    speeds = np.clip(speeds, 0, None)  # No negative speeds
-
-    # Create datetime array
-    base_time = pd.Timestamp("2024-01-01")
-    datetime_array = [base_time + pd.Timedelta(hours=h) for h in time_hours]
-
-    # Test the function
-    result = calculate_flood_ebb_directions(
-        directions, speeds, elevation, datetime_array
-    )
-
-    print("Tidal Flow Analysis Results:")
-    print(f"Flood Direction: {result['flood_direction']:.1f}°")
-    print(f"Flood Mean Speed: {result['flood_mean_speed']:.2f} m/s")
-    print(f"Ebb Direction: {result['ebb_direction']:.1f}°")
-    print(f"Ebb Mean Speed: {result['ebb_mean_speed']:.2f} m/s")
-    print(f"Hours above {result['speed_threshold_used']} m/s threshold:")
-    print(f"  Flood: {result['hours_above_threshold_flood']:.1f} hours")
-    print(f"  Ebb: {result['hours_above_threshold_ebb']:.1f} hours")
-
-
 class VAPSummaryCalculator:
     """
     Class for calculating averages, max values, and 95th percentiles across VAP NetCDF files.
