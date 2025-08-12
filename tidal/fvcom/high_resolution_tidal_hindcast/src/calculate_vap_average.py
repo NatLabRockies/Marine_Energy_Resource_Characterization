@@ -933,7 +933,7 @@ class VAPSummaryCalculator:
         print("To Direction Shape:", to_direction_data.shape)
         print("Speed Shape:", speed_data.shape)
         print("Surface Elevation Shape:", surface_elevation_data.shape)
-        print("Time Shape:", time.shape)
+        print("Time Len:", len(time))
 
         # Direction data shape is [time, sigma_layer, face]
         # We'll calculate QOI for each face and sigma_layer combination
