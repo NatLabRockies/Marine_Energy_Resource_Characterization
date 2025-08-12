@@ -684,7 +684,6 @@ class VAPSummaryCalculator:
         # Identify variable types
         self.avg_vars = []  # Regular variables for averaging
         self.max_vars = []  # Max variables
-        self.p95_vars = []  # 95th percentile variables
 
     def _calculate_face_batch_slice(self, total_faces):
         """
@@ -765,9 +764,6 @@ class VAPSummaryCalculator:
             if "time" in dataset[var].dims and var not in constant_variables:
                 if "water_column_max" in var:
                     self.max_vars.append(var)
-                    self.p95_vars.append(var)
-                # elif "water_column_95th_percentile" in var:
-                    # self.p95_vars.append(var)
                 else:
                     self.avg_vars.append(var)
 
@@ -856,21 +852,14 @@ class VAPSummaryCalculator:
         """
         print("Calculating 95th percentiles of max values...")
 
-        # Map each p95 variable to its corresponding max variable
-        max_to_p95_map = {}
-        for p95_var in self.p95_vars:
-            # Find the corresponding max variable by replacing '95th_percentile' with 'max'
-            base_name = p95_var.replace("_95th_percentile_", "_max_")
-            if base_name in self.max_vars:
-                max_to_p95_map[base_name] = p95_var
-
-        # Calculate 95th percentile for each p95 variable
-        for max_var, p95_var in max_to_p95_map.items():
+        # Calculate 95th percentile for each max variable
+        for max_var in self.max_vars:
+            p95_name = max_var.replace("_max_", "_95th_percentile_")
             if max_var in self.max_values and self.max_values[max_var] is not None:
                 # Calculate the 95th percentile along the file dimension
                 p95_value = self.max_values[max_var].quantile(0.95, dim="file")
-                result_ds[p95_var] = p95_value
-                print(f"Calculated 95th percentile for {p95_var} from {max_var}")
+                result_ds[p95_name] = p95_value
+                print(f"Calculated 95th percentile for {p95_name} from {max_var}")
 
         return result_ds
 
@@ -1514,7 +1503,6 @@ class VAPSummaryCalculator:
         # Reset variable tracking for this calculation
         self.avg_vars = []
         self.max_vars = []
-        self.p95_vars = []
         self.max_values = {}
 
         # Process all files
@@ -1623,7 +1611,6 @@ class VAPSummaryCalculator:
             # Reset variable tracking for this month
             self.avg_vars = []
             self.max_vars = []
-            self.p95_vars = []
             self.max_values = {}
 
             # Process files for this month
