@@ -559,19 +559,9 @@ def calculate_flood_ebb_directions(
     # Calculate elevation gradient to determine rising/falling tide
     elevation_gradient = np.gradient(elevation)
 
-    print("directions shape:", directions.shape)
-    print("speeds shape:", speeds.shape)
-    print("elevation shape:", elevation.shape)
-    print("timestamps shape:", timestamps.shape)
-
-    print("elevation_gradient shape:", elevation_gradient.shape)
-
     # Classify each measurement as flood (rising) or ebb (falling)
     is_flood = elevation_gradient > 0
     is_ebb = elevation_gradient < 0
-
-    print("is_flood shape:", is_flood.shape)
-    print("is_ebb shape:", is_ebb.shape)
 
     # Separate data by tidal phase
     flood_directions = directions[is_flood]
@@ -957,6 +947,8 @@ class VAPSummaryCalculator:
         bin_width_degrees = 2
         mask_width_degrees = 180
 
+        count = 0
+        expected_n_iterations = n_sigma_layers * n_faces
         # Calculate direction QOI for each sigma_layer-face combination
         for layer_idx in range(n_sigma_layers):
             for face_idx in range(n_faces):
@@ -964,13 +956,6 @@ class VAPSummaryCalculator:
                 direction_timeseries = to_direction_data[:, layer_idx, face_idx]
                 speed_timeseries = speed_data[:, layer_idx, face_idx]
                 surface_elevation_timeseries = surface_elevation_data[:, face_idx]
-
-                print("direction_timeseries shape:", direction_timeseries.shape)
-                print("speed_timeseries shape:", speed_timeseries.shape)
-                print(
-                    "surface_elevation_timeseries shape:",
-                    surface_elevation_timeseries.shape,
-                )
 
                 # # Remove NaN values
                 # valid_mask = ~np.isnan(direction_timeseries)
@@ -980,8 +965,6 @@ class VAPSummaryCalculator:
                 # valid_directions = direction_timeseries[valid_mask]
                 # valid_speed = speed_timeseries[valid_mask]
                 #
-                # print("valid_directions shape:", valid_directions.shape)
-                # print("valid_speed shape:", valid_speed.shape)
 
                 # Calculate ebb and flood directions
                 dir_qoi = calculate_flood_ebb_directions(
@@ -1005,6 +988,12 @@ class VAPSummaryCalculator:
                 flood_speeds[layer_idx, face_idx] = flood_mean_speed
                 ebb_directions[layer_idx, face_idx] = ebb_dir
                 ebb_speeds[layer_idx, face_idx] = ebb_mean_speed
+                count += 1
+
+                if count % 100 == 0 or count == expected_n_iterations:
+                    print(
+                        f"Processed {count}/{expected_n_iterations} sigma_layer-face combinations"
+                    )
 
         # Add direction QOI variables to result dataset using correct dimension names
         # Create new variables for direction QOI with CF-compliant attributes
