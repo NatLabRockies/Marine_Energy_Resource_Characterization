@@ -530,8 +530,8 @@ def calculate_zeta_center(ds):
     Calculate sea surface elevation at cell centers from node values.
     """
 
-    # Get raw nv values from first timestep to avoid coordinate conflicts
-    nv_values = ds.nv.isel(time=0).values - 1  # shape (3, n_faces)
+    # Convert to zero-based indexing
+    nv_values = ds.nv.values - 1
 
     # Get raw zeta values (all timesteps)
     zeta_values = ds.zeta.values  # shape (n_times, n_nodes)
@@ -803,8 +803,8 @@ def calculate_top_face_area_of_fvcom_volume_from_coordinates(ds):
     numpy.ndarray
         Array of element areas in square meters
     """
-    # Get the node indices for each face - first time index only
-    nv = ds.nv.values[0, :, :] - 1  # Convert to 0-based indexing
+    # Get the node indices for each face
+    nv = ds.nv.values - 1  # Convert to 0-based indexing
 
     # Get node coordinates
     lon_node = ds.lon_node.values
@@ -889,8 +889,8 @@ def calculate_element_volume(ds):
         output_names["surface_elevation"]
     ].values  # Surface elevation at element centers
 
-    # Get node indices for each element (face) - first time index only
-    nv = ds.nv.values[0, :, :] - 1  # Convert to 0-based indexing
+    # Get node indices for each element
+    nv = ds.nv.values - 1  # Convert to 0-based indexing
 
     # Get sigma layer and level values
     sigma_layer_values = ds.sigma_layer.values  # Shape: (n_sigma_layer, n_node)
