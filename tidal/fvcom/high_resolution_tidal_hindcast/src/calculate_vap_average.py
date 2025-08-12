@@ -765,8 +765,9 @@ class VAPSummaryCalculator:
             if "time" in dataset[var].dims and var not in constant_variables:
                 if "water_column_max" in var:
                     self.max_vars.append(var)
-                elif "water_column_95th_percentile" in var:
                     self.p95_vars.append(var)
+                # elif "water_column_95th_percentile" in var:
+                    # self.p95_vars.append(var)
                 else:
                     self.avg_vars.append(var)
 
