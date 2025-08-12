@@ -1334,8 +1334,8 @@ class VAPSummaryCalculator:
             ds.close()
 
         # Calculate 95th percentiles after processing all files
-        if first_ds is not None:  # Only if we processed at least one file
-            result_ds = self._calculate_percentiles(result_ds)
+        # if first_ds is not None:  # Only if we processed at least one file
+        result_ds = self._calculate_percentiles(result_ds)
 
         # Combine accumulated data and calculate QOI
         # Concatenate along time axis (axis 0)
