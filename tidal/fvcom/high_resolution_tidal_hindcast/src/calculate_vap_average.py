@@ -559,9 +559,19 @@ def calculate_flood_ebb_directions(
     # Calculate elevation gradient to determine rising/falling tide
     elevation_gradient = np.gradient(elevation)
 
+    print("directions shape:", directions.shape)
+    print("speeds shape:", speeds.shape)
+    print("elevation shape:", elevation.shape)
+    print("timestamps shape:", timestamps.shape)
+
+    print("elevation_gradient shape:", elevation_gradient.shape)
+
     # Classify each measurement as flood (rising) or ebb (falling)
     is_flood = elevation_gradient > 0
     is_ebb = elevation_gradient < 0
+
+    print("is_flood shape:", is_flood.shape)
+    print("is_ebb shape:", is_ebb.shape)
 
     # Separate data by tidal phase
     flood_directions = directions[is_flood]
