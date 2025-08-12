@@ -1374,7 +1374,6 @@ class VAPSummaryCalculator:
         combined_to_direction = np.concatenate(to_direction_data, axis=0)
         combined_speed = np.concatenate(speed_data, axis=0)
         combined_surface_elevation = np.concatenate(surface_elevation_data, axis=0)
-        all_timestamps = np.array(all_timestamps)
         print("Calculating direction qoi variables...")
         result_ds = self.calculate_to_direction_qoi(
             result_ds,
