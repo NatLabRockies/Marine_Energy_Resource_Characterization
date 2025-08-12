@@ -965,17 +965,28 @@ class VAPSummaryCalculator:
                 speed_timeseries = speed_data[:, layer_idx, face_idx]
                 surface_elevation_timeseries = surface_elevation_data[:, face_idx]
 
+                print("direction_timeseries shape:", direction_timeseries.shape)
+                print("speed_timeseries shape:", speed_timeseries.shape)
+                print(
+                    "surface_elevation_timeseries shape:",
+                    surface_elevation_timeseries.shape,
+                )
+
                 # Remove NaN values
                 valid_mask = ~np.isnan(direction_timeseries)
                 if np.sum(valid_mask) < 10:  # Need minimum data points
                     continue
 
                 valid_directions = direction_timeseries[valid_mask]
+                valid_speed = (speed_timeseries[valid_mask],)
+
+                print("valid_directions shape:", valid_directions.shape)
+                print("valid_speed shape:", valid_speed.shape)
 
                 # Calculate ebb and flood directions
                 dir_qoi = calculate_flood_ebb_directions(
                     valid_directions,
-                    speed_timeseries[valid_mask],
+                    valid_speed,
                     surface_elevation_timeseries,
                     time,
                     bin_width_degrees=bin_width_degrees,
