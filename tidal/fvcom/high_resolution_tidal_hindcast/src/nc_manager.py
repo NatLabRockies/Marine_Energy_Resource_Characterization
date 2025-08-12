@@ -79,13 +79,13 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
     # Get chunking spec from config
     chunk_spec = config["dataset"]["encoding"]["chunk_spec"]
     target_chunk_size_mb = chunk_spec["target_size_mb"]
-    target_chunk_size_bytes = target_chunk_size_mb / 1024 / 1024
+    target_chunk_size_bytes = target_chunk_size_mb * 1024 * 1024
     target_chunk_multiple = chunk_spec["multiple"]
     preferred_chunking_dimension = chunk_spec["preferred_dim"]
 
     var = ds[var_name]
     bytes_per_element = var.dtype.itemsize
-    total_bytes = var.size * bytes_per_element
+    variable_bytes = var.size * bytes_per_element
 
     print(f"DEBUG: Processing variable '{var_name}'")
     print(f"DEBUG: Variable shape: {var.shape}, dims: {var.dims}")
@@ -93,12 +93,12 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
         f"DEBUG: Target chunk size: {target_chunk_size_mb} MB ({target_chunk_size_bytes} bytes)"
     )
     print(
-        f"DEBUG: Total variable size: {total_bytes} bytes ({total_bytes / 1024 / 1024:.2f} MB)"
+        f"DEBUG: Total variable size: {variable_bytes} bytes ({variable_bytes / 1024 / 1024:.2f} MB)"
     )
 
     # If the actual size is less than the target chunk size
     # no chunking is necessary and we just need to return the original shape
-    if total_bytes < target_chunk_size_bytes:
+    if variable_bytes < target_chunk_size_bytes:
         print(
             f"DEBUG: Variable smaller than target chunk size, using original shape: {var.shape}"
         )
