@@ -967,6 +967,7 @@ class VAPSummaryCalculator:
                     valid_directions,
                     speed_timeseries[valid_mask],
                     surface_elevation_timeseries,
+                    time,
                     bin_width_degrees=bin_width_degrees,
                     mask_width_degrees=mask_width_degrees,
                 )
