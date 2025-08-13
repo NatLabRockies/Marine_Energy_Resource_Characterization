@@ -328,10 +328,6 @@ def convert_h5_to_parquet_batched(
     # Extract metadata from the first NC file
     nc_metadata_for_parquet = extract_metadata_from_nc(h5_files[0])
 
-    # print("nc_metadata_for_parquet:", nc_metadata_for_parquet)
-
-    exit()
-
     print(f"{timestamp} - INFO - Extracted metadata from {h5_files[0]}")
 
     print(f"{timestamp} - INFO - Total faces to process: {total_faces}")
@@ -608,24 +604,107 @@ def convert_h5_to_parquet_batched(
         )
 
         # Convert DataFrame to PyArrow table
-        table = pa.Table.from_pandas(df)
+        table = pa.Table.from_pandas(df, preserve_index=True)
 
         # 1. Handle SCHEMA metadata (variable attributes)
         # Create new fields with metadata for each column
+        # new_fields = []
+        # for field in table.schema:
+        #     # Start with existing field metadata
+        #     field_metadata = field.metadata.copy() if field.metadata else {}
+        #
+        #     # Add variable-specific metadata if it exists
+        #     var_name = field.name.encode("utf-8")
+        #     if var_name in nc_metadata_for_parquet["var"]:
+        #         # Append new metadata to existing
+        #         field_metadata.update(nc_metadata_for_parquet["var"][var_name])
+        #
+        #     # Create new field with combined metadata
+        #     new_field = pa.field(field.name, field.type, metadata=field_metadata)
+        #     new_fields.append(new_field)
+
+        # Metadata tracking and reconciliation
+        matched_fields = []
+        missed_fields = []
+        fields_with_existing_meta = []
+        fields_with_new_meta = []
+
         new_fields = []
         for field in table.schema:
             # Start with existing field metadata
             field_metadata = field.metadata.copy() if field.metadata else {}
 
+            # Track existing metadata
+            if field.metadata:
+                fields_with_existing_meta.append(field.name)
+
             # Add variable-specific metadata if it exists
-            var_name = field.name.encode("utf-8")
+            var_name = field.name
             if var_name in nc_metadata_for_parquet["var"]:
                 # Append new metadata to existing
                 field_metadata.update(nc_metadata_for_parquet["var"][var_name])
+                matched_fields.append(field.name)
+                fields_with_new_meta.append(field.name)
+            else:
+                missed_fields.append(field.name)
 
             # Create new field with combined metadata
             new_field = pa.field(field.name, field.type, metadata=field_metadata)
             new_fields.append(new_field)
+
+        # Reconciliation and warnings
+        print("=== METADATA RECONCILIATION REPORT ===")
+        print(f"Total fields: {len(table.schema)}")
+        print(
+            f"Fields with existing metadata: {len(fields_with_existing_meta)} -> {fields_with_existing_meta}"
+        )
+        print(
+            f"Fields matched with new metadata: {len(matched_fields)} -> {matched_fields}"
+        )
+        print(
+            f"Fields MISSED (no new metadata): {len(missed_fields)} -> {missed_fields}"
+        )
+        print(
+            f"Fields that will have metadata after processing: {len(fields_with_new_meta)} -> {fields_with_new_meta}"
+        )
+
+        # Critical checks
+        if len(missed_fields) > 0:
+            print(f"\nWARNING: {len(missed_fields)} fields have no metadata!")
+            print(f"   Missed fields: {missed_fields}")
+
+            # Check if it's a key type mismatch
+            print("\nDEBUGGING KEY MISMATCH:")
+            print(
+                f"   Available metadata keys: {list(nc_metadata_for_parquet['var'].keys())[:5]}..."
+            )
+            print(
+                f"   Key types: {[type(k) for k in list(nc_metadata_for_parquet['var'].keys())[:3]]}"
+            )
+
+            # Try string keys instead
+            string_matches = []
+            for field_name in missed_fields:
+                if field_name in nc_metadata_for_parquet["var"]:
+                    string_matches.append(field_name)
+
+            if string_matches:
+                print(f"   Found matches using STRING keys: {string_matches}")
+                print(
+                    "   SOLUTION: Use 'field.name' instead of 'field.name.encode(\"utf-8\")'"
+                )
+
+        if len(fields_with_new_meta) == 0:
+            print("\nCRITICAL ERROR: NO FIELDS HAVE METADATA!")
+            print("   This means the parquet file will have no variable metadata.")
+            print("   Check metadata key types and field name encoding.")
+            raise ValueError("No fields matched for metadata - check key types!")
+
+        print(
+            f"\nMetadata assignment complete: {len(fields_with_new_meta)}/{len(table.schema)} fields have metadata"
+        )
+
+        exit()
 
         # Create new schema with field metadata
         new_schema = pa.schema(new_fields)
