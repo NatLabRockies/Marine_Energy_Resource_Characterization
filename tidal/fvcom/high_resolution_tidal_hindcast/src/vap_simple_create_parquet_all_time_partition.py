@@ -345,8 +345,8 @@ def convert_h5_to_parquet_batched(
 
         print(f"{timestamp} - INFO - Reading node indices (nv array)")
         # Read node indices for each face (first time step is sufficient)
-        # Note: nv is (time, 3, face) where 3 is the number of corners in each triangular face
-        nv = f["nv"][0, :, :]  # Get the first time step
+        # Note: nv is (3, face) where 3 is the number of corners in each triangular face
+        nv = f["nv"]
         print(f"{timestamp} - INFO - nv shape: {nv.shape}")
 
         # Convert from Fortran 1-based indexing to Python 0-based indexing
