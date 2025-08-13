@@ -684,57 +684,57 @@ def convert_h5_to_parquet_batched(
             new_field = pa.field(field.name, field.type, metadata=field_metadata)
             new_fields.append(new_field)
 
-        # Reconciliation and warnings
-        print("=== METADATA RECONCILIATION REPORT ===")
-        print(f"Total fields: {len(table.schema)}")
-        print(
-            f"Fields with existing metadata: {len(fields_with_existing_meta)} -> {fields_with_existing_meta}"
-        )
-        print(
-            f"Fields matched with new metadata: {len(matched_fields)} -> {matched_fields}"
-        )
-        print(
-            f"Fields MISSED (no new metadata): {len(missed_fields)} -> {missed_fields}"
-        )
-        print(
-            f"Fields that will have metadata after processing: {len(fields_with_new_meta)} -> {fields_with_new_meta}"
-        )
-
-        # Critical checks
-        if len(missed_fields) > 0:
-            print(f"\nWARNING: {len(missed_fields)} fields have no metadata!")
-            print(f"   Missed fields: {missed_fields}")
-
-            # Check if it's a key type mismatch
-            print("\nDEBUGGING KEY MISMATCH:")
-            print(
-                f"   Available metadata keys: {list(nc_metadata_for_parquet['var'].keys())[:5]}..."
-            )
-            print(
-                f"   Key types: {[type(k) for k in list(nc_metadata_for_parquet['var'].keys())[:3]]}"
-            )
-
-            # Try string keys instead
-            string_matches = []
-            for field_name in missed_fields:
-                if field_name in nc_metadata_for_parquet["var"]:
-                    string_matches.append(field_name)
-
-            if string_matches:
-                print(f"   Found matches using STRING keys: {string_matches}")
-                print(
-                    "   SOLUTION: Use 'field.name' instead of 'field.name.encode(\"utf-8\")'"
-                )
-
-        if len(fields_with_new_meta) == 0:
-            print("\nCRITICAL ERROR: NO FIELDS HAVE METADATA!!!")
-            print("   This means the parquet file will have no variable metadata.")
-            print("   Check metadata key types and field name encoding.")
-            raise ValueError("No fields matched for metadata - check key types!")
-
-        print(
-            f"\nMetadata assignment complete: {len(fields_with_new_meta)}/{len(table.schema)} fields have metadata"
-        )
+        # # Reconciliation and warnings
+        # print("=== METADATA RECONCILIATION REPORT ===")
+        # print(f"Total fields: {len(table.schema)}")
+        # print(
+        #     f"Fields with existing metadata: {len(fields_with_existing_meta)} -> {fields_with_existing_meta}"
+        # )
+        # print(
+        #     f"Fields matched with new metadata: {len(matched_fields)} -> {matched_fields}"
+        # )
+        # print(
+        #     f"Fields MISSED (no new metadata): {len(missed_fields)} -> {missed_fields}"
+        # )
+        # print(
+        #     f"Fields that will have metadata after processing: {len(fields_with_new_meta)} -> {fields_with_new_meta}"
+        # )
+        #
+        # # Critical checks
+        # if len(missed_fields) > 0:
+        #     print(f"\nWARNING: {len(missed_fields)} fields have no metadata!")
+        #     print(f"   Missed fields: {missed_fields}")
+        #
+        #     # Check if it's a key type mismatch
+        #     print("\nDEBUGGING KEY MISMATCH:")
+        #     print(
+        #         f"   Available metadata keys: {list(nc_metadata_for_parquet['var'].keys())[:5]}..."
+        #     )
+        #     print(
+        #         f"   Key types: {[type(k) for k in list(nc_metadata_for_parquet['var'].keys())[:3]]}"
+        #     )
+        #
+        #     # Try string keys instead
+        #     string_matches = []
+        #     for field_name in missed_fields:
+        #         if field_name in nc_metadata_for_parquet["var"]:
+        #             string_matches.append(field_name)
+        #
+        #     if string_matches:
+        #         print(f"   Found matches using STRING keys: {string_matches}")
+        #         print(
+        #             "   SOLUTION: Use 'field.name' instead of 'field.name.encode(\"utf-8\")'"
+        #         )
+        #
+        # if len(fields_with_new_meta) == 0:
+        #     print("\nCRITICAL ERROR: NO FIELDS HAVE METADATA!!!")
+        #     print("   This means the parquet file will have no variable metadata.")
+        #     print("   Check metadata key types and field name encoding.")
+        #     raise ValueError("No fields matched for metadata - check key types!")
+        #
+        # print(
+        #     f"\nMetadata assignment complete: {len(fields_with_new_meta)}/{len(table.schema)} fields have metadata"
+        # )
 
         # Create new schema with field metadata
         new_schema = pa.schema(new_fields)
@@ -755,9 +755,9 @@ def convert_h5_to_parquet_batched(
 
         pq.write_table(table, output_file)
 
-        print(f"File written: {output_file}")
-
-        exit()
+        # print(f"File written: {output_file}")
+        #
+        # exit()
 
         # Update counter and provide progress reporting
         processed_count += 1
