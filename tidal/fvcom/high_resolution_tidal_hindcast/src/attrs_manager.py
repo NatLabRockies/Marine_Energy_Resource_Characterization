@@ -70,7 +70,7 @@ def run_git_command(command):
         return None
 
 
-def extract_git_repo_versioning():
+def extract_git_repo_versioning(remote_name="public"):
     try:
         # Get the current commit SHA
         sha = run_git_command("git rev-parse HEAD")
@@ -78,9 +78,9 @@ def extract_git_repo_versioning():
             raise ValueError("Could not get commit SHA")
 
         # Get the remote URL
-        origin_url = run_git_command("git config --get remote.origin.url")
+        origin_url = run_git_command(f"git config --get remote.{remote_name}.url")
         if not origin_url:
-            raise ValueError("Could not get remote origin URL")
+            raise ValueError(f"Could not get remote {remote_name} URL")
 
         # Handle different URL formats
         if origin_url.startswith("git@"):
