@@ -268,7 +268,7 @@ VIZ_SPECS = {
     "surface_elevation_mean": {
         "title": "Mean Sea Surface Elevation",
         "units": "m",
-        "column_name": "vap_sea_surface_elevation",
+        "column_name": "vap_surface_elevation",
         "colormap": cmocean.cm.deep,
         "range_min": 0,
         "range_max": 1,
