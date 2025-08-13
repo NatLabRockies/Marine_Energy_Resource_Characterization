@@ -635,8 +635,10 @@ def convert_h5_to_parquet_batched(
         combined_file_metadata = existing_file_metadata.copy()
         combined_file_metadata.update(nc_metadata_for_parquet["global"])
 
-        # Write to parquet with combined file-level metadata
-        pq.write_table(table, output_file, metadata=combined_file_metadata)
+        final_schema = new_schema.with_metadata(combined_file_metadata)
+        table = table.cast(final_schema)
+
+        pq.write_table(table, output_file)
 
         print(f"File written: {output_file}")
 
