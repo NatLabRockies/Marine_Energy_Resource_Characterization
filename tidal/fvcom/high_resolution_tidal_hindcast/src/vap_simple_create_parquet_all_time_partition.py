@@ -671,9 +671,9 @@ def convert_h5_to_parquet_batched(
 
             # Add variable-specific metadata if it exists
             var_name = field.name
-            if var_name in nc_metadata_for_parquet["var"]:
+            nc_var_name = parquet_col_to_nc_var_map[var_name]
+            if nc_var_name in nc_metadata_for_parquet["var"]:
                 # Append new metadata to existing
-                nc_var_name = parquet_col_to_nc_var_map[var_name]
                 field_metadata.update(nc_metadata_for_parquet["var"][nc_var_name])
                 matched_fields.append(field.name)
                 fields_with_new_meta.append(field.name)
@@ -727,7 +727,7 @@ def convert_h5_to_parquet_batched(
                 )
 
         if len(fields_with_new_meta) == 0:
-            print("\nCRITICAL ERROR: NO FIELDS HAVE METADATA!")
+            print("\nCRITICAL ERROR: NO FIELDS HAVE METADATA!!!")
             print("   This means the parquet file will have no variable metadata.")
             print("   Check metadata key types and field name encoding.")
             raise ValueError("No fields matched for metadata - check key types!")
