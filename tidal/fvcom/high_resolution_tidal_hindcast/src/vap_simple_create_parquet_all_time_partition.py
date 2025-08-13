@@ -704,8 +704,6 @@ def convert_h5_to_parquet_batched(
             f"\nMetadata assignment complete: {len(fields_with_new_meta)}/{len(table.schema)} fields have metadata"
         )
 
-        exit()
-
         # Create new schema with field metadata
         new_schema = pa.schema(new_fields)
         table = table.cast(new_schema)
@@ -726,6 +724,8 @@ def convert_h5_to_parquet_batched(
         pq.write_table(table, output_file)
 
         print(f"File written: {output_file}")
+
+        exit()
 
         # Update counter and provide progress reporting
         processed_count += 1
