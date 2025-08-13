@@ -259,6 +259,9 @@ def extract_metadata_from_nc(nc_file_path):
 
         attrs = {"global": global_attrs, "vars": var_attrs}
 
+        print("Passing metadata to prepare_nc_metadata_for_parquet")
+        print("var_attrs:", var_attrs)
+
     return prepare_nc_metadata_for_parquet(attrs)
 
 
@@ -320,6 +323,10 @@ def convert_h5_to_parquet_batched(
 
     # Extract metadata from the first NC file
     nc_metadata_for_parquet = extract_metadata_from_nc(h5_files[0])
+
+    print("nc_metadata_for_parquet:", nc_metadata_for_parquet)
+
+    exit()
 
     print(f"{timestamp} - INFO - Extracted metadata from {h5_files[0]}")
 
