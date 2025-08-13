@@ -15,10 +15,11 @@ import xarray as xr
 from . import file_manager, file_name_convention_manager
 
 
-def prepare_netcdf_compatible_metadata(attributes):
+def prepare_nc_metadata_for_parquet(attributes):
     """
-    Process and prepare metadata to be compatible with NetCDF/xarray structure.
-    Filters out problematic fields that cause JSON encoding errors.
+    This outputs two dictionaries of atttributes that are compatiable with parquet metadata
+    The `global` dict is equivalent to the global attributes in a netCDF file,
+    The `vars` dict is a map of variable names and is equivalent to the variable attributes in a netCDF file.
     """
 
     # Custom JSON encoder for NumPy types
@@ -38,10 +39,12 @@ def prepare_netcdf_compatible_metadata(attributes):
                 return obj.isoformat()
             return super(NumpyEncoder, self).default(obj)
 
-    metadata = {}
+    global_attrs = {}
+    variable_attrs = {}
+
     # Set identifiers in metadata
-    metadata["WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
-    metadata["WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
+    global_attrs["WPTO_HINDCAST_FORMAT_VERSION"] = "1.0"
+    global_attrs["WPTO_HINDCAST_METADATA_TYPE"] = "netcdf_compatible"
 
     global_attrs_to_skip = [
         # This does not provide relevant information here
@@ -69,30 +72,29 @@ def prepare_netcdf_compatible_metadata(attributes):
     ]
     for attr_name, attr_value in attributes["global"].items():
         if attr_name not in global_attrs_to_skip:
-            metadata[f"global:{attr_name}"] = attr_value
+            global_attrs[attr_name] = attr_value
 
     for var_name, var_attrs in attributes["vars"].items():
+        if var_name not in variable_attrs:
+            variable_attrs[var_name] = {}
         for attr_name, attr_value in var_attrs.items():
-            metadata[f"{var_name}:{attr_name}"] = attr_value
+            variable_attrs[var_name][attr_name] = attr_value
 
     # Convert all metadata values to bytes
-    metadata_bytes = {}
-    for k, v in metadata.items():
-        metadata_bytes[k] = str(v).encode("utf-8")
-        # try:
-        #     if (
-        #         isinstance(v, (list, dict, tuple))
-        #         or hasattr(v, "__dict__")
-        #         or isinstance(v, np.ndarray)
-        #     ):
-        #         metadata_bytes[k] = json.dumps(v, cls=NumpyEncoder).encode("utf-8")
-        #     else:
-        #         metadata_bytes[k] = str(v).encode("utf-8")
-        # except TypeError as e:
-        #     metadata_bytes[k] = str(v).encode("utf-8")
-        #     print(f"Warning: Could not JSON encode {k}: {e}")
+    global_attr_bytes = {}
+    for k, v in global_attrs.items():
+        global_attr_bytes[k] = str(v).encode("utf-8")
 
-    return metadata_bytes
+    variable_attr_bytes = {}
+    for key in variable_attrs.keys():
+        variable_attr_bytes[key] = {}
+        for k, v in variable_attrs[key].items():
+            variable_attr_bytes[key][k] = str(v).encode("utf-8")
+
+    return {
+        "global": global_attr_bytes,
+        "var": variable_attr_bytes,
+    }
 
 
 def get_partition_path(df) -> str:
@@ -257,39 +259,7 @@ def extract_metadata_from_nc(nc_file_path):
 
         attrs = {"global": global_attrs, "vars": var_attrs}
 
-    # attributes = {}
-    #
-    # try:
-    #     with h5py.File(nc_file_path, "r") as f:
-    #         # Extract global attributes
-    #         global_attrs = {}
-    #         for attr_name in f.attrs:
-    #             global_attrs[attr_name] = f.attrs[attr_name]
-    #
-    #         # Extract variable attributes
-    #         variable_attrs = {}
-    #         for var_name in f:
-    #             if isinstance(f[var_name], h5py.Dataset):
-    #                 var_attrs = {}
-    #                 for attr_name in f[var_name].attrs:
-    #                     var_attrs[attr_name] = f[var_name].attrs[attr_name]
-    #                 if var_attrs:
-    #                     variable_attrs[var_name] = var_attrs
-    #
-    #         attributes = {
-    #             "global_attributes": global_attrs,
-    #             "variable_attributes": variable_attrs,
-    #         }
-    #
-    # except Exception as e:
-    #     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    #     print(
-    #         f"{timestamp} - ERROR - Error extracting metadata from {nc_file_path}: {e}"
-    #     )
-    #     raise
-
-    # Prepare metadata
-    return prepare_netcdf_compatible_metadata(attrs)
+    return prepare_nc_metadata_for_parquet(attrs)
 
 
 def convert_h5_to_parquet_batched(
@@ -341,7 +311,7 @@ def convert_h5_to_parquet_batched(
 
     print(f"{timestamp} - INFO - Found {len(h5_files)} files (sorted by name)")
     for i, file in enumerate(h5_files):
-        print(f"  File {i+1}: {file.name}")
+        print(f"  File {i + 1}: {file.name}")
 
     # Get dataset information from the first file
     print(f"{timestamp} - INFO - Reading dataset information from first file")
@@ -349,7 +319,7 @@ def convert_h5_to_parquet_batched(
     total_faces = dataset_info["total_faces"]
 
     # Extract metadata from the first NC file
-    file_metadata_bytes = extract_metadata_from_nc(h5_files[0])
+    nc_metadata_for_parquet = extract_metadata_from_nc(h5_files[0])
 
     print(f"{timestamp} - INFO - Extracted metadata from {h5_files[0]}")
 
@@ -454,7 +424,7 @@ def convert_h5_to_parquet_batched(
         file_start_time = time.time()
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(
-            f"{timestamp} - INFO - File {file_idx+1}/{len(h5_files)}: Reading {h5_file}"
+            f"{timestamp} - INFO - File {file_idx + 1}/{len(h5_files)}: Reading {h5_file}"
         )
 
         with h5py.File(h5_file, "r") as f:
@@ -575,7 +545,7 @@ def convert_h5_to_parquet_batched(
         file_time = time.time() - file_start_time
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(
-            f"{timestamp} - INFO - Completed reading file {file_idx+1}/{len(h5_files)} in {file_time:.2f} seconds"
+            f"{timestamp} - INFO - Completed reading file {file_idx + 1}/{len(h5_files)} in {file_time:.2f} seconds"
         )
 
     # Now write one parquet file per face with the complete time series sequentially
@@ -629,14 +599,39 @@ def convert_h5_to_parquet_batched(
         # Convert DataFrame to PyArrow table
         table = pa.Table.from_pandas(df)
 
-        # Merge the extracted metadata with existing table metadata
-        merged_metadata = {**table.schema.metadata, **file_metadata_bytes}
+        # 1. Handle SCHEMA metadata (variable attributes)
+        # Create new fields with metadata for each column
+        new_fields = []
+        for field in table.schema:
+            # Start with existing field metadata
+            field_metadata = field.metadata.copy() if field.metadata else {}
 
-        # Create new table with updated metadata
-        table = table.replace_schema_metadata(merged_metadata)
+            # Add variable-specific metadata if it exists
+            var_name = field.name.encode("utf-8")
+            if var_name in nc_metadata_for_parquet["var"]:
+                # Append new metadata to existing
+                field_metadata.update(nc_metadata_for_parquet["var"][var_name])
 
-        # Write the table to parquet file
-        pq.write_table(table, output_file)
+            # Create new field with combined metadata
+            new_field = pa.field(field.name, field.type, metadata=field_metadata)
+            new_fields.append(new_field)
+
+        # Create new schema with field metadata
+        new_schema = pa.schema(new_fields)
+        table = table.cast(new_schema)
+
+        # 2. Handle FILE metadata (global attributes)
+        # Start with existing file metadata from the schema
+        existing_file_metadata = (
+            table.schema.metadata.copy() if table.schema.metadata else {}
+        )
+
+        # Append global metadata to existing file metadata
+        combined_file_metadata = existing_file_metadata.copy()
+        combined_file_metadata.update(nc_metadata_for_parquet["global"])
+
+        # Write to parquet with combined file-level metadata
+        pq.write_table(table, output_file, metadata=combined_file_metadata)
 
         print(f"File written: {output_file}")
 
