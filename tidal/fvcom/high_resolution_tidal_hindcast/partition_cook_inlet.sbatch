@@ -18,16 +18,7 @@
 #SBATCH --mem=64G
 #SBATCH --partition=shared
 
-# Load necessary modules
-module load anaconda3/2023.07-2
-conda init
-conda activate tidal_fvcom
-
-# Change to the directory containing the script
-cd /home/asimms/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast
-
-# Force Python to flush print statements immediately
-export PYTHONUNBUFFERED=1
+source sbatch_env_setup.sh
 
 # Create a Python script that handles the parallelized processing
 python partition_dataset.py cook_inlet --batch-size 2500 --batch-num $SLURM_ARRAY_TASK_ID 
