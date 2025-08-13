@@ -564,7 +564,7 @@ def convert_h5_to_parquet_batched(
 
         # Convert all lists to numpy arrays and handle constant values
         for key, value in all_face_data[face_id].items():
-            if "nv_layer" in key:
+            if "nv" in key:
                 continue
             if key in [
                 "lat",
