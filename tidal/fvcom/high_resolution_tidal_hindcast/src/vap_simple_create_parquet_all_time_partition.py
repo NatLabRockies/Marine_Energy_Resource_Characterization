@@ -398,6 +398,37 @@ def convert_h5_to_parquet_batched(
     # Data structure to store all time series for each face
     all_face_data = {}
 
+    parquet_col_to_nc_var_map = {}
+
+    # Direct mappings for coordinate transformations
+    parquet_col_to_nc_var_map["lat"] = "lat_center"  # lat_center -> lat
+    parquet_col_to_nc_var_map["lon"] = "lon_center"  # lon_center -> lon
+
+    # Element corner coordinates (these are computed, no direct NC equivalent)
+    # We could map these to lat_node/lon_node if that makes sense
+    parquet_col_to_nc_var_map["element_corner_1_lat"] = "lat_node"
+    parquet_col_to_nc_var_map["element_corner_1_lon"] = "lon_node"
+    parquet_col_to_nc_var_map["element_corner_2_lat"] = "lat_node"
+    parquet_col_to_nc_var_map["element_corner_2_lon"] = "lon_node"
+    parquet_col_to_nc_var_map["element_corner_3_lat"] = "lat_node"
+    parquet_col_to_nc_var_map["element_corner_3_lon"] = "lon_node"
+
+    # 2D datasets - direct mapping
+    for dataset_name in dataset_info["2d_datasets"]:
+        if dataset_name not in ["lat_center", "lon_center"]:
+            parquet_col_to_nc_var_map[dataset_name] = dataset_name
+
+    # 3D datasets - layer expansion mapping
+    for dataset_name, num_layers in dataset_info["3d_datasets"]:
+        for layer_idx in range(num_layers):
+            parquet_col = f"{dataset_name}_layer_{layer_idx}"
+            parquet_col_to_nc_var_map[parquet_col] = (
+                dataset_name  # All layers map back to original variable
+            )
+
+    # Time mapping
+    parquet_col_to_nc_var_map["time"] = "time"
+
     # Initialize the data structure for each face
     print(
         f"{timestamp} - INFO - Initializing data structure for {faces_to_process} faces"
@@ -642,7 +673,8 @@ def convert_h5_to_parquet_batched(
             var_name = field.name
             if var_name in nc_metadata_for_parquet["var"]:
                 # Append new metadata to existing
-                field_metadata.update(nc_metadata_for_parquet["var"][var_name])
+                nc_var_name = parquet_col_to_nc_var_map[var_name]
+                field_metadata.update(nc_metadata_for_parquet["var"][nc_var_name])
                 matched_fields.append(field.name)
                 fields_with_new_meta.append(field.name)
             else:
