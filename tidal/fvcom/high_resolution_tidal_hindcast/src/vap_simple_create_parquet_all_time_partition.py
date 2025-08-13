@@ -582,6 +582,11 @@ def convert_h5_to_parquet_batched(
             else:
                 df_data[key] = np.array(value)
 
+        # Print shape of each column for debugging
+        print("Data for parquet output")
+        for key, value in df_data.items():
+            print(f"\t{key}: shape {value.shape} dtype {value.dtype}")
+
         # Create DataFrame and write to parquet
         df = pd.DataFrame(df_data)
         df["time"] = pd.to_datetime(df["time"], unit="s", origin="unix")
