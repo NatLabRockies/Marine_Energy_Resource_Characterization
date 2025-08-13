@@ -324,7 +324,7 @@ def convert_h5_to_parquet_batched(
     # Extract metadata from the first NC file
     nc_metadata_for_parquet = extract_metadata_from_nc(h5_files[0])
 
-    print("nc_metadata_for_parquet:", nc_metadata_for_parquet)
+    # print("nc_metadata_for_parquet:", nc_metadata_for_parquet)
 
     exit()
 
