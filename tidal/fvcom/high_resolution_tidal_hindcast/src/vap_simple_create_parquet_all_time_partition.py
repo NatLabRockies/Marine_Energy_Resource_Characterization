@@ -259,12 +259,12 @@ def extract_metadata_from_nc(nc_file_path):
 
         attrs = {"global": global_attrs, "vars": var_attrs}
 
-        print("Passing metadata to prepare_nc_metadata_for_parquet")
-
-    for key, value in attrs["vars"].items():
-        print(f"Variable: {key}")
-        for attr_key, attr_value in value.items():
-            print(f"  {attr_key}: {attr_value}")
+    #     print("Passing metadata to prepare_nc_metadata_for_parquet")
+    #
+    # for key, value in attrs["vars"].items():
+    #     print(f"Variable: {key}")
+    #     for attr_key, attr_value in value.items():
+    #         print(f"  {attr_key}: {attr_value}")
 
     return prepare_nc_metadata_for_parquet(attrs)
 
