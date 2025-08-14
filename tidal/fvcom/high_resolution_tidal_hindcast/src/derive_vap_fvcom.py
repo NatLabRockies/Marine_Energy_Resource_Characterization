@@ -496,7 +496,7 @@ def calculate_zeta_center(ds):
             "nodes that define each triangular cell using the node-to-cell "
             "connectivity array (nv)"
         ),
-        "computation": "zeta_center = mean(zeta[nv(t=0) - 1], axis=1)",
+        "computation": "zeta_center = mean(zeta[nv - 1], axis=1)",
         "input_variables": "zeta: sea_surface_height_above_geoid at nodes",
     }
 
