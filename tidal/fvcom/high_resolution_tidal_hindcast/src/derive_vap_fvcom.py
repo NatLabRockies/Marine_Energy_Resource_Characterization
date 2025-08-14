@@ -622,8 +622,12 @@ def calculate_surface_elevation_and_depths(ds, offset_file_path):
         h_center_msl = ds[output_names["h_center"]] - mean_offset
         total_water_depth = h_center_msl + surface_elevation
 
+        # Coerce total_water_depth to have dimensions (time, face) before expanding
+        # This ensures it matches the same dimension structure as the rest of the dataset
+        total_water_depth = total_water_depth.transpose("time", "face")
+
         # 3. Calculate seafloor depth (total water column depth)
-        seafloor_depth = total_water_depth.copy()
+        seafloor_depth = total_water_depth
         seafloor_depth.attrs = {
             "long_name": "Sea Floor Depth Below Sea Surface",
             "standard_name": "sea_floor_depth_below_sea_surface",
