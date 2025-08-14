@@ -652,47 +652,44 @@ def calculate_surface_elevation_and_depths(ds, offset_file_path):
         ds[output_names["sea_floor_depth"]] = seafloor_depth
 
         # 4. Calculate sigma-level depths if sigma coordinates are available
-        if "sigma_layer" in ds:
-            print("Calculating sigma-level depths...")
+        print("Calculating sigma-level depths...")
 
-            # Extract sigma levels
-            sigma_layer = ds.sigma_layer.T.values[0]
-            sigma_3d = sigma_layer.reshape(1, -1, 1)
+        # Extract sigma levels
+        sigma_layer = ds.sigma_layer.T.values[0]
+        sigma_3d = sigma_layer.reshape(1, -1, 1)
 
-            # Expand total depth for sigma calculation
-            total_depth_3d = total_water_depth.expand_dims(
-                dim={"sigma_layer": len(sigma_layer)}, axis=1
-            )
+        # Expand total depth for sigma calculation
+        total_depth_3d = total_water_depth.expand_dims(
+            dim={"sigma_layer": len(sigma_layer)}, axis=1
+        )
 
-            # Calculate depth at each sigma level (positive down from surface)
-            sigma_depths = -(total_depth_3d * sigma_3d)
+        # Calculate depth at each sigma level (positive down from surface)
+        sigma_depths = -(total_depth_3d * sigma_3d)
 
-            sigma_depths.attrs = {
-                "long_name": "Depth Below Sea Surface at Sigma Levels",
-                "standard_name": "depth",
-                "units": ds[output_names["h_center"]].attrs["units"],
-                "positive": "down",
-                "coordinates": "time sigma_layer face lon_center lat_center",
-                "mesh": "cell_centered",
-                "description": (
-                    "Depth at each sigma level calculated using bathymetry and surface "
-                    "elevation both referenced to mean sea level. This represents the "
-                    "actual physical depth that would be measured with an instrument."
-                ),
-                "computation": "depth = -((h_center - navd88_offset) + surface_elevation) * sigma",
-                "reference_level": "mean_sea_level",
-                "input_variables": (
-                    "h_center: sea_floor_depth_below_geoid (m), "
-                    "surface_elevation: sea_surface_height_above_mean_sea_level (m), "
-                    "sigma: ocean_sigma_coordinate, "
-                    "mean_navd88_offset: pre-computed temporal mean"
-                ),
-            }
+        sigma_depths.attrs = {
+            "long_name": "Depth Below Sea Surface at Sigma Levels",
+            "standard_name": "depth",
+            "units": ds[output_names["h_center"]].attrs["units"],
+            "positive": "down",
+            "coordinates": "time sigma_layer face lon_center lat_center",
+            "mesh": "cell_centered",
+            "description": (
+                "Depth at each sigma level calculated using bathymetry and surface "
+                "elevation both referenced to mean sea level. This represents the "
+                "actual physical depth that would be measured with an instrument."
+            ),
+            "computation": "depth = -((h_center - navd88_offset) + surface_elevation) * sigma",
+            "reference_level": "mean_sea_level",
+            "input_variables": (
+                "h_center: sea_floor_depth_below_geoid (m), "
+                "surface_elevation: sea_surface_height_above_mean_sea_level (m), "
+                "sigma: ocean_sigma_coordinate, "
+                "mean_navd88_offset: pre-computed temporal mean"
+            ),
+        }
 
-            ds[output_names["depth"]] = sigma_depths
-            print("Sigma-level depths calculated successfully")
-        else:
-            print("No sigma_layer found - skipping sigma-level depth calculation")
+        ds[output_names["depth"]] = sigma_depths
+        print("Sigma-level depths calculated successfully")
 
         print("Surface elevation and depths calculated successfully")
         print(
