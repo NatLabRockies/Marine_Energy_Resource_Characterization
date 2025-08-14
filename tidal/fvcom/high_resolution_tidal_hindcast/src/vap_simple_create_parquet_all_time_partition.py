@@ -469,7 +469,11 @@ def convert_h5_to_parquet_batched(
             # Get time values once
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             print(f"{timestamp} - INFO - Reading time values")
-            time_values = f["time"][:]
+            # time_values = f["time"][:]
+
+            with xr.open_dataset(h5_file, engine="h5netcdf") as ds:
+                time_values = ds["time"].values
+
             time_length = len(time_values)
             print(f"{timestamp} - INFO - Found {time_length} time values")
 
