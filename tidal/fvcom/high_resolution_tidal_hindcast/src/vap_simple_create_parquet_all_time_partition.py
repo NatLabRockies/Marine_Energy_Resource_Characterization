@@ -626,13 +626,12 @@ def convert_h5_to_parquet_batched(
 
         # Create DataFrame and write to parquet
         df = pd.DataFrame(df_data)
-        print(df["time"].head())
-        print(df["time"].tail())
-        df["time"] = pd.to_datetime(df["time"], unit="s", origin="unix")
-        print(df["time"].head())
-        print(df["time"].tail())
+
+        df["time"] = pd.to_datetime(df["time"])
         df = df.set_index("time")
         df = df.sort_index()
+
+        print(df.info())
 
         exit()
 
