@@ -618,38 +618,39 @@ def calculate_surface_elevation_and_depths(ds, offset_file_path):
 
         ds[output_names["surface_elevation"]] = surface_elevation
 
-        # 2. Convert bathymetry to MSL reference and calculate total water depth
-        h_center_msl = ds[output_names["h_center"]] - mean_offset
-        total_water_depth = h_center_msl + surface_elevation
+        # 2. Calculate depth from sea surface to seafloor
+        # This is the actual depth measured from the instantaneous water surface
+        depth_from_sea_surface = ds[output_names["h_center"]] + zeta_center
 
-        # Coerce total_water_depth to have dimensions (time, face) before expanding
-        # This ensures it matches the same dimension structure as the rest of the dataset
-        total_water_depth = total_water_depth.transpose("time", "face")
-
-        # 3. Calculate seafloor depth (total water column depth)
-        seafloor_depth = total_water_depth
-        seafloor_depth.attrs = {
-            "long_name": "Sea Floor Depth Below Sea Surface",
+        # Ensure proper dimension ordering
+        depth_from_sea_surface = depth_from_sea_surface.transpose("time", "face")
+        depth_from_sea_surface.attrs = {
+            "long_name": "Water Depth from Sea Surface to Seafloor",
             "standard_name": "sea_floor_depth_below_sea_surface",
             "units": ds[output_names["h_center"]].attrs["units"],
             "positive": "down",
             "coordinates": "time face lon_center lat_center",
             "mesh": "cell_centered",
             "description": (
-                "The vertical distance between the sea surface and the seabed, "
-                "calculated using bathymetry and surface elevation both referenced "
-                "to mean sea level. This represents the actual physical water depth."
+                "The water depth representing the actual distance from the "
+                "instantaneous water surface to the seafloor. This is the depth that "
+                "would be measured by instruments from the current sea surface. "
+                "The depth varies with tidal conditions as the water surface elevation changes."
             ),
-            "computation": "seafloor_depth = (h_center - navd88_offset) + surface_elevation",
-            "reference_level": "mean_sea_level",
+            "computation": "depth_from_sea_surface = h_center + zeta_center",
+            "reference_level": "instantaneous_sea_surface",
             "input_variables": (
                 "h_center: sea_floor_depth_below_geoid (m), "
-                "surface_elevation: sea_surface_height_above_mean_sea_level (m), "
-                "mean_navd88_offset: pre-computed temporal mean"
+                "zeta_center: sea_surface_height_above_geoid (m)"
+            ),
+            "application": "depth_measurements_from_surface",
+            "note": (
+                "Both h_center and zeta_center use the same geoid reference (NAVD88), "
+                "so they can be added directly to get depth from surface without datum conversions."
             ),
         }
 
-        ds[output_names["sea_floor_depth"]] = seafloor_depth
+        ds[output_names["sea_floor_depth"]] = depth_from_sea_surface
 
         # 4. Calculate sigma-level depths if sigma coordinates are available
         print("Calculating sigma-level depths...")
@@ -658,13 +659,13 @@ def calculate_surface_elevation_and_depths(ds, offset_file_path):
         sigma_layer = ds.sigma_layer.T.values[0]
         sigma_3d = sigma_layer.reshape(1, -1, 1)
 
-        # Expand total depth for sigma calculation
-        total_depth_3d = total_water_depth.expand_dims(
+        # Expand depth from sea surface for sigma calculation
+        depth_3d = depth_from_sea_surface.expand_dims(
             dim={"sigma_layer": len(sigma_layer)}, axis=1
         )
 
         # Calculate depth at each sigma level (positive down from surface)
-        sigma_depths = -(total_depth_3d * sigma_3d)
+        sigma_depths = -(depth_3d * sigma_3d)
 
         sigma_depths.attrs = {
             "long_name": "Depth Below Sea Surface at Sigma Levels",
@@ -674,24 +675,26 @@ def calculate_surface_elevation_and_depths(ds, offset_file_path):
             "coordinates": "time sigma_layer face lon_center lat_center",
             "mesh": "cell_centered",
             "description": (
-                "Depth at each sigma level calculated using bathymetry and surface "
-                "elevation both referenced to mean sea level. This represents the "
-                "actual physical depth that would be measured with an instrument."
+                "Depth at each sigma level calculated using water column depth from sea surface. "
+                "This represents the actual physical depth below the instantaneous water "
+                "surface that would be measured by instruments at each sigma level. "
+                "Depths vary with tidal conditions as the total water column depth changes."
             ),
-            "computation": "depth = -((h_center - navd88_offset) + surface_elevation) * sigma",
-            "reference_level": "mean_sea_level",
+            "computation": "depth = -(h_center + zeta_center) * sigma_coordinate",
+            "reference_level": "instantaneous_sea_surface",
             "input_variables": (
                 "h_center: sea_floor_depth_below_geoid (m), "
-                "surface_elevation: sea_surface_height_above_mean_sea_level (m), "
-                "sigma: ocean_sigma_coordinate, "
-                "mean_navd88_offset: pre-computed temporal mean"
+                "zeta_center: sea_surface_height_above_geoid (m), "
+                "sigma: ocean_sigma_coordinate"
             ),
+            "application": "depth_measurements_from_surface",
+            "sigma_convention": "sigma=0 at surface, sigma=-1 at bottom",
         }
 
         ds[output_names["depth"]] = sigma_depths
-        print("Sigma-level depths calculated successfully")
+        print("Sigma-level depths calculated successfully using depth from sea surface")
 
-        print("Surface elevation and depths calculated successfully")
+        print("Surface elevation and depth from sea surface calculated successfully")
         print(
             f"Surface elevation statistics: "
             f"min={surface_elevation.min().values:.3f}m, "
@@ -699,9 +702,9 @@ def calculate_surface_elevation_and_depths(ds, offset_file_path):
             f"temporal_mean={surface_elevation.mean().values:.6f}m"
         )
         print(
-            f"Seafloor depth statistics: "
-            f"min={seafloor_depth.min().values:.3f}m, "
-            f"max={seafloor_depth.max().values:.3f}m"
+            f"Depth from sea surface statistics: "
+            f"min={depth_from_sea_surface.min().values:.3f}m, "
+            f"max={depth_from_sea_surface.max().values:.3f}m"
         )
 
     return ds
