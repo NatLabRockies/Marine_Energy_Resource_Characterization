@@ -180,8 +180,8 @@ def analyze_file_structure(nc_files, include_vars):
 
     # Get basic structure from first file
     with xr.open_dataset(nc_files[0]) as ds_first:
-        file_info["n_faces"] = ds_first.dims["face"]
-        file_info["n_sigma"] = ds_first.dims["sigma_layer"]
+        file_info["n_faces"] = ds_first.sizes["face"]
+        file_info["n_sigma"] = ds_first.sizes["sigma_layer"]
         file_info["lat_center"] = ds_first.lat_center.values
         file_info["lon_center"] = ds_first.lon_center.values
         file_info["water_depth"] = ds_first.h_center.values
