@@ -337,19 +337,36 @@ def stream_data_to_h5(
 
         # Stream data file by file
         time_offset = 0
+        total_variables = len(variable_info)
+
         for i, nc_file in enumerate(nc_files):
-            print(f"Streaming file {i + 1}/{len(nc_files)}: {nc_file.name}")
+            print(f"\nStreaming file {i + 1}/{len(nc_files)}: {nc_file.name}")
 
             with xr.open_dataset(nc_file) as ds:
                 time_steps_this_file = len(ds.time)
                 time_slice = slice(time_offset, time_offset + time_steps_this_file)
 
+                # Track variables in this file
+                variables_processed = 0
+                variables_found = []
+
                 # Process each variable
                 for var_name, var in ds.variables.items():
                     if should_include_variable(var_name, include_vars):
-                        stream_variable_data(
+                        result = stream_variable_data(
                             var_name, var, datasets, time_slice, file_info["n_sigma"]
                         )
+                        if result:  # If variables were actually processed
+                            variables_found.extend(result)
+                            variables_processed += len(result)
+
+                # Show progress for this file
+                print(
+                    f"  → Processed {variables_processed}/{total_variables} variables: {', '.join(variables_found[:5])}{('...' if len(variables_found) > 5 else '')}"
+                )
+                print(
+                    f"  → Time slice: {time_offset} to {time_offset + time_steps_this_file - 1} ({time_steps_this_file} steps)"
+                )
 
                 time_offset += time_steps_this_file
 
