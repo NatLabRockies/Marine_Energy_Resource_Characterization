@@ -28,57 +28,42 @@ def create_hsds_tidal_dataset(
 
     print(f"Found {len(nc_files)} files to process")
 
-    # Step 1: Analyze first file to understand structure
-    with xr.open_dataset(nc_files[0]) as ds_first:
-        n_faces = ds_first.dims["face"]
-        n_sigma = ds_first.dims["sigma_layer"]
+    # Step 1: Analyze all files to understand full structure
+    print("Step 1: Analyzing file structure...")
+    file_info = analyze_file_structure(nc_files, include_vars)
 
-        # Get coordinate data (same for all files)
-        lat_center = ds_first.lat_center.values
-        lon_center = ds_first.lon_center.values
-
-        # Get depth data from h_center variable
-        water_depth = ds_first.h_center.values
-
-        # Collect global attributes from NetCDF
-        global_attrs = dict(ds_first.attrs)
-
-        # Determine time steps per file
-        time_steps_per_file = len(ds_first.time)
+    n_faces = file_info["n_faces"]
+    n_sigma = file_info["n_sigma"]
+    total_time_steps = file_info["total_time_steps"]
+    variable_info = file_info["variable_info"]
+    global_attrs = file_info["global_attrs"]
 
     print(
-        f"Dataset structure: {n_faces} faces, {n_sigma} sigma layers, {time_steps_per_file} time steps per file"
+        f"Dataset structure: {n_faces} faces, {n_sigma} sigma layers, {total_time_steps} total time steps"
     )
 
     # Step 2: Create metadata table (required by NREL spec)
+    print("Step 2: Creating metadata...")
     metadata = create_metadata_table(
-        lat_center, lon_center, water_depth, timezone_offset, jurisdiction, n_faces
+        file_info["lat_center"],
+        file_info["lon_center"],
+        file_info["water_depth"],
+        timezone_offset,
+        jurisdiction,
+        n_faces,
     )
 
-    # Step 3: Process all files to create time series
-    all_times = []
-    all_data = {}
-
-    for i, nc_file in enumerate(nc_files):
-        print(f"Processing file {i + 1}/{len(nc_files)}: {nc_file.name}")
-
-        with xr.open_dataset(nc_file) as ds:
-            # Collect time information
-            file_times = pd.to_datetime(ds.time.values)
-            all_times.extend(file_times)
-
-            # Process variables
-            for var_name, var in ds.variables.items():
-                if should_include_variable(var_name, include_vars):
-                    process_variable(
-                        var_name, var, all_data, i, n_sigma, time_steps_per_file
-                    )
-
-    # Step 4: Create time_index (required by NREL spec)
-    time_index = create_time_index(all_times)
-
-    # Step 5: Write H5 file
-    write_h5_file(output_path, metadata, time_index, all_data, n_faces, global_attrs)
+    # Step 3: Create H5 file structure and stream data
+    print("Step 3: Creating H5 file and streaming data...")
+    stream_data_to_h5(
+        nc_files,
+        output_path,
+        metadata,
+        file_info,
+        variable_info,
+        global_attrs,
+        include_vars,
+    )
 
     print(f"Successfully created {output_path}")
     return output_path
@@ -185,11 +170,233 @@ def process_variable(var_name, var, all_data, file_idx, n_sigma, time_steps_per_
         return
 
 
+def analyze_file_structure(nc_files, include_vars):
+    """Analyze all files to determine structure without loading all data"""
+    print(f"Analyzing structure of {len(nc_files)} files...")
+
+    file_info = {}
+    all_times = []
+    variable_info = {}
+
+    # Get basic structure from first file
+    with xr.open_dataset(nc_files[0]) as ds_first:
+        file_info["n_faces"] = ds_first.dims["face"]
+        file_info["n_sigma"] = ds_first.dims["sigma_layer"]
+        file_info["lat_center"] = ds_first.lat_center.values
+        file_info["lon_center"] = ds_first.lon_center.values
+        file_info["water_depth"] = ds_first.h_center.values
+        file_info["global_attrs"] = dict(ds_first.attrs)
+
+        # Analyze variables that will be included
+        for var_name, var in ds_first.variables.items():
+            if should_include_variable(var_name, include_vars):
+                dims = var.dims
+
+                # Skip coordinate variables
+                skip_vars = [
+                    "lat_center",
+                    "lon_center",
+                    "lat_node",
+                    "lon_node",
+                    "nv",
+                    "face_node_index",
+                    "sigma_layer",
+                    "sigma_level",
+                    "time",
+                    "face",
+                    "node",
+                    "h_center",
+                ]
+                if var_name in skip_vars:
+                    continue
+
+                if dims == ("time", "face"):
+                    variable_info[var_name] = {
+                        "dims": dims,
+                        "dtype": var.dtype,
+                        "attrs": dict(var.attrs),
+                        "shape": (
+                            None,
+                            file_info["n_faces"],
+                        ),  # None for time dimension
+                    }
+                elif dims == ("time", "sigma_layer", "face"):
+                    # Split into sigma layers
+                    for sigma_idx in range(file_info["n_sigma"]):
+                        layer_var_name = f"{var_name}_sigma_layer_{sigma_idx + 1}"
+                        layer_attrs = dict(var.attrs)
+                        layer_attrs["sigma_layer_index"] = sigma_idx + 1
+                        layer_attrs["original_variable"] = var_name
+                        variable_info[layer_var_name] = {
+                            "dims": ("time", "face"),
+                            "dtype": var.dtype,
+                            "attrs": layer_attrs,
+                            "shape": (None, file_info["n_faces"]),
+                            "sigma_idx": sigma_idx,
+                        }
+                elif dims == ("face",):
+                    variable_info[var_name] = {
+                        "dims": ("time", "face"),  # Will be broadcast
+                        "dtype": var.dtype,
+                        "attrs": dict(var.attrs),
+                        "shape": (None, file_info["n_faces"]),
+                    }
+
+    # Count total time steps across all files
+    total_time_steps = 0
+    for nc_file in nc_files:
+        with xr.open_dataset(nc_file) as ds:
+            file_times = pd.to_datetime(ds.time.values)
+            all_times.extend(file_times)
+            total_time_steps += len(ds.time)
+
+    file_info["total_time_steps"] = total_time_steps
+    file_info["all_times"] = all_times
+
+    # Update variable shapes with known time dimension
+    for var_name in variable_info:
+        shape_list = list(variable_info[var_name]["shape"])
+        shape_list[0] = total_time_steps
+        variable_info[var_name]["shape"] = tuple(shape_list)
+
+    return {**file_info, "variable_info": variable_info}
+
+
 def create_time_index(all_times):
     """Create time_index array in Unix timestamp format"""
     # Convert to Unix timestamps (seconds since 1970-01-01)
     time_index = np.array([t.timestamp() for t in all_times], dtype=np.float64)
     return time_index
+
+
+def stream_data_to_h5(
+    nc_files,
+    output_path,
+    metadata,
+    file_info,
+    variable_info,
+    global_attrs,
+    include_vars,
+):
+    """Stream data from NC files directly to H5 file to minimize memory usage"""
+
+    # Create time index
+    time_index = create_time_index(file_info["all_times"])
+
+    with h5py.File(output_path, "w") as h5f:
+        # Add global attributes
+        if global_attrs:
+            for attr_name, attr_value in global_attrs.items():
+                try:
+                    h5f.attrs[attr_name] = attr_value
+                except Exception as e:
+                    print(
+                        f"Warning: Could not set global attribute '{attr_name}' with type '{type(attr_value)}': {e}"
+                    )
+
+        # Ensure version attribute exists
+        if "version" not in h5f.attrs:
+            h5f.attrs["version"] = "v1.0.0"
+
+        # Create required datasets
+        h5f.create_dataset("meta", data=metadata)
+        h5f.create_dataset("time_index", data=time_index)
+
+        # Create empty datasets with proper dimensions
+        datasets = {}
+        for var_name, var_info in variable_info.items():
+            # Calculate chunking
+            chunk_sizes = calculate_optimal_chunk_sizes(
+                shape=var_info["shape"],
+                dims=["time", "face"],
+                dtype=var_info["dtype"],
+                config=config,
+            )
+
+            # Create empty dataset
+            dataset = h5f.create_dataset(
+                var_name,
+                shape=var_info["shape"],
+                dtype=var_info["dtype"],
+                chunks=chunk_sizes,
+                compression="gzip",
+                compression_opts=4,
+            )
+
+            # Add attributes
+            for attr_name, attr_value in var_info["attrs"].items():
+                try:
+                    dataset.attrs[attr_name] = attr_value
+                except Exception as e:
+                    print(
+                        f"Warning: Could not set attribute '{attr_name}' for '{var_name}': {e}"
+                    )
+
+            datasets[var_name] = dataset
+            print(f"Created empty dataset {var_name} with shape {var_info['shape']}")
+
+        # Stream data file by file
+        time_offset = 0
+        for i, nc_file in enumerate(nc_files):
+            print(f"Streaming file {i + 1}/{len(nc_files)}: {nc_file.name}")
+
+            with xr.open_dataset(nc_file) as ds:
+                time_steps_this_file = len(ds.time)
+                time_slice = slice(time_offset, time_offset + time_steps_this_file)
+
+                # Process each variable
+                for var_name, var in ds.variables.items():
+                    if should_include_variable(var_name, include_vars):
+                        stream_variable_data(
+                            var_name, var, datasets, time_slice, file_info["n_sigma"]
+                        )
+
+                time_offset += time_steps_this_file
+
+        print(f"Successfully streamed all data to {output_path}")
+
+
+def stream_variable_data(var_name, var, datasets, time_slice, n_sigma):
+    """Stream individual variable data to H5 datasets"""
+    dims = var.dims
+
+    # Skip coordinate variables
+    skip_vars = [
+        "lat_center",
+        "lon_center",
+        "lat_node",
+        "lon_node",
+        "nv",
+        "face_node_index",
+        "sigma_layer",
+        "sigma_level",
+        "time",
+        "face",
+        "node",
+        "h_center",
+    ]
+    if var_name in skip_vars:
+        return
+
+    if dims == ("time", "face"):
+        # 2D time series: direct streaming
+        if var_name in datasets:
+            datasets[var_name][time_slice, :] = var.values
+
+    elif dims == ("time", "sigma_layer", "face"):
+        # 3D time series: stream each sigma layer separately
+        for sigma_idx in range(n_sigma):
+            layer_var_name = f"{var_name}_sigma_layer_{sigma_idx + 1}"
+            if layer_var_name in datasets:
+                datasets[layer_var_name][time_slice, :] = var.values[:, sigma_idx, :]
+
+    elif dims == ("face",):
+        # Static variable: broadcast and stream
+        if var_name in datasets:
+            # Broadcast to match time dimension
+            time_steps = time_slice.stop - time_slice.start
+            broadcasted_data = np.tile(var.values[np.newaxis, :], (time_steps, 1))
+            datasets[var_name][time_slice, :] = broadcasted_data
 
 
 def write_h5_file(
@@ -213,7 +420,7 @@ def write_h5_file(
 
         # Ensure version attribute exists (required by NREL spec)
         if "version" not in h5f.attrs:
-            h5f.attrs["version"] = "v1.0.0"
+            h5f.attrs["version"] = f"v{config['dataset']['version']}"
 
         # Create required datasets - rename to 'meta' to match specification
         h5f.create_dataset("meta", data=metadata)
@@ -263,7 +470,7 @@ def write_h5_file(
 if __name__ == "__main__":
     create_hsds_tidal_dataset(
         input_path="/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_cook_inlet/b1_vap",
-        output_path="/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/hsds/AK_cook_inlet.wpto_high_res_tidal.hsds.v0.3.0",
+        output_path=f"/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/hsds/AK_cook_inlet.wpto_high_res_tidal.hsds.v{config['dataset']['version']}.h5",
         timezone_offset=-9,
         jurisdiction="Alaska",
         include_vars=[
