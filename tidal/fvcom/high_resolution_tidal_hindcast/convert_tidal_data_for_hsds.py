@@ -408,7 +408,9 @@ def stream_variable_data(var_name, var, datasets, time_slice, n_sigma):
     if dims == ("time", "face"):
         # 2D time series: direct streaming
         if var_name in datasets:
-            print(f"      Writing {var_name} with {len(time_slice)} timestamps")
+            print(
+                f"      Writing {var_name} from {time_slice.start} to {time_slice.stop}"
+            )
             datasets[var_name][time_slice, :] = var.values
             processed_vars.append(var_name)
 
@@ -418,7 +420,7 @@ def stream_variable_data(var_name, var, datasets, time_slice, n_sigma):
             layer_var_name = f"{var_name}_sigma_layer_{sigma_idx + 1}"
             if layer_var_name in datasets:
                 print(
-                    f"      Writing {layer_var_name} with {len(time_slice)} timestamps at sigma level {sigma_idx}"
+                    f"      Writing {layer_var_name} from {time_slice.start} to {time_slice.stop} at sigma level {sigma_idx}"
                 )
                 datasets[layer_var_name][time_slice, :] = var.values[:, sigma_idx, :]
                 processed_vars.append(layer_var_name)
