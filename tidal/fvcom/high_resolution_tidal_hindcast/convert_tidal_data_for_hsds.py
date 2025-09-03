@@ -342,6 +342,7 @@ def stream_data_to_h5(
         for i, nc_file in enumerate(nc_files):
             print(f"\nStreaming file {i + 1}/{len(nc_files)}: {nc_file.name}")
 
+            print(f"  → Opening {nc_file}")
             with xr.open_dataset(nc_file) as ds:
                 time_steps_this_file = len(ds.time)
                 time_slice = slice(time_offset, time_offset + time_steps_this_file)
@@ -351,8 +352,12 @@ def stream_data_to_h5(
                 variables_found = []
 
                 # Process each variable
+                print("  → Processing variables...")
                 for var_name, var in ds.variables.items():
                     if should_include_variable(var_name, include_vars):
+                        print(
+                            f"    - Processing variable: {var_name} with size {var.sizes}"
+                        )
                         result = stream_variable_data(
                             var_name, var, datasets, time_slice, file_info["n_sigma"]
                         )
@@ -374,8 +379,13 @@ def stream_data_to_h5(
 
 
 def stream_variable_data(var_name, var, datasets, time_slice, n_sigma):
-    """Stream individual variable data to H5 datasets"""
+    """Stream individual variable data to H5 datasets
+
+    Returns:
+        list: Names of variables that were actually processed and written
+    """
     dims = var.dims
+    processed_vars = []
 
     # Skip coordinate variables
     skip_vars = [
@@ -393,19 +403,25 @@ def stream_variable_data(var_name, var, datasets, time_slice, n_sigma):
         "h_center",
     ]
     if var_name in skip_vars:
-        return
+        return processed_vars
 
     if dims == ("time", "face"):
         # 2D time series: direct streaming
         if var_name in datasets:
+            print(f"      Writing {var_name} from {time_slice[0]} to {time_slice[-1]}")
             datasets[var_name][time_slice, :] = var.values
+            processed_vars.append(var_name)
 
     elif dims == ("time", "sigma_layer", "face"):
         # 3D time series: stream each sigma layer separately
         for sigma_idx in range(n_sigma):
             layer_var_name = f"{var_name}_sigma_layer_{sigma_idx + 1}"
             if layer_var_name in datasets:
+                print(
+                    f"      Writing {layer_var_name} from {time_slice[0]} to {time_slice[-1]} at sigma level {sigma_idx}"
+                )
                 datasets[layer_var_name][time_slice, :] = var.values[:, sigma_idx, :]
+                processed_vars.append(layer_var_name)
 
     elif dims == ("face",):
         # Static variable: broadcast and stream
@@ -414,6 +430,9 @@ def stream_variable_data(var_name, var, datasets, time_slice, n_sigma):
             time_steps = time_slice.stop - time_slice.start
             broadcasted_data = np.tile(var.values[np.newaxis, :], (time_steps, 1))
             datasets[var_name][time_slice, :] = broadcasted_data
+            processed_vars.append(var_name)
+
+    return processed_vars
 
 
 def write_h5_file(
