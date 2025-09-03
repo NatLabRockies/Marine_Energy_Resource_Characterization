@@ -54,7 +54,8 @@ def create_hsds_tidal_dataset(
     )
 
     # Step 3: Create H5 file structure and stream data
-    print("Step 3: Creating H5 file and streaming data...")
+    print(f"Step 3: Creating H5 file {output_path}")
+    print("→ Starting streaming data to H5 file")
     stream_data_to_h5(
         nc_files,
         output_path,
