@@ -5,6 +5,9 @@ import pandas as pd
 import xarray as xr
 import h5py
 
+from config import config
+from src.nc_manager import calculate_optimal_chunk_sizes
+
 
 def create_hsds_tidal_dataset(
     input_path, output_path, timezone_offset, jurisdiction, include_vars=None
@@ -181,8 +184,18 @@ def write_h5_file(output_path, metadata, time_index, all_data, n_faces):
             # Stack time series data
             var_array = np.stack(var_data_list, axis=0)  # Shape: (n_times, n_faces)
 
-            # Create dataset with chunking for performance
-            chunk_size = min(100, n_times), min(10000, n_faces)  # Reasonable chunk size
+            # Calculate optimal chunk sizes using shared chunking strategy
+            # Verify dimensions match the array shape: (n_times, n_faces) -> ["time", "face"]
+            array_shape = var_array.shape
+            array_dims = ["time", "face"]  # Based on verified shape: (n_times, n_faces)
+            
+            chunk_size = calculate_optimal_chunk_sizes(
+                shape=array_shape,
+                dims=array_dims, 
+                dtype=var_array.dtype,
+                config=config
+            )
+            
             h5f.create_dataset(
                 var_name,
                 data=var_array,
@@ -195,17 +208,11 @@ def write_h5_file(output_path, metadata, time_index, all_data, n_faces):
 
 
 if __name__ == "__main__":
-    # User inputs for timezone and jurisdiction
-    timezone_offset = int(
-        input("Enter timezone offset (e.g., -9 for AKST, -5 for EST): ")
-    )
-    jurisdiction = input("Enter jurisdiction: ")
-
     create_hsds_tidal_dataset(
         input_path="/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_cook_inlet/b1_vap",
         output_path="AK_cook_inlet.wpto_high_res_tidal.hsds.v0.3.0",
-        timezone_offset=timezone_offset,
-        jurisdiction=jurisdiction,
+        timezone_offset=-9,
+        jurisdiction="Alaska",
         include_vars=[
             "time",
             "latc",

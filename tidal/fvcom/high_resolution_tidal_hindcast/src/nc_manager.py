@@ -76,6 +76,37 @@ def define_compression_encoding(this_encoding, compression_strategy):
 
 
 def define_chunk_size_encoding(ds, var_name, config, this_encoding):
+    var = ds[var_name]
+
+    # Use the shared chunking calculation
+    chunk_sizes = calculate_optimal_chunk_sizes(
+        shape=var.shape, dims=var.dims, dtype=var.dtype, config=config
+    )
+
+    this_encoding["chunksizes"] = chunk_sizes
+    return this_encoding
+
+
+def calculate_optimal_chunk_sizes(shape, dims, dtype, config):
+    """
+    Calculate optimal chunk sizes for any array (xarray or numpy) using the chunking strategy.
+
+    Parameters:
+    -----------
+    shape : tuple
+        Shape of the array (e.g., (n_times, n_faces))
+    dims : list or tuple
+        Dimension names corresponding to shape (e.g., ["time", "face"])
+    dtype : numpy.dtype or str
+        Data type of the array
+    config : dict
+        Configuration containing chunking specifications
+
+    Returns:
+    --------
+    tuple
+        Chunk sizes for each dimension (e.g., (100, 5000))
+    """
     # Get chunking spec from config
     chunk_spec = config["dataset"]["encoding"]["chunk_spec"]
     target_chunk_size_mb = chunk_spec["target_size_mb"]
@@ -83,23 +114,35 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
     target_chunk_multiple = chunk_spec["multiple"]
     preferred_chunking_dimension = chunk_spec["preferred_dim"]
 
-    var = ds[var_name]
-    bytes_per_element = var.dtype.itemsize
-    variable_bytes = var.size * bytes_per_element
+    # Convert dtype to numpy dtype if it's a string
+    if isinstance(dtype, str):
+        dtype = np.dtype(dtype)
+    elif hasattr(dtype, "dtype"):  # xarray DataArray case
+        dtype = dtype.dtype
+
+    bytes_per_element = dtype.itemsize
+    variable_bytes = math.prod(shape) * bytes_per_element
 
     # If the actual size is less than the target chunk size
     # no chunking is necessary and we just need to return the original shape
     if variable_bytes < target_chunk_size_bytes:
-        this_encoding["chunksizes"] = var.shape
-        return this_encoding
+        return shape
+
+    # Verify dims and shape have same length
+    if len(shape) != len(dims):
+        raise ValueError(
+            f"Shape length ({len(shape)}) must match dims length ({len(dims)})"
+        )
 
     dimension_sizes = {}
-    for dim, size in zip(var.dims, var.shape):
+    for dim, size in zip(dims, shape):
         dimension_sizes[dim] = size
 
-    if preferred_chunking_dimension in var.dims:
+    # Find the chunking dimension
+    if preferred_chunking_dimension in dims:
         chunking_dim = preferred_chunking_dimension
     else:
+        # Fall back to largest dimension
         chunking_dim = None
         max_size = 0
         for this_dim, this_size in dimension_sizes.items():
@@ -113,15 +156,15 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
         if key != chunking_dim:
             sizes.append(value)
 
-    bytes_per_one_face = math.prod(sizes) * bytes_per_element
-    optimal_chunks_per_face = target_chunk_size_bytes / bytes_per_one_face
+    bytes_per_one_chunk_unit = math.prod(sizes) * bytes_per_element
+    optimal_chunks_per_unit = target_chunk_size_bytes / bytes_per_one_chunk_unit
 
     # Calculate a chunk size for the target dimension that makes each chunk less than the target size
     # floor rounded to the multiple
     chunk_size = int(
         max(
             target_chunk_multiple,
-            (optimal_chunks_per_face // target_chunk_multiple) * target_chunk_multiple,
+            (optimal_chunks_per_unit // target_chunk_multiple) * target_chunk_multiple,
         )
     )
 
@@ -133,8 +176,7 @@ def define_chunk_size_encoding(ds, var_name, config, this_encoding):
         else:
             chunking_spec.append(size)
 
-    this_encoding["chunksizes"] = tuple(chunking_spec)
-    return this_encoding
+    return tuple(chunking_spec)
 
 
 def define_numeric_encoding(ds, var_name, config, this_encoding):
