@@ -188,14 +188,11 @@ def write_h5_file(output_path, metadata, time_index, all_data, n_faces):
             # Verify dimensions match the array shape: (n_times, n_faces) -> ["time", "face"]
             array_shape = var_array.shape
             array_dims = ["time", "face"]  # Based on verified shape: (n_times, n_faces)
-            
+
             chunk_size = calculate_optimal_chunk_sizes(
-                shape=array_shape,
-                dims=array_dims, 
-                dtype=var_array.dtype,
-                config=config
+                shape=array_shape, dims=array_dims, dtype=var_array.dtype, config=config
             )
-            
+
             h5f.create_dataset(
                 var_name,
                 data=var_array,
@@ -210,7 +207,7 @@ def write_h5_file(output_path, metadata, time_index, all_data, n_faces):
 if __name__ == "__main__":
     create_hsds_tidal_dataset(
         input_path="/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_cook_inlet/b1_vap",
-        output_path="AK_cook_inlet.wpto_high_res_tidal.hsds.v0.3.0",
+        output_path="/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/hsds/AK_cook_inlet.wpto_high_res_tidal.hsds.v0.3.0",
         timezone_offset=-9,
         jurisdiction="Alaska",
         include_vars=[
