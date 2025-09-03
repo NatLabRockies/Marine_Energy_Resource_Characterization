@@ -485,9 +485,23 @@ def write_h5_file(
 
 
 if __name__ == "__main__":
+    base_dir = Path(
+        "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast"
+    )
+    location_dir = "AK_cook_inlet"
+    data_level_dir = "b1_vap"
+
+    input_path = Path(base_dir, location_dir, data_level_dir)
+
+    output_path = Path(
+        base_dir,
+        "hsds",
+        f"{location_dir}.wpto_high_res_tidal.hsds.v{config['dataset']['version']}.h5",
+    )
+
     create_hsds_tidal_dataset(
-        input_path="/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_cook_inlet/b1_vap",
-        output_path=f"/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/hsds/AK_cook_inlet.wpto_high_res_tidal.hsds.v{config['dataset']['version']}.h5",
+        input_path=input_path,
+        output_path=output_path,
         timezone_offset=-9,
         jurisdiction="Alaska",
         include_vars=[
