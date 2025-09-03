@@ -40,6 +40,9 @@ def create_hsds_tidal_dataset(
         # Get depth data from h_center variable
         water_depth = ds_first.h_center.values
 
+        # Collect global attributes from NetCDF
+        global_attrs = dict(ds_first.attrs)
+
         # Determine time steps per file
         time_steps_per_file = len(ds_first.time)
 
@@ -75,7 +78,7 @@ def create_hsds_tidal_dataset(
     time_index = create_time_index(all_times)
 
     # Step 5: Write H5 file
-    write_h5_file(output_path, metadata, time_index, all_data, n_faces)
+    write_h5_file(output_path, metadata, time_index, all_data, n_faces, global_attrs)
 
     print(f"Successfully created {output_path}")
     return output_path
@@ -127,10 +130,10 @@ def should_include_variable(var_name, include_vars):
 
 
 def process_variable(var_name, var, all_data, file_idx, n_sigma, time_steps_per_file):
-    """Process a single variable and add to all_data dict"""
+    """Process a single variable and add to all_data dict with proper NREL spec compliance"""
     dims = var.dims
 
-    # Skip coordinate and connectivity variables
+    # Skip coordinate and connectivity variables - these are handled separately
     skip_vars = [
         "lat_center",
         "lon_center",
@@ -141,23 +144,45 @@ def process_variable(var_name, var, all_data, file_idx, n_sigma, time_steps_per_
         "sigma_layer",
         "sigma_level",
         "time",
+        "face",
+        "node",
+        "h_center",  # Used for meta water_depth, not as a time-varying variable
     ]
     if var_name in skip_vars:
         return
 
-    if dims == ("face",):
-        # 2D variable: just copy
+    if dims == ("time", "face"):
+        # 2D time series: direct use (time, face) -> (time, face)
         if var_name not in all_data:
-            all_data[var_name] = []
-        all_data[var_name].append(var.values)
+            all_data[var_name] = {"data": [], "attrs": dict(var.attrs)}
+        all_data[var_name]["data"].append(var.values)  # Shape: (time_steps, faces)
 
-    elif dims == ("sigma_layer", "face"):
-        # 3D variable: create separate 2D variables for each sigma layer
+    elif dims == ("time", "sigma_layer", "face"):
+        # 3D time series: split into sigma layers (1-indexed)
         for sigma_idx in range(n_sigma):
-            layer_var_name = f"{var_name}_sigma_{sigma_idx}"
+            layer_var_name = f"{var_name}_sigma_layer_{sigma_idx + 1}"
             if layer_var_name not in all_data:
-                all_data[layer_var_name] = []
-            all_data[layer_var_name].append(var.values[sigma_idx, :])
+                # Copy original variable attributes and add layer-specific info
+                layer_attrs = dict(var.attrs)
+                layer_attrs["sigma_layer_index"] = sigma_idx + 1
+                layer_attrs["original_variable"] = var_name
+                all_data[layer_var_name] = {"data": [], "attrs": layer_attrs}
+            all_data[layer_var_name]["data"].append(
+                var.values[:, sigma_idx, :]
+            )  # Shape: (time_steps, faces)
+
+    elif dims == ("face",):
+        # Static variable: broadcast to time dimension for NREL spec compliance
+        if var_name not in all_data:
+            all_data[var_name] = {"data": [], "attrs": dict(var.attrs)}
+        # Broadcast static data to match time dimension
+        broadcasted_data = np.tile(var.values[np.newaxis, :], (time_steps_per_file, 1))
+        all_data[var_name]["data"].append(broadcasted_data)
+
+    else:
+        # Log unhandled dimension patterns for debugging
+        print(f"Warning: Unhandled variable '{var_name}' with dimensions {dims}")
+        return
 
 
 def create_time_index(all_times):
@@ -167,20 +192,39 @@ def create_time_index(all_times):
     return time_index
 
 
-def write_h5_file(output_path, metadata, time_index, all_data, n_faces):
-    """Write data to H5 file following NREL spec"""
+def write_h5_file(
+    output_path, metadata, time_index, all_data, n_faces, global_attrs=None
+):
+    """Write data to H5 file following NREL spec with attributes"""
     n_times = len(time_index)
 
     with h5py.File(output_path, "w") as h5f:
-        # Add version attribute
-        h5f.attrs["version"] = "v1.0.0"
+        # Add global attributes (copy from NetCDF + ensure version exists)
+        if global_attrs:
+            for attr_name, attr_value in global_attrs.items():
+                # Handle different attribute types properly for HDF5
+                if isinstance(attr_value, (str, bytes)):
+                    h5f.attrs[attr_name] = attr_value
+                elif isinstance(attr_value, (int, float, np.integer, np.floating)):
+                    h5f.attrs[attr_name] = attr_value
+                else:
+                    # Convert other types to string for safety
+                    h5f.attrs[attr_name] = str(attr_value)
+
+        # Ensure version attribute exists (required by NREL spec)
+        if "version" not in h5f.attrs:
+            h5f.attrs["version"] = "v1.0.0"
 
         # Create required datasets - rename to 'meta' to match specification
         h5f.create_dataset("meta", data=metadata)
         h5f.create_dataset("time_index", data=time_index)
 
         # Create data variables (2D: time × face)
-        for var_name, var_data_list in all_data.items():
+        for var_name, var_info in all_data.items():
+            # Extract data and attributes
+            var_data_list = var_info["data"]
+            var_attrs = var_info["attrs"]
+
             # Stack time series data
             var_array = np.stack(var_data_list, axis=0)  # Shape: (n_times, n_faces)
 
@@ -193,7 +237,8 @@ def write_h5_file(output_path, metadata, time_index, all_data, n_faces):
                 shape=array_shape, dims=array_dims, dtype=var_array.dtype, config=config
             )
 
-            h5f.create_dataset(
+            # Create dataset with compression and chunking
+            dataset = h5f.create_dataset(
                 var_name,
                 data=var_array,
                 chunks=chunk_size,
@@ -201,7 +246,18 @@ def write_h5_file(output_path, metadata, time_index, all_data, n_faces):
                 compression_opts=4,
             )
 
-            print(f"Created variable {var_name} with shape {var_array.shape}")
+            # Add variable attributes
+            for attr_name, attr_value in var_attrs.items():
+                try:
+                    dataset.attrs[attr_name] = attr_value
+                except (TypeError, ValueError) as e:
+                    print(
+                        f"Warning: Could not set attribute '{attr_name}' for variable '{var_name}': {e}"
+                    )
+
+            print(
+                f"Created variable {var_name} with shape {var_array.shape} and {len(var_attrs)} attributes"
+            )
 
 
 if __name__ == "__main__":
@@ -211,12 +267,8 @@ if __name__ == "__main__":
         timezone_offset=-9,
         jurisdiction="Alaska",
         include_vars=[
-            "time",
-            "latc",
-            "lonc",
             "u",
             "v",
-            "h_center",
             "vap_sea_water_speed",
             "vap_sea_water_to_direction",
             "vap_surface_elevation",
