@@ -4,8 +4,8 @@
 #SBATCH --job-name=cook_hsds
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=47:00:00
-#SBATCH --partition=standard
+#SBATCH --time=120:00:00
+#SBATCH --partition=long
 
 # Source shared environment setup
 source sbatch_env_setup.sh
