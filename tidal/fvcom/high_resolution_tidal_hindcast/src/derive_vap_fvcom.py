@@ -3,9 +3,16 @@ import time
 
 from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import numpy as np
+import pandas as pd
 import xarray as xr
+import geopandas as gpd
+import pyproj
+from shapely.geometry import Point
+from shapely.ops import nearest_points
+from timezonefinder import TimezoneFinder
 
 from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
 
@@ -36,76 +43,125 @@ output_names = {
 }
 
 
-def calculate_and_save_mean_navd88_offset(config, location_key):
-    """
-    Calculate mean NAVD88 offset across all files and save for later use.
+def get_face_center_precalculations_path(config, location):
+    """Get path to consolidated face center precalculations parquet file"""
+    tracking_path = file_manager.get_tracking_output_dir(config, location)
+    location_config = (
+        config["location_specification"][location]
+        if isinstance(location, str)
+        else location
+    )
+    return Path(
+        tracking_path,
+        f"{location_config['output_name']}_face_center_precalculations.parquet",
+    )
 
-    This function processes all NetCDF files to calculate zeta_center, then computes
-    the temporal mean across all files for each face location. This mean represents
-    the NAVD88 offset that needs to be subtracted to get surface elevation relative
-    to mean sea level.
+
+def calculate_and_save_face_center_precalculations(config, location_key):
+    """
+    Calculate and save all face-centered precalculated data in correct dependency order.
+
+    This function creates a consolidated DataFrame with face-centered spatial data and
+    also calculates the NAVD88 offset data. Both are saved for later use in VAP processing.
+
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary
+    location_key : str
+        Location key from config
 
     Returns
     -------
-    Path
-        Path to the saved offset file
+    tuple[Path, Path]
+        Tuple containing (parquet_file_path, navd88_offset_path)
 
     Raises
     ------
     ValueError
-        If files have inconsistent face coordinates or dimensions
+        If files have inconsistent face coordinates or calculations fail
     FileNotFoundError
         If no NC files found in the specified path
     """
-
     location = config["location_specification"][location_key]
     location_name = location["label"]
+
+    print(f"Calculating all face-centered precalculations for {location_name}...")
+
+    try:
+        # Step 1: Initialize DataFrame with face coordinates
+        print("Step 1: Initializing face coordinates DataFrame...")
+        df = _initialize_face_coordinates_dataframe(config, location_key)
+
+        # Step 2: Add timezone offset data
+        print("Step 2: Adding timezone offset data...")
+        df = _add_timezone_offset_to_dataframe(df, config, location_key)
+
+        # Step 3: Add distance to shore data
+        print("Step 3: Adding distance to shore data...")
+        df = _add_distance_to_shore_to_dataframe(df, config, location_key)
+
+        # Step 4: Add jurisdiction data (depends on distance to shore)
+        print("Step 4: Adding jurisdiction data...")
+        df = _add_jurisdiction_to_dataframe(df, config, location_key)
+
+        # Step 5: Calculate NAVD88 offset (temporal mean across all files)
+        print("Step 5: Calculating mean NAVD88 offset...")
+        df = _add_navd88_offset_to_dataframe(df, config, location_key)
+
+        # Step 6: Save consolidated parquet file
+        print("Step 6: Saving consolidated precalculations...")
+        parquet_path = _save_face_precalculations_dataframe(df, config, location_key)
+
+        print("All face-centered precalculations complete!")
+        print(f"  Parquet file: {parquet_path}")
+
+        return parquet_path
+
+    except Exception as e:
+        print(f"ERROR: Face-centered precalculations failed: {e}")
+        raise
+
+
+def _initialize_face_coordinates_dataframe(config, location_key):
+    """Create initial DataFrame with face_index, lat_center, lon_center"""
+    location = config["location_specification"][location_key]
     input_path = file_manager.get_standardized_partition_output_dir(config, location)
 
-    output_path = file_manager.get_tracking_output_dir(config, location)
-    output_file_path = Path(
-        output_path, f"{location['output_name']}_mean_navd88_offset.nc"
-    )
-
-    # Find all NC files
+    # Find all NC files for coordinate validation
     nc_files = sorted(list(input_path.rglob("*.nc")))
     if not nc_files:
         raise FileNotFoundError(f"No NetCDF files found in {input_path}")
 
-    print(f"Processing {len(nc_files)} files to calculate mean NAVD88 offset...")
+    print(f"Initializing coordinates from {len(nc_files)} files...")
 
-    zeta_center_data = []
+    # Get reference coordinates from first file
     reference_coords = None
 
     for i, nc_file in enumerate(nc_files):
-        print(f"Processing file {i + 1}/{len(nc_files)}: {nc_file.name}")
+        print(
+            f"Validating coordinates from file {i + 1}/{len(nc_files)}: {nc_file.name}"
+        )
 
         with xr.open_dataset(nc_file) as ds:
-            # Calculate zeta_center for this file
-            ds_with_zeta = calculate_zeta_center(ds)
-
-            # Extract zeta_center data
-            zeta_center = ds_with_zeta[output_names["zeta_center"]]
-
-            # Validate coordinates consistency
             current_coords = {
-                "lon_center": zeta_center.lon_center.values,
-                "lat_center": zeta_center.lat_center.values,
-                "n_faces": len(zeta_center.face),
+                "lon_center": ds.lon_center.values,
+                "lat_center": ds.lat_center.values,
+                "n_faces": len(ds.face),
+                "face_index": ds.face.values,
             }
 
             if reference_coords is None:
                 reference_coords = current_coords
                 print(f"Reference coordinates set: {current_coords['n_faces']} faces")
             else:
-                # Check face count
+                # Validate consistency (same as NAVD88 function)
                 if current_coords["n_faces"] != reference_coords["n_faces"]:
                     raise ValueError(
                         f"File {nc_file.name} has {current_coords['n_faces']} faces, "
                         f"but reference has {reference_coords['n_faces']} faces"
                     )
 
-                # Check coordinate consistency (within tolerance for floating point)
                 if not np.allclose(
                     current_coords["lon_center"],
                     reference_coords["lon_center"],
@@ -124,74 +180,430 @@ def calculate_and_save_mean_navd88_offset(config, location_key):
                         f"File {nc_file.name} has inconsistent lat_center coordinates"
                     )
 
-            # Store the zeta_center data
-            zeta_center_data.append(zeta_center.values)
+    # Create DataFrame with face_index as index
+    df = pd.DataFrame(
+        {
+            "latitude_center": reference_coords["lat_center"].astype(np.float64),
+            "longitude_center": reference_coords["lon_center"].astype(np.float64),
+        },
+        index=reference_coords["face_index"],
+    )
 
+    df.index.name = "face_index"
+
+    print(f"Initialized DataFrame: {len(df)} faces, columns: {list(df.columns)}")
+    return df
+
+
+def _add_timezone_offset_to_dataframe(df, config, location_key):
+    """Add timezone_offset column to existing DataFrame"""
+    import time
+    from timezonefinder import TimezoneFinder
+    import pytz
+
+    print(f"Calculating timezone offsets for {len(df)} face coordinates...")
+
+    tf = TimezoneFinder()
+    timezone_offsets = []
+
+    for i, (face_idx, row) in enumerate(df.iterrows()):
+        if i % 1000 == 0:
+            print(f"  Processing face {i + 1}/{len(df)}")
+
+        lat = row["latitude_center"]
+        lon = row["longitude_center"]
+
+        # Get timezone string for this coordinate
+        timezone_str = tf.timezone_at(lat=lat, lng=lon)
+
+        if timezone_str:
+            try:
+                tz = pytz.timezone(timezone_str)
+                # Get UTC offset in hours (using a reference date to avoid DST issues)
+                reference_date = pd.Timestamp("2023-01-15 12:00:00")  # Winter time
+                localized_dt = tz.localize(reference_date)
+                utc_offset_hours = int(localized_dt.utcoffset().total_seconds() / 3600)
+                timezone_offsets.append(utc_offset_hours)
+            except Exception as e:
+                print(
+                    f"Warning: Could not determine offset for timezone {timezone_str} at face {face_idx}: {e}"
+                )
+                timezone_offsets.append(0)  # Default to UTC
+        else:
+            print(
+                f"Warning: No timezone found for face {face_idx} at ({lat:.4f}, {lon:.4f}), defaulting to UTC"
+            )
+            timezone_offsets.append(0)  # Default to UTC
+
+    df["timezone_offset"] = pd.Series(timezone_offsets, dtype=np.int16, index=df.index)
+
+    # Save metadata JSON
+    metadata = {
+        "variable_name": "timezone_offset",
+        "standard_name": "utc_timezone_offset",
+        "long_name": "UTC Timezone Offset",
+        "units": "hours",
+        "description": "UTC timezone offset in hours for each face center coordinate",
+        "computation": "TimezoneFinder library with pytz timezone database",
+        "reference_date": "2023-01-15 (winter time to avoid DST)",
+        "default_value": 0,
+        "dtype": "int16",
+        "unique_values": sorted(df["timezone_offset"].unique().tolist()),
+        "value_counts": df["timezone_offset"].value_counts().to_dict(),
+        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+    }
+
+    _save_metadata_json(metadata, config, location_key, "timezone_offset")
+
+    print(
+        f"Added timezone_offset column. Unique values: {sorted(df['timezone_offset'].unique())}"
+    )
+    return df
+
+
+def _add_distance_to_shore_to_dataframe(df, config, location_key):
+    """Add distance_to_shore column to existing DataFrame"""
+    import time
+    import geopandas as gpd
+    from shapely.geometry import Point
+
+    print(f"Calculating distance to shore for {len(df)} face coordinates...")
+
+    # Load Natural Earth data (assume config has the path)
+    natural_earth_path = config.get("natural_earth_data_path")
+    if not natural_earth_path:
+        raise ValueError(
+            "Config must contain 'natural_earth_data_path' for distance calculations"
+        )
+
+    coastline_gdf = gpd.read_file(natural_earth_path)
+    print(f"Loaded coastline data: {len(coastline_gdf)} features")
+
+    # Create GeoDataFrame from face coordinates
+    geometry = [
+        Point(lon, lat)
+        for lat, lon in zip(df["latitude_center"], df["longitude_center"])
+    ]
+    points_gdf = gpd.GeoDataFrame(
+        df[["latitude_center", "longitude_center"]], geometry=geometry, crs="EPSG:4326"
+    )
+
+    # Transform to appropriate projection for distance calculations (EPSG:4087 - World Equidistant Cylindrical)
+    points_projected = points_gdf.to_crs("EPSG:4087")
+    coastline_projected = coastline_gdf.to_crs("EPSG:4087")
+
+    # Create spatial index for efficiency
+    coastline_sindex = coastline_projected.sindex
+
+    distances_nm = []
+    batch_size = 1000
+
+    for batch_start in range(0, len(points_projected), batch_size):
+        batch_end = min(batch_start + batch_size, len(points_projected))
+        print(
+            f"  Processing batch {batch_start + 1}-{batch_end} of {len(points_projected)}"
+        )
+
+        batch_points = points_projected.iloc[batch_start:batch_end]
+
+        for idx, point_row in batch_points.iterrows():
+            point_geom = point_row.geometry
+
+            # Find potential intersections using spatial index
+            possible_matches_index = list(
+                coastline_sindex.intersection(point_geom.bounds)
+            )
+            possible_matches = coastline_projected.iloc[possible_matches_index]
+
+            if len(possible_matches) == 0:
+                # No nearby coastline found, use large distance
+                distance_m = (
+                    200 * 1852
+                )  # 200 NM in meters (cap for international waters)
+            else:
+                # Calculate actual distances to nearby coastline segments
+                distances = possible_matches.geometry.distance(point_geom)
+                distance_m = distances.min()
+
+            # Convert to nautical miles and cap at 200 NM
+            distance_nm = min(distance_m / 1852.0, 200.0)
+
+            # Handle points on land (very small distances)
+            if distance_nm < 0.001:  # Less than ~2 meters
+                distance_nm = 0.0
+
+            distances_nm.append(distance_nm)
+
+    df["distance_to_shore"] = pd.Series(distances_nm, dtype=np.float32, index=df.index)
+
+    # Save metadata JSON
+    metadata = {
+        "variable_name": "distance_to_shore",
+        "standard_name": "distance_to_shore",
+        "long_name": "Distance to Nearest Shore",
+        "units": "nautical_miles",
+        "description": "Geodesic distance from face center to nearest coastline in nautical miles",
+        "computation": "Spatial distance calculation using Natural Earth 1:10m coastline data",
+        "projection": "EPSG:4087 (World Equidistant Cylindrical)",
+        "maximum_distance": 200.0,
+        "minimum_distance": 0.0,
+        "land_points_distance": 0.0,
+        "dtype": "float32",
+        "statistics": {
+            "min": float(df["distance_to_shore"].min()),
+            "max": float(df["distance_to_shore"].max()),
+            "mean": float(df["distance_to_shore"].mean()),
+            "median": float(df["distance_to_shore"].median()),
+        },
+        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        "data_source": str(natural_earth_path),
+    }
+
+    _save_metadata_json(metadata, config, location_key, "distance_to_shore")
+
+    print(
+        f"Added distance_to_shore column. Stats: min={df['distance_to_shore'].min():.2f}, max={df['distance_to_shore'].max():.2f}, mean={df['distance_to_shore'].mean():.2f} NM"
+    )
+    return df
+
+
+def _add_jurisdiction_to_dataframe(df, config, location_key):
+    """Add jurisdiction column to existing DataFrame (depends on distance_to_shore)"""
+    import time
+
+    if "distance_to_shore" not in df.columns:
+        raise ValueError(
+            "DataFrame must contain 'distance_to_shore' column before calculating jurisdiction"
+        )
+
+    print(f"Calculating maritime jurisdiction for {len(df)} faces...")
+
+    # Get location-specific information from config
+    location_config = config.get("location_specification", {}).get(location_key, {})
+    state_province = location_config.get("jurisdiction", None)
+    location_label = location_config.get("label", location_key)
+
+    # Determine country based on coordinate bounds (same logic as original function)
+    lat_values = df["latitude_center"].values
+    lon_values = df["longitude_center"].values
+
+    if np.mean(lat_values) > 25 and np.mean(lon_values) < -50:
+        country = "US"
+    elif np.mean(lat_values) > 45 and np.mean(lon_values) < -50:
+        country = "Canada"
+    else:
+        country = "Coastal State"
+
+    # Determine state water boundary
+    state_boundary = 3.0  # Default 3 NM
+    if (
+        state_province
+        and state_province.lower() in ["texas", "florida"]
+        and "gulf" in location_label.lower()
+    ):
+        state_boundary = 9.0
+
+    print(f"Using {state_boundary} NM state water boundary for {country}")
+
+    # Create jurisdiction labels
+    if state_province:
+        land_label = f"{country} {state_province} Land"
+        state_waters_label = f"{country} {state_province} State Waters"
+    else:
+        land_label = f"{country} Coastal Land"
+        state_waters_label = f"{country} State Waters (within {state_boundary} NM)"
+
+    territorial_label = f"{country} Territorial Sea"
+    contiguous_label = f"{country} Contiguous Zone"
+    eez_label = f"{country} Exclusive Economic Zone"
+    international_label = "International Waters"
+
+    # Apply jurisdiction classification
+    distance = df["distance_to_shore"].values
+    jurisdiction_values = np.select(
+        [
+            distance == 0,
+            (distance > 0) & (distance <= state_boundary),
+            (distance > state_boundary) & (distance <= 12),
+            (distance > 12) & (distance <= 24),
+            (distance > 24) & (distance <= 200),
+            distance > 200,
+        ],
+        [
+            land_label,
+            state_waters_label,
+            territorial_label,
+            contiguous_label,
+            eez_label,
+            international_label,
+        ],
+        default="Unknown",
+    )
+
+    df["jurisdiction"] = pd.Series(jurisdiction_values, dtype="string", index=df.index)
+
+    # Calculate statistics
+    unique_jurisdictions, counts = np.unique(jurisdiction_values, return_counts=True)
+    jurisdiction_stats = dict(zip(unique_jurisdictions, counts.tolist()))
+
+    print("Jurisdiction classification complete:")
+    for jurisdiction, count in jurisdiction_stats.items():
+        percentage = (count / len(df)) * 100
+        print(f"  {jurisdiction}: {count} faces ({percentage:.1f}%)")
+
+    # Save metadata JSON
+    metadata = {
+        "variable_name": "jurisdiction",
+        "standard_name": "maritime_jurisdiction_zone",
+        "long_name": "Maritime Jurisdiction Classification",
+        "units": "1",
+        "description": "Maritime jurisdiction zone classification based on distance from shore following US maritime law and international conventions (UNCLOS)",
+        "computation": f"Classification based on distance ranges with {state_boundary} NM state boundary",
+        "boundaries": {
+            "land": "0 NM (exactly on coastline)",
+            "state_waters": f"0-{state_boundary} NM",
+            "territorial_sea": f"{state_boundary}-12 NM",
+            "contiguous_zone": "12-24 NM",
+            "exclusive_economic_zone": "24-200 NM",
+            "international_waters": ">200 NM",
+        },
+        "legal_references": "UNCLOS 1982, 43 USC 1331 (Submerged Lands Act), 43 USC 1301-1315",
+        "country": country,
+        "state_province": state_province,
+        "location": location_label,
+        "dtype": "string",
+        "unique_values": unique_jurisdictions.tolist(),
+        "value_counts": jurisdiction_stats,
+        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+    }
+
+    _save_metadata_json(metadata, config, location_key, "jurisdiction")
+
+    return df
+
+
+def _add_navd88_offset_to_dataframe(df, config, location_key):
+    """Add mean_navd88_offset column to existing DataFrame"""
+    import time
+    
+    print(f"Calculating mean NAVD88 offset for {len(df)} faces...")
+    
+    location = config["location_specification"][location_key]
+    input_path = file_manager.get_standardized_partition_output_dir(config, location)
+    
+    # Find all NC files
+    nc_files = sorted(list(input_path.rglob("*.nc")))
+    if not nc_files:
+        raise FileNotFoundError(f"No NetCDF files found in {input_path}")
+    
+    zeta_center_data = []
+    
+    for i, nc_file in enumerate(nc_files):
+        if i % 5 == 0:
+            print(f"  Processing file {i + 1}/{len(nc_files)}: {nc_file.name}")
+        
+        with xr.open_dataset(nc_file) as ds:
+            # Calculate zeta_center for this file
+            ds_with_zeta = calculate_zeta_center(ds)
+            
+            # Extract zeta_center data
+            zeta_center = ds_with_zeta[output_names["zeta_center"]]
+            
+            # Validate that face indices match our DataFrame
+            if not np.array_equal(zeta_center.face.values, df.index.values):
+                raise ValueError(
+                    f"File {nc_file.name} has inconsistent face indices with DataFrame"
+                )
+            
+            # Store the zeta_center data (face dimension should match DataFrame index)
+            zeta_center_data.append(zeta_center.values)
+    
     # Concatenate all data along time axis
     print("Concatenating data and calculating temporal mean...")
     all_zeta_data = np.concatenate(zeta_center_data, axis=0)  # (total_time, n_faces)
-
+    
     # Calculate mean across all time steps for each face
     mean_navd88_offset = np.mean(all_zeta_data, axis=0)  # (n_faces,)
-
-    # Create xarray DataArray for the offset
-    with xr.open_dataset(nc_files[0]) as first_ds:
-        first_ds_with_zeta = calculate_zeta_center(first_ds)
-        reference_zeta = first_ds_with_zeta[output_names["zeta_center"]]
-
-        offset_da = xr.DataArray(
-            mean_navd88_offset,
-            dims=("face",),
-            coords={
-                "face": reference_zeta.face,
-                "lon_center": reference_zeta.lon_center,
-                "lat_center": reference_zeta.lat_center,
-            },
-        )
-
-        # Add comprehensive metadata
-        offset_da.attrs = {
-            "long_name": "Mean NAVD88 Offset for Surface Elevation Calculation",
-            "standard_name": "mean_sea_surface_height_offset_above_geoid",
-            "units": "m",
-            "description": (
-                "Temporal mean of zeta_center values across all input files. "
-                "This offset represents the mean deviation from NAVD88 datum "
-                "and should be subtracted from instantaneous zeta_center values "
-                "to obtain surface elevation relative to mean sea level."
-            ),
-            "computation": "mean(zeta_center) across all timesteps and files",
-            "input_files_count": len(nc_files),
-            "total_timesteps": all_zeta_data.shape[0],
-            "coordinate_reference": "NAVD88",
-            "mesh": "cell_centered",
-            "coordinates": "face lon_center lat_center",
-        }
-
-    # Create dataset and save
-    offset_ds = xr.Dataset(
-        {"mean_navd88_offset": offset_da},
-        attrs={
-            "title": f"Mean NAVD88 Offset Data for {location_name}",
-            "description": "Pre-computed mean NAVD88 offset for surface elevation calculations",
-            "location": location_name,
-            "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
-            "input_files_count": len(nc_files),
-            "total_timesteps_processed": all_zeta_data.shape[0],
-            "source_directory": str(input_path),
+    
+    # Add to DataFrame with same index
+    df["mean_navd88_offset"] = pd.Series(
+        mean_navd88_offset, dtype=np.float32, index=df.index
+    )
+    
+    # Save metadata JSON
+    metadata = {
+        "variable_name": "mean_navd88_offset",
+        "standard_name": "mean_sea_surface_height_offset_above_geoid",
+        "long_name": "Mean NAVD88 Offset for Surface Elevation Calculation",
+        "units": "m",
+        "description": (
+            "Temporal mean of zeta_center values across all input files. "
+            "This offset represents the mean deviation from NAVD88 datum "
+            "and should be subtracted from instantaneous zeta_center values "
+            "to obtain surface elevation relative to mean sea level."
+        ),
+        "computation": "mean(zeta_center) across all timesteps and files",
+        "input_files_count": len(nc_files),
+        "total_timesteps": all_zeta_data.shape[0],
+        "coordinate_reference": "NAVD88",
+        "dtype": "float32",
+        "statistics": {
+            "min": float(df["mean_navd88_offset"].min()),
+            "max": float(df["mean_navd88_offset"].max()),
+            "mean": float(df["mean_navd88_offset"].mean()),
+            "std": float(df["mean_navd88_offset"].std()),
         },
-    )
-
-    # Save to file
-    offset_ds.to_netcdf(output_file_path)
-    print(f"Mean NAVD88 offset saved to: {output_file_path}")
+        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+    }
+    
+    _save_metadata_json(metadata, config, location_key, "mean_navd88_offset")
+    
     print(
-        f"Offset statistics: min={mean_navd88_offset.min():.3f}m, "
-        f"max={mean_navd88_offset.max():.3f}m, "
-        f"mean={mean_navd88_offset.mean():.3f}m"
+        f"Added mean_navd88_offset column. Stats: min={df['mean_navd88_offset'].min():.3f}, max={df['mean_navd88_offset'].max():.3f}, mean={df['mean_navd88_offset'].mean():.3f} m"
+    )
+    return df
+
+
+def _save_face_precalculations_dataframe(df, config, location_key):
+    """Save consolidated DataFrame to parquet file"""
+    location = config["location_specification"][location_key]
+    output_path = get_face_center_precalculations_path(config, location)
+
+    # Ensure output directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save to parquet with optimal settings
+    df.to_parquet(
+        output_path,
+        index=True,  # Include face_index
+        compression="snappy",
+        engine="pyarrow",
     )
 
-    return output_file_path
+    print(f"Consolidated DataFrame saved: {len(df)} faces, {len(df.columns)} columns")
+    print(f"Columns: {list(df.columns)}")
+    print(f"File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
+
+    return output_path
+
+
+def _save_metadata_json(metadata, config, location_key, variable_name):
+    """Save metadata JSON file"""
+    location = config["location_specification"][location_key]
+    output_path = file_manager.get_tracking_output_dir(config, location)
+    json_path = Path(
+        output_path, f"{location['output_name']}_{variable_name}_metadata.json"
+    )
+
+    # Ensure output directory exists
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+
+    import json
+
+    with open(json_path, "w") as f:
+        json.dump(metadata, f, indent=2)
+
+    print(f"Metadata saved: {json_path}")
 
 
 def validate_u_and_v(ds):
