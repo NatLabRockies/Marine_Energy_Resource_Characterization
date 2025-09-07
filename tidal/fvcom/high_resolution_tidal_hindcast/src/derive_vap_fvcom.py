@@ -281,6 +281,110 @@ def calculate_sea_water_speed(ds, config):
     return ds
 
 
+def calculate_utc_timezone_offset(ds, config):
+    """
+    Calculate UTC timezone offset for each face using individual coordinates.
+    
+    This function computes the timezone offset for each face in the dataset
+    using the lat_center/lon_center coordinates for that specific face.
+    
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing lat_center and lon_center coordinate variables
+    config : dict
+        Configuration dictionary (maintained for consistency with other functions)
+    
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'vap_utc_timezone_offset' variable and CF-compliant metadata
+    
+    Raises
+    ------
+    KeyError
+        If required coordinate variables are missing
+    ValueError
+        If timezone cannot be determined for any coordinates
+    """
+    # Check required coordinates
+    if "lat_center" not in ds.variables:
+        raise KeyError("Dataset must contain 'lat_center' coordinate variable")
+    if "lon_center" not in ds.variables:
+        raise KeyError("Dataset must contain 'lon_center' coordinate variable")
+    
+    # Get coordinate arrays
+    lat_values = ds.lat_center.values
+    lon_values = ds.lon_center.values
+    n_faces = len(ds.face)
+    
+    print(f"Calculating timezone offsets for {n_faces} individual face coordinates...")
+    
+    # Initialize TimezoneFinder
+    tf = TimezoneFinder()
+    
+    # Calculate timezone offset for each face
+    timezone_offset_values = np.zeros(n_faces, dtype=np.int16)
+    
+    for i in range(n_faces):
+        lat = float(lat_values[i])
+        lon = float(lon_values[i])
+        
+        # Get timezone name for this specific coordinate
+        timezone_name = tf.timezone_at(lat=lat, lng=lon)
+        
+        if not timezone_name:
+            raise ValueError(f"Could not determine timezone for face {i} at coordinates ({lat}, {lon})")
+        
+        # Get UTC offset using zoneinfo
+        tz = ZoneInfo(timezone_name)
+        now = datetime.now(tz)
+        utc_offset_seconds = now.utcoffset().total_seconds()
+        utc_offset_hours = int(utc_offset_seconds / 3600)
+        
+        timezone_offset_values[i] = utc_offset_hours
+    
+    # Report statistics
+    unique_offsets = np.unique(timezone_offset_values)
+    print(f"Found {len(unique_offsets)} unique timezone offsets: {unique_offsets}")
+    
+    output_variable_name = output_names["utc_timezone_offset"]
+    
+    # Create DataArray with timezone offset for each face
+    ds[output_variable_name] = xr.DataArray(
+        timezone_offset_values,
+        dims=["face"],
+        coords={
+            "face": ds.face,
+            "lat_center": ds.lat_center,
+            "lon_center": ds.lon_center,
+        },
+    )
+    
+    # Add CF-compliant metadata
+    ds[output_variable_name].attrs = {
+        "long_name": "UTC Timezone Offset",
+        "standard_name": "utc_offset",
+        "units": "hours",
+        "description": (
+            "The offset in hours from Coordinated Universal Time (UTC) for the "
+            "timezone at each face's geographic location. Each face receives its "
+            "own timezone offset based on its specific lat_center/lon_center coordinates."
+        ),
+        "computation": "Calculated using timezonefinder for each individual face coordinate",
+        "input_variables": "lat_center, lon_center coordinates for each face",
+        "methodology": (
+            "For each face, timezone determined using TimezoneFinder library with "
+            "the face's specific lat_center/lon_center coordinates, then UTC offset "
+            "extracted using Python's zoneinfo module."
+        ),
+        "unique_offsets_found": unique_offsets.tolist(),
+        "coordinates": "face lat_center lon_center",
+    }
+    
+    return ds
+
+
 def calculate_sea_water_to_direction(
     ds, config, direction_undefined_speed_threshold_ms=0.01
 ):
