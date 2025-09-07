@@ -30,6 +30,9 @@ output_names = {
     "median": "vap_water_column_median",
     "max": "vap_water_column_max",
     "p95": "vap_water_column_<PERCENTILE>th_percentile",
+    "utc_timezone_offset": "vap_utc_timezone_offset",
+    "distance_to_shore": "vap_distance_to_shore",
+    "jurisdiction": "vap_jurisdiction",
 }
 
 
