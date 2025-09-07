@@ -36,6 +36,17 @@ config = {
         },
         "xarray_netcdf4_engine": "h5netcdf",
     },
+    "hdf5_cache": {
+        # HDF5 chunk cache settings for performance optimization
+        # Cache sizes in GB - converted to bytes at runtime
+        "write_cache_gb": 4.0,  # For write-heavy operations (convert scripts)
+        "read_cache_gb": 2.0,  # For read-heavy operations (stitch scripts)
+        "stitch_write_cache_gb": 3.0,  # For stitching operations (write to yearly file)
+        # Computed at runtime
+        "write_cache_bytes": None,
+        "read_cache_bytes": None,
+        "stitch_write_cache_bytes": None,
+    },
     "code": {
         "version": "0.3.0",
         "development_version": "0.4.0",
@@ -816,6 +827,25 @@ config = {
         "publisher_url": "https://www.nrel.gov",
     },
 }
+
+
+# Initialize HDF5 cache byte values from GB settings
+def initialize_hdf5_cache():
+    """Initialize HDF5 cache byte values from GB configuration"""
+    cache_config = config["hdf5_cache"]
+    gb_to_bytes = 1024**3
+
+    cache_config["write_cache_bytes"] = int(
+        cache_config["write_cache_gb"] * gb_to_bytes
+    )
+    cache_config["read_cache_bytes"] = int(cache_config["read_cache_gb"] * gb_to_bytes)
+    cache_config["stitch_write_cache_bytes"] = int(
+        cache_config["stitch_write_cache_gb"] * gb_to_bytes
+    )
+
+
+# Initialize cache values on import
+initialize_hdf5_cache()
 
 if __name__ == "__main__":
     import json
