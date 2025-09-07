@@ -9,7 +9,10 @@ from src.file_manager import get_specified_nc_files, get_tracking_output_dir
 from src.verify import verify_dataset
 from src.standardize import standardize_dataset
 from src.partition_by_time import partition_by_time
-from src.derive_vap_fvcom import calculate_and_save_mean_navd88_offset, derive_vap
+from src.derive_vap_fvcom import (
+    calculate_and_save_face_center_precalculations,
+    derive_vap,
+)
 from src.calculate_vap_average import (
     calculate_vap_monthly_average,
     calculate_vap_yearly_average,
@@ -66,16 +69,17 @@ if __name__ == "__main__":
     # print("Step 3: Partitioning Standardized Dataset by Time...")
     # partition_by_time(config, args.location, valid_std_files_df)
 
-    # print("Step 4: Calculating Derived Value Added Products...")
-    # surface_elevation_offset_path = calculate_and_save_mean_navd88_offset(
-    #     config, args.location
-    # )
-    # derive_vap(
-    #     config,
-    #     args.location,
-    #     surface_elevation_offset_path,
-    #     skip_if_output_files_exist=False,
-    # )
+    print("Step 4: Calculating Derived Value Added Products...")
+    face_precalculations_path, surface_elevation_offset_path = (
+        calculate_and_save_face_center_precalculations(config, args.location)
+    )
+
+    derive_vap(
+        config,
+        args.location,
+        surface_elevation_offset_path,
+        skip_if_output_files_exist=False,
+    )
     #
     # The following doesn't work anymore due to memory issues
     # Summary computations must use dispatch_summarize_jobs.py
