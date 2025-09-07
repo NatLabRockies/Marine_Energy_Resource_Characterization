@@ -381,7 +381,177 @@ def calculate_utc_timezone_offset(ds, config):
         "unique_offsets_found": unique_offsets.tolist(),
         "coordinates": "face lat_center lon_center",
     }
-    
+
+    return ds
+
+
+def calculate_distance_to_shore(ds, config):
+    """
+    Calculate distance to shore for each face using Natural Earth coastline data.
+
+    This function computes the minimum distance from each face center to the
+    nearest coastline using high-resolution Natural Earth data. Distances are
+    calculated in nautical miles using geodesic calculations.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing lat_center and lon_center coordinate variables
+    config : dict
+        Configuration dictionary containing Natural Earth data path
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'vap_distance_to_shore' variable and CF-compliant metadata
+
+    Raises
+    ------
+    KeyError
+        If required coordinate variables are missing
+    ValueError
+        If Natural Earth data cannot be loaded
+    FileNotFoundError
+        If Natural Earth data file not found
+    """
+    # Check required coordinates
+    if "lat_center" not in ds.variables:
+        raise KeyError("Dataset must contain 'lat_center' coordinate variable")
+    if "lon_center" not in ds.variables:
+        raise KeyError("Dataset must contain 'lon_center' coordinate variable")
+
+    # Get coordinate arrays
+    lat_values = ds.lat_center.values
+    lon_values = ds.lon_center.values
+    n_faces = len(ds.face)
+
+    print(f"Calculating distance to shore for {n_faces} individual face coordinates...")
+
+    # Load Natural Earth data from config path
+    natural_earth_path = Path(config["natural_earth"]["land_polygons_path"])
+    if not natural_earth_path.exists():
+        raise FileNotFoundError(
+            f"Natural Earth data file not found: {natural_earth_path}"
+        )
+
+    print(f"Loading Natural Earth coastline data from: {natural_earth_path}")
+    try:
+        # Load the land polygons
+        land_gdf = gpd.read_file(natural_earth_path)
+
+        # Create a combined geometry for all land masses for faster distance calculation
+        land_union = land_gdf.geometry.unary_union
+
+        print(f"Loaded {len(land_gdf)} land polygon features")
+
+    except Exception as e:
+        raise ValueError(f"Failed to load Natural Earth data: {e}")
+
+    # Create spatial index for faster distance calculations
+    print("Building spatial index for distance calculations...")
+
+    # Convert to appropriate CRS for accurate distance calculation in meters
+    # Use World Equidistant Cylindrical (EPSG:4087) for global distance calculations
+    crs_distance = "EPSG:4087"  # World Equidistant Cylindrical
+
+    # Reproject land geometry to distance CRS
+    land_gdf_projected = land_gdf.to_crs(crs_distance)
+    land_union_projected = land_gdf_projected.geometry.unary_union
+
+    # Initialize distance array
+    distance_values = np.zeros(n_faces, dtype=np.float32)
+
+    # Process points in batches for memory efficiency
+    batch_size = 1000
+    n_batches = (n_faces + batch_size - 1) // batch_size
+
+    print(f"Processing {n_faces} points in {n_batches} batches...")
+
+    for batch_idx in range(n_batches):
+        start_idx = batch_idx * batch_size
+        end_idx = min(start_idx + batch_size, n_faces)
+
+        # Create points for this batch
+        batch_points = [
+            Point(lon_values[i], lat_values[i]) for i in range(start_idx, end_idx)
+        ]
+
+        # Create GeoDataFrame and project to distance CRS
+        points_gdf = gpd.GeoDataFrame(geometry=batch_points, crs="EPSG:4326")
+        points_gdf_projected = points_gdf.to_crs(crs_distance)
+
+        # Calculate distances for this batch
+        for local_idx, point_geom in enumerate(points_gdf_projected.geometry):
+            face_idx = start_idx + local_idx
+
+            # Check if point is on land first (distance = 0)
+            if land_union_projected.contains(point_geom):
+                distance_values[face_idx] = 0.0
+            else:
+                # Calculate minimum distance to coastline in meters
+                distance_meters = point_geom.distance(land_union_projected)
+
+                # Convert meters to nautical miles (1 nautical mile = 1852 meters)
+                distance_nautical_miles = distance_meters / 1852.0
+
+                # Apply maximum distance constraint (200 NM for international waters)
+                distance_values[face_idx] = min(distance_nautical_miles, 200.0)
+
+        if (batch_idx + 1) % 10 == 0:
+            print(f"  Processed batch {batch_idx + 1}/{n_batches}")
+
+    # Report statistics
+    unique_distances = np.unique(distance_values)
+    on_land_count = np.sum(distance_values == 0.0)
+    max_distance_count = np.sum(distance_values == 200.0)
+
+    print("Distance calculation complete:")
+    print(f"  Points on land (distance=0): {on_land_count}")
+    print(f"  Points at maximum distance (200NM): {max_distance_count}")
+    print(
+        f"  Distance range: {distance_values.min():.2f} - {distance_values.max():.2f} nautical miles"
+    )
+
+    output_variable_name = output_names["distance_to_shore"]
+
+    # Create DataArray with distance to shore for each face
+    ds[output_variable_name] = xr.DataArray(
+        distance_values,
+        dims=["face"],
+        coords={
+            "face": ds.face,
+            "lat_center": ds.lat_center,
+            "lon_center": ds.lon_center,
+        },
+    )
+
+    # Add CF-compliant metadata
+    ds[output_variable_name].attrs = {
+        "long_name": "Distance to Shore",
+        "standard_name": "distance_to_shore",
+        "units": "nautical_miles",
+        "description": (
+            "The minimum distance from each face center to the nearest coastline. "
+            "Calculated using high-resolution Natural Earth land polygon data. "
+            "Points on land have distance=0. Distances are capped at 200 nautical miles "
+            "to represent the boundary of international waters."
+        ),
+        "computation": "Geodesic distance calculation using geopandas and shapely",
+        "input_variables": "lat_center, lon_center coordinates for each face",
+        "methodology": (
+            "For each face, coordinates are projected to World Equidistant Cylindrical "
+            "(EPSG:4087) coordinate system for accurate distance calculation. Distance "
+            "is calculated to the nearest land polygon using Shapely geometric operations, "
+            "then converted from meters to nautical miles."
+        ),
+        "data_source": "Natural Earth 1:10m Land Polygons",
+        "spatial_reference": "WGS84 (EPSG:4326) input, EPSG:4087 for distance calculation",
+        "maximum_distance": "200.0 nautical miles (international waters boundary)",
+        "coordinates": "face lat_center lon_center",
+        "points_on_land": int(on_land_count),
+        "points_at_max_distance": int(max_distance_count),
+    }
+
     return ds
 
 
