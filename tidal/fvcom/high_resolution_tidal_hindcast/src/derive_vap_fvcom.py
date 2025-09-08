@@ -197,9 +197,6 @@ def _initialize_face_coordinates_dataframe(config, location_key):
 
 def _add_timezone_offset_to_dataframe(df, config, location_key):
     """Add timezone_offset column to existing DataFrame"""
-    import time
-    from timezonefinder import TimezoneFinder
-    import pytz
 
     print(f"Calculating timezone offsets for {len(df)} face coordinates...")
 
@@ -216,24 +213,12 @@ def _add_timezone_offset_to_dataframe(df, config, location_key):
         # Get timezone string for this coordinate
         timezone_str = tf.timezone_at(lat=lat, lng=lon)
 
-        if timezone_str:
-            try:
-                tz = pytz.timezone(timezone_str)
-                # Get UTC offset in hours (using a reference date to avoid DST issues)
-                reference_date = pd.Timestamp("2023-01-15 12:00:00")  # Winter time
-                localized_dt = tz.localize(reference_date)
-                utc_offset_hours = int(localized_dt.utcoffset().total_seconds() / 3600)
-                timezone_offsets.append(utc_offset_hours)
-            except Exception as e:
-                print(
-                    f"Warning: Could not determine offset for timezone {timezone_str} at face {face_idx}: {e}"
-                )
-                timezone_offsets.append(0)  # Default to UTC
-        else:
-            print(
-                f"Warning: No timezone found for face {face_idx} at ({lat:.4f}, {lon:.4f}), defaulting to UTC"
-            )
-            timezone_offsets.append(0)  # Default to UTC
+        tz = pytz.timezone(timezone_str)
+        # Get UTC offset in hours (using a reference date to avoid DST issues)
+        reference_date = pd.Timestamp("2023-01-15 12:00:00")  # Winter time
+        localized_dt = tz.localize(reference_date)
+        utc_offset_hours = int(localized_dt.utcoffset().total_seconds() / 3600)
+        timezone_offsets.append(utc_offset_hours)
 
     df["timezone_offset"] = pd.Series(timezone_offsets, dtype=np.int16, index=df.index)
 
