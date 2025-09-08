@@ -301,17 +301,20 @@ def _add_distance_to_shore_to_dataframe(df, config, location_key):
             possible_matches = coastline_projected.iloc[possible_matches_index]
 
             if len(possible_matches) == 0:
-                # No nearby coastline found, use large distance
-                distance_m = (
-                    200 * 1852
-                )  # 200 NM in meters (cap for international waters)
+                # No nearby coastline found - this should not happen with global coastline data
+                # If it does, fail with descriptive error
+                raise ValueError(
+                    f"No coastline features found near point at index {idx} "
+                    f"({point_row['latitude_center']:.4f}, {point_row['longitude_center']:.4f}). "
+                    "This suggests incomplete coastline data coverage."
+                )
             else:
                 # Calculate actual distances to nearby coastline segments
                 distances = possible_matches.geometry.distance(point_geom)
                 distance_m = distances.min()
 
-            # Convert to nautical miles and cap at 200 NM
-            distance_nm = min(distance_m / 1852.0, 200.0)
+            # Convert to nautical miles - no capping, output actual distance
+            distance_nm = distance_m / 1852.0
 
             # Handle points on land (very small distances)
             if distance_nm < 0.001:  # Less than ~2 meters
@@ -330,7 +333,6 @@ def _add_distance_to_shore_to_dataframe(df, config, location_key):
         "description": "Geodesic distance from face center to nearest coastline in nautical miles",
         "computation": "Spatial distance calculation using Natural Earth 1:10m coastline data",
         "projection": "EPSG:4087 (World Equidistant Cylindrical)",
-        "maximum_distance": 200.0,
         "minimum_distance": 0.0,
         "land_points_distance": 0.0,
         "dtype": "float32",
