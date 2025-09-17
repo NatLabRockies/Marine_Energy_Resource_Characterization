@@ -36,6 +36,31 @@ config = {
         },
         "xarray_netcdf4_engine": "h5netcdf",
     },
+    "dependencies": {
+        "gis": {
+            # https://hub.marinecadastre.gov/search
+            "noaa_coastal_states": {
+                "docs": "https://hub.marinecadastre.gov/datasets/noaa::coastal-states/about",
+                "data": "https://marinecadastre.gov/downloads/data/mc/CoastalState.zip",
+            },
+            "noaa_territorial_sea": {
+                "docs": "https://hub.marinecadastre.gov/datasets/noaa::territorial-sea/about",
+                "data": "https://maritimeboundaries.noaa.gov/downloads/USMaritimeLimitsAndBoundariesSHP.zip",
+            },
+            "noaa_eez": {
+                "docs": "https://hub.marinecadastre.gov/datasets/noaa::exclusive-economic-zone/about",
+                "data": "https://maritimeboundaries.noaa.gov/downloads/USMaritimeLimitsAndBoundariesSHP.zip",
+            },
+            "marinecadastre_coastal_zone_management_act": {
+                "docs": "https://hub.marinecadastre.gov/datasets/noaa::coastal-zone-management-act/about",
+                "data": "https://marinecadastre.gov/downloads/data/mc/CoastalZoneManagementAct.zip",
+            },
+            "uh_gshhg": {
+                "docs": "https://www.soest.hawaii.edu/pwessel/gshhg/",
+                "data": "http://www.soest.hawaii.edu/pwessel/gshhg/gshhg-shp-2.3.7.zip",
+            },
+        }
+    },
     "hdf5_cache": {
         # HDF5 chunk cache settings for performance optimization
         # Cache sizes in GB - converted to bytes at runtime
@@ -53,6 +78,7 @@ config = {
     },
     "dir": {
         # Data Input and Output Directories
+        "dependencies": "data/deps",
         # Starting point for all files
         "base": "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast",
         # Input directory relative to base_dir

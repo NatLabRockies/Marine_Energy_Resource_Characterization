@@ -1,5 +1,6 @@
 import gc
 import time
+import pytz
 
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -248,9 +249,6 @@ def _add_timezone_offset_to_dataframe(df, config, location_key):
 
 def _add_distance_to_shore_to_dataframe(df, config, location_key):
     """Add distance_to_shore column to existing DataFrame"""
-    import time
-    import geopandas as gpd
-    from shapely.geometry import Point
 
     print(f"Calculating distance to shore for {len(df)} face coordinates...")
 
@@ -281,6 +279,8 @@ def _add_distance_to_shore_to_dataframe(df, config, location_key):
     coastline_sindex = coastline_projected.sindex
 
     distances_nm = []
+    closest_shore_lats = []
+    closest_shore_lons = []
     batch_size = 1000
 
     for batch_start in range(0, len(points_projected), batch_size):
@@ -309,9 +309,16 @@ def _add_distance_to_shore_to_dataframe(df, config, location_key):
                     "This suggests incomplete coastline data coverage."
                 )
             else:
-                # Calculate actual distances to nearby coastline segments
+                # Calculate all distances vectorized and find minimum
                 distances = possible_matches.geometry.distance(point_geom)
                 distance_m = distances.min()
+
+                # Find the closest coastline feature and get the closest point on it
+                closest_idx = distances.idxmin()
+                closest_coastline = possible_matches.loc[closest_idx, "geometry"]
+                closest_shore_point = closest_coastline.interpolate(
+                    closest_coastline.project(point_geom)
+                )
 
             # Convert to nautical miles - no capping, output actual distance
             distance_nm = distance_m / 1852.0
@@ -319,10 +326,25 @@ def _add_distance_to_shore_to_dataframe(df, config, location_key):
             # Handle points on land (very small distances)
             if distance_nm < 0.001:  # Less than ~2 meters
                 distance_nm = 0.0
+                # For points on land, use the face center coordinates as "closest shore point"
+                closest_shore_point = point_geom
 
             distances_nm.append(distance_nm)
 
+            # Convert closest shore point back to WGS84 for storage
+            closest_shore_point_wgs84 = gpd.GeoSeries(
+                [closest_shore_point], crs="EPSG:4087"
+            ).to_crs("EPSG:4326")[0]
+            closest_shore_lats.append(closest_shore_point_wgs84.y)
+            closest_shore_lons.append(closest_shore_point_wgs84.x)
+
     df["distance_to_shore"] = pd.Series(distances_nm, dtype=np.float32, index=df.index)
+    df["closest_shore_lat"] = pd.Series(
+        closest_shore_lats, dtype=np.float32, index=df.index
+    )
+    df["closest_shore_lon"] = pd.Series(
+        closest_shore_lons, dtype=np.float32, index=df.index
+    )
 
     # Save metadata JSON
     metadata = {
@@ -336,6 +358,10 @@ def _add_distance_to_shore_to_dataframe(df, config, location_key):
         "minimum_distance": 0.0,
         "land_points_distance": 0.0,
         "dtype": "float32",
+        "additional_columns": {
+            "closest_shore_lat": "Latitude of closest point on coastline (WGS84)",
+            "closest_shore_lon": "Longitude of closest point on coastline (WGS84)",
+        },
         "statistics": {
             "min": float(df["distance_to_shore"].min()),
             "max": float(df["distance_to_shore"].max()),
@@ -349,9 +375,193 @@ def _add_distance_to_shore_to_dataframe(df, config, location_key):
     _save_metadata_json(metadata, config, location_key, "distance_to_shore")
 
     print(
-        f"Added distance_to_shore column. Stats: min={df['distance_to_shore'].min():.2f}, max={df['distance_to_shore'].max():.2f}, mean={df['distance_to_shore'].mean():.2f} NM"
+        f"Added distance_to_shore column and closest shore coordinates. Stats: min={df['distance_to_shore'].min():.2f}, max={df['distance_to_shore'].max():.2f}, mean={df['distance_to_shore'].mean():.2f} NM"
     )
     return df
+
+
+def _calculate_closest_admin_boundaries(df, config):
+    """
+    Calculate closest country and state/province for each face center coordinate using Natural Earth administrative boundary data.
+
+    This function requires accurate Natural Earth administrative boundary data and will fail if the required
+    configuration paths are not provided. No fallback or approximation methods are used to ensure data accuracy.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame with face center coordinates indexed by face_index
+    config : dict
+        Configuration dictionary that must contain:
+        - 'natural_earth_countries_data_path': Path to Natural Earth countries shapefile
+        - 'natural_earth_states_data_path': Path to Natural Earth states/provinces shapefile
+
+    Returns
+    -------
+    tuple[list[str], list[str]]
+        Tuple containing (closest_countries, closest_states) lists
+
+    Raises
+    ------
+    ValueError
+        If required Natural Earth data paths are not provided in config
+        If no administrative boundaries are found for any coordinate
+        If column names cannot be determined from Natural Earth data
+    FileNotFoundError
+        If Natural Earth data files cannot be loaded
+    """
+    from shapely.geometry import Point
+
+    # Get administrative data paths from config
+    countries_path = config.get("natural_earth_countries_data_path")
+    states_path = config.get("natural_earth_states_data_path")
+
+    if not countries_path:
+        raise ValueError(
+            "Config must contain 'natural_earth_countries_data_path' for closest country calculation. "
+            "Accurate administrative boundary data is required."
+        )
+
+    # Load country boundaries
+    print("Loading country boundary data...")
+    countries_gdf = gpd.read_file(countries_path)
+    print(f"Loaded country data: {len(countries_gdf)} features")
+
+    # Load state/province boundaries - required for accurate state/province data
+    if not states_path:
+        raise ValueError(
+            "Config must contain 'natural_earth_states_data_path' for closest state/province calculation. "
+            "Accurate administrative boundary data is required."
+        )
+
+    print("Loading state/province boundary data...")
+    states_gdf = gpd.read_file(states_path)
+    print(f"Loaded state/province data: {len(states_gdf)} features")
+
+    # Require closest shore point data for accurate admin boundary calculation
+    if "closest_shore_lat" not in df.columns or "closest_shore_lon" not in df.columns:
+        raise ValueError(
+            "DataFrame must contain 'closest_shore_lat' and 'closest_shore_lon' columns. "
+            "Please run _add_distance_to_shore_to_dataframe() first to generate closest shore point data."
+        )
+
+    print("Using closest shore point coordinates for admin boundary calculation...")
+    # Use closest shore point coordinates, but fall back to face center for on-land points (distance = 0)
+    lats = []
+    lons = []
+    for _, row in df.iterrows():
+        if row.get("distance_to_shore", float("inf")) == 0.0:
+            # For points on land, use face center coordinates
+            lats.append(row["latitude_center"])
+            lons.append(row["longitude_center"])
+        else:
+            # For points in water, use closest shore point coordinates
+            lats.append(row["closest_shore_lat"])
+            lons.append(row["closest_shore_lon"])
+
+    geometry = [Point(lon, lat) for lat, lon in zip(lats, lons)]
+    points_gdf = gpd.GeoDataFrame(
+        df[["latitude_center", "longitude_center"]], geometry=geometry, crs="EPSG:4326"
+    )
+    on_land_count = sum(
+        1
+        for i, row in df.iterrows()
+        if row.get("distance_to_shore", float("inf")) == 0.0
+    )
+    water_count = len(df) - on_land_count
+    print(
+        f"Using closest shore points for {water_count} faces, face center for {on_land_count} on-land faces"
+    )
+
+    # Transform to appropriate projection for distance calculations (EPSG:4087 - World Equidistant Cylindrical)
+    points_projected = points_gdf.to_crs("EPSG:4087")
+    countries_projected = countries_gdf.to_crs("EPSG:4087")
+    states_projected = states_gdf.to_crs("EPSG:4087")
+
+    # Create spatial indexes for efficiency
+    countries_sindex = countries_projected.sindex
+    states_sindex = states_projected.sindex
+
+    closest_countries = []
+    closest_states = []
+    batch_size = 1000
+
+    for batch_start in range(0, len(points_projected), batch_size):
+        batch_end = min(batch_start + batch_size, len(points_projected))
+        print(
+            f"  Processing admin boundary batch {batch_start + 1}-{batch_end} of {len(points_projected)}"
+        )
+
+        batch_points = points_projected.iloc[batch_start:batch_end]
+
+        for idx, point_row in batch_points.iterrows():
+            point_geom = point_row.geometry
+
+            # Find closest country
+            possible_countries_index = list(
+                countries_sindex.intersection(point_geom.bounds)
+            )
+            if len(possible_countries_index) == 0:
+                # Expand search area if no immediate matches
+                buffer = point_geom.buffer(100000)  # 100km buffer
+                possible_countries_index = list(
+                    countries_sindex.intersection(buffer.bounds)
+                )
+
+            if len(possible_countries_index) > 0:
+                possible_countries = countries_projected.iloc[possible_countries_index]
+                distances = possible_countries.geometry.distance(point_geom)
+                min_idx = distances.idxmin()
+                # Try different common column names for country names
+                for col in ["NAME", "ADMIN", "name", "Country"]:
+                    if col in countries_projected.columns:
+                        country_name = countries_projected.loc[min_idx, col]
+                        break
+                else:
+                    raise ValueError(
+                        f"Could not find a valid column name for country data in Natural Earth dataset. "
+                        f"Available columns: {list(countries_projected.columns)}"
+                    )
+                closest_countries.append(country_name)
+            else:
+                raise ValueError(
+                    f"No country features found near point at index {idx} "
+                    f"({point_row['latitude_center']:.4f}, {point_row['longitude_center']:.4f}) "
+                    f"even after expanding search to 100km buffer. This suggests incomplete "
+                    f"country boundary data coverage."
+                )
+
+            # Find closest state/province
+            possible_states_index = list(states_sindex.intersection(point_geom.bounds))
+            if len(possible_states_index) == 0:
+                # Expand search area if no immediate matches
+                buffer = point_geom.buffer(100000)  # 100km buffer
+                possible_states_index = list(states_sindex.intersection(buffer.bounds))
+
+            if len(possible_states_index) > 0:
+                possible_states = states_projected.iloc[possible_states_index]
+                distances = possible_states.geometry.distance(point_geom)
+                min_idx = distances.idxmin()
+                # Try different common column names for state/province names
+                for col in ["NAME", "ADMIN", "NAME_1", "name", "State", "Province"]:
+                    if col in states_projected.columns:
+                        state_name = states_projected.loc[min_idx, col]
+                        break
+                else:
+                    raise ValueError(
+                        f"Could not find a valid column name for state/province data in Natural Earth dataset. "
+                        f"Available columns: {list(states_projected.columns)}"
+                    )
+                closest_states.append(state_name)
+            else:
+                raise ValueError(
+                    f"No state/province features found near point at index {idx} "
+                    f"({point_row['latitude_center']:.4f}, {point_row['longitude_center']:.4f}) "
+                    f"even after expanding search to 100km buffer. This suggests incomplete "
+                    f"state/province boundary data coverage."
+                )
+
+    return closest_countries, closest_states
 
 
 def _add_jurisdiction_to_dataframe(df, config, location_key):
@@ -365,67 +575,76 @@ def _add_jurisdiction_to_dataframe(df, config, location_key):
 
     print(f"Calculating maritime jurisdiction for {len(df)} faces...")
 
-    # Get location-specific information from config
-    location_config = config.get("location_specification", {}).get(location_key, {})
-    state_province = location_config.get("jurisdiction", None)
-    location_label = location_config.get("label", location_key)
+    # Calculate closest country and state/province for each point
+    print("Calculating closest country and state/province...")
+    closest_countries, closest_states = _calculate_closest_admin_boundaries(df, config)
 
-    # Determine country based on coordinate bounds (same logic as original function)
-    lat_values = df["latitude_center"].values
-    lon_values = df["longitude_center"].values
-
-    if np.mean(lat_values) > 25 and np.mean(lon_values) < -50:
-        country = "US"
-    elif np.mean(lat_values) > 45 and np.mean(lon_values) < -50:
-        country = "Canada"
-    else:
-        country = "Coastal State"
-
-    # Determine state water boundary
-    state_boundary = 3.0  # Default 3 NM
-    if (
-        state_province
-        and state_province.lower() in ["texas", "florida"]
-        and "gulf" in location_label.lower()
-    ):
-        state_boundary = 9.0
-
-    print(f"Using {state_boundary} NM state water boundary for {country}")
-
-    # Create jurisdiction labels
-    if state_province:
-        land_label = f"{country} {state_province} Land"
-        state_waters_label = f"{country} {state_province} State Waters"
-    else:
-        land_label = f"{country} Coastal Land"
-        state_waters_label = f"{country} State Waters (within {state_boundary} NM)"
-
-    territorial_label = f"{country} Territorial Sea"
-    contiguous_label = f"{country} Contiguous Zone"
-    eez_label = f"{country} Exclusive Economic Zone"
-    international_label = "International Waters"
-
-    # Apply jurisdiction classification
-    distance = df["distance_to_shore"].values
-    jurisdiction_values = np.select(
-        [
-            distance == 0,
-            (distance > 0) & (distance <= state_boundary),
-            (distance > state_boundary) & (distance <= 12),
-            (distance > 12) & (distance <= 24),
-            (distance > 24) & (distance <= 200),
-            distance > 200,
-        ],
-        [
-            land_label,
-            state_waters_label,
-            territorial_label,
-            contiguous_label,
-            eez_label,
-            international_label,
-        ],
-        default="Unknown",
+    # Add closest country and state/province columns
+    df["closest_country"] = pd.Series(closest_countries, dtype="string", index=df.index)
+    df["closest_state_province"] = pd.Series(
+        closest_states, dtype="string", index=df.index
     )
+
+    # Calculate jurisdiction for each face individually based on its closest country/state and distance to shore
+    print("Calculating individual jurisdiction for each face...")
+
+    jurisdiction_values = []
+    distances = df["distance_to_shore"].values
+
+    for i, (face_idx, row) in enumerate(df.iterrows()):
+        if i % 5000 == 0:
+            print(f"  Processing jurisdiction for face {i + 1}/{len(df)}")
+
+        distance = row["distance_to_shore"]
+        closest_country = row["closest_country"]
+        closest_state_province = row["closest_state_province"]
+
+        # Map Natural Earth country names to standard abbreviations
+        country_mapping = {
+            "United States": "US",
+            "United States of America": "US",
+            "Canada": "Canada",
+        }
+        country = country_mapping.get(closest_country, closest_country)
+
+        # Determine state water boundary based on country and state
+        state_boundary = 3.0  # Default 3 NM
+        if (
+            country == "US"
+            and closest_state_province
+            and closest_state_province.lower() in ["texas", "florida"]
+            and any(term in location_key.lower() for term in ["gulf", "mexico"])
+        ):
+            state_boundary = 9.0
+
+        # Create jurisdiction labels for this specific face
+        if closest_state_province and closest_state_province != "Unknown":
+            land_label = f"{country} {closest_state_province} Land"
+            state_waters_label = f"{country} {closest_state_province} State Waters"
+        else:
+            land_label = f"{country} Coastal Land"
+            state_waters_label = f"{country} State Waters"
+
+        territorial_label = f"{country} Territorial Sea"
+        contiguous_label = f"{country} Contiguous Zone"
+        eez_label = f"{country} Exclusive Economic Zone"
+        international_label = "International Waters"
+
+        # Apply jurisdiction classification for this face
+        if distance == 0:
+            jurisdiction = land_label
+        elif 0 < distance <= state_boundary:
+            jurisdiction = state_waters_label
+        elif state_boundary < distance <= 12:
+            jurisdiction = territorial_label
+        elif 12 < distance <= 24:
+            jurisdiction = contiguous_label
+        elif 24 < distance <= 200:
+            jurisdiction = eez_label
+        else:  # distance > 200
+            jurisdiction = international_label
+
+        jurisdiction_values.append(jurisdiction)
 
     df["jurisdiction"] = pd.Series(jurisdiction_values, dtype="string", index=df.index)
 
