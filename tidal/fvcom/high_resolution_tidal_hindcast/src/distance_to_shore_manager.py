@@ -6,11 +6,15 @@ GSHHG (Global Self-consistent, Hierarchical, High-resolution Geography) coastlin
 """
 
 import time
+import warnings
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 from .deps_manager import DependencyManager
+
+# Silence NumPy scalar conversion deprecation warnings from coordinate transformations
+warnings.filterwarnings("ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated")
 
 
 class DistanceToShoreCalculator:
