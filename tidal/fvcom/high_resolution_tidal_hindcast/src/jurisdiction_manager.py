@@ -123,10 +123,11 @@ class JurisdictionCalculator:
         """
         # Create GeoDataFrame from coordinates
         geometry = [
-            Point(lon, lat) for lat, lon in zip(df["latitude"], df["longitude"])
+            Point(lon, lat)
+            for lat, lon in zip(df["latitude_center"], df["longitude_center"])
         ]
         points_gdf = gpd.GeoDataFrame(
-            df[["latitude", "longitude"]],
+            df[["latitude_center", "longitude_center"]],
             geometry=geometry,
             crs="EPSG:4326",
         )
