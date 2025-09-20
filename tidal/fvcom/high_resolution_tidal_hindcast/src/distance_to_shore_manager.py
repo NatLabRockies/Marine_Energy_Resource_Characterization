@@ -140,20 +140,26 @@ class DistanceToShoreCalculator:
         # Create GeoDataFrame for batch
         geometry = [
             Point(float(lon), float(lat))
-            for lat, lon in zip(batch_df["latitude_center"].values, batch_df["longitude_center"].values)
+            for lat, lon in zip(
+                batch_df["latitude_center"].values, batch_df["longitude_center"].values
+            )
         ]
         points_gdf = gpd.GeoDataFrame(
             batch_df[["latitude_center", "longitude_center"]],
             geometry=geometry,
             crs="EPSG:4326",
-            index=batch_indices
+            index=batch_indices,
         )
 
         # Transform to projected coordinate system
         points_projected = points_gdf.to_crs("EPSG:4087")
 
         # Progressive buffer expansion for finding coastline features
-        buffer_distances = [buffer_km, buffer_km * 5, buffer_km * 10]  # 100/500/1000km or 500/2500/5000km
+        buffer_distances = [
+            buffer_km,
+            buffer_km * 5,
+            buffer_km * 10,
+        ]  # 100/500/1000km or 500/2500/5000km
         buffer_meters = [dist * 1000 for dist in buffer_distances]
 
         distances = np.full(len(batch_df), np.nan, dtype=np.float32)
@@ -171,7 +177,9 @@ class DistanceToShoreCalculator:
             if len(current_points) == 0:
                 break
 
-            print(f"  Buffer {buffer_distances[buffer_idx]:.0f}km: processing {len(current_points)} points")
+            print(
+                f"  Buffer {buffer_distances[buffer_idx]:.0f}km: processing {len(current_points)} points"
+            )
 
             # Create buffer around all points for spatial intersection
             buffered_points = current_points.geometry.buffer(buffer_m)
@@ -185,10 +193,14 @@ class DistanceToShoreCalculator:
             if len(possible_coastline_indices) == 0:
                 continue
 
-            relevant_coastline = self.coastline_prepared.iloc[possible_coastline_indices]
+            relevant_coastline = self.coastline_prepared.iloc[
+                possible_coastline_indices
+            ]
 
             # Process each point in current batch
-            for local_idx, (orig_idx, point_row) in enumerate(current_points.iterrows()):
+            for local_idx, (orig_idx, point_row) in enumerate(
+                current_points.iterrows()
+            ):
                 if not unprocessed_mask[points_projected.index.get_loc(orig_idx)]:
                     continue
 
@@ -257,8 +269,10 @@ class DistanceToShoreCalculator:
         # Check for any unprocessed points
         if unprocessed_mask.any():
             unprocessed_indices = batch_indices[unprocessed_mask]
-            unprocessed_coords = [(row['latitude_center'], row['longitude_center'])
-                                for _, row in batch_df[unprocessed_mask].iterrows()]
+            unprocessed_coords = [
+                (row["latitude_center"], row["longitude_center"])
+                for _, row in batch_df[unprocessed_mask].iterrows()
+            ]
             raise ValueError(
                 f"Could not find coastline features within maximum buffer "
                 f"({buffer_distances[-1]}km) for {unprocessed_mask.sum()} points. "
@@ -286,13 +300,15 @@ class DistanceToShoreCalculator:
                 "Coastline data not loaded. Call _load_coastline_data() first."
             )
 
-        print(f"Calculating distance to shore for {len(df)} coordinates using vectorized approach...")
+        print(
+            f"Calculating distance to shore for {len(df)} coordinates using vectorized approach..."
+        )
         start_time = time.time()
 
         # Auto-detect buffer based on location name
         if buffer_km is None:
-            location_name = str(self.config.get('location', '')).lower()
-            if 'aleutian' in location_name:
+            location_name = str(self.config.get("location", "")).lower()
+            if "aleutian" in location_name:
                 buffer_km = 500
             else:
                 buffer_km = 100
@@ -311,8 +327,10 @@ class DistanceToShoreCalculator:
             batch_df = df.iloc[batch_start:batch_end]
             batch_indices = df.index[batch_start:batch_end]
 
-            print(f"Processing batch {batch_start//batch_size + 1}/{(len(df)-1)//batch_size + 1} "
-                  f"({len(batch_df)} points)...")
+            print(
+                f"Processing batch {batch_start // batch_size + 1}/{(len(df) - 1) // batch_size + 1} "
+                f"({len(batch_df)} points)..."
+            )
 
             # Process this batch
             batch_distances, batch_lats, batch_lons = self._process_batch_vectorized(
@@ -326,9 +344,15 @@ class DistanceToShoreCalculator:
 
         # Add columns to DataFrame
         result_df = df.copy()
-        result_df["distance_to_shore"] = pd.Series(distances, dtype=np.float32, index=df.index)
-        result_df["closest_shore_lat"] = pd.Series(closest_shore_lats, dtype=np.float32, index=df.index)
-        result_df["closest_shore_lon"] = pd.Series(closest_shore_lons, dtype=np.float32, index=df.index)
+        result_df["distance_to_shore"] = pd.Series(
+            distances, dtype=np.float32, index=df.index
+        )
+        result_df["closest_shore_lat"] = pd.Series(
+            closest_shore_lats, dtype=np.float32, index=df.index
+        )
+        result_df["closest_shore_lon"] = pd.Series(
+            closest_shore_lons, dtype=np.float32, index=df.index
+        )
 
         calc_time = time.time() - start_time
         units_label = "NM" if self.units == "nautical_miles" else "km"
