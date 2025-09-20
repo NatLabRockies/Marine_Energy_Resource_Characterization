@@ -177,8 +177,7 @@ class DistanceToShoreCalculator:
             buffered_points = current_points.geometry.buffer(buffer_m)
 
             # Find all coastline features that intersect with any buffered point
-            # Use unary_union for efficient bulk intersection
-            combined_buffer = buffered_points.unary_union
+            combined_buffer = buffered_points.union_all()
             possible_coastline_indices = list(
                 self.coastline_prepared_sindex.intersection(combined_buffer.bounds)
             )
