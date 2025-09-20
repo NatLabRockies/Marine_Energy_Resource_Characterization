@@ -260,8 +260,11 @@ class DistanceToShoreCalculator:
                 # Store results
                 result_idx = points_projected.index.get_loc(orig_idx)
                 distances[result_idx] = float(distance_output)
-                closest_shore_lats[result_idx] = float(closest_shore_point_wgs84.y)
-                closest_shore_lons[result_idx] = float(closest_shore_point_wgs84.x)
+                # Ensure scalar extraction for coordinate values to avoid NumPy deprecation warnings
+                lat_coord = closest_shore_point_wgs84.y
+                lon_coord = closest_shore_point_wgs84.x
+                closest_shore_lats[result_idx] = float(lat_coord.item() if hasattr(lat_coord, 'item') else lat_coord)
+                closest_shore_lons[result_idx] = float(lon_coord.item() if hasattr(lon_coord, 'item') else lon_coord)
 
                 # Mark as processed
                 unprocessed_mask[result_idx] = False
