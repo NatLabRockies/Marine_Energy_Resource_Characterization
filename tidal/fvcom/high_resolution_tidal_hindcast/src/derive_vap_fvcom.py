@@ -464,8 +464,7 @@ def _calculate_closest_admin_boundaries(df, config):
 
 
 def _add_jurisdiction_to_dataframe(df, config, location_key):
-    """Add jurisdiction column to existing DataFrame (depends on distance_to_shore)"""
-    import time
+    """Add jurisdiction column to existing DataFrame using NOAA jurisdiction data"""
 
     if "distance_to_shore" not in df.columns:
         raise ValueError(
@@ -474,117 +473,67 @@ def _add_jurisdiction_to_dataframe(df, config, location_key):
 
     print(f"Calculating maritime jurisdiction for {len(df)} faces...")
 
-    # Calculate closest country and state/province for each point
-    print("Calculating closest country and state/province...")
-    closest_countries, closest_states = _calculate_closest_admin_boundaries(df, config)
+    # Add location_key to config for jurisdiction calculation
+    config_with_location = config.copy()
+    config_with_location["location_key"] = location_key
 
-    # Add closest country and state/province columns
-    df["closest_country"] = pd.Series(closest_countries, dtype="string", index=df.index)
-    df["closest_state_province"] = pd.Series(
-        closest_states, dtype="string", index=df.index
-    )
+    # Initialize the jurisdiction calculator
+    jurisdiction_calculator = JurisdictionCalculator(config_with_location)
 
-    # Calculate jurisdiction for each face individually based on its closest country/state and distance to shore
-    print("Calculating individual jurisdiction for each face...")
+    # Calculate jurisdiction
+    df_with_jurisdiction = jurisdiction_calculator.calc_jurisdiction(df)
 
-    jurisdiction_values = []
-    distances = df["distance_to_shore"].values
+    # Save metadata JSON for jurisdiction
+    metadata = jurisdiction_calculator.get_metadata()
 
-    for i, (face_idx, row) in enumerate(df.iterrows()):
-        if i % 5000 == 0:
-            print(f"  Processing jurisdiction for face {i + 1}/{len(df)}")
-
-        distance = row["distance_to_shore"]
-        closest_country = row["closest_country"]
-        closest_state_province = row["closest_state_province"]
-
-        # Map Natural Earth country names to standard abbreviations
-        country_mapping = {
-            "United States": "US",
-            "United States of America": "US",
-            "Canada": "Canada",
-        }
-        country = country_mapping.get(closest_country, closest_country)
-
-        # Determine state water boundary based on country and state
-        state_boundary = 3.0  # Default 3 NM
-        if (
-            country == "US"
-            and closest_state_province
-            and closest_state_province.lower() in ["texas", "florida"]
-            and any(term in location_key.lower() for term in ["gulf", "mexico"])
-        ):
-            state_boundary = 9.0
-
-        # Create jurisdiction labels for this specific face
-        if closest_state_province and closest_state_province != "Unknown":
-            land_label = f"{country} {closest_state_province} Land"
-            state_waters_label = f"{country} {closest_state_province} State Waters"
-        else:
-            land_label = f"{country} Coastal Land"
-            state_waters_label = f"{country} State Waters"
-
-        territorial_label = f"{country} Territorial Sea"
-        contiguous_label = f"{country} Contiguous Zone"
-        eez_label = f"{country} Exclusive Economic Zone"
-        international_label = "International Waters"
-
-        # Apply jurisdiction classification for this face
-        if distance == 0:
-            jurisdiction = land_label
-        elif 0 < distance <= state_boundary:
-            jurisdiction = state_waters_label
-        elif state_boundary < distance <= 12:
-            jurisdiction = territorial_label
-        elif 12 < distance <= 24:
-            jurisdiction = contiguous_label
-        elif 24 < distance <= 200:
-            jurisdiction = eez_label
-        else:  # distance > 200
-            jurisdiction = international_label
-
-        jurisdiction_values.append(jurisdiction)
-
-    df["jurisdiction"] = pd.Series(jurisdiction_values, dtype="string", index=df.index)
-
-    # Calculate statistics
-    unique_jurisdictions, counts = np.unique(jurisdiction_values, return_counts=True)
+    # Calculate statistics for metadata
+    unique_jurisdictions, counts = np.unique(df_with_jurisdiction["jurisdiction"], return_counts=True)
     jurisdiction_stats = dict(zip(unique_jurisdictions, counts.tolist()))
 
-    print("Jurisdiction classification complete:")
-    for jurisdiction, count in jurisdiction_stats.items():
-        percentage = (count / len(df)) * 100
-        print(f"  {jurisdiction}: {count} faces ({percentage:.1f}%)")
-
-    # Save metadata JSON
-    metadata = {
-        "variable_name": "jurisdiction",
-        "standard_name": "maritime_jurisdiction_zone",
-        "long_name": "Maritime Jurisdiction Classification",
-        "units": "1",
-        "description": "Maritime jurisdiction zone classification based on distance from shore following US maritime law and international conventions (UNCLOS)",
-        "computation": f"Classification based on distance ranges with {state_boundary} NM state boundary",
-        "boundaries": {
-            "land": "0 NM (exactly on coastline)",
-            "state_waters": f"0-{state_boundary} NM",
-            "territorial_sea": f"{state_boundary}-12 NM",
-            "contiguous_zone": "12-24 NM",
-            "exclusive_economic_zone": "24-200 NM",
-            "international_waters": ">200 NM",
-        },
-        "legal_references": "UNCLOS 1982, 43 USC 1331 (Submerged Lands Act), 43 USC 1301-1315",
-        "country": country,
-        "state_province": state_province,
-        "location": location_label,
-        "dtype": "string",
-        "unique_values": unique_jurisdictions.tolist(),
-        "value_counts": jurisdiction_stats,
-        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
-    }
+    metadata["unique_values"] = unique_jurisdictions.tolist()
+    metadata["value_counts"] = jurisdiction_stats
 
     _save_metadata_json(metadata, config, location_key, "jurisdiction")
 
-    return df
+    # Save metadata for closest country
+    closest_country_metadata = {
+        "variable_name": "closest_country",
+        "standard_name": "closest_country_name",
+        "long_name": "Closest Country",
+        "units": "1",
+        "description": "Name of the closest country to each face center coordinate based on NOAA jurisdiction data",
+        "computation": "Spatial analysis using NOAA Coastal Zone Management Act and maritime boundary data",
+        "methodology": "Point-in-polygon analysis with fallback distance calculations for boundary determination",
+        "data_source": "NOAA Coastal Zone Management Act boundaries and US Maritime Limits",
+        "dtype": "string",
+        "unique_values": sorted(df_with_jurisdiction["closest_country"].unique().tolist()),
+        "value_counts": df_with_jurisdiction["closest_country"].value_counts().to_dict(),
+        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+    }
+    _save_metadata_json(
+        closest_country_metadata, config, location_key, "closest_country"
+    )
+
+    # Save metadata for closest state/province
+    closest_state_metadata = {
+        "variable_name": "closest_state_province",
+        "standard_name": "closest_state_province_name",
+        "long_name": "Closest State or Province",
+        "units": "1",
+        "description": "Name of the closest state, province, or administrative subdivision to each face center coordinate",
+        "computation": "Spatial analysis using NOAA Coastal States data",
+        "methodology": "Point-in-polygon analysis with distance-based fallback for coastal state determination",
+        "data_source": "NOAA Coastal States data",
+        "dtype": "string",
+        "unique_values": sorted(df_with_jurisdiction["closest_state_province"].unique().tolist()),
+        "value_counts": df_with_jurisdiction["closest_state_province"].value_counts().to_dict(),
+        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+    }
+    _save_metadata_json(
+        closest_state_metadata, config, location_key, "closest_state_province"
+    )
+
+    return df_with_jurisdiction
 
 
 def _add_navd88_offset_to_dataframe(df, config, location_key):
