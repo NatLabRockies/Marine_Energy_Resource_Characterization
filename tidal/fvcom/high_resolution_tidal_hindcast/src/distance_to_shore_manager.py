@@ -148,10 +148,13 @@ class DistanceToShoreCalculator:
 
         # Create GeoDataFrame from coordinates
         geometry = [
-            Point(lon, lat) for lat, lon in zip(df["latitude"], df["longitude"])
+            Point(lon, lat)
+            for lat, lon in zip(df["latitude_center"], df["longitude_center"])
         ]
         points_gdf = gpd.GeoDataFrame(
-            df[["latitude", "longitude"]], geometry=geometry, crs="EPSG:4326"
+            df[["latitude_center", "longitude_center"]],
+            geometry=geometry,
+            crs="EPSG:4326",
         )
 
         # Transform to projected coordinate system
