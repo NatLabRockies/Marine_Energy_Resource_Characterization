@@ -16,6 +16,8 @@ from shapely.ops import nearest_points
 from timezonefinder import TimezoneFinder
 
 from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
+from .distance_to_shore_manager import DistanceToShoreCalculator
+from .jurisdiction_manager import JurisdictionCalculator
 
 output_names = {
     # Original Data
@@ -248,136 +250,33 @@ def _add_timezone_offset_to_dataframe(df, config, location_key):
 
 
 def _add_distance_to_shore_to_dataframe(df, config, location_key):
-    """Add distance_to_shore column to existing DataFrame"""
+    """Add distance_to_shore column to existing DataFrame using GSHHG data"""
 
     print(f"Calculating distance to shore for {len(df)} face coordinates...")
 
-    # Load Natural Earth data (assume config has the path)
-    natural_earth_path = config.get("natural_earth_data_path")
-    if not natural_earth_path:
-        raise ValueError(
-            "Config must contain 'natural_earth_data_path' for distance calculations"
-        )
+    # Initialize the distance calculator with nautical miles (for compatibility)
+    distance_calculator = DistanceToShoreCalculator(config, units='nautical_miles')
 
-    coastline_gdf = gpd.read_file(natural_earth_path)
-    print(f"Loaded coastline data: {len(coastline_gdf)} features")
-
-    # Create GeoDataFrame from face coordinates
-    geometry = [
-        Point(lon, lat)
-        for lat, lon in zip(df["latitude_center"], df["longitude_center"])
-    ]
-    points_gdf = gpd.GeoDataFrame(
-        df[["latitude_center", "longitude_center"]], geometry=geometry, crs="EPSG:4326"
-    )
-
-    # Transform to appropriate projection for distance calculations (EPSG:4087 - World Equidistant Cylindrical)
-    points_projected = points_gdf.to_crs("EPSG:4087")
-    coastline_projected = coastline_gdf.to_crs("EPSG:4087")
-
-    # Create spatial index for efficiency
-    coastline_sindex = coastline_projected.sindex
-
-    distances_nm = []
-    closest_shore_lats = []
-    closest_shore_lons = []
-    batch_size = 1000
-
-    for batch_start in range(0, len(points_projected), batch_size):
-        batch_end = min(batch_start + batch_size, len(points_projected))
-        print(
-            f"  Processing batch {batch_start + 1}-{batch_end} of {len(points_projected)}"
-        )
-
-        batch_points = points_projected.iloc[batch_start:batch_end]
-
-        for idx, point_row in batch_points.iterrows():
-            point_geom = point_row.geometry
-
-            # Find potential intersections using spatial index
-            possible_matches_index = list(
-                coastline_sindex.intersection(point_geom.bounds)
-            )
-            possible_matches = coastline_projected.iloc[possible_matches_index]
-
-            if len(possible_matches) == 0:
-                # No nearby coastline found - this should not happen with global coastline data
-                # If it does, fail with descriptive error
-                raise ValueError(
-                    f"No coastline features found near point at index {idx} "
-                    f"({point_row['latitude_center']:.4f}, {point_row['longitude_center']:.4f}). "
-                    "This suggests incomplete coastline data coverage."
-                )
-            else:
-                # Calculate all distances vectorized and find minimum
-                distances = possible_matches.geometry.distance(point_geom)
-                distance_m = distances.min()
-
-                # Find the closest coastline feature and get the closest point on it
-                closest_idx = distances.idxmin()
-                closest_coastline = possible_matches.loc[closest_idx, "geometry"]
-                closest_shore_point = closest_coastline.interpolate(
-                    closest_coastline.project(point_geom)
-                )
-
-            # Convert to nautical miles - no capping, output actual distance
-            distance_nm = distance_m / 1852.0
-
-            # Handle points on land (very small distances)
-            if distance_nm < 0.001:  # Less than ~2 meters
-                distance_nm = 0.0
-                # For points on land, use the face center coordinates as "closest shore point"
-                closest_shore_point = point_geom
-
-            distances_nm.append(distance_nm)
-
-            # Convert closest shore point back to WGS84 for storage
-            closest_shore_point_wgs84 = gpd.GeoSeries(
-                [closest_shore_point], crs="EPSG:4087"
-            ).to_crs("EPSG:4326")[0]
-            closest_shore_lats.append(closest_shore_point_wgs84.y)
-            closest_shore_lons.append(closest_shore_point_wgs84.x)
-
-    df["distance_to_shore"] = pd.Series(distances_nm, dtype=np.float32, index=df.index)
-    df["closest_shore_lat"] = pd.Series(
-        closest_shore_lats, dtype=np.float32, index=df.index
-    )
-    df["closest_shore_lon"] = pd.Series(
-        closest_shore_lons, dtype=np.float32, index=df.index
-    )
+    # Calculate distance to shore
+    df_with_distance = distance_calculator.calc_distance_to_shore(df)
 
     # Save metadata JSON
-    metadata = {
-        "variable_name": "distance_to_shore",
-        "standard_name": "distance_to_shore",
-        "long_name": "Distance to Nearest Shore",
-        "units": "nautical_miles",
-        "description": "Geodesic distance from face center to nearest coastline in nautical miles",
-        "computation": "Spatial distance calculation using Natural Earth 1:10m coastline data",
-        "projection": "EPSG:4087 (World Equidistant Cylindrical)",
-        "minimum_distance": 0.0,
-        "land_points_distance": 0.0,
-        "dtype": "float32",
-        "additional_columns": {
-            "closest_shore_lat": "Latitude of closest point on coastline (WGS84)",
-            "closest_shore_lon": "Longitude of closest point on coastline (WGS84)",
-        },
-        "statistics": {
-            "min": float(df["distance_to_shore"].min()),
-            "max": float(df["distance_to_shore"].max()),
-            "mean": float(df["distance_to_shore"].mean()),
-            "median": float(df["distance_to_shore"].median()),
-        },
-        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
-        "data_source": str(natural_earth_path),
+    metadata = distance_calculator.get_metadata()
+
+    # Add statistics to metadata
+    metadata["statistics"] = {
+        "min": float(df_with_distance["distance_to_shore"].min()),
+        "max": float(df_with_distance["distance_to_shore"].max()),
+        "mean": float(df_with_distance["distance_to_shore"].mean()),
+        "median": float(df_with_distance["distance_to_shore"].median()),
     }
 
     _save_metadata_json(metadata, config, location_key, "distance_to_shore")
 
     print(
-        f"Added distance_to_shore column and closest shore coordinates. Stats: min={df['distance_to_shore'].min():.2f}, max={df['distance_to_shore'].max():.2f}, mean={df['distance_to_shore'].mean():.2f} NM"
+        f"Added distance_to_shore column and closest shore coordinates. Stats: min={df_with_distance['distance_to_shore'].min():.2f}, max={df_with_distance['distance_to_shore'].max():.2f}, mean={df_with_distance['distance_to_shore'].mean():.2f} NM"
     )
-    return df
+    return df_with_distance
 
 
 def _calculate_closest_admin_boundaries(df, config):
