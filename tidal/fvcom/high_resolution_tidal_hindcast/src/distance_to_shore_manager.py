@@ -233,8 +233,12 @@ class DistanceToShoreCalculator:
             closest_shore_point_wgs84 = gpd.GeoSeries(
                 [closest_shore_point], crs="EPSG:4087"
             ).to_crs("EPSG:4326")[0]
-            closest_shore_lats.append(closest_shore_point_wgs84.y)
-            closest_shore_lons.append(closest_shore_point_wgs84.x)
+
+            # Extract scalar values to avoid NumPy deprecation warnings
+            lat_value = float(closest_shore_point_wgs84.y)
+            lon_value = float(closest_shore_point_wgs84.x)
+            closest_shore_lats.append(lat_value)
+            closest_shore_lons.append(lon_value)
 
         # Add columns to DataFrame
         result_df = df.copy()
