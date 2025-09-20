@@ -255,7 +255,7 @@ def _add_distance_to_shore_to_dataframe(df, config, location_key):
     print(f"Calculating distance to shore for {len(df)} face coordinates...")
 
     # Initialize the distance calculator with nautical miles (for compatibility)
-    distance_calculator = DistanceToShoreCalculator(config, units='nautical_miles')
+    distance_calculator = DistanceToShoreCalculator(config, units="nautical_miles")
 
     # Calculate distance to shore
     df_with_distance = distance_calculator.calc_distance_to_shore(df)
@@ -309,7 +309,6 @@ def _calculate_closest_admin_boundaries(df, config):
     FileNotFoundError
         If Natural Earth data files cannot be loaded
     """
-    from shapely.geometry import Point
 
     # Get administrative data paths from config
     countries_path = config.get("natural_earth_countries_data_path")
@@ -487,7 +486,9 @@ def _add_jurisdiction_to_dataframe(df, config, location_key):
     metadata = jurisdiction_calculator.get_metadata()
 
     # Calculate statistics for metadata
-    unique_jurisdictions, counts = np.unique(df_with_jurisdiction["jurisdiction"], return_counts=True)
+    unique_jurisdictions, counts = np.unique(
+        df_with_jurisdiction["jurisdiction"], return_counts=True
+    )
     jurisdiction_stats = dict(zip(unique_jurisdictions, counts.tolist()))
 
     metadata["unique_values"] = unique_jurisdictions.tolist()
@@ -506,8 +507,12 @@ def _add_jurisdiction_to_dataframe(df, config, location_key):
         "methodology": "Point-in-polygon analysis with fallback distance calculations for boundary determination",
         "data_source": "NOAA Coastal Zone Management Act boundaries and US Maritime Limits",
         "dtype": "string",
-        "unique_values": sorted(df_with_jurisdiction["closest_country"].unique().tolist()),
-        "value_counts": df_with_jurisdiction["closest_country"].value_counts().to_dict(),
+        "unique_values": sorted(
+            df_with_jurisdiction["closest_country"].unique().tolist()
+        ),
+        "value_counts": df_with_jurisdiction["closest_country"]
+        .value_counts()
+        .to_dict(),
         "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
     }
     _save_metadata_json(
@@ -525,8 +530,12 @@ def _add_jurisdiction_to_dataframe(df, config, location_key):
         "methodology": "Point-in-polygon analysis with distance-based fallback for coastal state determination",
         "data_source": "NOAA Coastal States data",
         "dtype": "string",
-        "unique_values": sorted(df_with_jurisdiction["closest_state_province"].unique().tolist()),
-        "value_counts": df_with_jurisdiction["closest_state_province"].value_counts().to_dict(),
+        "unique_values": sorted(
+            df_with_jurisdiction["closest_state_province"].unique().tolist()
+        ),
+        "value_counts": df_with_jurisdiction["closest_state_province"]
+        .value_counts()
+        .to_dict(),
         "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
     }
     _save_metadata_json(
@@ -538,52 +547,50 @@ def _add_jurisdiction_to_dataframe(df, config, location_key):
 
 def _add_navd88_offset_to_dataframe(df, config, location_key):
     """Add mean_navd88_offset column to existing DataFrame"""
-    import time
-    
     print(f"Calculating mean NAVD88 offset for {len(df)} faces...")
-    
+
     location = config["location_specification"][location_key]
     input_path = file_manager.get_standardized_partition_output_dir(config, location)
-    
+
     # Find all NC files
     nc_files = sorted(list(input_path.rglob("*.nc")))
     if not nc_files:
         raise FileNotFoundError(f"No NetCDF files found in {input_path}")
-    
+
     zeta_center_data = []
-    
+
     for i, nc_file in enumerate(nc_files):
         if i % 5 == 0:
             print(f"  Processing file {i + 1}/{len(nc_files)}: {nc_file.name}")
-        
+
         with xr.open_dataset(nc_file) as ds:
             # Calculate zeta_center for this file
             ds_with_zeta = calculate_zeta_center(ds)
-            
+
             # Extract zeta_center data
             zeta_center = ds_with_zeta[output_names["zeta_center"]]
-            
+
             # Validate that face indices match our DataFrame
             if not np.array_equal(zeta_center.face.values, df.index.values):
                 raise ValueError(
                     f"File {nc_file.name} has inconsistent face indices with DataFrame"
                 )
-            
+
             # Store the zeta_center data (face dimension should match DataFrame index)
             zeta_center_data.append(zeta_center.values)
-    
+
     # Concatenate all data along time axis
     print("Concatenating data and calculating temporal mean...")
     all_zeta_data = np.concatenate(zeta_center_data, axis=0)  # (total_time, n_faces)
-    
+
     # Calculate mean across all time steps for each face
     mean_navd88_offset = np.mean(all_zeta_data, axis=0)  # (n_faces,)
-    
+
     # Add to DataFrame with same index
     df["mean_navd88_offset"] = pd.Series(
         mean_navd88_offset, dtype=np.float32, index=df.index
     )
-    
+
     # Save metadata JSON
     metadata = {
         "variable_name": "mean_navd88_offset",
@@ -609,9 +616,9 @@ def _add_navd88_offset_to_dataframe(df, config, location_key):
         },
         "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
     }
-    
+
     _save_metadata_json(metadata, config, location_key, "mean_navd88_offset")
-    
+
     print(
         f"Added mean_navd88_offset column. Stats: min={df['mean_navd88_offset'].min():.3f}, max={df['mean_navd88_offset'].max():.3f}, mean={df['mean_navd88_offset'].mean():.3f} m"
     )
