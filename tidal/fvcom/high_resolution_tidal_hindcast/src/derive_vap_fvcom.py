@@ -1048,6 +1048,69 @@ def calculate_distance_to_shore(ds, config):
     return ds
 
 
+def calculate_jurisdiction(ds, config):
+    """
+    Calculate maritime jurisdiction for each face using precomputed values.
+
+    This function reads the maritime jurisdiction for each face from precomputed data
+    stored during the face center precalculation phase. The precomputed values
+    are validated against the dataset's face indices and coordinates.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing face coordinate variables (used for validation)
+    config : dict
+        Configuration dictionary containing location information
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added variable and CF-compliant metadata:
+        - 'vap_jurisdiction': Maritime jurisdiction classification
+
+    Raises
+    ------
+    ValueError
+        If precomputed data file doesn't exist or validation fails
+    KeyError
+        If required coordinate variables are missing
+    """
+    print("Loading precomputed maritime jurisdiction data...")
+
+    # Get location key from config
+    location_key = config.get("location_key") or config.get("location")
+    if not location_key:
+        raise ValueError("Config must contain 'location_key' or 'location' field")
+
+    # Load precomputed face data with validation
+    face_data_df = _load_precomputed_face_data(ds, config, location_key)
+
+    # Extract jurisdiction values
+    jurisdiction_values = face_data_df["jurisdiction"].values
+
+    output_variable_name = output_names["jurisdiction"]
+
+    # Get metadata from jurisdiction calculator
+    jurisdiction_calculator = JurisdictionCalculator(config)
+
+    # Create DataArray with jurisdiction for each face
+    ds[output_variable_name] = xr.DataArray(
+        jurisdiction_values,
+        dims=["face"],
+        coords={
+            "face": ds.face,
+            "lat_center": ds.lat_center,
+            "lon_center": ds.lon_center,
+        },
+    )
+
+    # Use metadata from jurisdiction calculator for CF-compliant attributes
+    ds[output_variable_name].attrs = jurisdiction_calculator.get_metadata()
+
+    return ds
+
+
 def calculate_sea_water_to_direction(
     ds, config, direction_undefined_speed_threshold_ms=0.01
 ):
@@ -2053,211 +2116,6 @@ def calculate_depth_statistics(
     return ds
 
 
-def calculate_jurisdiction(ds, config):
-    """
-    Calculate maritime jurisdiction for each face using precomputed values.
-
-    This function reads the maritime jurisdiction for each face from precomputed data
-    stored during the face center precalculation phase. The precomputed values
-    are validated against the dataset's face indices and coordinates.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        Dataset containing face coordinate variables (used for validation)
-    config : dict
-        Configuration dictionary containing location information
-
-    Returns
-    -------
-    xarray.Dataset
-        Original dataset with added variables and CF-compliant metadata:
-        - 'vap_jurisdiction': Maritime jurisdiction classification
-        - 'vap_closest_country': Closest country name
-        - 'vap_closest_state_province': Closest state or province name
-
-    Raises
-    ------
-    ValueError
-        If precomputed data file doesn't exist or validation fails
-    KeyError
-        If required coordinate variables are missing
-    """
-    print("Loading precomputed maritime jurisdiction data...")
-
-    # Get location key from config
-    location_key = config.get("location_key") or config.get("location")
-    if not location_key:
-        raise ValueError("Config must contain 'location_key' or 'location' field")
-
-    # Load precomputed face data with validation
-    face_data_df = _load_precomputed_face_data(ds, config, location_key)
-
-    # Extract jurisdiction values
-    jurisdiction_values = face_data_df["jurisdiction"].values
-
-    # Extract closest country and state/province values
-    closest_country_values = face_data_df["closest_country"].values
-    closest_state_province_values = face_data_df["closest_state_province"].values
-
-    # Calculate statistics
-    unique_jurisdictions, counts = np.unique(jurisdiction_values, return_counts=True)
-    jurisdiction_stats = dict(zip(unique_jurisdictions, counts.tolist()))
-
-    unique_countries, country_counts = np.unique(
-        closest_country_values, return_counts=True
-    )
-    country_stats = dict(zip(unique_countries, country_counts.tolist()))
-
-    unique_states, state_counts = np.unique(
-        closest_state_province_values, return_counts=True
-    )
-    state_stats = dict(zip(unique_states, state_counts.tolist()))
-
-    # Report statistics
-    n_faces = len(jurisdiction_values)
-    print(f"Loaded maritime jurisdiction for {n_faces} faces")
-    print("Jurisdiction classification:")
-    for jurisdiction, count in jurisdiction_stats.items():
-        percentage = (count / n_faces) * 100
-        print(f"  {jurisdiction}: {count} faces ({percentage:.1f}%)")
-
-    print(f"Closest countries: {len(unique_countries)} unique")
-    for country, count in sorted(country_stats.items()):
-        percentage = (count / n_faces) * 100
-        print(f"  {country}: {count} faces ({percentage:.1f}%)")
-
-    print(f"Closest states/provinces: {len(unique_states)} unique")
-    for state, count in sorted(state_stats.items()):
-        percentage = (count / n_faces) * 100
-        print(f"  {state}: {count} faces ({percentage:.1f}%)")
-
-    output_variable_name = output_names["jurisdiction"]
-
-    # Create DataArray with jurisdiction for each face
-    ds[output_variable_name] = xr.DataArray(
-        jurisdiction_values,
-        dims=["face"],
-        coords={
-            "face": ds.face,
-            "lat_center": ds.lat_center,
-            "lon_center": ds.lon_center,
-        },
-    )
-
-    # Add comprehensive CF-compliant metadata
-    ds[output_variable_name].attrs = {
-        "standard_name": "maritime_jurisdiction_zone",
-        "long_name": "Maritime Jurisdiction Classification",
-        "units": "1",
-        "description": (
-            "Maritime jurisdiction zone classification based on distance from shore "
-            "following US maritime law and international conventions (UNCLOS). "
-            "Provides regulatory context for marine renewable energy development."
-        ),
-        "coverage_content_type": "auxiliaryInformation",
-        "computation": "Loaded from precomputed face center data",
-        "input_variables": "lat_center, lon_center coordinates for each face",
-        "methodology": (
-            "Jurisdiction values were precomputed during face center calculation based on "
-            "distance to shore using UNCLOS and US maritime law boundaries: Land (0 NM), "
-            "State Waters (0-3 or 0-9 NM for TX/FL Gulf), Territorial Sea (3-12 NM), "
-            "Contiguous Zone (12-24 NM), EEZ (24-200 NM), International Waters (>200 NM), "
-            "then stored for efficient reuse."
-        ),
-        "references": "UNCLOS 1982, 43 USC 1331 (Submerged Lands Act), 43 USC 1301-1315",
-        "institution": "NREL Marine Energy Resource Characterization",
-        "source": "Derived from precomputed distance to shore data using UNCLOS and US maritime law boundaries",
-        "comment": (
-            "Classification determines applicable regulations for marine renewable energy projects. "
-            "Texas and Florida have 9 NM state waters in Gulf of Mexico."
-        ),
-        "coordinates": "face lat_center lon_center",
-        "legal_significance": (
-            "State Waters: state jurisdiction for permitting and regulation; "
-            "Territorial Sea: federal jurisdiction with state concurrent authority; "
-            "EEZ: federal jurisdiction for renewable energy development (BOEM)"
-        ),
-        "regulatory_agencies": (
-            "State Waters: state agencies; "
-            "Federal Waters: BOEM (renewable energy), USACE (navigation), NOAA (fisheries)"
-        ),
-        "unique_values": unique_jurisdictions.tolist(),
-        "face_counts": counts.tolist(),
-    }
-
-    # Add closest country DataArray
-    ds["vap_closest_country"] = xr.DataArray(
-        closest_country_values,
-        dims=["face"],
-        coords={
-            "face": ds.face,
-            "lat_center": ds.lat_center,
-            "lon_center": ds.lon_center,
-        },
-    )
-
-    ds["vap_closest_country"].attrs = {
-        "standard_name": "closest_country_name",
-        "long_name": "Closest Country",
-        "units": "1",
-        "description": (
-            "Name of the closest country to each face center coordinate based on "
-            "administrative boundary distance calculation using Natural Earth data."
-        ),
-        "coverage_content_type": "auxiliaryInformation",
-        "computation": "Loaded from precomputed face center data",
-        "input_variables": "lat_center, lon_center coordinates for each face",
-        "methodology": (
-            "Country names were precomputed during face center calculation using "
-            "spatial distance calculation to Natural Earth administrative country "
-            "boundaries with World Equidistant Cylindrical (EPSG:4087) projection "
-            "for accurate distance calculation, then stored for efficient reuse."
-        ),
-        "data_source": "Natural Earth Administrative Countries data",
-        "coordinates": "face lat_center lon_center",
-        "unique_values": unique_countries.tolist(),
-        "face_counts": country_counts.tolist(),
-    }
-
-    # Add closest state/province DataArray
-    ds["vap_closest_state_province"] = xr.DataArray(
-        closest_state_province_values,
-        dims=["face"],
-        coords={
-            "face": ds.face,
-            "lat_center": ds.lat_center,
-            "lon_center": ds.lon_center,
-        },
-    )
-
-    ds["vap_closest_state_province"].attrs = {
-        "standard_name": "closest_state_province_name",
-        "long_name": "Closest State or Province",
-        "units": "1",
-        "description": (
-            "Name of the closest state, province, or administrative subdivision to "
-            "each face center coordinate based on administrative boundary distance "
-            "calculation using Natural Earth data."
-        ),
-        "coverage_content_type": "auxiliaryInformation",
-        "computation": "Loaded from precomputed face center data",
-        "input_variables": "lat_center, lon_center coordinates for each face",
-        "methodology": (
-            "State/province names were precomputed during face center calculation using "
-            "spatial distance calculation to Natural Earth administrative state/province "
-            "boundaries with World Equidistant Cylindrical (EPSG:4087) projection "
-            "for accurate distance calculation, then stored for efficient reuse."
-        ),
-        "data_source": "Natural Earth Administrative States/Provinces data",
-        "coordinates": "face lat_center lon_center",
-        "unique_values": unique_states.tolist(),
-        "face_counts": state_counts.tolist(),
-    }
-
-    return ds
-
-
 def process_single_file(
     nc_file,
     config,
@@ -2293,6 +2151,9 @@ def process_single_file(
         this_ds = calculate_surface_elevation_and_depths(
             this_ds, surface_elevation_offset_path
         )
+
+        print(f"\t[{file_index}] Calculating timezone...")
+        this_ds = calculate_utc_timezone_offset(this_ds, config)
 
         print(f"\t[{file_index}] Calculating distance to shore...")
         this_ds = calculate_distance_to_shore(this_ds, config)
