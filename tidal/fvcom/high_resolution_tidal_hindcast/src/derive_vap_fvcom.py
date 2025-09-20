@@ -667,6 +667,126 @@ def _save_metadata_json(metadata, config, location_key, variable_name):
     print(f"Metadata saved: {json_path}")
 
 
+def _load_precomputed_face_data(ds, config, location_key=None):
+    """
+    Load precomputed face-centered data from parquet file and validate consistency with dataset.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing lat_center, lon_center, and face coordinates
+    config : dict
+        Configuration dictionary
+    location_key : str, optional
+        Location key to use. If None, will attempt to determine from config context
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with precomputed face data indexed by face_index containing:
+        - latitude_center, longitude_center
+        - timezone_offset
+        - distance_to_shore
+        - closest_shore_lat, closest_shore_lon
+        - jurisdiction
+        - closest_country
+        - closest_state_province
+        - mean_navd88_offset
+
+    Raises
+    ------
+    ValueError
+        If precomputed data file doesn't exist or validation fails
+    FileNotFoundError
+        If parquet file not found
+    """
+    # Determine location_key if not provided
+    if location_key is None:
+        # Try to determine from config context - look for single location
+        location_specs = config.get("location_specification", {})
+        if len(location_specs) == 1:
+            location_key = list(location_specs.keys())[0]
+        else:
+            raise ValueError(
+                "Cannot determine location_key automatically. Multiple or no locations in config. "
+                "Please provide location_key parameter explicitly."
+            )
+
+    # Get location configuration
+    location_config = config["location_specification"][location_key]
+
+    # Get parquet file path
+    parquet_path = get_face_center_precalculations_path(config, location_config)
+
+    # Check if file exists
+    if not parquet_path.exists():
+        raise ValueError(
+            f"Precomputed face data not found at {parquet_path}. "
+            f"Please run calculate_and_save_face_center_precalculations(config, '{location_key}') first."
+        )
+
+    # Load the DataFrame
+    print(f"Loading precomputed face data from: {parquet_path}")
+    df = pd.read_parquet(parquet_path)
+
+    # Validate that the DataFrame has expected columns
+    required_columns = [
+        "latitude_center",
+        "longitude_center",
+        "timezone_offset",
+        "distance_to_shore",
+        "closest_shore_lat",
+        "closest_shore_lon",
+        "jurisdiction",
+        "closest_country",
+        "closest_state_province",
+        "mean_navd88_offset",
+    ]
+
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(
+            f"Precomputed data missing required columns: {missing_columns}. "
+            f"Available columns: {list(df.columns)}"
+        )
+
+    # Validate consistency with dataset
+    ds_face_indices = ds.face.values
+    ds_lat_centers = ds.lat_center.values
+    ds_lon_centers = ds.lon_center.values
+
+    # Check that face indices match
+    if not np.array_equal(ds_face_indices, df.index.values):
+        raise ValueError(
+            f"Face indices mismatch between dataset and precomputed data. "
+            f"Dataset faces: {len(ds_face_indices)}, DataFrame faces: {len(df)}"
+        )
+
+    # Check coordinate consistency (using the same tolerance as validation functions)
+    if not np.allclose(ds_lat_centers, df["latitude_center"].values, rtol=1e-10):
+        raise ValueError(
+            "Latitude coordinates mismatch between dataset and precomputed data"
+        )
+
+    if not np.allclose(ds_lon_centers, df["longitude_center"].values, rtol=1e-10):
+        raise ValueError(
+            "Longitude coordinates mismatch between dataset and precomputed data"
+        )
+
+    print(f"Successfully loaded and validated precomputed data for {len(df)} faces")
+    print("Available precomputed values:")
+    print(f"  - Timezone offsets: {sorted(df['timezone_offset'].unique())}")
+    print(
+        f"  - Distance to shore range: {df['distance_to_shore'].min():.2f} - {df['distance_to_shore'].max():.2f} NM"
+    )
+    print(f"  - Jurisdictions: {len(df['jurisdiction'].unique())} unique")
+    print(
+        f"  - NAVD88 offset range: {df['mean_navd88_offset'].min():.3f} - {df['mean_navd88_offset'].max():.3f} m"
+    )
+
+    return df
+
+
 def validate_u_and_v(ds):
     """
     Validate velocity components in an xarray Dataset to ensure they exist
