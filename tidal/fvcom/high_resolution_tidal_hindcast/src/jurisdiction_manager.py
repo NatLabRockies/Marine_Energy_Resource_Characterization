@@ -511,3 +511,42 @@ class JurisdictionCalculator:
                 "jurisdiction": self._outside_usa_jurisdiction_string(),
                 "jurisdiction_source": "None",
             }
+
+    def get_metadata(self):
+        """
+        Get comprehensive metadata for jurisdiction calculation.
+
+        Returns
+        -------
+        dict
+            Metadata dictionary with CF-compliant attributes and data source information
+        """
+
+        # Get dependency information
+        czma_info = self.deps_manager.get_dependency_info(
+            "marinecadastre_coastal_zone_management_act"
+        )
+        territorial_info = self.deps_manager.get_dependency_info("noaa_territorial_sea")
+        coastal_states_info = self.deps_manager.get_dependency_info(
+            "noaa_coastal_states"
+        )
+
+        metadata = {
+            "variable_name": "vap_jurisdiction",
+            "long_name": "Maritime Jurisdiction Classification",
+            "description": (
+                f"Maritime jurisdiction classification derived from NOAA datasets: "
+                f"Coastal Zone Management Act documentation: {czma_info['documentation_url']}, dataset_link: {czma_info['data_url']}; "
+                f"Territorial Sea documentation: {territorial_info['documentation_url']}, dataset_link: {territorial_info['data_url']}; "
+                f"Coastal States documentation: {coastal_states_info['documentation_url']}, dataset_link: {coastal_states_info['data_url']}"
+            ),
+            "coverage_content_type": "auxiliaryInformation",
+            "input_variables": "lat_center, lon_center coordinates for each face",
+            "methodology": (
+                "Geographic coordinates for each face center were spatially intersected with "
+                "boundary polygons to determine jurisdictional classification."
+            ),
+            "coordinates": "face lat_center lon_center",
+        }
+
+        return metadata

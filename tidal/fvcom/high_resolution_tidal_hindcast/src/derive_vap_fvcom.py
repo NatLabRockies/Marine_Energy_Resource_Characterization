@@ -876,73 +876,51 @@ def calculate_sea_water_speed(ds, config):
 
 def calculate_utc_timezone_offset(ds, config):
     """
-    Calculate UTC timezone offset for each face using individual coordinates.
-    
-    This function computes the timezone offset for each face in the dataset
-    using the lat_center/lon_center coordinates for that specific face.
-    
+    Populate UTC timezone offset for each face using precomputed values.
+
+    This function reads the timezone offset for each face from precomputed data
+    stored during the face center precalculation phase. The precomputed values
+    are validated against the dataset's face indices and coordinates.
+
     Parameters
     ----------
     ds : xarray.Dataset
-        Dataset containing lat_center and lon_center coordinate variables
+        Dataset containing face coordinate variables (used for validation)
     config : dict
-        Configuration dictionary (maintained for consistency with other functions)
-    
+        Configuration dictionary containing location information
+
     Returns
     -------
     xarray.Dataset
         Original dataset with added 'vap_utc_timezone_offset' variable and CF-compliant metadata
-    
+
     Raises
     ------
+    ValueError
+        If precomputed data file doesn't exist or validation fails
     KeyError
         If required coordinate variables are missing
-    ValueError
-        If timezone cannot be determined for any coordinates
     """
-    # Check required coordinates
-    if "lat_center" not in ds.variables:
-        raise KeyError("Dataset must contain 'lat_center' coordinate variable")
-    if "lon_center" not in ds.variables:
-        raise KeyError("Dataset must contain 'lon_center' coordinate variable")
-    
-    # Get coordinate arrays
-    lat_values = ds.lat_center.values
-    lon_values = ds.lon_center.values
-    n_faces = len(ds.face)
-    
-    print(f"Calculating timezone offsets for {n_faces} individual face coordinates...")
-    
-    # Initialize TimezoneFinder
-    tf = TimezoneFinder()
-    
-    # Calculate timezone offset for each face
-    timezone_offset_values = np.zeros(n_faces, dtype=np.int16)
-    
-    for i in range(n_faces):
-        lat = float(lat_values[i])
-        lon = float(lon_values[i])
-        
-        # Get timezone name for this specific coordinate
-        timezone_name = tf.timezone_at(lat=lat, lng=lon)
-        
-        if not timezone_name:
-            raise ValueError(f"Could not determine timezone for face {i} at coordinates ({lat}, {lon})")
-        
-        # Get UTC offset using zoneinfo
-        tz = ZoneInfo(timezone_name)
-        now = datetime.now(tz)
-        utc_offset_seconds = now.utcoffset().total_seconds()
-        utc_offset_hours = int(utc_offset_seconds / 3600)
-        
-        timezone_offset_values[i] = utc_offset_hours
-    
+    print("Loading precomputed timezone offset data...")
+
+    # Get location key from config
+    location_key = config.get("location_key") or config.get("location")
+    if not location_key:
+        raise ValueError("Config must contain 'location_key' or 'location' field")
+
+    # Load precomputed face data with validation
+    face_data_df = _load_precomputed_face_data(ds, config, location_key)
+
+    # Extract timezone offset values
+    timezone_offset_values = face_data_df["timezone_offset"].values.astype(np.int16)
+
     # Report statistics
     unique_offsets = np.unique(timezone_offset_values)
+    print(f"Loaded timezone offsets for {len(timezone_offset_values)} faces")
     print(f"Found {len(unique_offsets)} unique timezone offsets: {unique_offsets}")
-    
+
     output_variable_name = output_names["utc_timezone_offset"]
-    
+
     # Create DataArray with timezone offset for each face
     ds[output_variable_name] = xr.DataArray(
         timezone_offset_values,
@@ -953,7 +931,7 @@ def calculate_utc_timezone_offset(ds, config):
             "lon_center": ds.lon_center,
         },
     )
-    
+
     # Add CF-compliant metadata
     ds[output_variable_name].attrs = {
         "long_name": "UTC Timezone Offset",
@@ -964,12 +942,12 @@ def calculate_utc_timezone_offset(ds, config):
             "timezone at each face's geographic location. Each face receives its "
             "own timezone offset based on its specific lat_center/lon_center coordinates."
         ),
-        "computation": "Calculated using timezonefinder for each individual face coordinate",
+        "computation": "Loaded from precomputed face center data",
         "input_variables": "lat_center, lon_center coordinates for each face",
         "methodology": (
-            "For each face, timezone determined using TimezoneFinder library with "
-            "the face's specific lat_center/lon_center coordinates, then UTC offset "
-            "extracted using Python's zoneinfo module."
+            "Timezone offset values were precomputed during face center calculation "
+            "using TimezoneFinder library with each face's specific coordinates, "
+            "then stored for efficient reuse."
         ),
         "unique_offsets_found": unique_offsets.tolist(),
         "coordinates": "face lat_center lon_center",
@@ -980,18 +958,18 @@ def calculate_utc_timezone_offset(ds, config):
 
 def calculate_distance_to_shore(ds, config):
     """
-    Calculate distance to shore for each face using Natural Earth coastline data.
+    Calculate distance to shore for each face using precomputed values.
 
-    This function computes the minimum distance from each face center to the
-    nearest coastline using high-resolution Natural Earth data. Distances are
-    calculated in nautical miles using geodesic calculations.
+    This function reads the distance to shore for each face from precomputed data
+    stored during the face center precalculation phase. The precomputed values
+    are validated against the dataset's face indices and coordinates.
 
     Parameters
     ----------
     ds : xarray.Dataset
-        Dataset containing lat_center and lon_center coordinate variables
+        Dataset containing face coordinate variables (used for validation)
     config : dict
-        Configuration dictionary containing Natural Earth data path
+        Configuration dictionary containing location information
 
     Returns
     -------
@@ -1000,105 +978,28 @@ def calculate_distance_to_shore(ds, config):
 
     Raises
     ------
+    ValueError
+        If precomputed data file doesn't exist or validation fails
     KeyError
         If required coordinate variables are missing
-    ValueError
-        If Natural Earth data cannot be loaded
-    FileNotFoundError
-        If Natural Earth data file not found
     """
-    # Check required coordinates
-    if "lat_center" not in ds.variables:
-        raise KeyError("Dataset must contain 'lat_center' coordinate variable")
-    if "lon_center" not in ds.variables:
-        raise KeyError("Dataset must contain 'lon_center' coordinate variable")
+    print("Loading precomputed distance to shore data...")
 
-    # Get coordinate arrays
-    lat_values = ds.lat_center.values
-    lon_values = ds.lon_center.values
-    n_faces = len(ds.face)
+    # Get location key from config
+    location_key = config.get("location_key") or config.get("location")
+    if not location_key:
+        raise ValueError("Config must contain 'location_key' or 'location' field")
 
-    print(f"Calculating distance to shore for {n_faces} individual face coordinates...")
+    # Load precomputed face data with validation
+    face_data_df = _load_precomputed_face_data(ds, config, location_key)
 
-    # Load Natural Earth data from config path
-    natural_earth_path = Path(config["natural_earth"]["land_polygons_path"])
-    if not natural_earth_path.exists():
-        raise FileNotFoundError(
-            f"Natural Earth data file not found: {natural_earth_path}"
-        )
-
-    print(f"Loading Natural Earth coastline data from: {natural_earth_path}")
-    try:
-        # Load the land polygons
-        land_gdf = gpd.read_file(natural_earth_path)
-
-        # Create a combined geometry for all land masses for faster distance calculation
-        land_union = land_gdf.geometry.unary_union
-
-        print(f"Loaded {len(land_gdf)} land polygon features")
-
-    except Exception as e:
-        raise ValueError(f"Failed to load Natural Earth data: {e}")
-
-    # Create spatial index for faster distance calculations
-    print("Building spatial index for distance calculations...")
-
-    # Convert to appropriate CRS for accurate distance calculation in meters
-    # Use World Equidistant Cylindrical (EPSG:4087) for global distance calculations
-    crs_distance = "EPSG:4087"  # World Equidistant Cylindrical
-
-    # Reproject land geometry to distance CRS
-    land_gdf_projected = land_gdf.to_crs(crs_distance)
-    land_union_projected = land_gdf_projected.geometry.unary_union
-
-    # Initialize distance array
-    distance_values = np.zeros(n_faces, dtype=np.float32)
-
-    # Process points in batches for memory efficiency
-    batch_size = 1000
-    n_batches = (n_faces + batch_size - 1) // batch_size
-
-    print(f"Processing {n_faces} points in {n_batches} batches...")
-
-    for batch_idx in range(n_batches):
-        start_idx = batch_idx * batch_size
-        end_idx = min(start_idx + batch_size, n_faces)
-
-        # Create points for this batch
-        batch_points = [
-            Point(lon_values[i], lat_values[i]) for i in range(start_idx, end_idx)
-        ]
-
-        # Create GeoDataFrame and project to distance CRS
-        points_gdf = gpd.GeoDataFrame(geometry=batch_points, crs="EPSG:4326")
-        points_gdf_projected = points_gdf.to_crs(crs_distance)
-
-        # Calculate distances for this batch
-        for local_idx, point_geom in enumerate(points_gdf_projected.geometry):
-            face_idx = start_idx + local_idx
-
-            # Check if point is on land first (distance = 0)
-            if land_union_projected.contains(point_geom):
-                distance_values[face_idx] = 0.0
-            else:
-                # Calculate minimum distance to coastline in meters
-                distance_meters = point_geom.distance(land_union_projected)
-
-                # Convert meters to nautical miles (1 nautical mile = 1852 meters)
-                distance_nautical_miles = distance_meters / 1852.0
-
-                # Apply maximum distance constraint (200 NM for international waters)
-                distance_values[face_idx] = min(distance_nautical_miles, 200.0)
-
-        if (batch_idx + 1) % 10 == 0:
-            print(f"  Processed batch {batch_idx + 1}/{n_batches}")
+    # Extract distance to shore values
+    distance_values = face_data_df["distance_to_shore"].values.astype(np.float32)
 
     # Report statistics
-    unique_distances = np.unique(distance_values)
     on_land_count = np.sum(distance_values == 0.0)
     max_distance_count = np.sum(distance_values == 200.0)
-
-    print("Distance calculation complete:")
+    print(f"Loaded distance to shore for {len(distance_values)} faces")
     print(f"  Points on land (distance=0): {on_land_count}")
     print(f"  Points at maximum distance (200NM): {max_distance_count}")
     print(
@@ -1126,20 +1027,19 @@ def calculate_distance_to_shore(ds, config):
         "description": (
             "The minimum distance from each face center to the nearest coastline. "
             "Calculated using high-resolution Natural Earth land polygon data. "
-            "Points on land have distance=0. Distances are capped at 200 nautical miles "
-            "to represent the boundary of international waters."
+            "Points on land have distance=0."
         ),
-        "computation": "Geodesic distance calculation using geopandas and shapely",
+        "computation": "Loaded from precomputed face center data",
         "input_variables": "lat_center, lon_center coordinates for each face",
         "methodology": (
-            "For each face, coordinates are projected to World Equidistant Cylindrical "
-            "(EPSG:4087) coordinate system for accurate distance calculation. Distance "
-            "is calculated to the nearest land polygon using Shapely geometric operations, "
-            "then converted from meters to nautical miles."
+            "Distance values were precomputed during face center calculation using "
+            "World Equidistant Cylindrical (EPSG:4087) coordinate system for accurate "
+            "distance calculation. Distance was calculated to the nearest land polygon "
+            "using Shapely geometric operations with Natural Earth data, then converted "
+            "from meters to nautical miles and stored for efficient reuse."
         ),
         "data_source": "Natural Earth 1:10m Land Polygons",
         "spatial_reference": "WGS84 (EPSG:4326) input, EPSG:4087 for distance calculation",
-        "maximum_distance": "200.0 nautical miles (international waters boundary)",
         "coordinates": "face lat_center lon_center",
         "points_on_land": int(on_land_count),
         "points_at_max_distance": int(max_distance_count),
@@ -2153,6 +2053,211 @@ def calculate_depth_statistics(
     return ds
 
 
+def calculate_jurisdiction(ds, config):
+    """
+    Calculate maritime jurisdiction for each face using precomputed values.
+
+    This function reads the maritime jurisdiction for each face from precomputed data
+    stored during the face center precalculation phase. The precomputed values
+    are validated against the dataset's face indices and coordinates.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing face coordinate variables (used for validation)
+    config : dict
+        Configuration dictionary containing location information
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added variables and CF-compliant metadata:
+        - 'vap_jurisdiction': Maritime jurisdiction classification
+        - 'vap_closest_country': Closest country name
+        - 'vap_closest_state_province': Closest state or province name
+
+    Raises
+    ------
+    ValueError
+        If precomputed data file doesn't exist or validation fails
+    KeyError
+        If required coordinate variables are missing
+    """
+    print("Loading precomputed maritime jurisdiction data...")
+
+    # Get location key from config
+    location_key = config.get("location_key") or config.get("location")
+    if not location_key:
+        raise ValueError("Config must contain 'location_key' or 'location' field")
+
+    # Load precomputed face data with validation
+    face_data_df = _load_precomputed_face_data(ds, config, location_key)
+
+    # Extract jurisdiction values
+    jurisdiction_values = face_data_df["jurisdiction"].values
+
+    # Extract closest country and state/province values
+    closest_country_values = face_data_df["closest_country"].values
+    closest_state_province_values = face_data_df["closest_state_province"].values
+
+    # Calculate statistics
+    unique_jurisdictions, counts = np.unique(jurisdiction_values, return_counts=True)
+    jurisdiction_stats = dict(zip(unique_jurisdictions, counts.tolist()))
+
+    unique_countries, country_counts = np.unique(
+        closest_country_values, return_counts=True
+    )
+    country_stats = dict(zip(unique_countries, country_counts.tolist()))
+
+    unique_states, state_counts = np.unique(
+        closest_state_province_values, return_counts=True
+    )
+    state_stats = dict(zip(unique_states, state_counts.tolist()))
+
+    # Report statistics
+    n_faces = len(jurisdiction_values)
+    print(f"Loaded maritime jurisdiction for {n_faces} faces")
+    print("Jurisdiction classification:")
+    for jurisdiction, count in jurisdiction_stats.items():
+        percentage = (count / n_faces) * 100
+        print(f"  {jurisdiction}: {count} faces ({percentage:.1f}%)")
+
+    print(f"Closest countries: {len(unique_countries)} unique")
+    for country, count in sorted(country_stats.items()):
+        percentage = (count / n_faces) * 100
+        print(f"  {country}: {count} faces ({percentage:.1f}%)")
+
+    print(f"Closest states/provinces: {len(unique_states)} unique")
+    for state, count in sorted(state_stats.items()):
+        percentage = (count / n_faces) * 100
+        print(f"  {state}: {count} faces ({percentage:.1f}%)")
+
+    output_variable_name = output_names["jurisdiction"]
+
+    # Create DataArray with jurisdiction for each face
+    ds[output_variable_name] = xr.DataArray(
+        jurisdiction_values,
+        dims=["face"],
+        coords={
+            "face": ds.face,
+            "lat_center": ds.lat_center,
+            "lon_center": ds.lon_center,
+        },
+    )
+
+    # Add comprehensive CF-compliant metadata
+    ds[output_variable_name].attrs = {
+        "standard_name": "maritime_jurisdiction_zone",
+        "long_name": "Maritime Jurisdiction Classification",
+        "units": "1",
+        "description": (
+            "Maritime jurisdiction zone classification based on distance from shore "
+            "following US maritime law and international conventions (UNCLOS). "
+            "Provides regulatory context for marine renewable energy development."
+        ),
+        "coverage_content_type": "auxiliaryInformation",
+        "computation": "Loaded from precomputed face center data",
+        "input_variables": "lat_center, lon_center coordinates for each face",
+        "methodology": (
+            "Jurisdiction values were precomputed during face center calculation based on "
+            "distance to shore using UNCLOS and US maritime law boundaries: Land (0 NM), "
+            "State Waters (0-3 or 0-9 NM for TX/FL Gulf), Territorial Sea (3-12 NM), "
+            "Contiguous Zone (12-24 NM), EEZ (24-200 NM), International Waters (>200 NM), "
+            "then stored for efficient reuse."
+        ),
+        "references": "UNCLOS 1982, 43 USC 1331 (Submerged Lands Act), 43 USC 1301-1315",
+        "institution": "NREL Marine Energy Resource Characterization",
+        "source": "Derived from precomputed distance to shore data using UNCLOS and US maritime law boundaries",
+        "comment": (
+            "Classification determines applicable regulations for marine renewable energy projects. "
+            "Texas and Florida have 9 NM state waters in Gulf of Mexico."
+        ),
+        "coordinates": "face lat_center lon_center",
+        "legal_significance": (
+            "State Waters: state jurisdiction for permitting and regulation; "
+            "Territorial Sea: federal jurisdiction with state concurrent authority; "
+            "EEZ: federal jurisdiction for renewable energy development (BOEM)"
+        ),
+        "regulatory_agencies": (
+            "State Waters: state agencies; "
+            "Federal Waters: BOEM (renewable energy), USACE (navigation), NOAA (fisheries)"
+        ),
+        "unique_values": unique_jurisdictions.tolist(),
+        "face_counts": counts.tolist(),
+    }
+
+    # Add closest country DataArray
+    ds["vap_closest_country"] = xr.DataArray(
+        closest_country_values,
+        dims=["face"],
+        coords={
+            "face": ds.face,
+            "lat_center": ds.lat_center,
+            "lon_center": ds.lon_center,
+        },
+    )
+
+    ds["vap_closest_country"].attrs = {
+        "standard_name": "closest_country_name",
+        "long_name": "Closest Country",
+        "units": "1",
+        "description": (
+            "Name of the closest country to each face center coordinate based on "
+            "administrative boundary distance calculation using Natural Earth data."
+        ),
+        "coverage_content_type": "auxiliaryInformation",
+        "computation": "Loaded from precomputed face center data",
+        "input_variables": "lat_center, lon_center coordinates for each face",
+        "methodology": (
+            "Country names were precomputed during face center calculation using "
+            "spatial distance calculation to Natural Earth administrative country "
+            "boundaries with World Equidistant Cylindrical (EPSG:4087) projection "
+            "for accurate distance calculation, then stored for efficient reuse."
+        ),
+        "data_source": "Natural Earth Administrative Countries data",
+        "coordinates": "face lat_center lon_center",
+        "unique_values": unique_countries.tolist(),
+        "face_counts": country_counts.tolist(),
+    }
+
+    # Add closest state/province DataArray
+    ds["vap_closest_state_province"] = xr.DataArray(
+        closest_state_province_values,
+        dims=["face"],
+        coords={
+            "face": ds.face,
+            "lat_center": ds.lat_center,
+            "lon_center": ds.lon_center,
+        },
+    )
+
+    ds["vap_closest_state_province"].attrs = {
+        "standard_name": "closest_state_province_name",
+        "long_name": "Closest State or Province",
+        "units": "1",
+        "description": (
+            "Name of the closest state, province, or administrative subdivision to "
+            "each face center coordinate based on administrative boundary distance "
+            "calculation using Natural Earth data."
+        ),
+        "coverage_content_type": "auxiliaryInformation",
+        "computation": "Loaded from precomputed face center data",
+        "input_variables": "lat_center, lon_center coordinates for each face",
+        "methodology": (
+            "State/province names were precomputed during face center calculation using "
+            "spatial distance calculation to Natural Earth administrative state/province "
+            "boundaries with World Equidistant Cylindrical (EPSG:4087) projection "
+            "for accurate distance calculation, then stored for efficient reuse."
+        ),
+        "data_source": "Natural Earth Administrative States/Provinces data",
+        "coordinates": "face lat_center lon_center",
+        "unique_values": unique_states.tolist(),
+        "face_counts": state_counts.tolist(),
+    }
+
+    return ds
+
+
 def process_single_file(
     nc_file,
     config,
@@ -2188,6 +2293,12 @@ def process_single_file(
         this_ds = calculate_surface_elevation_and_depths(
             this_ds, surface_elevation_offset_path
         )
+
+        print(f"\t[{file_index}] Calculating distance to shore...")
+        this_ds = calculate_distance_to_shore(this_ds, config)
+
+        print(f"\t[{file_index}] Calculating jurisdiction...")
+        this_ds = calculate_jurisdiction(this_ds, config)
 
         # print(f"\t[{file_index}] Calculating depth...")
         # this_ds = calculate_depth(this_ds)
