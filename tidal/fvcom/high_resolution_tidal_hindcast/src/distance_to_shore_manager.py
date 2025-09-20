@@ -148,7 +148,7 @@ class DistanceToShoreCalculator:
 
         # Create GeoDataFrame from coordinates
         geometry = [
-            Point(lon, lat)
+            Point(float(lon), float(lat))
             for lat, lon in zip(df["latitude_center"], df["longitude_center"])
         ]
         points_gdf = gpd.GeoDataFrame(
@@ -185,7 +185,7 @@ class DistanceToShoreCalculator:
             if len(possible_matches_index) == 0:
                 raise ValueError(
                     f"No coastline features found {buffer_kilometers}km from point at index {idx} "
-                    f"({point_row['latitude']:.4f}, {point_row['longitude']:.4f}). "
+                    f"({point_row['latitude_center']:.4f}, {point_row['longitude_center']:.4f}). "
                     "This suggests incomplete coastline data coverage."
                 )
 
@@ -209,9 +209,11 @@ class DistanceToShoreCalculator:
                         closest_line = line
                 closest_coastline = closest_line
 
-            closest_shore_point = closest_coastline.interpolate(
-                closest_coastline.project(point_geom)
-            )
+            # Project point onto closest coastline and interpolate
+            projection_distance = closest_coastline.project(point_geom)
+            # Ensure scalar value to avoid NumPy deprecation warnings
+            projection_distance = float(projection_distance)
+            closest_shore_point = closest_coastline.interpolate(projection_distance)
 
             # Convert distance based on units
             if self.units == "nautical_miles":
