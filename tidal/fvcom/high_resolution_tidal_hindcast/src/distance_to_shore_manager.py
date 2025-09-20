@@ -140,7 +140,7 @@ class DistanceToShoreCalculator:
         # Create GeoDataFrame for batch
         geometry = [
             Point(float(lon), float(lat))
-            for lat, lon in zip(batch_df["latitude_center"], batch_df["longitude_center"])
+            for lat, lon in zip(batch_df["latitude_center"].values, batch_df["longitude_center"].values)
         ]
         points_gdf = gpd.GeoDataFrame(
             batch_df[["latitude_center", "longitude_center"]],
