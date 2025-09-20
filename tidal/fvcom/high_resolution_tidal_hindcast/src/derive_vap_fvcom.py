@@ -60,7 +60,86 @@ def get_face_center_precalculations_path(config, location):
     )
 
 
-def calculate_and_save_face_center_precalculations(config, location_key):
+def _load_and_validate_existing_precalculations(config, location_key):
+    """
+    Load existing precalculations and validate coordinates and completeness.
+
+    Returns
+    -------
+    tuple[pd.DataFrame or None, list[str]]
+        Tuple of (existing_dataframe, missing_columns). If validation fails,
+        returns (None, []) indicating full recalculation is needed.
+    """
+    location = config["location_specification"][location_key]
+    parquet_path = get_face_center_precalculations_path(config, location)
+
+    # Check if file exists
+    if not parquet_path.exists():
+        print(f"Precalculations file does not exist: {parquet_path}")
+        return None, []
+
+    try:
+        # Load existing data
+        print(f"Loading existing precalculations from: {parquet_path}")
+        existing_df = pd.read_parquet(parquet_path)
+        print(f"Loaded existing data: {len(existing_df)} faces, {len(existing_df.columns)} columns")
+
+        # Expected columns (all that should be calculated)
+        expected_columns = [
+            "latitude_center", "longitude_center", "timezone_offset",
+            "distance_to_shore", "jurisdiction", "closest_country",
+            "closest_state_province", "mean_navd88_offset"
+        ]
+
+        # Check which columns are missing or have null values
+        missing_columns = []
+        for col in expected_columns:
+            if col not in existing_df.columns:
+                missing_columns.append(col)
+                print(f"Missing column: {col}")
+            elif existing_df[col].isnull().any():
+                missing_columns.append(col)
+                print(f"Column {col} has null values")
+
+        # Validate coordinates against reference data if lat/lon are present
+        if "latitude_center" in existing_df.columns and "longitude_center" in existing_df.columns:
+            print("Validating coordinates against reference data...")
+            try:
+                reference_df = _initialize_face_coordinates_dataframe(config, location_key)
+
+                # Check face count consistency
+                if len(existing_df) != len(reference_df):
+                    print(f"Face count mismatch: existing={len(existing_df)}, reference={len(reference_df)}")
+                    return None, []
+
+                # Check coordinate consistency with same tolerance as original validation
+                if not np.allclose(existing_df["longitude_center"], reference_df["longitude_center"], rtol=1e-10):
+                    print("Longitude coordinates do not match reference data")
+                    return None, []
+
+                if not np.allclose(existing_df["latitude_center"], reference_df["latitude_center"], rtol=1e-10):
+                    print("Latitude coordinates do not match reference data")
+                    return None, []
+
+                print("Coordinate validation successful")
+
+            except Exception as e:
+                print(f"Warning: Could not validate coordinates against reference: {e}")
+                print("Proceeding with full recalculation...")
+                return None, []
+        else:
+            # If coordinates are missing, need full recalculation
+            missing_columns.extend(["latitude_center", "longitude_center"])
+
+        return existing_df, missing_columns
+
+    except Exception as e:
+        print(f"Warning: Could not load or validate existing precalculations: {e}")
+        print("Proceeding with full recalculation...")
+        return None, []
+
+
+def calculate_and_save_face_center_precalculations(config, location_key, skip_if_precalculated=False):
     """
     Calculate and save all face-centered precalculated data in correct dependency order.
 
@@ -73,11 +152,14 @@ def calculate_and_save_face_center_precalculations(config, location_key):
         Configuration dictionary
     location_key : str
         Location key from config
+    skip_if_precalculated : bool, default False
+        If True, check if precalculations already exist and skip recalculation if
+        coordinates match and all columns are present with non-null values
 
     Returns
     -------
-    tuple[Path, Path]
-        Tuple containing (parquet_file_path, navd88_offset_path)
+    Path
+        Path to the parquet file containing precalculations
 
     Raises
     ------
@@ -92,25 +174,50 @@ def calculate_and_save_face_center_precalculations(config, location_key):
     print(f"Calculating all face-centered precalculations for {location_name}...")
 
     try:
-        # Step 1: Initialize DataFrame with face coordinates
-        print("Step 1: Initializing face coordinates DataFrame...")
-        df = _initialize_face_coordinates_dataframe(config, location_key)
+        # Check if we should skip based on existing precalculations
+        if skip_if_precalculated:
+            existing_df, missing_columns = _load_and_validate_existing_precalculations(config, location_key)
+            if existing_df is not None:
+                if not missing_columns:
+                    print("All precalculations already exist and are valid. Skipping recalculation.")
+                    parquet_path = get_face_center_precalculations_path(config, location)
+                    return parquet_path
+                else:
+                    print(f"Found existing precalculations but missing columns: {missing_columns}")
+                    print("Will recalculate only missing columns...")
+                    df = existing_df
+            else:
+                print("No valid existing precalculations found. Performing full calculation...")
+                df = None
+        else:
+            df = None
 
-        # Step 2: Add timezone offset data
-        print("Step 2: Adding timezone offset data...")
-        df = _add_timezone_offset_to_dataframe(df, config, location_key)
+        # Step 1: Initialize DataFrame with face coordinates (if not loaded from existing)
+        if df is None:
+            print("Step 1: Initializing face coordinates DataFrame...")
+            df = _initialize_face_coordinates_dataframe(config, location_key)
+            missing_columns = ["timezone_offset", "distance_to_shore", "jurisdiction", "closest_country", "closest_state_province", "mean_navd88_offset"]
 
-        # Step 3: Add distance to shore data
-        print("Step 3: Adding distance to shore data...")
-        df = _add_distance_to_shore_to_dataframe(df, config, location_key)
+        # Step 2: Add timezone offset data (if missing)
+        if "timezone_offset" in missing_columns:
+            print("Step 2: Adding timezone offset data...")
+            df = _add_timezone_offset_to_dataframe(df, config, location_key)
 
-        # Step 4: Add jurisdiction data (depends on distance to shore)
-        print("Step 4: Adding jurisdiction data...")
-        df = _add_jurisdiction_to_dataframe(df, config, location_key)
+        # Step 3: Add distance to shore data (if missing)
+        if "distance_to_shore" in missing_columns:
+            print("Step 3: Adding distance to shore data...")
+            df = _add_distance_to_shore_to_dataframe(df, config, location_key)
 
-        # Step 5: Calculate NAVD88 offset (temporal mean across all files)
-        print("Step 5: Calculating mean NAVD88 offset...")
-        df = _add_navd88_offset_to_dataframe(df, config, location_key)
+        # Step 4: Add jurisdiction data (if missing, depends on distance to shore)
+        jurisdiction_columns = ["jurisdiction", "closest_country", "closest_state_province"]
+        if any(col in missing_columns for col in jurisdiction_columns):
+            print("Step 4: Adding jurisdiction data...")
+            df = _add_jurisdiction_to_dataframe(df, config, location_key)
+
+        # Step 5: Calculate NAVD88 offset (if missing)
+        if "mean_navd88_offset" in missing_columns:
+            print("Step 5: Calculating mean NAVD88 offset...")
+            df = _add_navd88_offset_to_dataframe(df, config, location_key)
 
         # Step 6: Save consolidated parquet file
         print("Step 6: Saving consolidated precalculations...")
