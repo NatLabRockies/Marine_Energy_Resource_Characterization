@@ -14,7 +14,9 @@ from shapely.geometry import Point
 from .deps_manager import DependencyManager
 
 # Silence NumPy scalar conversion deprecation warnings from coordinate transformations
-warnings.filterwarnings("ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated")
+warnings.filterwarnings(
+    "ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated"
+)
 
 
 class DistanceToShoreCalculator:
@@ -45,6 +47,7 @@ class DistanceToShoreCalculator:
         self.coastline_gdf = None
         self.coastline_projected = None
         self.coastline_sindex = None
+        self.batch_size = 50000
 
         # Validate units
         if units not in ["nautical_miles", "kilometers"]:
@@ -267,8 +270,12 @@ class DistanceToShoreCalculator:
                 # Ensure scalar extraction for coordinate values to avoid NumPy deprecation warnings
                 lat_coord = closest_shore_point_wgs84.y
                 lon_coord = closest_shore_point_wgs84.x
-                closest_shore_lats[result_idx] = float(lat_coord.item() if hasattr(lat_coord, 'item') else lat_coord)
-                closest_shore_lons[result_idx] = float(lon_coord.item() if hasattr(lon_coord, 'item') else lon_coord)
+                closest_shore_lats[result_idx] = float(
+                    lat_coord.item() if hasattr(lat_coord, "item") else lat_coord
+                )
+                closest_shore_lons[result_idx] = float(
+                    lon_coord.item() if hasattr(lon_coord, "item") else lon_coord
+                )
 
                 # Mark as processed
                 unprocessed_mask[result_idx] = False
@@ -327,8 +334,8 @@ class DistanceToShoreCalculator:
         closest_shore_lats = np.full(len(df), np.nan, dtype=np.float32)
         closest_shore_lons = np.full(len(df), np.nan, dtype=np.float32)
 
-        # Process in batches of 1000 points
-        batch_size = 1000
+        batch_size = self.batch_size
+
         for batch_start in range(0, len(df), batch_size):
             batch_end = min(batch_start + batch_size, len(df))
             batch_df = df.iloc[batch_start:batch_end]
