@@ -93,8 +93,6 @@ def _load_and_validate_existing_precalculations(config, location_key):
             "timezone_offset",
             "distance_to_shore",
             "jurisdiction",
-            "closest_country",
-            "closest_state_province",
             "mean_navd88_offset",
         ]
 
@@ -234,8 +232,6 @@ def calculate_and_save_face_center_precalculations(
                 "timezone_offset",
                 "distance_to_shore",
                 "jurisdiction",
-                "closest_country",
-                "closest_state_province",
                 "mean_navd88_offset",
             ]
 
@@ -258,8 +254,6 @@ def calculate_and_save_face_center_precalculations(
         # Step 4: Add jurisdiction data (if missing, depends on distance to shore)
         jurisdiction_columns = [
             "jurisdiction",
-            "closest_country",
-            "closest_state_province",
         ]
         if any(col in missing_columns for col in jurisdiction_columns):
             print("Step 4: Adding jurisdiction data...")
