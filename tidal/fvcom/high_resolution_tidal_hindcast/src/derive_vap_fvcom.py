@@ -2147,7 +2147,9 @@ def process_single_file(
         this_ds = calculate_zeta_center(this_ds)
 
         print(f"\t[{file_index}] Calculating surface_elevation...")
-        this_ds = calculate_surface_elevation_and_depths(this_ds, precalculated_face_df)
+        this_ds = calculate_surface_elevation_and_depths(
+            this_ds, config, precalculated_face_df
+        )
 
         print(f"\t[{file_index}] Calculating timezone...")
         this_ds = calculate_utc_timezone_offset(this_ds, config, precalculated_face_df)
