@@ -70,14 +70,13 @@ if __name__ == "__main__":
     # partition_by_time(config, args.location, valid_std_files_df)
 
     print("Step 4: Calculating Derived Value Added Products...")
-    face_precalculations_path, surface_elevation_offset_path = (
-        calculate_and_save_face_center_precalculations(config, args.location)
+    face_precalculations_path = calculate_and_save_face_center_precalculations(
+        config, args.location
     )
 
     derive_vap(
         config,
         args.location,
-        surface_elevation_offset_path,
         skip_if_output_files_exist=False,
     )
     #

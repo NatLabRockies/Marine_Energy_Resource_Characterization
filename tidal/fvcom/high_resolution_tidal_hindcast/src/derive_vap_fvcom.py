@@ -768,7 +768,7 @@ def _save_metadata_json(metadata, config, location_key, variable_name):
     print(f"Metadata saved: {json_path}")
 
 
-def _load_precomputed_face_data(ds, config, location_key=None):
+def _load_precomputed_face_data(ds, config, location_config):
     """
     Load precomputed face-centered data from parquet file and validate consistency with dataset.
 
@@ -801,30 +801,13 @@ def _load_precomputed_face_data(ds, config, location_key=None):
     FileNotFoundError
         If parquet file not found
     """
-    # Determine location_key if not provided
-    if location_key is None:
-        # Try to determine from config context - look for single location
-        location_specs = config.get("location_specification", {})
-        if len(location_specs) == 1:
-            location_key = list(location_specs.keys())[0]
-        else:
-            raise ValueError(
-                "Cannot determine location_key automatically. Multiple or no locations in config. "
-                "Please provide location_key parameter explicitly."
-            )
-
-    # Get location configuration
-    location_config = config["location_specification"][location_key]
 
     # Get parquet file path
     parquet_path = get_face_center_precalculations_path(config, location_config)
 
     # Check if file exists
     if not parquet_path.exists():
-        raise ValueError(
-            f"Precomputed face data not found at {parquet_path}. "
-            f"Please run calculate_and_save_face_center_precalculations(config, '{location_key}') first."
-        )
+        raise ValueError(f"Precomputed face data not found at {parquet_path}. ")
 
     # Load the DataFrame
     print(f"Loading precomputed face data from: {parquet_path}")
@@ -836,11 +819,11 @@ def _load_precomputed_face_data(ds, config, location_key=None):
         "longitude_center",
         "timezone_offset",
         "distance_to_shore",
-        "closest_shore_lat",
-        "closest_shore_lon",
+        # "closest_shore_lat",
+        # "closest_shore_lon",
         "jurisdiction",
-        "closest_country",
-        "closest_state_province",
+        # "closest_country",
+        # "closest_state_province",
         "mean_navd88_offset",
     ]
 
@@ -975,7 +958,7 @@ def calculate_sea_water_speed(ds, config):
     return ds
 
 
-def calculate_utc_timezone_offset(ds, config):
+def calculate_utc_timezone_offset(ds, config, face_df):
     """
     Populate UTC timezone offset for each face using precomputed values.
 
@@ -1002,18 +985,9 @@ def calculate_utc_timezone_offset(ds, config):
     KeyError
         If required coordinate variables are missing
     """
-    print("Loading precomputed timezone offset data...")
-
-    # Get location key from config
-    location_key = config.get("location_key") or config.get("location")
-    if not location_key:
-        raise ValueError("Config must contain 'location_key' or 'location' field")
-
-    # Load precomputed face data with validation
-    face_data_df = _load_precomputed_face_data(ds, config, location_key)
 
     # Extract timezone offset values
-    timezone_offset_values = face_data_df["timezone_offset"].values.astype(np.int16)
+    timezone_offset_values = face_df["timezone_offset"].values.astype(np.int16)
 
     # Report statistics
     unique_offsets = np.unique(timezone_offset_values)
@@ -1040,24 +1014,17 @@ def calculate_utc_timezone_offset(ds, config):
         "units": "hours",
         "description": (
             "The offset in hours from Coordinated Universal Time (UTC) for the "
-            "timezone at each face's geographic location. Each face receives its "
-            "own timezone offset based on its specific lat_center/lon_center coordinates."
+            "timezone at each face's center lat/lon coordinates."
         ),
-        "computation": "Loaded from precomputed face center data",
-        "input_variables": "lat_center, lon_center coordinates for each face",
-        "methodology": (
-            "Timezone offset values were precomputed during face center calculation "
-            "using TimezoneFinder library with each face's specific coordinates, "
-            "then stored for efficient reuse."
-        ),
-        "unique_offsets_found": unique_offsets.tolist(),
+        "input_variables": "lat_center, lon_center",
+        "methodology": ("Calculated using python TimezoneFinder library"),
         "coordinates": "face lat_center lon_center",
     }
 
     return ds
 
 
-def calculate_distance_to_shore(ds, config):
+def calculate_distance_to_shore(ds, config, face_df):
     """
     Calculate distance to shore for each face using precomputed values.
 
@@ -1084,28 +1051,9 @@ def calculate_distance_to_shore(ds, config):
     KeyError
         If required coordinate variables are missing
     """
-    print("Loading precomputed distance to shore data...")
-
-    # Get location key from config
-    location_key = config.get("location_key") or config.get("location")
-    if not location_key:
-        raise ValueError("Config must contain 'location_key' or 'location' field")
-
-    # Load precomputed face data with validation
-    face_data_df = _load_precomputed_face_data(ds, config, location_key)
 
     # Extract distance to shore values
-    distance_values = face_data_df["distance_to_shore"].values.astype(np.float32)
-
-    # Report statistics
-    on_land_count = np.sum(distance_values == 0.0)
-    max_distance_count = np.sum(distance_values == 200.0)
-    print(f"Loaded distance to shore for {len(distance_values)} faces")
-    print(f"  Points on land (distance=0): {on_land_count}")
-    print(f"  Points at maximum distance (200NM): {max_distance_count}")
-    print(
-        f"  Distance range: {distance_values.min():.2f} - {distance_values.max():.2f} nautical miles"
-    )
+    distance_values = face_df["distance_to_shore"].values.astype(np.float32)
 
     output_variable_name = output_names["distance_to_shore"]
 
@@ -1120,36 +1068,13 @@ def calculate_distance_to_shore(ds, config):
         },
     )
 
-    # Add CF-compliant metadata
-    ds[output_variable_name].attrs = {
-        "long_name": "Distance to Shore",
-        "standard_name": "distance_to_shore",
-        "units": "nautical_miles",
-        "description": (
-            "The minimum distance from each face center to the nearest coastline. "
-            "Calculated using high-resolution Natural Earth land polygon data. "
-            "Points on land have distance=0."
-        ),
-        "computation": "Loaded from precomputed face center data",
-        "input_variables": "lat_center, lon_center coordinates for each face",
-        "methodology": (
-            "Distance values were precomputed during face center calculation using "
-            "World Equidistant Cylindrical (EPSG:4087) coordinate system for accurate "
-            "distance calculation. Distance was calculated to the nearest land polygon "
-            "using Shapely geometric operations with Natural Earth data, then converted "
-            "from meters to nautical miles and stored for efficient reuse."
-        ),
-        "data_source": "Natural Earth 1:10m Land Polygons",
-        "spatial_reference": "WGS84 (EPSG:4326) input, EPSG:4087 for distance calculation",
-        "coordinates": "face lat_center lon_center",
-        "points_on_land": int(on_land_count),
-        "points_at_max_distance": int(max_distance_count),
-    }
+    distance_calculator = DistanceToShoreCalculator(config, units="nautical_miles")
+    ds[output_variable_name].attrs = distance_calculator.get_metadata()
 
     return ds
 
 
-def calculate_jurisdiction(ds, config):
+def calculate_jurisdiction(ds, config, face_data_df):
     """
     Calculate maritime jurisdiction for each face using precomputed values.
 
@@ -1177,15 +1102,6 @@ def calculate_jurisdiction(ds, config):
     KeyError
         If required coordinate variables are missing
     """
-    print("Loading precomputed maritime jurisdiction data...")
-
-    # Get location key from config
-    location_key = config.get("location_key") or config.get("location")
-    if not location_key:
-        raise ValueError("Config must contain 'location_key' or 'location' field")
-
-    # Load precomputed face data with validation
-    face_data_df = _load_precomputed_face_data(ds, config, location_key)
 
     # Extract jurisdiction values
     jurisdiction_values = face_data_df["jurisdiction"].values
@@ -1439,7 +1355,7 @@ def calculate_zeta_center(ds):
     return ds
 
 
-def calculate_surface_elevation_and_depths(ds, offset_file_path):
+def calculate_surface_elevation_and_depths(ds, config, face_df):
     """
     Calculate surface elevation and depths using pre-computed NAVD88 offset.
 
@@ -1483,163 +1399,133 @@ def calculate_surface_elevation_and_depths(ds, offset_file_path):
     if output_names["h_center"] not in ds.variables:
         raise ValueError(f"Dataset must contain '{output_names['h_center']}' variable")
 
-    # Load the stored offset
-    if not offset_file_path.exists():
-        raise FileNotFoundError(f"Offset file not found: {offset_file_path}")
+    zeta_center = ds[output_names["zeta_center"]]
 
-    print(f"Loading mean NAVD88 offset from: {offset_file_path}")
-    with xr.open_dataset(offset_file_path) as offset_ds:
-        mean_offset = offset_ds.mean_navd88_offset
+    mean_offset = face_df["mean_navd88_offset"].values.astype(np.float32)
 
-        # Validate coordinate consistency
-        zeta_center = ds[output_names["zeta_center"]]
+    # 1. Calculate surface elevation relative to MSL
+    surface_elevation_values = zeta_center - mean_offset
 
-        if len(mean_offset.face) != len(zeta_center.face):
-            raise ValueError(
-                f"Face dimension mismatch: offset file has {len(mean_offset.face)} faces, "
-                f"but dataset has {len(zeta_center.face)} faces"
-            )
+    surface_elevation = xr.DataArray(
+        surface_elevation_values.values,
+        dims=("time", "face"),
+        coords={
+            "time": ds.time,
+            "lon_center": ds.lon_center,
+            "lat_center": ds.lat_center,
+            "face": zeta_center.face,
+        },
+    )
 
-        # Check coordinate consistency
-        if not np.allclose(
-            mean_offset.lon_center.values, zeta_center.lon_center.values, rtol=1e-10
-        ):
-            raise ValueError(
-                "Longitude coordinates mismatch between dataset and offset file"
-            )
+    surface_elevation.attrs = {
+        "long_name": "Sea Surface Elevation Relative to Mean Sea Level",
+        "name": "sea_surface_height_above_mean_sea_level",
+        "units": "m",
+        "coordinates": "time face lon_center lat_center",
+        "mesh": "cell_centered",
+        "description": (
+            "Sea surface elevation calculated by subtracting the temporal mean "
+            "NAVD88 offset from instantaneous zeta_center values. This represents "
+            "surface elevation fluctuations relative to mean sea level."
+        ),
+        "computation": "surface_elevation = zeta_center - mean_navd88_offset",
+        "reference_level": "mean_sea_level",
+        "input_variables": (
+            f"zeta_center: {output_names['zeta_center']}, "
+            "mean_navd88_offset: pre-computed temporal mean"
+        ),
+    }
 
-        if not np.allclose(
-            mean_offset.lat_center.values, zeta_center.lat_center.values, rtol=1e-10
-        ):
-            raise ValueError(
-                "Latitude coordinates mismatch between dataset and offset file"
-            )
+    ds[output_names["surface_elevation"]] = surface_elevation
 
-        # 1. Calculate surface elevation relative to MSL
-        surface_elevation_values = zeta_center - mean_offset
+    # 2. Calculate depth from sea surface to seafloor
+    # This is the actual depth measured from the instantaneous water surface
+    depth_from_sea_surface = ds[output_names["h_center"]] + zeta_center
 
-        surface_elevation = xr.DataArray(
-            surface_elevation_values.values,
-            dims=("time", "face"),
-            coords={
-                "time": ds.time,
-                "lon_center": ds.lon_center,
-                "lat_center": ds.lat_center,
-                "face": zeta_center.face,
-            },
-        )
+    # Ensure proper dimension ordering
+    depth_from_sea_surface = depth_from_sea_surface.transpose("time", "face")
+    depth_from_sea_surface.attrs = {
+        "long_name": "Water Depth from Sea Surface to Seafloor",
+        "standard_name": "sea_floor_depth_below_sea_surface",
+        "units": ds[output_names["h_center"]].attrs["units"],
+        "positive": "down",
+        "coordinates": "time face lon_center lat_center",
+        "mesh": "cell_centered",
+        "description": (
+            "The water depth representing the actual distance from the "
+            "instantaneous water surface to the seafloor. This is the depth that "
+            "would be measured by instruments from the current sea surface. "
+            "The depth varies with tidal conditions as the water surface elevation changes."
+        ),
+        "computation": "depth_from_sea_surface = h_center + zeta_center",
+        "reference_level": "instantaneous_sea_surface",
+        "input_variables": (
+            "h_center: sea_floor_depth_below_geoid (m), "
+            "zeta_center: sea_surface_height_above_geoid (m)"
+        ),
+        "application": "depth_measurements_from_surface",
+        "note": (
+            "Both h_center and zeta_center use the same geoid reference (NAVD88), "
+            "so they can be added directly to get depth from surface without datum conversions."
+        ),
+    }
 
-        surface_elevation.attrs = {
-            "long_name": "Sea Surface Elevation Relative to Mean Sea Level",
-            "name": "sea_surface_height_above_mean_sea_level",
-            "units": "m",
-            "coordinates": "time face lon_center lat_center",
-            "mesh": "cell_centered",
-            "description": (
-                "Sea surface elevation calculated by subtracting the temporal mean "
-                "NAVD88 offset from instantaneous zeta_center values. This represents "
-                "surface elevation fluctuations relative to mean sea level and should "
-                "have a temporal mean near zero (when using complete yearly data)."
-            ),
-            "computation": "surface_elevation = zeta_center - mean_navd88_offset",
-            "offset_source": str(offset_file_path),
-            "reference_level": "mean_sea_level",
-            "input_variables": (
-                f"zeta_center: {output_names['zeta_center']}, "
-                "mean_navd88_offset: pre-computed temporal mean"
-            ),
-        }
+    ds[output_names["sea_floor_depth"]] = depth_from_sea_surface
 
-        ds[output_names["surface_elevation"]] = surface_elevation
+    # 4. Calculate sigma-level depths if sigma coordinates are available
+    print("Calculating sigma-level depths...")
 
-        # 2. Calculate depth from sea surface to seafloor
-        # This is the actual depth measured from the instantaneous water surface
-        depth_from_sea_surface = ds[output_names["h_center"]] + zeta_center
+    # Extract sigma levels
+    sigma_layer = ds.sigma_layer.T.values[0]
+    sigma_3d = sigma_layer.reshape(1, -1, 1)
 
-        # Ensure proper dimension ordering
-        depth_from_sea_surface = depth_from_sea_surface.transpose("time", "face")
-        depth_from_sea_surface.attrs = {
-            "long_name": "Water Depth from Sea Surface to Seafloor",
-            "standard_name": "sea_floor_depth_below_sea_surface",
-            "units": ds[output_names["h_center"]].attrs["units"],
-            "positive": "down",
-            "coordinates": "time face lon_center lat_center",
-            "mesh": "cell_centered",
-            "description": (
-                "The water depth representing the actual distance from the "
-                "instantaneous water surface to the seafloor. This is the depth that "
-                "would be measured by instruments from the current sea surface. "
-                "The depth varies with tidal conditions as the water surface elevation changes."
-            ),
-            "computation": "depth_from_sea_surface = h_center + zeta_center",
-            "reference_level": "instantaneous_sea_surface",
-            "input_variables": (
-                "h_center: sea_floor_depth_below_geoid (m), "
-                "zeta_center: sea_surface_height_above_geoid (m)"
-            ),
-            "application": "depth_measurements_from_surface",
-            "note": (
-                "Both h_center and zeta_center use the same geoid reference (NAVD88), "
-                "so they can be added directly to get depth from surface without datum conversions."
-            ),
-        }
+    # Expand depth from sea surface for sigma calculation
+    depth_3d = depth_from_sea_surface.expand_dims(
+        dim={"sigma_layer": len(sigma_layer)}, axis=1
+    )
 
-        ds[output_names["sea_floor_depth"]] = depth_from_sea_surface
+    # Calculate depth at each sigma level (positive down from surface)
+    sigma_depths = -(depth_3d * sigma_3d)
 
-        # 4. Calculate sigma-level depths if sigma coordinates are available
-        print("Calculating sigma-level depths...")
+    sigma_depths.attrs = {
+        "long_name": "Depth Below Sea Surface at Sigma Levels",
+        "standard_name": "depth",
+        "units": ds[output_names["h_center"]].attrs["units"],
+        "positive": "down",
+        "coordinates": "time sigma_layer face lon_center lat_center",
+        "mesh": "cell_centered",
+        "description": (
+            "Depth at each sigma level calculated using water column depth from sea surface. "
+            "This represents the actual physical depth below the instantaneous water "
+            "surface that would be measured by instruments at each sigma level. "
+            "Depths vary with tidal conditions as the total water column depth changes."
+        ),
+        "computation": "depth = -(h_center + zeta_center) * sigma_coordinate",
+        "reference_level": "instantaneous_sea_surface",
+        "input_variables": (
+            "h_center: sea_floor_depth_below_geoid (m), "
+            "zeta_center: sea_surface_height_above_geoid (m), "
+            "sigma: ocean_sigma_coordinate"
+        ),
+        "application": "depth_measurements_from_surface",
+        "sigma_convention": "sigma=0 at surface, sigma=-1 at bottom",
+    }
 
-        # Extract sigma levels
-        sigma_layer = ds.sigma_layer.T.values[0]
-        sigma_3d = sigma_layer.reshape(1, -1, 1)
+    ds[output_names["depth"]] = sigma_depths
+    print("Sigma-level depths calculated successfully using depth from sea surface")
 
-        # Expand depth from sea surface for sigma calculation
-        depth_3d = depth_from_sea_surface.expand_dims(
-            dim={"sigma_layer": len(sigma_layer)}, axis=1
-        )
-
-        # Calculate depth at each sigma level (positive down from surface)
-        sigma_depths = -(depth_3d * sigma_3d)
-
-        sigma_depths.attrs = {
-            "long_name": "Depth Below Sea Surface at Sigma Levels",
-            "standard_name": "depth",
-            "units": ds[output_names["h_center"]].attrs["units"],
-            "positive": "down",
-            "coordinates": "time sigma_layer face lon_center lat_center",
-            "mesh": "cell_centered",
-            "description": (
-                "Depth at each sigma level calculated using water column depth from sea surface. "
-                "This represents the actual physical depth below the instantaneous water "
-                "surface that would be measured by instruments at each sigma level. "
-                "Depths vary with tidal conditions as the total water column depth changes."
-            ),
-            "computation": "depth = -(h_center + zeta_center) * sigma_coordinate",
-            "reference_level": "instantaneous_sea_surface",
-            "input_variables": (
-                "h_center: sea_floor_depth_below_geoid (m), "
-                "zeta_center: sea_surface_height_above_geoid (m), "
-                "sigma: ocean_sigma_coordinate"
-            ),
-            "application": "depth_measurements_from_surface",
-            "sigma_convention": "sigma=0 at surface, sigma=-1 at bottom",
-        }
-
-        ds[output_names["depth"]] = sigma_depths
-        print("Sigma-level depths calculated successfully using depth from sea surface")
-
-        print("Surface elevation and depth from sea surface calculated successfully")
-        print(
-            f"Surface elevation statistics: "
-            f"min={surface_elevation.min().values:.3f}m, "
-            f"max={surface_elevation.max().values:.3f}m, "
-            f"temporal_mean={surface_elevation.mean().values:.6f}m"
-        )
-        print(
-            f"Depth from sea surface statistics: "
-            f"min={depth_from_sea_surface.min().values:.3f}m, "
-            f"max={depth_from_sea_surface.max().values:.3f}m"
-        )
+    print("Surface elevation and depth from sea surface calculated successfully")
+    print(
+        f"Surface elevation statistics: "
+        f"min={surface_elevation.min().values:.3f}m, "
+        f"max={surface_elevation.max().values:.3f}m, "
+        f"temporal_mean={surface_elevation.mean().values:.6f}m"
+    )
+    print(
+        f"Depth from sea surface statistics: "
+        f"min={depth_from_sea_surface.min().values:.3f}m, "
+        f"max={depth_from_sea_surface.max().values:.3f}m"
+    )
 
     return ds
 
@@ -2221,7 +2107,6 @@ def process_single_file(
     nc_file,
     config,
     location,
-    surface_elevation_offset_path,
     output_dir,
     file_index,
     total_files=None,
@@ -2236,6 +2121,8 @@ def process_single_file(
     with xr.open_dataset(
         nc_file, engine=config["dataset"]["xarray_netcdf4_engine"]
     ) as this_ds:
+        precalculated_face_df = _load_precomputed_face_data(config, location)
+
         print(f"\t[{file_index}] Calculating speed...")
         this_ds = calculate_sea_water_speed(this_ds, config)
 
@@ -2249,18 +2136,16 @@ def process_single_file(
         this_ds = calculate_zeta_center(this_ds)
 
         print(f"\t[{file_index}] Calculating surface_elevation...")
-        this_ds = calculate_surface_elevation_and_depths(
-            this_ds, surface_elevation_offset_path
-        )
+        this_ds = calculate_surface_elevation_and_depths(this_ds, precalculated_face_df)
 
         print(f"\t[{file_index}] Calculating timezone...")
-        this_ds = calculate_utc_timezone_offset(this_ds, config)
+        this_ds = calculate_utc_timezone_offset(this_ds, config, precalculated_face_df)
 
         print(f"\t[{file_index}] Calculating distance to shore...")
-        this_ds = calculate_distance_to_shore(this_ds, config)
+        this_ds = calculate_distance_to_shore(this_ds, config, precalculated_face_df)
 
         print(f"\t[{file_index}] Calculating jurisdiction...")
-        this_ds = calculate_jurisdiction(this_ds, config)
+        this_ds = calculate_jurisdiction(this_ds, config, precalculated_face_df)
 
         # print(f"\t[{file_index}] Calculating depth...")
         # this_ds = calculate_depth(this_ds)
@@ -2394,7 +2279,6 @@ def get_processed_file_indices(output_dir):
 def derive_vap(
     config,
     location_key,
-    surface_elevation_offset_path,
     single_file_to_process_index=None,
     skip_if_output_files_exist=True,
 ):
