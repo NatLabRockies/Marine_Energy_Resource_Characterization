@@ -82,13 +82,20 @@ def _load_and_validate_existing_precalculations(config, location_key):
         # Load existing data
         print(f"Loading existing precalculations from: {parquet_path}")
         existing_df = pd.read_parquet(parquet_path)
-        print(f"Loaded existing data: {len(existing_df)} faces, {len(existing_df.columns)} columns")
+        print(
+            f"Loaded existing data: {len(existing_df)} faces, {len(existing_df.columns)} columns"
+        )
 
         # Expected columns (all that should be calculated)
         expected_columns = [
-            "latitude_center", "longitude_center", "timezone_offset",
-            "distance_to_shore", "jurisdiction", "closest_country",
-            "closest_state_province", "mean_navd88_offset"
+            "latitude_center",
+            "longitude_center",
+            "timezone_offset",
+            "distance_to_shore",
+            "jurisdiction",
+            "closest_country",
+            "closest_state_province",
+            "mean_navd88_offset",
         ]
 
         # Check which columns are missing or have null values
@@ -102,22 +109,37 @@ def _load_and_validate_existing_precalculations(config, location_key):
                 print(f"Column {col} has null values")
 
         # Validate coordinates against reference data if lat/lon are present
-        if "latitude_center" in existing_df.columns and "longitude_center" in existing_df.columns:
+        if (
+            "latitude_center" in existing_df.columns
+            and "longitude_center" in existing_df.columns
+        ):
             print("Validating coordinates against reference data...")
             try:
-                reference_df = _initialize_face_coordinates_dataframe(config, location_key)
+                reference_df = _initialize_face_coordinates_dataframe(
+                    config, location_key
+                )
 
                 # Check face count consistency
                 if len(existing_df) != len(reference_df):
-                    print(f"Face count mismatch: existing={len(existing_df)}, reference={len(reference_df)}")
+                    print(
+                        f"Face count mismatch: existing={len(existing_df)}, reference={len(reference_df)}"
+                    )
                     return None, []
 
                 # Check coordinate consistency with same tolerance as original validation
-                if not np.allclose(existing_df["longitude_center"], reference_df["longitude_center"], rtol=1e-10):
+                if not np.allclose(
+                    existing_df["longitude_center"],
+                    reference_df["longitude_center"],
+                    rtol=1e-10,
+                ):
                     print("Longitude coordinates do not match reference data")
                     return None, []
 
-                if not np.allclose(existing_df["latitude_center"], reference_df["latitude_center"], rtol=1e-10):
+                if not np.allclose(
+                    existing_df["latitude_center"],
+                    reference_df["latitude_center"],
+                    rtol=1e-10,
+                ):
                     print("Latitude coordinates do not match reference data")
                     return None, []
 
@@ -139,7 +161,9 @@ def _load_and_validate_existing_precalculations(config, location_key):
         return None, []
 
 
-def calculate_and_save_face_center_precalculations(config, location_key, skip_if_precalculated=False):
+def calculate_and_save_face_center_precalculations(
+    config, location_key, skip_if_precalculated=False
+):
     """
     Calculate and save all face-centered precalculated data in correct dependency order.
 
@@ -176,18 +200,28 @@ def calculate_and_save_face_center_precalculations(config, location_key, skip_if
     try:
         # Check if we should skip based on existing precalculations
         if skip_if_precalculated:
-            existing_df, missing_columns = _load_and_validate_existing_precalculations(config, location_key)
+            existing_df, missing_columns = _load_and_validate_existing_precalculations(
+                config, location_key
+            )
             if existing_df is not None:
                 if not missing_columns:
-                    print("All precalculations already exist and are valid. Skipping recalculation.")
-                    parquet_path = get_face_center_precalculations_path(config, location)
+                    print(
+                        "All precalculations already exist and are valid. Skipping recalculation."
+                    )
+                    parquet_path = get_face_center_precalculations_path(
+                        config, location
+                    )
                     return parquet_path
                 else:
-                    print(f"Found existing precalculations but missing columns: {missing_columns}")
+                    print(
+                        f"Found existing precalculations but missing columns: {missing_columns}"
+                    )
                     print("Will recalculate only missing columns...")
                     df = existing_df
             else:
-                print("No valid existing precalculations found. Performing full calculation...")
+                print(
+                    "No valid existing precalculations found. Performing full calculation..."
+                )
                 df = None
         else:
             df = None
@@ -196,7 +230,14 @@ def calculate_and_save_face_center_precalculations(config, location_key, skip_if
         if df is None:
             print("Step 1: Initializing face coordinates DataFrame...")
             df = _initialize_face_coordinates_dataframe(config, location_key)
-            missing_columns = ["timezone_offset", "distance_to_shore", "jurisdiction", "closest_country", "closest_state_province", "mean_navd88_offset"]
+            missing_columns = [
+                "timezone_offset",
+                "distance_to_shore",
+                "jurisdiction",
+                "closest_country",
+                "closest_state_province",
+                "mean_navd88_offset",
+            ]
 
         # Step 2: Add timezone offset data (if missing)
         if "timezone_offset" in missing_columns:
@@ -209,7 +250,11 @@ def calculate_and_save_face_center_precalculations(config, location_key, skip_if
             df = _add_distance_to_shore_to_dataframe(df, config, location_key)
 
         # Step 4: Add jurisdiction data (if missing, depends on distance to shore)
-        jurisdiction_columns = ["jurisdiction", "closest_country", "closest_state_province"]
+        jurisdiction_columns = [
+            "jurisdiction",
+            "closest_country",
+            "closest_state_province",
+        ]
         if any(col in missing_columns for col in jurisdiction_columns):
             print("Step 4: Adding jurisdiction data...")
             df = _add_jurisdiction_to_dataframe(df, config, location_key)
