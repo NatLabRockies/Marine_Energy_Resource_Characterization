@@ -54,10 +54,13 @@ class JurisdictionCalculator:
 
     def _load_jurisdiction_data(self):
         """Load and process jurisdiction data"""
+        print("Loading jurisdiction data...")
         self._load_coastal_zone_management_act_data()
         self._load_noaa_eez_and_territorial_sea_data()
         self._load_noaa_coastal_states()
+        print("Standardizing CRS to EPSG:4326...")
         self._standardize_crs()
+        print("Jurisdiction data loaded and standardized.")
 
     def _load_coastal_zone_management_act_data(self):
         czma_path = self.deps_manager.find_gis_file(
