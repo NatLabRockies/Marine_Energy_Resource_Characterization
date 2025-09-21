@@ -44,6 +44,7 @@ class JurisdictionCalculator:
 
         self.usa = "United States of America"
         self.eez = "Exclusive Economic Zone"
+        self.not_found_jurisdiction = "Unable to determine"
 
     def _download_dependencies(self):
         self.deps_manager.download_dependency(
@@ -154,10 +155,22 @@ class JurisdictionCalculator:
         # Add jurisdiction columns to DataFrame
         result_df = df.copy()
         result_df["jurisdiction"] = pd.Series(
-            [r["jurisdiction"] for r in results], dtype="string", index=df.index
+            [
+                r["jurisdiction"] if r is not None else self.not_found_jurisdiction
+                for r in results
+            ],
+            dtype="string",
+            index=df.index,
         )
         result_df["jurisdiction_source"] = pd.Series(
-            [r["jurisdiction_source"] for r in results], dtype="string", index=df.index
+            [
+                r["jurisdiction_source"]
+                if r is not None
+                else self.not_found_jurisdiction
+                for r in results
+            ],
+            dtype="string",
+            index=df.index,
         )
 
         return result_df
@@ -325,6 +338,8 @@ class JurisdictionCalculator:
                 "jurisdiction": self._outside_usa_jurisdiction_string(),
                 "jurisdiction_source": "None",
             }
+
+        return self.not_found_jurisdiction
 
     def _query_all_data_sources(self, point_geom):
         """Query all data sources for jurisdiction determination"""
@@ -527,6 +542,8 @@ class JurisdictionCalculator:
                 "jurisdiction": self._outside_usa_jurisdiction_string(),
                 "jurisdiction_source": "None",
             }
+
+        return self.not_found_jurisdiction
 
     def get_metadata(self):
         """
