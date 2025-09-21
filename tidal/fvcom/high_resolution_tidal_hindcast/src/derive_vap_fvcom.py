@@ -244,10 +244,10 @@ def calculate_and_save_face_center_precalculations(
             print("Step 2: Adding timezone offset data...")
             df = _add_timezone_offset_to_dataframe(df, config, location_key)
 
-        # Step 3: Add distance to shore data (if missing)
-        if "distance_to_shore" in missing_columns:
-            print("Step 3: Adding distance to shore data...")
-            df = _add_distance_to_shore_to_dataframe(df, config, location_key)
+        # # Step 3: Add distance to shore data (if missing)
+        # if "distance_to_shore" in missing_columns:
+        #     print("Step 3: Adding distance to shore data...")
+        #     df = _add_distance_to_shore_to_dataframe(df, config, location_key)
 
         # Step 4: Add jurisdiction data (if missing, depends on distance to shore)
         jurisdiction_columns = [
