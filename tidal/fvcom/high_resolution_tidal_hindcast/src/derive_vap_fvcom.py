@@ -643,52 +643,6 @@ def _add_jurisdiction_to_dataframe(df, config, location_key):
 
     _save_metadata_json(metadata, config, location_key, "jurisdiction")
 
-    # Save metadata for closest country
-    closest_country_metadata = {
-        "variable_name": "closest_country",
-        "standard_name": "closest_country_name",
-        "long_name": "Closest Country",
-        "units": "1",
-        "description": "Name of the closest country to each face center coordinate based on NOAA jurisdiction data",
-        "computation": "Spatial analysis using NOAA Coastal Zone Management Act and maritime boundary data",
-        "methodology": "Point-in-polygon analysis with fallback distance calculations for boundary determination",
-        "data_source": "NOAA Coastal Zone Management Act boundaries and US Maritime Limits",
-        "dtype": "string",
-        "unique_values": sorted(
-            df_with_jurisdiction["closest_country"].unique().tolist()
-        ),
-        "value_counts": df_with_jurisdiction["closest_country"]
-        .value_counts()
-        .to_dict(),
-        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
-    }
-    _save_metadata_json(
-        closest_country_metadata, config, location_key, "closest_country"
-    )
-
-    # Save metadata for closest state/province
-    closest_state_metadata = {
-        "variable_name": "closest_state_province",
-        "standard_name": "closest_state_province_name",
-        "long_name": "Closest State or Province",
-        "units": "1",
-        "description": "Name of the closest state, province, or administrative subdivision to each face center coordinate",
-        "computation": "Spatial analysis using NOAA Coastal States data",
-        "methodology": "Point-in-polygon analysis with distance-based fallback for coastal state determination",
-        "data_source": "NOAA Coastal States data",
-        "dtype": "string",
-        "unique_values": sorted(
-            df_with_jurisdiction["closest_state_province"].unique().tolist()
-        ),
-        "value_counts": df_with_jurisdiction["closest_state_province"]
-        .value_counts()
-        .to_dict(),
-        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
-    }
-    _save_metadata_json(
-        closest_state_metadata, config, location_key, "closest_state_province"
-    )
-
     return df_with_jurisdiction
 
 
