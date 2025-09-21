@@ -243,11 +243,17 @@ def calculate_and_save_face_center_precalculations(
         if "timezone_offset" in missing_columns:
             print("Step 2: Adding timezone offset data...")
             df = _add_timezone_offset_to_dataframe(df, config, location_key)
+            parquet_path = _save_face_precalculations_dataframe(
+                df, config, location_key
+            )
 
-        # # Step 3: Add distance to shore data (if missing)
-        # if "distance_to_shore" in missing_columns:
-        #     print("Step 3: Adding distance to shore data...")
-        #     df = _add_distance_to_shore_to_dataframe(df, config, location_key)
+        # Step 3: Add distance to shore data (if missing)
+        if "distance_to_shore" in missing_columns:
+            print("Step 3: Adding distance to shore data...")
+            df = _add_distance_to_shore_to_dataframe(df, config, location_key)
+            parquet_path = _save_face_precalculations_dataframe(
+                df, config, location_key
+            )
 
         # Step 4: Add jurisdiction data (if missing, depends on distance to shore)
         jurisdiction_columns = [
@@ -258,11 +264,17 @@ def calculate_and_save_face_center_precalculations(
         if any(col in missing_columns for col in jurisdiction_columns):
             print("Step 4: Adding jurisdiction data...")
             df = _add_jurisdiction_to_dataframe(df, config, location_key)
+            parquet_path = _save_face_precalculations_dataframe(
+                df, config, location_key
+            )
 
         # Step 5: Calculate NAVD88 offset (if missing)
         if "mean_navd88_offset" in missing_columns:
             print("Step 5: Calculating mean NAVD88 offset...")
             df = _add_navd88_offset_to_dataframe(df, config, location_key)
+            parquet_path = _save_face_precalculations_dataframe(
+                df, config, location_key
+            )
 
         # Step 6: Save consolidated parquet file
         print("Step 6: Saving consolidated precalculations...")
