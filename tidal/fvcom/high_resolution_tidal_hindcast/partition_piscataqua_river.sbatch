@@ -12,10 +12,7 @@
 # Calculated Tasks = 292927 / 2500 = 117.17
 #SBATCH --array=0-117  # Create 118 tasks
 
-# Load necessary modules
-module load anaconda3/2023.07-2
-conda init
-conda activate tidal_fvcom
+source sbatch_env_setup.sh
 
 # Change to the directory containing the script
 cd /home/asimms/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast
