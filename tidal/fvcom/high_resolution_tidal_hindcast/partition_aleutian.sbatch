@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=hindcastra
 #SBATCH --output=part_aleutian_%A_%a.out
-#SBATCH --job-name=part_cook
+#SBATCH --job-name=part_aleutian
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 #SBATCH --time=24:00:00
