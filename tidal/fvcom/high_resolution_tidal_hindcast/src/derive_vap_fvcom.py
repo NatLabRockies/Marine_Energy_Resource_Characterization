@@ -661,8 +661,7 @@ def _add_navd88_offset_to_dataframe(df, config, location_key):
     zeta_center_data = []
 
     for i, nc_file in enumerate(nc_files):
-        if i % 5 == 0:
-            print(f"  Processing file {i + 1}/{len(nc_files)}: {nc_file.name}")
+        print(f"  Processing file {i + 1}/{len(nc_files)}: {nc_file.name}")
 
         with xr.open_dataset(nc_file) as ds:
             # Calculate zeta_center for this file
