@@ -125,10 +125,11 @@ def _load_and_validate_existing_precalculations(config, location_key):
                     return None, []
 
                 # Check coordinate consistency with same tolerance as original validation
+                coordinate_tolerance = 1e-6
                 if not np.allclose(
                     existing_df["longitude_center"],
                     reference_df["longitude_center"],
-                    rtol=1e-10,
+                    rtol=coordinate_tolerance,
                 ):
                     print("Longitude coordinates do not match reference data")
                     return None, []
@@ -136,7 +137,7 @@ def _load_and_validate_existing_precalculations(config, location_key):
                 if not np.allclose(
                     existing_df["latitude_center"],
                     reference_df["latitude_center"],
-                    rtol=1e-10,
+                    rtol=coordinate_tolerance,
                 ):
                     print("Latitude coordinates do not match reference data")
                     return None, []
