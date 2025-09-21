@@ -7,7 +7,6 @@ import json
 import h5py
 import numpy as np
 import pandas as pd
-import psutil
 import pyarrow as pa
 import pyarrow.parquet as pq
 import xarray as xr
@@ -360,7 +359,9 @@ def convert_h5_to_parquet_batched(
         print(f"{timestamp} - INFO - Converting from 1-based to 0-based indexing")
         # Ensure we have a numpy array and convert to 0-based indexing
         nv = np.array(nv) - 1
-        print(f"{timestamp} - INFO - nv min/max after conversion: {nv.min()}/{nv.max()}")
+        print(
+            f"{timestamp} - INFO - nv min/max after conversion: {nv.min()}/{nv.max()}"
+        )
 
         # For each face, get the corner coordinates
         print(f"{timestamp} - INFO - Calculating corner coordinates for all faces")
