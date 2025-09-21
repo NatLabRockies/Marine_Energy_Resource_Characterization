@@ -339,7 +339,10 @@ class JurisdictionCalculator:
                 "jurisdiction_source": "None",
             }
 
-        return self.not_found_jurisdiction
+        return {
+            "jurisdiction": self.not_found_jurisdiction,
+            "jurisdiction_source": self.not_found_jurisdiction,
+        }
 
     def _query_all_data_sources(self, point_geom):
         """Query all data sources for jurisdiction determination"""
@@ -543,7 +546,10 @@ class JurisdictionCalculator:
                 "jurisdiction_source": "None",
             }
 
-        return self.not_found_jurisdiction
+        return {
+            "jurisdiction": self.not_found_jurisdiction,
+            "jurisdiction_source": self.not_found_jurisdiction,
+        }
 
     def get_metadata(self):
         """
