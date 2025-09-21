@@ -2346,7 +2346,6 @@ def derive_vap(
             nc_file,
             config,
             location,
-            surface_elevation_offset_path,
             vap_output_dir,
             file_index,
             total_files=total_files,
