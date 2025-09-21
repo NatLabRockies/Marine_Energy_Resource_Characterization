@@ -391,24 +391,12 @@ class DistanceToShoreCalculator:
         )
         units_symbol = "NM" if self.units == "nautical_miles" else "km"
 
+        # Get dependency information for URLs
+        gshhg_info = self.deps_manager.get_dependency_info("uh_gshhg")
+
         return {
-            "variable_name": "distance_to_shore",
-            "standard_name": "distance_to_shore",
             "long_name": "Distance to Nearest Shore",
             "units": units_label,
             "units_symbol": units_symbol,
-            "description": f"Geodesic distance from coordinate to nearest coastline in {units_label}",
-            "computation": "Spatial distance calculation using GSHHG full resolution coastline data",
-            "projection": "EPSG:4087 (World Equidistant Cylindrical)",
-            "minimum_distance": 0.0,
-            "land_points_distance": 0.0,
-            "dtype": "float32",
-            "data_source": "Global Self-consistent, Hierarchical, High-resolution Geography (GSHHG) v2.3.7",
-            "data_source_url": "https://www.soest.hawaii.edu/pwessel/gshhg/",
-            "resolution": "full",
-            "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
-            "additional_columns": {
-                "closest_shore_lat": "Latitude of closest point on coastline (WGS84)",
-                "closest_shore_lon": "Longitude of closest point on coastline (WGS84)",
-            },
+            "description": f"Geodesic distance from coordinate to nearest coastline in {units_label}. Spatial distance calculation using GSHHG full resolution coastline data with EPSG:4087 (World Equidistant Cylindrical) projection from Global Self-consistent, Hierarchical, High-resolution Geography (GSHHG) Documentation: {gshhg_info['docs_url']}, Data: {gshhg_info['data_url']}",
         }
