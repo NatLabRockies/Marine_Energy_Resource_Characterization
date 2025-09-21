@@ -2121,7 +2121,7 @@ def process_single_file(
     with xr.open_dataset(
         nc_file, engine=config["dataset"]["xarray_netcdf4_engine"]
     ) as this_ds:
-        precalculated_face_df = _load_precomputed_face_data(config, location)
+        precalculated_face_df = _load_precomputed_face_data(this_ds, config, location)
 
         print(f"\t[{file_index}] Calculating speed...")
         this_ds = calculate_sea_water_speed(this_ds, config)
