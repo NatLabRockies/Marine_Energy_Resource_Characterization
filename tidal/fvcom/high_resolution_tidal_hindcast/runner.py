@@ -71,7 +71,9 @@ if __name__ == "__main__":
 
     print("Step 4: Calculating Derived Value Added Products...")
     face_precalculations_path = calculate_and_save_face_center_precalculations(
-        config, args.location
+        config,
+        args.location,
+        skip_if_precalculated=True,
     )
 
     derive_vap(
