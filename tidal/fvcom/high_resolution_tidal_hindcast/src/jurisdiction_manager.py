@@ -552,9 +552,9 @@ class JurisdictionCalculator:
             "long_name": "Maritime Jurisdiction Classification",
             "description": (
                 f"Maritime jurisdiction classification derived from NOAA datasets: "
-                f"Coastal Zone Management Act documentation: {czma_info['docs']}, dataset_link: {czma_info['data']}; "
-                f"Territorial Sea documentation: {territorial_info['docs']}, dataset_link: {territorial_info['data']}; "
-                f"Coastal States documentation: {coastal_states_info['docs']}, dataset_link: {coastal_states_info['data']}"
+                f"Coastal Zone Management Act documentation: {czma_info['docs_url']}, dataset_link: {czma_info['data_url']}; "
+                f"Territorial Sea documentation: {territorial_info['docs_url']}, dataset_link: {territorial_info['data_url']}; "
+                f"Coastal States documentation: {coastal_states_info['docs_url']}, dataset_link: {coastal_states_info['data_url']}"
             ),
             "coverage_content_type": "auxiliaryInformation",
             "input_variables": "lat_center, lon_center coordinates for each face",
