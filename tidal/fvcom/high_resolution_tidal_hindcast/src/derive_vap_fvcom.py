@@ -617,11 +617,6 @@ def _calculate_closest_admin_boundaries(df, config):
 def _add_jurisdiction_to_dataframe(df, config, location_key):
     """Add jurisdiction column to existing DataFrame using NOAA jurisdiction data"""
 
-    if "distance_to_shore" not in df.columns:
-        raise ValueError(
-            "DataFrame must contain 'distance_to_shore' column before calculating jurisdiction"
-        )
-
     print(f"Calculating maritime jurisdiction for {len(df)} faces...")
 
     # Add location_key to config for jurisdiction calculation
