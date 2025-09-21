@@ -611,7 +611,6 @@ def _load_precomputed_face_data(ds, config, location_config):
         - latitude_center, longitude_center
         - timezone_offset
         - distance_to_shore
-        - closest_shore_lat, closest_shore_lon
         - jurisdiction
         - closest_country
         - closest_state_province
@@ -642,11 +641,7 @@ def _load_precomputed_face_data(ds, config, location_config):
         "longitude_center",
         "timezone_offset",
         "distance_to_shore",
-        # "closest_shore_lat",
-        # "closest_shore_lon",
         "jurisdiction",
-        # "closest_country",
-        # "closest_state_province",
         "mean_navd88_offset",
     ]
 
