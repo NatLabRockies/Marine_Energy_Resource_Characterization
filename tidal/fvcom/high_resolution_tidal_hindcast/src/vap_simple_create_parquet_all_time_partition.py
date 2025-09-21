@@ -358,7 +358,9 @@ def convert_h5_to_parquet_batched(
 
         # Convert from Fortran 1-based indexing to Python 0-based indexing
         print(f"{timestamp} - INFO - Converting from 1-based to 0-based indexing")
-        nv = nv - 1
+        # Ensure we have a numpy array and convert to 0-based indexing
+        nv = np.array(nv) - 1
+        print(f"{timestamp} - INFO - nv min/max after conversion: {nv.min()}/{nv.max()}")
 
         # For each face, get the corner coordinates
         print(f"{timestamp} - INFO - Calculating corner coordinates for all faces")
