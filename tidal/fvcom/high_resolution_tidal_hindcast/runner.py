@@ -64,7 +64,9 @@ if __name__ == "__main__":
     valid_timestamps_df = pd.read_parquet(tracking_path)
 
     print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
-    valid_std_files_df = standardize_dataset(config, args.location, valid_timestamps_df)
+    valid_std_files_df = standardize_dataset(
+        config, args.location, valid_timestamps_df, skip_if_verified=False
+    )
 
     print("Step 3: Partitioning Standardized Dataset by Time...")
     partition_by_time(config, args.location, valid_std_files_df)

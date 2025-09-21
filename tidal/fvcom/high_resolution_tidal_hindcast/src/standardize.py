@@ -693,7 +693,9 @@ class FVCOMStandardizer:
         return ds
 
 
-def standardize_dataset(config, location_key, valid_timestamps_df):
+def standardize_dataset(
+    config, location_key, valid_timestamps_df, skip_if_verified=True
+):
     standardizer = FVCOMStandardizer()
 
     # Check for existing standardization file
@@ -706,7 +708,7 @@ def standardize_dataset(config, location_key, valid_timestamps_df):
     )
 
     # Check if tracking file exists
-    if tracking_path.exists():
+    if tracking_path.exists() and skip_if_verified is True:
         print(f"\tDataset already verified: {output_name}")
         return pd.read_parquet(tracking_path)
 

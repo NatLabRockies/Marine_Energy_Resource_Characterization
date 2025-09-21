@@ -306,14 +306,14 @@ def model_specification_verifier(config, ds, filepath):
     return True
 
 
-def verify_dataset(config, location, nc_files):
+def verify_dataset(config, location, nc_files, skip_if_verified=True):
     tracking_folder = file_manager.get_tracking_output_dir(config, location)
     tracking_path = Path(
         tracking_folder, f"{location['output_name']}_verify_step_tracking.parquet"
     )
 
     # Check if tracking file exists
-    if tracking_path.exists():
+    if tracking_path.exists() and skip_if_verified is True:
         print(f"\tDataset already verified: {location['output_name']}")
         return pd.read_parquet(tracking_path)
 
