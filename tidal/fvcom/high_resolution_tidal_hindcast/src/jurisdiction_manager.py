@@ -137,7 +137,13 @@ class JurisdictionCalculator:
 
         # Process each point with standard boundaries
         results = []
+        total_points = len(points_gdf)
         for idx, point_row in points_gdf.iterrows():
+            if idx % 1000 == 0:
+                print(
+                    f"Processing point {idx + 1}/{total_points} ({((idx + 1) / total_points) * 100:.1f}%)"
+                )
+
             point_geom = point_row.geometry
 
             # Query all data sources with standard boundaries
@@ -236,7 +242,13 @@ class JurisdictionCalculator:
 
         # Process each point with IDL-closed boundaries
         results = []
+        total_points = len(points_gdf)
         for idx, point_row in points_gdf.iterrows():
+            if idx % 1000 == 0:
+                print(
+                    f"Processing Aleutian point {idx + 1}/{total_points} ({((idx + 1) / total_points) * 100:.1f}%)"
+                )
+
             point_geom = point_row.geometry
 
             # Query all data sources with IDL-closed boundaries
