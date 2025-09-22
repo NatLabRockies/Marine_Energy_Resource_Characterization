@@ -11,32 +11,32 @@ import math
 
 # Location configurations: location_name: {'faces': count, 'temporal_resolution': 'hourly'/'half_hourly'}
 LOCATIONS = {
-    # "aleutian_islands": {
-    #     "faces": 797978,
-    #     "temporal_resolution": "hourly",
-    #     "process_runtime_hours": 2,
-    # },
+    "aleutian_islands": {
+        "faces": 797978,
+        "temporal_resolution": "hourly",
+        "process_runtime_hours": 2,
+    },
     "cook_inlet": {
         "faces": 392002,
         "temporal_resolution": "hourly",
         "process_runtime_hours": 2,
     },
-    # "piscataqua_river": {
-    #     "faces": 292927,
-    #     "temporal_resolution": "half_hourly",
-    #     "process_runtime_hours": 2,
-    # },
+    "piscataqua_river": {
+        "faces": 292927,
+        "temporal_resolution": "half_hourly",
+        "process_runtime_hours": 2,
+    },
     # "puget_sound": {
     #     "faces": 1734765,
     #     "temporal_resolution": "half_hourly",
     #     # This is 73 half hourly files and is relatively slow
     #     "process_runtime_hours": 4,
     # },
-    # "western_passage": {
-    #     "faces": 231208,
-    #     "temporal_resolution": "half_hourly",
-    #     "process_runtime_hours": 1,
-    # },
+    "western_passage": {
+        "faces": 231208,
+        "temporal_resolution": "half_hourly",
+        "process_runtime_hours": 1,
+    },
 }
 
 # Mapping temporal resolution to batch size
