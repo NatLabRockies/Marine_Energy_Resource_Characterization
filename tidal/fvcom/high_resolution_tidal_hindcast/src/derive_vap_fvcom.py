@@ -665,12 +665,17 @@ def _load_precomputed_face_data(ds, config, location_config):
         )
 
     # Check coordinate consistency (using the same tolerance as validation functions)
-    if not np.allclose(ds_lat_centers, df["latitude_center"].values, rtol=1e-10):
+    coordinate_tolerance = 1e-6  # Same tolerance as used in validation functions
+    if not np.allclose(
+        ds_lat_centers, df["latitude_center"].values, rtol=coordinate_tolerance
+    ):
         raise ValueError(
             "Latitude coordinates mismatch between dataset and precomputed data"
         )
 
-    if not np.allclose(ds_lon_centers, df["longitude_center"].values, rtol=1e-10):
+    if not np.allclose(
+        ds_lon_centers, df["longitude_center"].values, rtol=coordinate_tolerance
+    ):
         raise ValueError(
             "Longitude coordinates mismatch between dataset and precomputed data"
         )
