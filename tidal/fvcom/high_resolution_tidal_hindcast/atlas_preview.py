@@ -232,7 +232,7 @@ VIZ_SPECS = {
         "title": "Sea Water Flood Tide To Direction",
         "units": "m/s",
         # "column_name": "vap_sea_water_primary_to_direction_sigma_level_3",
-        "column_name": "vap_sea_water_flood_to_direction_sigma_level_3",
+        "column_name": "vap_sea_water_flood_to_direction_sigma_level_1",
         "colormap": cmocean.cm.phase,
         "range_min": 0,
         "range_max": 360,
@@ -401,9 +401,9 @@ def get_available_regions():
         [
             d.name
             for d in BASE_DIR.iterdir()
-            # if d.is_dir() and "me_atlas" not in d.name and "puget_sound" not in d.name
+            if d.is_dir() and "me_atlas" not in d.name and "puget_sound" not in d.name
             # if d.is_dir() and "me_atlas" not in d.name and "aleutian" not in d.name
-            if d.is_dir() and "me_atlas" not in d.name
+            # if d.is_dir() and "me_atlas" not in d.name
         ]
     )
 
@@ -2584,9 +2584,9 @@ if __name__ == "__main__":
 
     # Display available regions
     regions = get_available_regions()
-    regions.reverse()
+    # regions.reverse()
     print("Available regions:")
-    regions = [region for region in regions if "cook" in region]
+    # regions = [region for region in regions if "cook" in region]
     for i, region in enumerate(regions):
         print(f"{i + 1}. {region}")
 
