@@ -345,9 +345,22 @@ def stream_monthly_data_to_h5(
                                     f"Warning: Could not set attribute '{attr_name}' for '{var_name}': {e}"
                                 )
 
-                        # Write data
+                        # Write data - handle string conversion if needed
                         print(f"    Writing data to {var_name}...")
-                        dataset[:] = var.values
+                        data = var.values
+
+                        # Convert Unicode strings to byte strings for h5py
+                        if data.dtype.kind == "U":  # Unicode string
+                            # Convert Unicode array to byte string array
+                            char_length = (
+                                data.dtype.itemsize // 4
+                            )  # Unicode uses 4 bytes per char
+                            data = data.astype(f"S{char_length}")
+                            print(
+                                f"      Converting Unicode data to S{char_length} for HDF5 storage"
+                            )
+
+                        dataset[:] = data
                         print(f"    ✓ Completed variable: {var_name}")
 
     print(f"Successfully created monthly H5 file: {output_path}")
