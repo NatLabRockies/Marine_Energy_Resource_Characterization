@@ -281,6 +281,8 @@ def stream_monthly_data_to_h5(
                     var = ds.variables[var_name]
 
                     if should_include_variable(var_name, include_vars):
+                        print(f"  Working on variable: {var_name} (dtype: {var_info['dtype']}, dims: {var_info['dims']})")
+
                         # For monthly files, adjust shape to match actual data
                         monthly_shape = list(var.shape)
 
@@ -298,6 +300,7 @@ def stream_monthly_data_to_h5(
                         )
 
                         # Create and populate dataset
+                        print(f"    Creating dataset with shape {monthly_shape}, dtype {var_info['dtype']}, chunks {chunk_sizes}")
                         dataset = h5f.create_dataset(
                             var_name,
                             shape=monthly_shape,
@@ -315,10 +318,9 @@ def stream_monthly_data_to_h5(
                                 )
 
                         # Write data
-                        print(
-                            f"  Writing variable: {var_name} with shape {monthly_shape}"
-                        )
+                        print(f"    Writing data to {var_name}...")
                         dataset[:] = var.values
+                        print(f"    ✓ Completed variable: {var_name}")
 
     print(f"Successfully created monthly H5 file: {output_path}")
 
