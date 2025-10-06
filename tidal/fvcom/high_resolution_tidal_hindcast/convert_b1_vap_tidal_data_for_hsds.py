@@ -152,12 +152,34 @@ def analyze_file_structure(nc_files, include_vars=None):
                 else:
                     final_shape = var.shape
 
+                # Convert dtype to h5py-compatible format
+                dtype_str = np.dtype(var.dtype).str
+
+                # h5py cannot handle Unicode strings (<U) or datetime/timedelta types
+                # Convert Unicode to byte strings (S type)
+                if (
+                    dtype_str.startswith("<U")
+                    or dtype_str.startswith(">U")
+                    or dtype_str.startswith("|U")
+                ):
+                    # Extract character length from Unicode dtype (e.g., '<U63' -> 63)
+                    char_length = int(dtype_str.split("U")[1])
+                    # Convert to byte string with same length
+                    dtype_str = f"S{char_length}"
+                    print(
+                        f"  Note: Converting {var_name} from Unicode {var.dtype} to byte string S{char_length} for HDF5"
+                    )
+                elif "datetime64" in str(var.dtype) or "timedelta64" in str(var.dtype):
+                    # Convert datetime/timedelta to int64
+                    dtype_str = "<i8"
+                    print(
+                        f"  Note: Converting {var_name} from {var.dtype} to int64 for HDF5"
+                    )
+
                 variable_info[var_name] = {
                     "shape": final_shape,
                     "dims": var.dims,
-                    "dtype": np.dtype(
-                        var.dtype
-                    ).str,  # Convert to numpy dtype string for h5py compatibility
+                    "dtype": dtype_str,
                     "attrs": dict(var.attrs),
                 }
 
