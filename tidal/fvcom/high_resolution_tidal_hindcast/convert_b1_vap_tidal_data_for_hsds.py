@@ -325,15 +325,61 @@ def stream_monthly_data_to_h5(
     print(f"Successfully created monthly H5 file: {output_path}")
 
 
-def create_time_index(times):
-    """Create time index array (same as original)"""
-    # Convert to epoch time (seconds since 1970-01-01)
-    epoch_times = [(t - pd.Timestamp("1970-01-01")) / pd.Timedelta("1s") for t in times]
+def datetime_to_hsds_string(dt):
+    """
+    Convert datetime to HSDS string format: 'YYYY-MM-DD HH:MM:SS+00:00'
 
-    # Convert to structured array with required format
-    time_dtype = [("timestamp", "<f8")]  # 64-bit float for timestamp
-    time_index = np.empty(len(times), dtype=time_dtype)
-    time_index["timestamp"] = epoch_times
+    Args:
+        dt: pandas Timestamp or datetime object
+
+    Returns:
+        str: formatted datetime string (25 characters)
+    """
+    # Ensure timezone-aware (assume UTC if not specified)
+    if not hasattr(dt, 'tz') or dt.tz is None:
+        dt = pd.Timestamp(dt, tz='UTC')
+
+    # Format: YYYY-MM-DD HH:MM:SS+00:00
+    formatted = dt.strftime('%Y-%m-%d %H:%M:%S%z')
+
+    # Insert colon in timezone offset to match format: +00:00 instead of +0000
+    if len(formatted) == 24:  # YYYY-MM-DD HH:MM:SS+0000
+        formatted = formatted[:-2] + ':' + formatted[-2:]
+
+    return formatted
+
+
+def create_time_index(times):
+    """
+    Create time index array with string timestamps
+
+    Format: 'YYYY-MM-DD HH:MM:SS+00:00' (e.g., '1979-01-02 00:00:00+00:00')
+
+    Args:
+        times: list/array of pandas Timestamps
+
+    Returns:
+        numpy array of byte strings with dtype S<length>
+    """
+    # Convert all times to HSDS string format
+    time_strings = [datetime_to_hsds_string(t) for t in times]
+
+    # Verify all strings are the same length and determine dtype
+    string_lengths = [len(s) for s in time_strings]
+    max_length = max(string_lengths)
+    min_length = min(string_lengths)
+
+    if max_length != min_length:
+        raise ValueError(
+            f"Inconsistent datetime string lengths: min={min_length}, max={max_length}. "
+            f"All timestamps must be the same length for HDF5 storage."
+        )
+
+    # Convert to bytes and create numpy array with appropriate dtype
+    time_bytes = [s.encode('utf-8') for s in time_strings]
+    time_index = np.array(time_bytes, dtype=f'S{max_length}')
+
+    print(f"Created time_index with dtype S{max_length} for {len(times)} timestamps")
 
     return time_index
 
