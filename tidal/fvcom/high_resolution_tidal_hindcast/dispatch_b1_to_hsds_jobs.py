@@ -182,7 +182,6 @@ def main():
     print(f"\nStitch job: {stitch_job_id}")
     print("  - Will run after convert job completes")
     print(f"  - Partition: {stitch_resources['partition']}")
-    print(f"  - Memory: {stitch_resources['mem']}")
     print(f"  - Time limit: {stitch_resources['time']}")
     print("\nMonitoring commands:")
     print("  squeue -u $USER")
