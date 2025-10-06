@@ -155,7 +155,7 @@ def analyze_file_structure(nc_files, include_vars=None):
                 variable_info[var_name] = {
                     "shape": final_shape,
                     "dims": var.dims,
-                    "dtype": var.dtype,
+                    "dtype": np.dtype(var.dtype).str,  # Convert to numpy dtype string for h5py compatibility
                     "attrs": dict(var.attrs),
                 }
 
