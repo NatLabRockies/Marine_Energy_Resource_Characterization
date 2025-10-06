@@ -99,6 +99,14 @@ def get_output_dirs(config, location, use_temp_base_path=False):
             ),
         ),
         "combined_vap_atlas": Path(base_path, output_dirs["combined_vap_atlas"]),
+        "hsds": Path(
+            base_path,
+            output_dirs["hsds"].replace("<location>", output_location_name),
+        ),
+        "hsds_temp": Path(
+            base_path,
+            output_dirs["hsds_temp"].replace("<location>", output_location_name),
+        ),
     }
     for path in paths.values():
         path.mkdir(parents=True, exist_ok=True)
@@ -148,3 +156,24 @@ def get_vap_atlas_summary_parquet_dir(config, location):
 
 def get_combined_vap_atlas(config, location):
     return get_output_dirs(config, location)["combined_vap_atlas"]
+
+
+def get_hsds_output_dir(config, location):
+    """Get HSDS output directory for the location"""
+    return get_output_dirs(config, location)["hsds"]
+
+
+def get_hsds_temp_dir(config, location):
+    """Get HSDS temporary directory for individual chunk files"""
+    return get_output_dirs(config, location)["hsds_temp"]
+
+
+def get_hsds_final_file_path(config, location):
+    """Get final HSDS file path with versioned naming"""
+    hsds_dir = get_hsds_output_dir(config, location)
+    output_name = location["output_name"]
+    dataset_name = config["dataset"]["name"]
+    version = config["dataset"]["version"]
+
+    filename = f"{output_name}.{dataset_name}.hsds.v{version}.h5"
+    return hsds_dir / filename
