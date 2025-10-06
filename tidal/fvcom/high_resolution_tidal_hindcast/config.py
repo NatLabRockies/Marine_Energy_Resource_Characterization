@@ -97,6 +97,8 @@ config = {
             "vap_summary_parquet": "<location>/b5_vap_summary_parquet",
             "vap_atlas_summary_parquet": "<location>/b6_vap_atlas_summary_parquet",
             "combined_vap_atlas": "all_locations_combined_gis",
+            "hsds": "<location>/hsds",
+            "hsds_temp": "<location>/hsds/individual_temp_files",
             "tracking": "<location>/metadata/time_validation_and_tracking",
             "attributes": "<location>/metadata/dataset_attributes",
             "sha_256": "<location>/metadata/sha_256",
