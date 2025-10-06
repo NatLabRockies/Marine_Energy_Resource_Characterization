@@ -35,8 +35,7 @@ LOCATION_RESOURCES = {
         },
         "stitch": {
             "partition": "standard",
-            "mem": "256GB",
-            "time": "6:00:00",
+            "time": "47:00:00",
         },
     },
     "cook_inlet": {
@@ -47,8 +46,7 @@ LOCATION_RESOURCES = {
         },
         "stitch": {
             "partition": "standard",
-            "mem": "128GB",
-            "time": "4:00:00",
+            "time": "47:00:00",
         },
     },
     "piscataqua_river": {
@@ -59,8 +57,7 @@ LOCATION_RESOURCES = {
         },
         "stitch": {
             "partition": "standard",
-            "mem": "128GB",
-            "time": "4:00:00",
+            "time": "47:00:00",
         },
     },
     "puget_sound": {
@@ -71,8 +68,7 @@ LOCATION_RESOURCES = {
         },
         "stitch": {
             "partition": "standard",
-            "mem": "256GB",
-            "time": "8:00:00",
+            "time": "47:00:00",
         },
     },
     "western_passage": {
@@ -83,8 +79,7 @@ LOCATION_RESOURCES = {
         },
         "stitch": {
             "partition": "standard",
-            "mem": "128GB",
-            "time": "4:00:00",
+            "time": "47:00:00",
         },
     },
 }
@@ -166,7 +161,6 @@ def main():
         f"--dependency=afterok:{convert_job_id}",
         f"--export=LOCATION={location}",
         f"--partition={stitch_resources['partition']}",
-        f"--mem={stitch_resources['mem']}",
         f"--time={stitch_resources['time']}",
         f"--output=stitch_hsds_{location}_%j.out",
         f"--job-name=stitch_hsds_{location}",
