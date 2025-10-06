@@ -98,7 +98,7 @@ def analyze_file_structure(nc_files, include_vars=None):
     """Analyze structure of NC files (adapted from original)"""
     first_file = nc_files[0]
 
-    with xr.open_dataset(first_file) as ds:
+    with xr.open_dataset(first_file, decode_timedelta=False) as ds:
         # Get dimensions
         n_faces = len(ds.face)
         n_sigma = len(ds.sigma) if "sigma" in ds.dims else 0
@@ -131,7 +131,7 @@ def analyze_file_structure(nc_files, include_vars=None):
         total_time_steps = 0
 
         for nc_file in nc_files:
-            with xr.open_dataset(nc_file) as ds_temp:
+            with xr.open_dataset(nc_file, decode_timedelta=False) as ds_temp:
                 times = pd.to_datetime(ds_temp.time.values)
                 all_times.extend(times)
                 total_time_steps += len(times)
@@ -155,7 +155,9 @@ def analyze_file_structure(nc_files, include_vars=None):
                 variable_info[var_name] = {
                     "shape": final_shape,
                     "dims": var.dims,
-                    "dtype": np.dtype(var.dtype).str,  # Convert to numpy dtype string for h5py compatibility
+                    "dtype": np.dtype(
+                        var.dtype
+                    ).str,  # Convert to numpy dtype string for h5py compatibility
                     "attrs": dict(var.attrs),
                 }
 
@@ -245,7 +247,7 @@ def stream_monthly_data_to_h5(
     """Stream single monthly file data to H5 file"""
 
     # Create time index for this monthly file
-    with xr.open_dataset(nc_file) as ds:
+    with xr.open_dataset(nc_file, decode_timedelta=False) as ds:
         monthly_times = pd.to_datetime(ds.time.values)
 
     time_index = create_time_index(monthly_times)
@@ -272,7 +274,7 @@ def stream_monthly_data_to_h5(
         # Process the monthly file
         print(f"Processing monthly file: {nc_file.name}")
 
-        with xr.open_dataset(nc_file) as ds:
+        with xr.open_dataset(nc_file, decode_timedelta=False) as ds:
             time_steps_this_file = len(ds.time)
 
             # Create and populate datasets for this monthly file
@@ -281,7 +283,9 @@ def stream_monthly_data_to_h5(
                     var = ds.variables[var_name]
 
                     if should_include_variable(var_name, include_vars):
-                        print(f"  Working on variable: {var_name} (dtype: {var_info['dtype']}, dims: {var_info['dims']})")
+                        print(
+                            f"  Working on variable: {var_name} (dtype: {var_info['dtype']}, dims: {var_info['dims']})"
+                        )
 
                         # For monthly files, adjust shape to match actual data
                         monthly_shape = list(var.shape)
@@ -300,7 +304,9 @@ def stream_monthly_data_to_h5(
                         )
 
                         # Create and populate dataset
-                        print(f"    Creating dataset with shape {monthly_shape}, dtype {var_info['dtype']}, chunks {chunk_sizes}")
+                        print(
+                            f"    Creating dataset with shape {monthly_shape}, dtype {var_info['dtype']}, chunks {chunk_sizes}"
+                        )
                         dataset = h5f.create_dataset(
                             var_name,
                             shape=monthly_shape,
@@ -336,15 +342,15 @@ def datetime_to_hsds_string(dt):
         str: formatted datetime string (25 characters)
     """
     # Ensure timezone-aware (assume UTC if not specified)
-    if not hasattr(dt, 'tz') or dt.tz is None:
-        dt = pd.Timestamp(dt, tz='UTC')
+    if not hasattr(dt, "tz") or dt.tz is None:
+        dt = pd.Timestamp(dt, tz="UTC")
 
     # Format: YYYY-MM-DD HH:MM:SS+00:00
-    formatted = dt.strftime('%Y-%m-%d %H:%M:%S%z')
+    formatted = dt.strftime("%Y-%m-%d %H:%M:%S%z")
 
     # Insert colon in timezone offset to match format: +00:00 instead of +0000
     if len(formatted) == 24:  # YYYY-MM-DD HH:MM:SS+0000
-        formatted = formatted[:-2] + ':' + formatted[-2:]
+        formatted = formatted[:-2] + ":" + formatted[-2:]
 
     return formatted
 
@@ -376,8 +382,8 @@ def create_time_index(times):
         )
 
     # Convert to bytes and create numpy array with appropriate dtype
-    time_bytes = [s.encode('utf-8') for s in time_strings]
-    time_index = np.array(time_bytes, dtype=f'S{max_length}')
+    time_bytes = [s.encode("utf-8") for s in time_strings]
+    time_index = np.array(time_bytes, dtype=f"S{max_length}")
 
     print(f"Created time_index with dtype S{max_length} for {len(times)} timestamps")
 
