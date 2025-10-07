@@ -138,18 +138,27 @@ def analyze_temporal_file_structure(temporal_files):
             total_time_steps += time_steps
 
     # Third pass: determine final shapes for yearly file
+    # Define static variables that should NOT have time dimension added
+    static_vars = {
+        "lat_center", "lon_center", "lat_node", "lon_node",
+        "nv", "face", "node", "sigma", "sigma_layer",
+        "h_center", "x_center", "y_center", "time"
+    }
+
     for var_name, var_info in variable_info.items():
         shape_template = var_info["shape_template"]
 
+        # Static variables keep their original shape (no time dimension)
+        if var_name in static_vars:
+            yearly_shape = shape_template
         # For time-dependent variables, update time dimension
-        if (
-            len(shape_template) > 1
-        ):  # Assuming time is first dimension for multi-D variables
+        elif len(shape_template) > 1:  # Multi-dimensional time-varying
             yearly_shape = (total_time_steps,) + shape_template[1:]
-        else:
+        else:  # 1D time-varying
             yearly_shape = (total_time_steps,)
 
         var_info["yearly_shape"] = yearly_shape
+        var_info["is_static"] = var_name in static_vars
 
     return {
         "n_faces": n_faces,
