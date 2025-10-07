@@ -735,7 +735,7 @@ This dataset contains 1 year ({location['start_date_utc']} to {location['end_dat
 resolved eastward sea water velocity (u) [m/s], northward  sea water velocity (v) [m/s], surface elevation [m] from NAVD88, 
 and calculated values including sea water speed [m/s], sea water to direction [deg clockwise from true north], power density [W/m²], 
 layer depths [m] below surface, and total depth [m] from surface across 10 uniform depth layers. 
-PNNL used FVCOM {config['model_specification']}, a finite volume coastal ocean model, to generate data and 
+PNNL used {config["model_specification"]["model_version"]}, a finite volume coastal ocean model, to generate data and 
 validated data against available Acoustic Doppler Current Profiler (ADCP) measurements as described in 
 {location['citation']}. NREL performed data standardization, documentation, and publication using its Kestrel 
 HPC to produce full fidelity and summarized data products using software available at {code_metadata['code_url']}. 
