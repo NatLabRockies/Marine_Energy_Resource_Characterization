@@ -38,9 +38,9 @@ def create_monthly_hsds_file(
 
     print(f"Processing monthly file: {input_path.name}")
 
-    # Step 1: Analyze file structure
+    # Step 1: Analyze file structure (includes adding timezone and jurisdiction)
     print("Step 1: Analyzing file structure...")
-    file_info = analyze_file_structure([input_path])
+    file_info = analyze_file_structure([input_path], timezone_offset, jurisdiction_array)
 
     n_faces = file_info["n_faces"]
     n_sigma = file_info["n_sigma"]
@@ -52,29 +52,11 @@ def create_monthly_hsds_file(
         f"Monthly file structure: {n_faces} faces, {n_sigma} sigma layers, {time_steps} time steps"
     )
 
-    # Step 2: Create metadata table
-    print("Step 2: Creating metadata...")
-    metadata = create_metadata_table(
-        file_info["lat_center"],
-        file_info["lon_center"],
-        file_info["water_depth"],
-        file_info["element_vertex_1_lat"],
-        file_info["element_vertex_1_lon"],
-        file_info["element_vertex_2_lat"],
-        file_info["element_vertex_2_lon"],
-        file_info["element_vertex_3_lat"],
-        file_info["element_vertex_3_lon"],
-        timezone_offset,
-        jurisdiction_array,
-        n_faces,
-    )
-
-    # Step 3: Stream monthly data to H5 file
-    print(f"Step 3: Creating monthly H5 file {output_file}")
+    # Step 2: Stream monthly data to H5 file (no meta creation)
+    print(f"Step 2: Creating monthly H5 file {output_file}")
     stream_monthly_data_to_h5(
         input_path,
         output_file,
-        metadata,
         file_info,
         variable_info,
         global_attrs,
@@ -170,7 +152,7 @@ def extract_and_verify_sigma_layers(ds):
     # Replace with exact decimal values to avoid float32 precision errors
     sigma_layer = np.array([-0.05 - 0.1 * n for n in range(n_layers)], dtype=np.float32)
 
-    print(f"  Validated: sigma_layer follows expected pattern")
+    print("  Validated: sigma_layer follows expected pattern")
 
     # Validate uniform spacing in sigma_layer
     sigma_layer_diffs = np.diff(sigma_layer)
@@ -207,7 +189,9 @@ def extract_and_verify_sigma_layers(ds):
             f"Got: {sigma_level}"
         )
 
-    print(f"  Validated: sigma_level ranges from 0.0 to -1.0 and is monotonically decreasing")
+    print(
+        "  Validated: sigma_level ranges from 0.0 to -1.0 and is monotonically decreasing"
+    )
 
     # Validate uniform spacing in sigma_level (excluding last boundary which is fixed at -1.0)
     sigma_level_diffs = np.diff(sigma_level[:-1])  # Exclude the last boundary
@@ -217,7 +201,9 @@ def extract_and_verify_sigma_layers(ds):
             f"Differences: {sigma_level_diffs}\n"
             f"Expected all differences to be approximately {sigma_level_diffs[0]:.3f}"
         )
-    print(f"  Validated: sigma_level has uniform spacing of {sigma_level_diffs[0]:.3f} (excluding last boundary)")
+    print(
+        f"  Validated: sigma_level has uniform spacing of {sigma_level_diffs[0]:.3f} (excluding last boundary)"
+    )
 
     # Print full arrays for verification
     print(f"  sigma_layer ({n_layers} values): {sigma_layer}")
@@ -226,8 +212,15 @@ def extract_and_verify_sigma_layers(ds):
     return sigma_layer.astype(np.float32), sigma_level.astype(np.float32)
 
 
-def analyze_file_structure(nc_files):
-    """Analyze structure of NC files (adapted from original)"""
+def analyze_file_structure(nc_files, timezone_offset=None, jurisdiction_array=None):
+    """
+    Analyze structure of NC files and prepare variable info.
+
+    Args:
+        nc_files: List of NetCDF file paths
+        timezone_offset: Optional array of timezone offsets (for adding to variable_info)
+        jurisdiction_array: Optional array of jurisdiction strings (for adding to variable_info)
+    """
     first_file = nc_files[0]
 
     with xr.open_dataset(first_file, decode_timedelta=False) as ds:
@@ -276,6 +269,69 @@ def analyze_file_structure(nc_files):
 
         # Analyze variables - apply NREL spec 3D to 2D splitting
         variable_info = {}
+
+        # First, add the standard renamed variables as separate face-only datasets
+        standard_face_vars = {
+            "latitude": {
+                "data": lat_center,
+                "dtype": "<f4",
+                "attrs": dict(ds.lat_center.attrs),
+            },
+            "longitude": {
+                "data": lon_center,
+                "dtype": "<f4",
+                "attrs": dict(ds.lon_center.attrs),
+            },
+            "water_depth": {
+                "data": water_depth,
+                "dtype": "<f4",
+                "attrs": dict(ds.h_center.attrs),
+            },
+        }
+
+        # Add timezone and jurisdiction
+        # Determine jurisdiction dtype
+        max_jurisdiction_length = max(len(str(j)) for j in jurisdiction_array)
+        jurisdiction_dtype = f"S{max_jurisdiction_length}"
+        jurisdiction_bytes = np.array(
+            [str(j).encode("utf-8") for j in jurisdiction_array], dtype=jurisdiction_dtype
+        )
+
+        standard_face_vars["timezone"] = {
+            "data": timezone_offset.astype(np.int16),
+            "dtype": "<i2",
+            "attrs": dict(ds.vap_utc_timezone_offset.attrs),
+        }
+
+        standard_face_vars["jurisdiction"] = {
+            "data": jurisdiction_bytes,
+            "dtype": jurisdiction_dtype,
+            "attrs": dict(ds.vap_jurisdiction.attrs),
+        }
+
+        # Add element vertex coordinates
+        element_vertex_vars = {
+            "element_vertex_1_lat": {"data": element_vertex_1_lat, "dtype": "<f4", "attrs": {}},
+            "element_vertex_1_lon": {"data": element_vertex_1_lon, "dtype": "<f4", "attrs": {}},
+            "element_vertex_2_lat": {"data": element_vertex_2_lat, "dtype": "<f4", "attrs": {}},
+            "element_vertex_2_lon": {"data": element_vertex_2_lon, "dtype": "<f4", "attrs": {}},
+            "element_vertex_3_lat": {"data": element_vertex_3_lat, "dtype": "<f4", "attrs": {}},
+            "element_vertex_3_lon": {"data": element_vertex_3_lon, "dtype": "<f4", "attrs": {}},
+        }
+
+        # Add all standard and element vertex variables to variable_info
+        for var_name, var_data in {**standard_face_vars, **element_vertex_vars}.items():
+            variable_info[var_name] = {
+                "shape": (n_faces,),
+                "dims": ("face",),
+                "dtype": var_data["dtype"],
+                "attrs": var_data["attrs"],
+                "original_variable": var_name,
+                "sigma_layer_index": None,
+                "static_data": var_data["data"],  # Store data for writing
+            }
+
+        # Now process all other variables from the dataset
         for var_name, var in ds.variables.items():
             if should_include_variable(var_name):
                 dims = var.dims
@@ -342,9 +398,24 @@ def analyze_file_structure(nc_files):
                         }
 
                 elif dims == ("face",):
-                    # Static variable: keep as 1D (face)
+                    # Static face-only variable
+                    # Check if this is a standard renamed variable
+                    output_var_name, is_renamed = get_renamed_variable_name(var_name)
+
+                    # For vap_ variables (not standard renames), remove vap_ prefix
+                    if not is_renamed and var_name.startswith("vap_"):
+                        output_var_name = var_name[4:]  # Remove "vap_" prefix
+                        print(f"  Note: Renaming {var_name} -> {output_var_name}")
+
+                    # Special dtype handling for timezone and jurisdiction
+                    if output_var_name == "timezone":
+                        dtype_str = "<i2"  # int16 for timezone
+                    elif output_var_name == "jurisdiction":
+                        # Keep the byte string dtype from earlier conversion
+                        pass
+
                     final_shape = (n_faces,)
-                    variable_info[var_name] = {
+                    variable_info[output_var_name] = {
                         "shape": final_shape,
                         "dims": dims,
                         "dtype": dtype_str,
@@ -393,69 +464,8 @@ def analyze_file_structure(nc_files):
     }
 
 
-def create_metadata_table(
-    lat_center,
-    lon_center,
-    water_depth,
-    element_vertex_1_lat,
-    element_vertex_1_lon,
-    element_vertex_2_lat,
-    element_vertex_2_lon,
-    element_vertex_3_lat,
-    element_vertex_3_lon,
-    timezone_offset,
-    jurisdiction_array,
-    n_faces,
-):
-    """Create metadata table with per-face jurisdiction from VAP processing"""
-    # timezone_offset is an array with individual values for each face
-    timezone = timezone_offset.astype(np.int16)
-
-    # Find the maximum length jurisdiction string to determine dtype
-    max_jurisdiction_length = max(len(str(j)) for j in jurisdiction_array)
-    jurisdiction_dtype = f"S{max_jurisdiction_length}"
-
-    # Convert jurisdiction strings to bytes with consistent encoding
-    jurisdiction_bytes_array = np.array(
-        [str(j).encode("utf-8") for j in jurisdiction_array], dtype=jurisdiction_dtype
-    )
-
-    print(
-        f"Jurisdiction strings: {len(np.unique(jurisdiction_array))} unique values, max length: {max_jurisdiction_length} characters"
-    )
-
-    metadata_dtype = [
-        ("latitude", "<f4"),
-        ("longitude", "<f4"),
-        ("water_depth", "<f4"),
-        ("timezone", "<i2"),
-        ("jurisdiction", jurisdiction_dtype),
-        ("element_vertex_1_lat", "<f4"),
-        ("element_vertex_1_lon", "<f4"),
-        ("element_vertex_2_lat", "<f4"),
-        ("element_vertex_2_lon", "<f4"),
-        ("element_vertex_3_lat", "<f4"),
-        ("element_vertex_3_lon", "<f4"),
-    ]
-
-    metadata = np.empty(n_faces, dtype=metadata_dtype)
-    metadata["latitude"] = lat_center.astype(np.float32)
-    metadata["longitude"] = lon_center.astype(np.float32)
-    metadata["water_depth"] = water_depth.astype(np.float32)
-    metadata["timezone"] = timezone
-    metadata["jurisdiction"] = jurisdiction_bytes_array
-    metadata["element_vertex_1_lat"] = element_vertex_1_lat.astype(np.float32)
-    metadata["element_vertex_1_lon"] = element_vertex_1_lon.astype(np.float32)
-    metadata["element_vertex_2_lat"] = element_vertex_2_lat.astype(np.float32)
-    metadata["element_vertex_2_lon"] = element_vertex_2_lon.astype(np.float32)
-    metadata["element_vertex_3_lat"] = element_vertex_3_lat.astype(np.float32)
-    metadata["element_vertex_3_lon"] = element_vertex_3_lon.astype(np.float32)
-
-    return metadata
-
-
 def stream_monthly_data_to_h5(
-    nc_file, output_path, metadata, file_info, variable_info, global_attrs
+    nc_file, output_path, file_info, variable_info, global_attrs
 ):
     """Stream single monthly file data to H5 file"""
 
@@ -480,8 +490,7 @@ def stream_monthly_data_to_h5(
         if "version" not in h5f.attrs:
             h5f.attrs["version"] = "v1.0.0"
 
-        # Create required datasets
-        h5f.create_dataset("meta", data=metadata)
+        # Create time_index dataset
         h5f.create_dataset("time_index", data=time_index)
 
         # Create sigma coordinate datasets
@@ -498,7 +507,38 @@ def stream_monthly_data_to_h5(
 
             # Create and populate datasets for this monthly file
             for var_name, var_info in variable_info.items():
-                # Get original variable name (for split sigma layers)
+                # Check if this is a static face-only variable with pre-computed data
+                if "static_data" in var_info:
+                    # Static variable - write directly from stored data
+                    print(
+                        f"  Working on static variable: {var_name} (dtype: {var_info['dtype']}, dims: {var_info['dims']})"
+                    )
+
+                    data = var_info["static_data"]
+                    monthly_shape = data.shape
+
+                    # Create dataset
+                    dataset = h5f.create_dataset(
+                        var_name,
+                        shape=monthly_shape,
+                        dtype=var_info["dtype"],
+                    )
+
+                    # Add attributes
+                    for attr_name, attr_value in var_info["attrs"].items():
+                        try:
+                            dataset.attrs[attr_name] = attr_value
+                        except Exception as e:
+                            print(
+                                f"Warning: Could not set attribute '{attr_name}' for '{var_name}': {e}"
+                            )
+
+                    # Write data
+                    dataset[:] = data
+                    print(f"    ✓ Completed static variable: {var_name}")
+                    continue
+
+                # Get original variable name (for split sigma layers or renamed variables)
                 original_var_name = var_info.get("original_variable", var_name)
                 sigma_layer_index = var_info.get("sigma_layer_index", None)
 
@@ -638,21 +678,48 @@ def create_time_index(times):
     return time_index
 
 
+def get_renamed_variable_name(var_name):
+    """
+    Get the renamed variable name for output H5 file.
+    Renames standard NREL variables and removes vap_ prefix from static face variables.
+
+    Returns:
+        tuple: (output_name, is_renamed)
+    """
+    # Standard NREL variable renames
+    rename_map = {
+        "lat_center": "latitude",
+        "lon_center": "longitude",
+        "h_center": "water_depth",
+        "vap_utc_timezone_offset": "timezone",
+        "vap_jurisdiction": "jurisdiction",
+    }
+
+    if var_name in rename_map:
+        return rename_map[var_name], True
+
+    # For other face-only variables starting with vap_, remove the prefix
+    # (This will be applied during variable processing based on dims)
+    return var_name, False
+
+
 def should_include_variable(var_name):
-    """Check if variable should be included"""
-    # Skip coordinate and node-based variables
+    """Check if variable should be included in output"""
+    # Skip coordinate and node-based variables that are not written as data
     skip_vars = [
-        "lat_center",
-        "lon_center",
+        "lat_center",  # Written as "latitude"
+        "lon_center",  # Written as "longitude"
+        "h_center",  # Written as "water_depth"
+        "vap_utc_timezone_offset",  # Written as "timezone"
+        "vap_jurisdiction",  # Written as "jurisdiction"
         "lat_node",
         "lon_node",
         "nv",
         "face",
         "node",
         "sigma",
-        "sigma_layer",  # sigma_layer is written as separate dataset
+        "sigma_layer",  # sigma_layer is written as separate coordinate dataset
         "time",  # time is handled separately via time_index
-        # "h_center",
         "x_center",
         "y_center",
         "x",
