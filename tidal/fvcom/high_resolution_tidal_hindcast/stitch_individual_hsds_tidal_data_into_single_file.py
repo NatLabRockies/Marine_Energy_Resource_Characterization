@@ -123,6 +123,10 @@ def analyze_temporal_file_structure(temporal_files):
         skip_datasets = {"meta", "time_index", "sigma_layer", "sigma_level"}
 
         print("\nCollecting variable info from first temporal file:")
+        print("Validating NREL spec compliance (only 1D or 2D variables allowed)...")
+
+        invalid_3d_vars = []
+
         for var_name in h5f.keys():
             if var_name not in skip_datasets:
                 var_dataset = h5f[var_name]
@@ -132,12 +136,38 @@ def analyze_temporal_file_structure(temporal_files):
 
                 print(f"  {var_name}: shape={shape}, dtype={dtype}")
 
+                # NREL spec validation: only 1D or 2D variables allowed
+                if len(shape) > 2:
+                    invalid_3d_vars.append((var_name, shape))
+
                 variable_info[var_name] = {
                     "dims": [d.label for d in dims] if dims else None,
                     "shape_template": shape,
                     "dtype": dtype,
                     "attrs": dict(var_dataset.attrs),
                 }
+
+        # Raise error if any 3D variables found
+        if invalid_3d_vars:
+            error_msg = (
+                "\n" + "="*80 + "\n"
+                "ERROR: NREL spec violation - 3D variables detected in H5 file!\n"
+                "="*80 + "\n"
+                "The NREL standardization spec requires all data variables to be 1D or 2D.\n"
+                "3D variables (time, sigma, face) must be split into separate 2D variables.\n\n"
+                "Found the following 3D variables:\n"
+            )
+            for var_name, shape in invalid_3d_vars:
+                error_msg += f"  - {var_name}: shape={shape}\n"
+            error_msg += (
+                "\nTo fix this issue:\n"
+                "1. Ensure convert_b1_vap_tidal_data_for_hsds.py is splitting 3D variables\n"
+                "2. Re-run the conversion step to regenerate temporal H5 files\n"
+                "3. Each 3D variable should be split into N separate 2D variables:\n"
+                "   {var_name}_sigma_layer_1, {var_name}_sigma_layer_2, ..., {var_name}_sigma_layer_N\n"
+                "="*80
+            )
+            raise ValueError(error_msg)
 
     # Second pass: calculate total time steps across all files
     print("Calculating total time steps...")
