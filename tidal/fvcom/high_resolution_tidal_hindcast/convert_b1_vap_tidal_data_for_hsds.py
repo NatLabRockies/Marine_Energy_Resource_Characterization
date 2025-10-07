@@ -353,24 +353,25 @@ def stream_monthly_data_to_h5(
                         print(f"    Writing data to {var_name}...")
                         data = var.values
 
-                        # Special handling for time variable - convert to string format
-                        if var_name == "time" and data.dtype.kind == "M":  # datetime64
-                            # Convert datetime64 to pandas timestamps then to strings
-                            times = pd.to_datetime(data)
-                            time_strings = [datetime_to_hsds_string(t) for t in times]
-                            # Determine max length
-                            max_len = max(len(s) for s in time_strings)
-                            # Convert to byte strings
-                            data = np.array(
-                                [s.encode("utf-8") for s in time_strings],
-                                dtype=f"S{max_len}",
-                            )
-                            print(
-                                f"      Converting datetime64 to string format S{max_len} for HDF5 storage"
-                            )
+                        # # Special handling for time variable - convert to string format
+                        # if var_name == "time":
+                        #     # Convert to pandas timestamps then to strings (works for both datetime64 and int64)
+                        #     times = pd.to_datetime(data)
+                        #     time_strings = [datetime_to_hsds_string(t) for t in times]
+                        #     # Determine max length
+                        #     max_len = max(len(s) for s in time_strings)
+                        #     # Convert to byte strings
+                        #     data = np.array(
+                        #         [s.encode("utf-8") for s in time_strings],
+                        #         dtype=f"S{max_len}",
+                        #     )
+                        #     print(
+                        #         f"      Converting time data to string format S{max_len} for HDF5 storage"
+                        #     )
 
                         # Convert Unicode strings to byte strings for h5py
-                        elif data.dtype.kind == "U":  # Unicode string
+                        # elif data.dtype.kind == "U":  # Unicode string
+                        if data.dtype.kind == "U":  # Unicode string
                             # Convert Unicode array to byte string array
                             char_length = (
                                 data.dtype.itemsize // 4
@@ -447,10 +448,7 @@ def create_time_index(times):
 
 def should_include_variable(var_name, include_vars):
     """Check if variable should be included (same as original)"""
-    if include_vars is None:
-        return True
-
-    # Skip coordinate variables by default
+    # Skip coordinate variables FIRST (always skip these regardless of include_vars)
     skip_vars = [
         "lat_center",
         "lon_center",
@@ -460,7 +458,7 @@ def should_include_variable(var_name, include_vars):
         "face",
         "node",
         "sigma",
-        "time",
+        "time",  # time is handled separately via time_index
         "h_center",
         "x_center",
         "y_center",
@@ -468,6 +466,10 @@ def should_include_variable(var_name, include_vars):
 
     if var_name in skip_vars:
         return False
+
+    # If no include filter specified, include all non-skipped variables
+    if include_vars is None:
+        return True
 
     # Check against include patterns
     for pattern in include_vars:
