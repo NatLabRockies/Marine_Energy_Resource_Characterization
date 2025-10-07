@@ -169,11 +169,21 @@ def extract_and_verify_sigma_layers(ds):
 
     print(f"  Validated: sigma_layer follows expected pattern")
 
+    # Validate uniform spacing in sigma_layer
+    sigma_layer_diffs = np.diff(sigma_layer)
+    if not np.allclose(sigma_layer_diffs, sigma_layer_diffs[0], atol=0.001):
+        raise ValueError(
+            f"sigma_layer spacing is not uniform.\n"
+            f"Differences: {sigma_layer_diffs}\n"
+            f"Expected all differences to be approximately {sigma_layer_diffs[0]:.3f}"
+        )
+    print(f"  Validated: sigma_layer has uniform spacing of {sigma_layer_diffs[0]:.3f}")
+
     # Calculate sigma_level (layer boundaries)
     # sigma_level has n+1 elements where n is number of layers
     # Each boundary is midway between adjacent layer centers
     # Note: sigma ranges from 0 (surface) to -1 (bottom) in FVCOM convention
-    sigma_level = np.zeros(n_layers + 1, dtype=sigma_layer.dtype)
+    sigma_level = np.zeros(n_layers + 1, dtype=np.float32)
 
     # First boundary (surface)
     sigma_level[0] = 0.0
@@ -182,12 +192,8 @@ def extract_and_verify_sigma_layers(ds):
     for i in range(n_layers - 1):
         sigma_level[i + 1] = (sigma_layer[i] + sigma_layer[i + 1]) / 2.0
 
-    # Last boundary (bottom) - extrapolate from last two layers
-    if n_layers >= 2:
-        layer_thickness = sigma_layer[-1] - sigma_layer[-2]
-        sigma_level[-1] = sigma_layer[-1] - layer_thickness / 2.0
-    else:
-        sigma_level[-1] = sigma_layer[-1] * 2.0  # Simple doubling for single layer case
+    # Last boundary (bottom) - must be exactly -1.0 by FVCOM convention
+    sigma_level[-1] = -1.0
 
     # Validate sigma_level ranges from 0 to -1
     if sigma_level[0] != 0.0:
@@ -207,12 +213,19 @@ def extract_and_verify_sigma_layers(ds):
 
     print(f"  Validated: sigma_level ranges from 0.0 to -1.0 and is monotonically decreasing")
 
-    print(
-        f"  sigma_layer ({n_layers} values): [{sigma_layer[0]:.4f}, {sigma_layer[1]:.4f}, ..., {sigma_layer[-1]:.4f}]"
-    )
-    print(
-        f"  sigma_level ({n_layers + 1} values): [{sigma_level[0]:.4f}, {sigma_level[1]:.4f}, ..., {sigma_level[-1]:.4f}]"
-    )
+    # Validate uniform spacing in sigma_level (excluding last boundary which is fixed at -1.0)
+    sigma_level_diffs = np.diff(sigma_level[:-1])  # Exclude the last boundary
+    if not np.allclose(sigma_level_diffs, sigma_level_diffs[0], atol=0.001):
+        raise ValueError(
+            f"sigma_level spacing is not uniform (excluding last boundary).\n"
+            f"Differences: {sigma_level_diffs}\n"
+            f"Expected all differences to be approximately {sigma_level_diffs[0]:.3f}"
+        )
+    print(f"  Validated: sigma_level has uniform spacing of {sigma_level_diffs[0]:.3f} (excluding last boundary)")
+
+    # Print full arrays for verification
+    print(f"  sigma_layer ({n_layers} values): {sigma_layer}")
+    print(f"  sigma_level ({n_layers + 1} values): {sigma_level}")
 
     return sigma_layer.astype(np.float32), sigma_level.astype(np.float32)
 
