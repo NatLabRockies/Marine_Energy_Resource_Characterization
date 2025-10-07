@@ -351,6 +351,15 @@ def stitch_data_into_yearly_file(output_file, monthly_files, file_structure):
                 for var_name, var_info in file_structure["variable_info"].items():
                     if not var_info.get("is_static", False):
                         monthly_data = monthly_h5[var_name][:]
+                        yearly_shape = yearly_h5[var_name].shape
+
+                        print(f"  DEBUG {var_name}:")
+                        print(f"    is_static: {var_info.get('is_static', False)}")
+                        print(f"    monthly_data.shape: {monthly_data.shape}")
+                        print(f"    yearly_shape: {yearly_shape}")
+                        print(f"    time_slice: {time_slice}")
+                        print(f"    Expected slice shape: ({time_slice.stop - time_slice.start}, ...)")
+
                         # Handle different dimensionalities
                         if len(monthly_data.shape) == 1:
                             yearly_h5[var_name][time_slice] = monthly_data
