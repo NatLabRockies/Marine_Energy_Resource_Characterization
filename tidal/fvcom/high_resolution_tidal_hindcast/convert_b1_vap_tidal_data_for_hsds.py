@@ -190,7 +190,7 @@ def analyze_file_structure(nc_files):
     with xr.open_dataset(first_file, decode_timedelta=False) as ds:
         # Get dimensions
         n_faces = len(ds.face)
-        n_sigma = len(ds.sigma) if "sigma" in ds.dims else 0
+        n_sigma = len(ds.sigma_layer) if "sigma_layer" in ds.dims else 0
 
         # Get coordinate data
         lat_center = ds.lat_center.values
