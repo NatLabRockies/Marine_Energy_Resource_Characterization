@@ -21,7 +21,7 @@ from src.nc_manager import calculate_optimal_chunk_sizes
 
 
 def create_monthly_hsds_file(
-    input_file, output_file, timezone_offset, jurisdiction_array, include_vars=None
+    input_file, output_file, timezone_offset, jurisdiction_array
 ):
     """
     Convert single monthly tidal FVCOM b1 NC file to HSDS format
@@ -31,7 +31,6 @@ def create_monthly_hsds_file(
     - output_file: Output H5 file path
     - timezone_offset: Array of UTC offsets in hours for each face
     - jurisdiction_array: Array of jurisdiction strings for each face (from VAP processing)
-    - include_vars: List of variable patterns to include (None = all)
     """
     input_path = Path(input_file)
     if not input_path.exists():
@@ -41,7 +40,7 @@ def create_monthly_hsds_file(
 
     # Step 1: Analyze file structure
     print("Step 1: Analyzing file structure...")
-    file_info = analyze_file_structure([input_path], include_vars)
+    file_info = analyze_file_structure([input_path])
 
     n_faces = file_info["n_faces"]
     n_sigma = file_info["n_sigma"]
@@ -79,7 +78,6 @@ def create_monthly_hsds_file(
         file_info,
         variable_info,
         global_attrs,
-        include_vars,
     )
 
     # Step 4: Return metadata for stitching validation
@@ -113,7 +111,7 @@ def extract_and_verify_sigma_layers(ds):
 
     sigma_layer_data = ds["sigma_layer"].values
 
-    print(f"\nVerifying sigma_layer coordinate:")
+    print("\nVerifying sigma_layer coordinate:")
     print(f"  Original shape: {sigma_layer_data.shape}")
     print(f"  Original dtype: {sigma_layer_data.dtype}")
 
@@ -121,28 +119,34 @@ def extract_and_verify_sigma_layers(ds):
     if sigma_layer_data.ndim == 2:
         # Verify all columns are identical
         first_column = sigma_layer_data[:, 0]
-        all_identical = np.all(sigma_layer_data == first_column[:, np.newaxis], axis=1).all()
+        all_identical = np.all(
+            sigma_layer_data == first_column[:, np.newaxis], axis=1
+        ).all()
 
         if not all_identical:
             # Check variance
             variance_per_layer = np.var(sigma_layer_data, axis=1)
             max_variance = np.max(variance_per_layer)
-            print(f"  WARNING: sigma_layer varies across faces! Max variance: {max_variance}")
+            print(
+                f"  WARNING: sigma_layer varies across faces! Max variance: {max_variance}"
+            )
 
             if max_variance > 1e-6:
                 raise ValueError(
                     "sigma_layer is not uniform across faces. Expected identical values for all faces."
                 )
             else:
-                print(f"  Variance is negligible (<1e-6), treating as uniform")
+                print("  Variance is negligible (<1e-6), treating as uniform")
 
         # Extract the uniform 1D array
         sigma_layer = first_column
-        print(f"  Verified: sigma_layer is uniform across all {sigma_layer_data.shape[1]} faces")
+        print(
+            f"  Verified: sigma_layer is uniform across all {sigma_layer_data.shape[1]} faces"
+        )
 
     elif sigma_layer_data.ndim == 1:
         sigma_layer = sigma_layer_data
-        print(f"  sigma_layer is already 1D")
+        print("  sigma_layer is already 1D")
     else:
         raise ValueError(f"Unexpected sigma_layer dimensions: {sigma_layer_data.ndim}")
 
@@ -169,13 +173,17 @@ def extract_and_verify_sigma_layers(ds):
     # Ensure sigma_level is monotonically increasing and bounded [0, 1]
     sigma_level = np.clip(sigma_level, 0.0, 1.0)
 
-    print(f"  sigma_layer ({n_layers} values): [{sigma_layer[0]:.4f}, {sigma_layer[1]:.4f}, ..., {sigma_layer[-1]:.4f}]")
-    print(f"  sigma_level ({n_layers + 1} values): [{sigma_level[0]:.4f}, {sigma_level[1]:.4f}, ..., {sigma_level[-1]:.4f}]")
+    print(
+        f"  sigma_layer ({n_layers} values): [{sigma_layer[0]:.4f}, {sigma_layer[1]:.4f}, ..., {sigma_layer[-1]:.4f}]"
+    )
+    print(
+        f"  sigma_level ({n_layers + 1} values): [{sigma_level[0]:.4f}, {sigma_level[1]:.4f}, ..., {sigma_level[-1]:.4f}]"
+    )
 
     return sigma_layer.astype(np.float32), sigma_level.astype(np.float32)
 
 
-def analyze_file_structure(nc_files, include_vars=None):
+def analyze_file_structure(nc_files):
     """Analyze structure of NC files (adapted from original)"""
     first_file = nc_files[0]
 
@@ -226,7 +234,7 @@ def analyze_file_structure(nc_files, include_vars=None):
         # Analyze variables - apply NREL spec 3D to 2D splitting
         variable_info = {}
         for var_name, var in ds.variables.items():
-            if should_include_variable(var_name, include_vars):
+            if should_include_variable(var_name):
                 dims = var.dims
 
                 # Convert dtype to h5py-compatible format
@@ -266,9 +274,15 @@ def analyze_file_structure(nc_files, include_vars=None):
                         "sigma_layer_index": None,
                     }
 
-                elif dims == ("time", "sigma", "face") or dims == ("time", "sigma_layer", "face"):
+                elif dims == ("time", "sigma", "face") or dims == (
+                    "time",
+                    "sigma_layer",
+                    "face",
+                ):
                     # 3D time series: split into sigma layers (1-indexed) - NREL spec
-                    print(f"  Note: Splitting 3D variable {var_name} into {n_sigma} sigma layers")
+                    print(
+                        f"  Note: Splitting 3D variable {var_name} into {n_sigma} sigma layers"
+                    )
                     for sigma_idx in range(n_sigma):
                         layer_var_name = f"{var_name}_sigma_layer_{sigma_idx + 1}"
                         layer_attrs = dict(var.attrs)
@@ -398,7 +412,7 @@ def create_metadata_table(
 
 
 def stream_monthly_data_to_h5(
-    nc_file, output_path, metadata, file_info, variable_info, global_attrs, include_vars
+    nc_file, output_path, metadata, file_info, variable_info, global_attrs
 ):
     """Stream single monthly file data to H5 file"""
 
@@ -496,8 +510,12 @@ def stream_monthly_data_to_h5(
 
                     if sigma_layer_index is not None:
                         # Extract specific sigma layer from 3D variable
-                        data = original_var.values[:, sigma_layer_index, :]  # Shape: (time, face)
-                        print(f"      Extracted sigma layer {sigma_layer_index + 1} from 3D variable")
+                        data = original_var.values[
+                            :, sigma_layer_index, :
+                        ]  # Shape: (time, face)
+                        print(
+                            f"      Extracted sigma layer {sigma_layer_index + 1} from 3D variable"
+                        )
                     else:
                         # Regular variable - use as-is
                         data = original_var.values
@@ -577,9 +595,9 @@ def create_time_index(times):
     return time_index
 
 
-def should_include_variable(var_name, include_vars):
-    """Check if variable should be included (same as original)"""
-    # Skip coordinate variables FIRST (always skip these regardless of include_vars)
+def should_include_variable(var_name):
+    """Check if variable should be included"""
+    # Skip coordinate and node-based variables
     skip_vars = [
         "lat_center",
         "lon_center",
@@ -596,22 +614,10 @@ def should_include_variable(var_name, include_vars):
         "y_center",
         "x",
         "y",
-        "zeta",
+        "zeta",  # Node-based variable (time, node)
     ]
 
-    if var_name in skip_vars:
-        return False
-
-    # If no include filter specified, include all non-skipped variables
-    if include_vars is None:
-        return True
-
-    # Check against include patterns
-    for pattern in include_vars:
-        if pattern in var_name:
-            return True
-
-    return False
+    return var_name not in skip_vars
 
 
 def main():
