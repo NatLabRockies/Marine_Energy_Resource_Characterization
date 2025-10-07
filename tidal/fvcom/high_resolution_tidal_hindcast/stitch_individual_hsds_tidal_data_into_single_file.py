@@ -140,9 +140,18 @@ def analyze_temporal_file_structure(temporal_files):
     # Third pass: determine final shapes for yearly file
     # Define static variables that should NOT have time dimension added
     static_vars = {
-        "lat_center", "lon_center", "lat_node", "lon_node",
-        "nv", "face", "node", "sigma", "sigma_layer",
-        "h_center", "x_center", "y_center", "time"
+        "lat_center",
+        "lon_center",
+        "lat_node",
+        "lon_node",
+        "nv",
+        "face",
+        "node",
+        "sigma",
+        "sigma_layer",
+        "h_center",
+        "x_center",
+        "y_center",
     }
 
     for var_name, var_info in variable_info.items():
