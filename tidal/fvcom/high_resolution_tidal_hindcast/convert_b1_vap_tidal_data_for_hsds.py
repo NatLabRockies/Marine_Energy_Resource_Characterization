@@ -94,6 +94,87 @@ def create_monthly_hsds_file(
     return time_info
 
 
+def extract_and_verify_sigma_layers(ds):
+    """
+    Extract and verify sigma layer coordinates from FVCOM dataset.
+
+    Sigma layers represent the vertical coordinate system in FVCOM.
+    This function verifies that sigma_layer is uniform across all faces/nodes
+    and calculates sigma_level (layer boundaries).
+
+    Args:
+        ds: xarray Dataset
+
+    Returns:
+        tuple: (sigma_layer, sigma_level) as 1D numpy arrays
+    """
+    if "sigma_layer" not in ds.variables:
+        raise ValueError("Dataset does not contain 'sigma_layer' variable")
+
+    sigma_layer_data = ds["sigma_layer"].values
+
+    print(f"\nVerifying sigma_layer coordinate:")
+    print(f"  Original shape: {sigma_layer_data.shape}")
+    print(f"  Original dtype: {sigma_layer_data.dtype}")
+
+    # Check if sigma_layer is 2D (sigma, face) or 1D (sigma)
+    if sigma_layer_data.ndim == 2:
+        # Verify all columns are identical
+        first_column = sigma_layer_data[:, 0]
+        all_identical = np.all(sigma_layer_data == first_column[:, np.newaxis], axis=1).all()
+
+        if not all_identical:
+            # Check variance
+            variance_per_layer = np.var(sigma_layer_data, axis=1)
+            max_variance = np.max(variance_per_layer)
+            print(f"  WARNING: sigma_layer varies across faces! Max variance: {max_variance}")
+
+            if max_variance > 1e-6:
+                raise ValueError(
+                    "sigma_layer is not uniform across faces. Expected identical values for all faces."
+                )
+            else:
+                print(f"  Variance is negligible (<1e-6), treating as uniform")
+
+        # Extract the uniform 1D array
+        sigma_layer = first_column
+        print(f"  Verified: sigma_layer is uniform across all {sigma_layer_data.shape[1]} faces")
+
+    elif sigma_layer_data.ndim == 1:
+        sigma_layer = sigma_layer_data
+        print(f"  sigma_layer is already 1D")
+    else:
+        raise ValueError(f"Unexpected sigma_layer dimensions: {sigma_layer_data.ndim}")
+
+    # Calculate sigma_level (layer boundaries)
+    # sigma_level has n+1 elements where n is number of layers
+    # Each boundary is midway between adjacent layer centers
+    n_layers = len(sigma_layer)
+    sigma_level = np.zeros(n_layers + 1, dtype=sigma_layer.dtype)
+
+    # First boundary (surface)
+    sigma_level[0] = 0.0
+
+    # Intermediate boundaries (midpoints between layer centers)
+    for i in range(n_layers - 1):
+        sigma_level[i + 1] = (sigma_layer[i] + sigma_layer[i + 1]) / 2.0
+
+    # Last boundary (bottom) - extrapolate from last two layers
+    if n_layers >= 2:
+        layer_thickness = sigma_layer[-1] - sigma_layer[-2]
+        sigma_level[-1] = sigma_layer[-1] + layer_thickness / 2.0
+    else:
+        sigma_level[-1] = sigma_layer[-1] * 2.0  # Simple doubling for single layer case
+
+    # Ensure sigma_level is monotonically increasing and bounded [0, 1]
+    sigma_level = np.clip(sigma_level, 0.0, 1.0)
+
+    print(f"  sigma_layer ({n_layers} values): [{sigma_layer[0]:.4f}, {sigma_layer[1]:.4f}, ..., {sigma_layer[-1]:.4f}]")
+    print(f"  sigma_level ({n_layers + 1} values): [{sigma_level[0]:.4f}, {sigma_level[1]:.4f}, ..., {sigma_level[-1]:.4f}]")
+
+    return sigma_layer.astype(np.float32), sigma_level.astype(np.float32)
+
+
 def analyze_file_structure(nc_files, include_vars=None):
     """Analyze structure of NC files (adapted from original)"""
     first_file = nc_files[0]
@@ -123,6 +204,9 @@ def analyze_file_structure(nc_files, include_vars=None):
         element_vertex_3_lat = lat_node[nv[2, :]]  # Third vertex for all faces
         element_vertex_3_lon = lon_node[nv[2, :]]
 
+        # Extract and verify sigma layers (vertical coordinate)
+        sigma_layer, sigma_level = extract_and_verify_sigma_layers(ds)
+
         # Get global attributes
         global_attrs = dict(ds.attrs)
 
@@ -139,25 +223,17 @@ def analyze_file_structure(nc_files, include_vars=None):
         # Sort times
         all_times = sorted(all_times)
 
-        # Analyze variables
+        # Analyze variables - apply NREL spec 3D to 2D splitting
         variable_info = {}
         for var_name, var in ds.variables.items():
             if should_include_variable(var_name, include_vars):
-                # Determine final shape for yearly dataset
-                if "time" in var.dims:
-                    shape = list(var.shape)
-                    time_dim_idx = var.dims.index("time")
-                    shape[time_dim_idx] = total_time_steps
-                    final_shape = tuple(shape)
-                else:
-                    final_shape = var.shape
+                dims = var.dims
 
                 # Convert dtype to h5py-compatible format
                 dtype_str = np.dtype(var.dtype).str
 
                 # Special handling for time variable - always store as string
                 if var_name == "time":
-                    # Time will be converted to string format (25 chars for YYYY-MM-DD HH:MM:SS+00:00)
                     dtype_str = "S25"
                     print("  Note: Converting time variable to string S25 for HDF5")
                 # h5py cannot handle Unicode strings (<U)
@@ -166,26 +242,78 @@ def analyze_file_structure(nc_files, include_vars=None):
                     or dtype_str.startswith(">U")
                     or dtype_str.startswith("|U")
                 ):
-                    # Extract character length from Unicode dtype (e.g., '<U63' -> 63)
                     char_length = int(dtype_str.split("U")[1])
-                    # Convert to byte string with same length
                     dtype_str = f"S{char_length}"
                     print(
                         f"  Note: Converting {var_name} from Unicode {var.dtype} to byte string S{char_length} for HDF5"
                     )
                 elif "datetime64" in str(var.dtype) or "timedelta64" in str(var.dtype):
-                    # Convert datetime/timedelta to string format (25 chars for YYYY-MM-DD HH:MM:SS+00:00)
                     dtype_str = "S25"
                     print(
                         f"  Note: Converting {var_name} from {var.dtype} to string S25 for HDF5"
                     )
 
-                variable_info[var_name] = {
-                    "shape": final_shape,
-                    "dims": var.dims,
-                    "dtype": dtype_str,
-                    "attrs": dict(var.attrs),
-                }
+                # Handle different dimension patterns following NREL spec
+                if dims == ("time", "face"):
+                    # 2D time series: direct use (time, face) -> (time, face)
+                    final_shape = (total_time_steps, n_faces)
+                    variable_info[var_name] = {
+                        "shape": final_shape,
+                        "dims": dims,
+                        "dtype": dtype_str,
+                        "attrs": dict(var.attrs),
+                        "original_variable": var_name,
+                        "sigma_layer_index": None,
+                    }
+
+                elif dims == ("time", "sigma", "face") or dims == ("time", "sigma_layer", "face"):
+                    # 3D time series: split into sigma layers (1-indexed) - NREL spec
+                    print(f"  Note: Splitting 3D variable {var_name} into {n_sigma} sigma layers")
+                    for sigma_idx in range(n_sigma):
+                        layer_var_name = f"{var_name}_sigma_layer_{sigma_idx + 1}"
+                        layer_attrs = dict(var.attrs)
+                        layer_attrs["sigma_layer_index"] = sigma_idx + 1
+                        layer_attrs["original_variable"] = var_name
+
+                        variable_info[layer_var_name] = {
+                            "shape": (total_time_steps, n_faces),
+                            "dims": ("time", "face"),
+                            "dtype": dtype_str,
+                            "attrs": layer_attrs,
+                            "original_variable": var_name,
+                            "sigma_layer_index": sigma_idx,
+                        }
+
+                elif dims == ("face",):
+                    # Static variable: keep as 1D (face)
+                    final_shape = (n_faces,)
+                    variable_info[var_name] = {
+                        "shape": final_shape,
+                        "dims": dims,
+                        "dtype": dtype_str,
+                        "attrs": dict(var.attrs),
+                        "original_variable": var_name,
+                        "sigma_layer_index": None,
+                    }
+
+                else:
+                    # Other dimension patterns - keep as-is
+                    if "time" in dims:
+                        shape = list(var.shape)
+                        time_dim_idx = dims.index("time")
+                        shape[time_dim_idx] = total_time_steps
+                        final_shape = tuple(shape)
+                    else:
+                        final_shape = var.shape
+
+                    variable_info[var_name] = {
+                        "shape": final_shape,
+                        "dims": dims,
+                        "dtype": dtype_str,
+                        "attrs": dict(var.attrs),
+                        "original_variable": var_name,
+                        "sigma_layer_index": None,
+                    }
 
     return {
         "n_faces": n_faces,
@@ -200,6 +328,8 @@ def analyze_file_structure(nc_files, include_vars=None):
         "element_vertex_2_lon": element_vertex_2_lon,
         "element_vertex_3_lat": element_vertex_3_lat,
         "element_vertex_3_lon": element_vertex_3_lon,
+        "sigma_layer": sigma_layer,
+        "sigma_level": sigma_level,
         "all_times": all_times,
         "variable_info": variable_info,
         "global_attrs": global_attrs,
@@ -297,6 +427,12 @@ def stream_monthly_data_to_h5(
         h5f.create_dataset("meta", data=metadata)
         h5f.create_dataset("time_index", data=time_index)
 
+        # Create sigma coordinate datasets
+        h5f.create_dataset("sigma_layer", data=file_info["sigma_layer"])
+        h5f.create_dataset("sigma_level", data=file_info["sigma_level"])
+        print(f"Created sigma_layer: {file_info['sigma_layer'].shape}")
+        print(f"Created sigma_level: {file_info['sigma_level'].shape}")
+
         # Process the monthly file
         print(f"Processing monthly file: {nc_file.name}")
 
@@ -305,84 +441,79 @@ def stream_monthly_data_to_h5(
 
             # Create and populate datasets for this monthly file
             for var_name, var_info in variable_info.items():
-                if var_name in ds.variables:
-                    var = ds.variables[var_name]
+                # Get original variable name (for split sigma layers)
+                original_var_name = var_info.get("original_variable", var_name)
+                sigma_layer_index = var_info.get("sigma_layer_index", None)
 
-                    if should_include_variable(var_name, include_vars):
-                        print(
-                            f"  Working on variable: {var_name} (dtype: {var_info['dtype']}, dims: {var_info['dims']})"
-                        )
+                # Check if original variable exists in dataset
+                if original_var_name in ds.variables:
+                    original_var = ds.variables[original_var_name]
 
-                        # For monthly files, adjust shape to match actual data
-                        monthly_shape = list(var.shape)
+                    print(
+                        f"  Working on variable: {var_name} (dtype: {var_info['dtype']}, dims: {var_info['dims']})"
+                    )
 
-                        # Use proven 6.4MB chunking strategy (yearly dimensions for consistency)
-                        # This ensures same chunk pattern as final yearly file
-                        yearly_shape = var_info[
-                            "shape"
-                        ]  # This is the yearly shape from analyze_file_structure
+                    # Determine monthly shape for this variable
+                    if sigma_layer_index is not None:
+                        # This is a split 3D variable - monthly shape is (time, face)
+                        monthly_shape = (time_steps_this_file, len(ds.face))
+                    else:
+                        # Regular variable - use actual shape from dataset
+                        monthly_shape = tuple(original_var.shape)
 
-                        chunk_sizes = calculate_optimal_chunk_sizes(
-                            shape=yearly_shape,  # Use yearly shape for consistent 6.4MB chunking
-                            dims=var.dims,
-                            dtype=var_info["dtype"],
-                            config=config,
-                        )
+                    # Use proven 6.4MB chunking strategy (yearly dimensions for consistency)
+                    yearly_shape = var_info["shape"]
 
-                        # Create and populate dataset
-                        print(
-                            f"    Creating dataset with shape {monthly_shape}, dtype {var_info['dtype']}, chunks {chunk_sizes}"
-                        )
-                        dataset = h5f.create_dataset(
-                            var_name,
-                            shape=monthly_shape,
-                            dtype=var_info["dtype"],
-                            chunks=chunk_sizes,
-                        )
+                    chunk_sizes = calculate_optimal_chunk_sizes(
+                        shape=yearly_shape,
+                        dims=var_info["dims"],
+                        dtype=var_info["dtype"],
+                        config=config,
+                    )
 
-                        # Add attributes
-                        for attr_name, attr_value in var_info["attrs"].items():
-                            try:
-                                dataset.attrs[attr_name] = attr_value
-                            except Exception as e:
-                                print(
-                                    f"Warning: Could not set attribute '{attr_name}' for '{var_name}': {e}"
-                                )
+                    # Create and populate dataset
+                    print(
+                        f"    Creating dataset with shape {monthly_shape}, dtype {var_info['dtype']}, chunks {chunk_sizes}"
+                    )
+                    dataset = h5f.create_dataset(
+                        var_name,
+                        shape=monthly_shape,
+                        dtype=var_info["dtype"],
+                        chunks=chunk_sizes,
+                    )
 
-                        # Write data - handle string conversion if needed
-                        print(f"    Writing data to {var_name}...")
-                        data = var.values
-
-                        # # Special handling for time variable - convert to string format
-                        # if var_name == "time":
-                        #     # Convert to pandas timestamps then to strings (works for both datetime64 and int64)
-                        #     times = pd.to_datetime(data)
-                        #     time_strings = [datetime_to_hsds_string(t) for t in times]
-                        #     # Determine max length
-                        #     max_len = max(len(s) for s in time_strings)
-                        #     # Convert to byte strings
-                        #     data = np.array(
-                        #         [s.encode("utf-8") for s in time_strings],
-                        #         dtype=f"S{max_len}",
-                        #     )
-                        #     print(
-                        #         f"      Converting time data to string format S{max_len} for HDF5 storage"
-                        #     )
-
-                        # Convert Unicode strings to byte strings for h5py
-                        # elif data.dtype.kind == "U":  # Unicode string
-                        if data.dtype.kind == "U":  # Unicode string
-                            # Convert Unicode array to byte string array
-                            char_length = (
-                                data.dtype.itemsize // 4
-                            )  # Unicode uses 4 bytes per char
-                            data = data.astype(f"S{char_length}")
+                    # Add attributes
+                    for attr_name, attr_value in var_info["attrs"].items():
+                        try:
+                            dataset.attrs[attr_name] = attr_value
+                        except Exception as e:
                             print(
-                                f"      Converting Unicode data to S{char_length} for HDF5 storage"
+                                f"Warning: Could not set attribute '{attr_name}' for '{var_name}': {e}"
                             )
 
-                        dataset[:] = data
-                        print(f"    ✓ Completed variable: {var_name}")
+                    # Write data - extract appropriate slice if 3D variable
+                    print(f"    Writing data to {var_name}...")
+
+                    if sigma_layer_index is not None:
+                        # Extract specific sigma layer from 3D variable
+                        data = original_var.values[:, sigma_layer_index, :]  # Shape: (time, face)
+                        print(f"      Extracted sigma layer {sigma_layer_index + 1} from 3D variable")
+                    else:
+                        # Regular variable - use as-is
+                        data = original_var.values
+
+                    # Convert Unicode strings to byte strings for h5py
+                    if data.dtype.kind == "U":  # Unicode string
+                        char_length = (
+                            data.dtype.itemsize // 4
+                        )  # Unicode uses 4 bytes per char
+                        data = data.astype(f"S{char_length}")
+                        print(
+                            f"      Converting Unicode data to S{char_length} for HDF5 storage"
+                        )
+
+                    dataset[:] = data
+                    print(f"    ✓ Completed variable: {var_name}")
 
     print(f"Successfully created monthly H5 file: {output_path}")
 
@@ -458,8 +589,9 @@ def should_include_variable(var_name, include_vars):
         "face",
         "node",
         "sigma",
+        "sigma_layer",  # sigma_layer is written as separate dataset
         "time",  # time is handled separately via time_index
-        "h_center",
+        # "h_center",
         "x_center",
         "y_center",
         "x",
