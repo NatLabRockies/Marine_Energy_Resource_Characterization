@@ -150,10 +150,29 @@ def extract_and_verify_sigma_layers(ds):
     else:
         raise ValueError(f"Unexpected sigma_layer dimensions: {sigma_layer_data.ndim}")
 
+    # Round sigma_layer to clean up floating point errors
+    # Assuming regular spacing around 0.05, 0.15, 0.25, etc.
+    sigma_layer = np.round(sigma_layer, decimals=2)
+
+    # Validate sigma_layer follows expected pattern: -0.05 - 0.1*n for n=0..9
+    # This gives: [-0.05, -0.15, -0.25, -0.35, -0.45, -0.55, -0.65, -0.75, -0.85, -0.95]
+    n_layers = len(sigma_layer)
+    expected_sigma_layer = np.array([-0.05 - 0.1 * n for n in range(n_layers)])
+
+    if not np.allclose(sigma_layer, expected_sigma_layer, atol=0.01):
+        raise ValueError(
+            f"sigma_layer does not follow expected pattern -0.05 - 0.1*n.\n"
+            f"Expected: {expected_sigma_layer}\n"
+            f"Got:      {sigma_layer}\n"
+            f"Difference: {sigma_layer - expected_sigma_layer}"
+        )
+
+    print(f"  Validated: sigma_layer follows expected pattern")
+
     # Calculate sigma_level (layer boundaries)
     # sigma_level has n+1 elements where n is number of layers
     # Each boundary is midway between adjacent layer centers
-    n_layers = len(sigma_layer)
+    # Note: sigma ranges from 0 (surface) to -1 (bottom) in FVCOM convention
     sigma_level = np.zeros(n_layers + 1, dtype=sigma_layer.dtype)
 
     # First boundary (surface)
@@ -166,12 +185,27 @@ def extract_and_verify_sigma_layers(ds):
     # Last boundary (bottom) - extrapolate from last two layers
     if n_layers >= 2:
         layer_thickness = sigma_layer[-1] - sigma_layer[-2]
-        sigma_level[-1] = sigma_layer[-1] + layer_thickness / 2.0
+        sigma_level[-1] = sigma_layer[-1] - layer_thickness / 2.0
     else:
         sigma_level[-1] = sigma_layer[-1] * 2.0  # Simple doubling for single layer case
 
-    # Ensure sigma_level is monotonically increasing and bounded [0, 1]
-    sigma_level = np.clip(sigma_level, 0.0, 1.0)
+    # Validate sigma_level ranges from 0 to -1
+    if sigma_level[0] != 0.0:
+        raise ValueError(f"sigma_level[0] must be 0.0 (surface), got {sigma_level[0]}")
+
+    if not np.isclose(sigma_level[-1], -1.0, atol=0.01):
+        raise ValueError(
+            f"sigma_level[-1] must be -1.0 (bottom), got {sigma_level[-1]}"
+        )
+
+    # Ensure sigma_level is monotonically decreasing
+    if not np.all(np.diff(sigma_level) < 0):
+        raise ValueError(
+            f"sigma_level must be monotonically decreasing from 0 to -1.\n"
+            f"Got: {sigma_level}"
+        )
+
+    print(f"  Validated: sigma_level ranges from 0.0 to -1.0 and is monotonically decreasing")
 
     print(
         f"  sigma_layer ({n_layers} values): [{sigma_layer[0]:.4f}, {sigma_layer[1]:.4f}, ..., {sigma_layer[-1]:.4f}]"
