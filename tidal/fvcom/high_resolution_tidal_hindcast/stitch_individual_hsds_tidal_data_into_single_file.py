@@ -110,17 +110,15 @@ def analyze_temporal_file_structure(temporal_files):
     print(f"Reading structure from first file: {temporal_files[0].name}\n")
 
     with h5py.File(temporal_files[0], "r", rdcc_nbytes=HDF5_READ_CACHE) as h5f:
-        # Get basic structure from first file
-        n_faces = len(h5f["meta"])
-        print(f"Number of faces: {n_faces}")
-
         # Get variable information
         variable_info = {}
+        meta_field_info = {}  # Face-only variables that will become meta fields
         total_time_steps = 0
+        n_faces = None
 
-        # First pass: collect basic info
+        # First pass: collect basic info and identify face-only variables
         # Skip special datasets that are handled separately
-        skip_datasets = {"meta", "time_index", "sigma_layer", "sigma_level"}
+        skip_datasets = {"time_index", "sigma_layer", "sigma_level"}
 
         print("\nCollecting variable info from first temporal file:")
         print("Validating NREL spec compliance (only 1D or 2D variables allowed)...")
@@ -140,12 +138,29 @@ def analyze_temporal_file_structure(temporal_files):
                 if len(shape) > 2:
                     invalid_3d_vars.append((var_name, shape))
 
+                # Determine if this is a face-only variable for meta
+                if len(shape) == 1:
+                    # This is a 1D variable - could be face-only (for meta) or time-only
+                    # We'll determine this by checking if size matches n_faces
+                    if n_faces is None:
+                        # First 1D variable - assume this is n_faces
+                        # We need latitude/longitude to always exist
+                        if var_name == "latitude" or var_name == "longitude":
+                            n_faces = shape[0]
+                            print(f"  Determined n_faces={n_faces} from {var_name}")
+
                 variable_info[var_name] = {
                     "dims": [d.label for d in dims] if dims else None,
                     "shape_template": shape,
                     "dtype": dtype,
                     "attrs": dict(var_dataset.attrs),
                 }
+
+        # Validate we found n_faces
+        if n_faces is None:
+            raise ValueError("Could not determine n_faces - latitude or longitude variable not found")
+
+        print(f"\nNumber of faces: {n_faces}")
 
         # Raise error if any 3D variables found
         if invalid_3d_vars:
@@ -170,7 +185,7 @@ def analyze_temporal_file_structure(temporal_files):
             raise ValueError(error_msg)
 
     # Second pass: calculate total time steps across all files
-    print("Calculating total time steps...")
+    print("\nCalculating total time steps...")
     for temporal_file in temporal_files:
         with h5py.File(temporal_file, "r", rdcc_nbytes=HDF5_READ_CACHE) as h5f:
             time_steps = len(h5f["time_index"])
@@ -178,66 +193,220 @@ def analyze_temporal_file_structure(temporal_files):
 
     print(f"Total time steps across all files: {total_time_steps}")
 
-    # Third pass: determine final shapes for yearly file
-    # Define static variables that should NOT have time dimension added
-    static_vars = {
-        "lat_center",
-        "lon_center",
-        "lat_node",
-        "lon_node",
-        "nv",
-        "face",
-        "node",
-        "sigma",
-        "sigma_layer",
-        "sigma_level",
-        "h_center",
-        "x_center",
-        "y_center",
-    }
+    # Third pass: separate face-only variables (for meta) from time-varying variables
+    print("\nSeparating face-only variables (meta fields) from time-varying variables:")
 
-    print("\nDetermining yearly shapes for each variable:")
-    for var_name, var_info in variable_info.items():
+    # Standard field ordering for meta compound dataset
+    meta_field_order = [
+        "latitude",
+        "longitude",
+        "water_depth",
+        "timezone",
+        "jurisdiction",
+        "element_vertex_1_lat",
+        "element_vertex_1_lon",
+        "element_vertex_2_lat",
+        "element_vertex_2_lon",
+        "element_vertex_3_lat",
+        "element_vertex_3_lon",
+    ]
+
+    for var_name, var_info in list(variable_info.items()):
         shape_template = var_info["shape_template"]
-        print(f"  {var_name}:")
-        print(f"    Template shape: {shape_template}")
-        print(f"    Is in static_vars: {var_name in static_vars}")
 
-        # Static variables keep their original shape (no time dimension)
-        if var_name in static_vars:
-            yearly_shape = shape_template
-            print(f"    → Keeping static shape: {yearly_shape}")
-        # For time-dependent variables, update time dimension
-        elif len(shape_template) > 1:  # Multi-dimensional time-varying
-            yearly_shape = (total_time_steps,) + shape_template[1:]
-            print(f"    → Time-varying (multi-dim): {yearly_shape}")
-        else:  # 1D time-varying
-            yearly_shape = (total_time_steps,)
-            print(f"    → Time-varying (1D): {yearly_shape}")
+        # Identify face-only variables: 1D with size == n_faces
+        if len(shape_template) == 1 and shape_template[0] == n_faces:
+            # This is a face-only variable - goes into meta
+            print(f"  {var_name}: shape={shape_template} → META FIELD")
+            meta_field_info[var_name] = var_info
+            # Remove from regular variable_info (will be in meta instead)
+            del variable_info[var_name]
+        elif len(shape_template) == 2 and shape_template[1] == n_faces:
+            # Time-varying 2D variable (time, face)
+            yearly_shape = (total_time_steps, n_faces)
+            var_info["yearly_shape"] = yearly_shape
+            var_info["is_static"] = False
+            print(f"  {var_name}: shape={shape_template} → Time-varying (yearly: {yearly_shape})")
+        else:
+            # Other patterns - keep as-is (shouldn't happen in this dataset)
+            var_info["yearly_shape"] = shape_template
+            var_info["is_static"] = True
+            print(f"  {var_name}: shape={shape_template} → Keeping as-is")
 
-        var_info["yearly_shape"] = yearly_shape
-        var_info["is_static"] = var_name in static_vars
+    # Sort meta fields by standard order, then alphabetically for any extras
+    sorted_meta_fields = {}
+    # First add fields in standard order
+    for field_name in meta_field_order:
+        if field_name in meta_field_info:
+            sorted_meta_fields[field_name] = meta_field_info[field_name]
+
+    # Then add any remaining fields alphabetically
+    remaining_fields = sorted([f for f in meta_field_info.keys() if f not in meta_field_order])
+    for field_name in remaining_fields:
+        sorted_meta_fields[field_name] = meta_field_info[field_name]
+
+    print(f"\nMeta will contain {len(sorted_meta_fields)} fields:")
+    for field_name in sorted_meta_fields.keys():
+        print(f"  - {field_name}")
+
+    print(f"\nTime-varying variables: {len(variable_info)}")
 
     return {
         "n_faces": n_faces,
         "total_time_steps": total_time_steps,
         "n_temporal_files": len(temporal_files),
         "variable_info": variable_info,
+        "meta_field_info": sorted_meta_fields,
     }
 
 
+def assemble_h5_data_for_meta(template_file, meta_field_info, n_faces):
+    """
+    Read individual face-only datasets from template file and assemble into compound array.
+
+    Args:
+        template_file: Path to first temporal H5 file
+        meta_field_info: Dict of field names to their info (dtype, attrs, etc.)
+        n_faces: Number of faces
+
+    Returns:
+        numpy structured array ready for meta dataset
+    """
+    print("\nAssembling meta compound dataset:")
+
+    # Build compound dtype from meta_field_info
+    meta_dtype = []
+    for field_name, field_info in meta_field_info.items():
+        dtype = field_info["dtype"]
+        meta_dtype.append((field_name, dtype))
+        print(f"  {field_name}: {dtype}")
+
+    # Create empty structured array
+    meta_data = np.empty(n_faces, dtype=meta_dtype)
+
+    # Read data from template file and populate structured array
+    with h5py.File(template_file, "r", rdcc_nbytes=HDF5_READ_CACHE) as h5f:
+        for field_name in meta_field_info.keys():
+            if field_name not in h5f:
+                raise ValueError(
+                    f"Field '{field_name}' not found in template file. "
+                    f"Available datasets: {list(h5f.keys())}"
+                )
+
+            field_data = h5f[field_name][:]
+            meta_data[field_name] = field_data
+            print(f"  Loaded {field_name}: shape={field_data.shape}, dtype={field_data.dtype}")
+
+    print(f"Meta compound array assembled: shape={meta_data.shape}, {len(meta_dtype)} fields")
+    return meta_data
+
+
+def assemble_attrs_for_meta(meta_field_info, existing_global_attrs):
+    """
+    Collect attributes from meta fields and format as global H5 attributes.
+
+    Attributes are stored with pattern: meta:{field_name}:{attr_name} = attr_value
+
+    Args:
+        meta_field_info: Dict of field names to their info (including attrs)
+        existing_global_attrs: Dict of existing global attributes to check for conflicts
+
+    Returns:
+        dict: Global attributes to add for meta fields
+
+    Raises:
+        ValueError: If attribute name conflicts with existing global attribute
+    """
+    print("\nAssembling attributes for meta fields:")
+
+    meta_attrs = {}
+
+    for field_name, field_info in meta_field_info.items():
+        field_attrs = field_info.get("attrs", {})
+
+        if field_attrs:
+            print(f"  {field_name}: {len(field_attrs)} attributes")
+            for attr_name, attr_value in field_attrs.items():
+                # Format: meta:{field}:{attr}
+                global_attr_name = f"meta:{field_name}:{attr_name}"
+
+                # Check for conflicts with existing global attributes
+                if global_attr_name in existing_global_attrs:
+                    raise ValueError(
+                        f"Attribute conflict: '{global_attr_name}' already exists in global attributes. "
+                        f"Existing value: {existing_global_attrs[global_attr_name]}, "
+                        f"New value: {attr_value}"
+                    )
+
+                meta_attrs[global_attr_name] = attr_value
+                print(f"    {global_attr_name} = {attr_value}")
+        else:
+            print(f"  {field_name}: no attributes")
+
+    print(f"Total meta attributes: {len(meta_attrs)}")
+    return meta_attrs
+
+
+def assemble_hsds_meta(template_file, meta_field_info, n_faces, existing_global_attrs):
+    """
+    Orchestrate meta compound dataset creation and attribute assembly.
+
+    Args:
+        template_file: Path to first temporal H5 file
+        meta_field_info: Dict of field names to their info
+        n_faces: Number of faces
+        existing_global_attrs: Dict of existing global attributes
+
+    Returns:
+        tuple: (meta_data, meta_attrs)
+            - meta_data: numpy structured array for meta dataset
+            - meta_attrs: dict of global attributes for meta fields
+    """
+    print("\n" + "="*80)
+    print("ASSEMBLING HSDS META DATASET")
+    print("="*80)
+
+    # Assemble the compound data array
+    meta_data = assemble_h5_data_for_meta(template_file, meta_field_info, n_faces)
+
+    # Assemble the attributes
+    meta_attrs = assemble_attrs_for_meta(meta_field_info, existing_global_attrs)
+
+    print("="*80)
+    print("META ASSEMBLY COMPLETE")
+    print("="*80 + "\n")
+
+    return meta_data, meta_attrs
+
+
 def create_yearly_file_structure(output_file, template_file, file_structure):
-    """Create the structure of the yearly H5 file"""
+    """Create the structure of the yearly H5 file with meta compound dataset"""
+
+    # First, assemble meta outside of file context
+    existing_global_attrs = {}
+    with h5py.File(template_file, "r", rdcc_nbytes=HDF5_READ_CACHE) as template_h5:
+        existing_global_attrs = dict(template_h5.attrs)
+
+    meta_data, meta_attrs = assemble_hsds_meta(
+        template_file,
+        file_structure["meta_field_info"],
+        file_structure["n_faces"],
+        existing_global_attrs,
+    )
 
     with h5py.File(template_file, "r", rdcc_nbytes=HDF5_READ_CACHE) as template_h5:
         with h5py.File(output_file, "w", rdcc_nbytes=HDF5_WRITE_CACHE) as yearly_h5:
-            # Copy global attributes
+            # Copy global attributes from template
             for attr_name, attr_value in template_h5.attrs.items():
                 yearly_h5.attrs[attr_name] = attr_value
 
-            # Copy metadata (same for all months)
-            meta_data = template_h5["meta"][:]
+            # Add meta field attributes as global attributes
+            for attr_name, attr_value in meta_attrs.items():
+                yearly_h5.attrs[attr_name] = attr_value
+
+            # Create meta compound dataset
             yearly_h5.create_dataset("meta", data=meta_data)
+            print(f"Created meta dataset: shape={meta_data.shape}, {len(meta_data.dtype.names)} fields")
 
             # Copy sigma coordinates (same for all months)
             if "sigma_layer" in template_h5:
@@ -318,19 +487,19 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
 
 
 def stitch_data_into_yearly_file(output_file, monthly_files, file_structure):
-    """Stitch data from monthly files into yearly file"""
+    """
+    Stitch data from monthly files into yearly file.
+
+    Note: Face-only variables are already in meta compound dataset and are not stitched.
+    Only time-varying variables are stitched across temporal chunks.
+    """
 
     with h5py.File(output_file, "a", rdcc_nbytes=HDF5_WRITE_CACHE) as yearly_h5:
-        # First, copy static variables from the first file (they're the same in all files)
-        print("Copying static variables from first file...")
-        with h5py.File(monthly_files[0], "r", rdcc_nbytes=HDF5_READ_CACHE) as first_h5:
-            for var_name, var_info in file_structure["variable_info"].items():
-                if var_info.get("is_static", False):
-                    static_data = first_h5[var_name][:]
-                    yearly_h5[var_name][:] = static_data
-                    print(f"  Copied static {var_name}: {static_data.shape}")
+        print("\nStitching time-varying variables across temporal chunks...")
+        print(f"Note: Face-only variables already assembled in meta dataset")
+        print(f"Processing {len(file_structure['variable_info'])} time-varying variables\n")
 
-        # Now stitch time-varying variables
+        # Stitch time-varying variables across temporal chunks
         time_offset = 0
         for i, monthly_file in enumerate(monthly_files):
             print(
@@ -348,24 +517,16 @@ def stitch_data_into_yearly_file(output_file, monthly_files, file_structure):
                 yearly_h5["time_index"][time_slice] = monthly_h5["time_index"][:]
 
                 # Copy time-varying variable data
+                # Note: face-only variables (in meta) are not in variable_info and won't be processed here
                 for var_name, var_info in file_structure["variable_info"].items():
-                    if not var_info.get("is_static", False):
-                        monthly_data = monthly_h5[var_name][:]
-                        yearly_shape = yearly_h5[var_name].shape
+                    monthly_data = monthly_h5[var_name][:]
 
-                        print(f"  DEBUG {var_name}:")
-                        print(f"    is_static: {var_info.get('is_static', False)}")
-                        print(f"    monthly_data.shape: {monthly_data.shape}")
-                        print(f"    yearly_shape: {yearly_shape}")
-                        print(f"    time_slice: {time_slice}")
-                        print(f"    Expected slice shape: ({time_slice.stop - time_slice.start}, ...)")
-
-                        # Handle different dimensionalities
-                        if len(monthly_data.shape) == 1:
-                            yearly_h5[var_name][time_slice] = monthly_data
-                        else:
-                            yearly_h5[var_name][time_slice, ...] = monthly_data
-                        print(f"  Copied {var_name}: {monthly_data.shape}")
+                    # Handle different dimensionalities
+                    if len(monthly_data.shape) == 1:
+                        yearly_h5[var_name][time_slice] = monthly_data
+                    else:
+                        yearly_h5[var_name][time_slice, ...] = monthly_data
+                    print(f"  Copied {var_name}: {monthly_data.shape}")
 
                 time_offset += monthly_time_steps
 
@@ -377,10 +538,11 @@ def validate_yearly_file(output_file, monthly_files):
     with h5py.File(output_file, "r", rdcc_nbytes=HDF5_READ_CACHE) as yearly_h5:
         # Check time index continuity
         time_index = yearly_h5["time_index"][:]
-        timestamps = [t[0] for t in time_index]  # Extract timestamp values
 
-        # Convert to datetime for analysis
-        dt_timestamps = [datetime.fromtimestamp(ts) for ts in timestamps]
+        # Time index is now string format: 'YYYY-MM-DD HH:MM:SS+00:00'
+        # Decode bytes to strings and parse
+        time_strings = [t.decode('utf-8') if isinstance(t, bytes) else str(t) for t in time_index]
+        dt_timestamps = [pd.to_datetime(ts) for ts in time_strings]
 
         # Timestamps must be monotonic
         is_monotonic = all(
