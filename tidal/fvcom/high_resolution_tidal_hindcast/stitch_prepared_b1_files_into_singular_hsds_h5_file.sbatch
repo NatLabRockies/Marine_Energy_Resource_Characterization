@@ -4,8 +4,10 @@
 #SBATCH --job-name=stitch_hsds
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --partition=standard
-#SBATCH --time=47:00:00
+##SBATCH --partition=standard
+##SBATCH --time=47:00:00
+#SBATCH --partition=debug
+#SBATCH --time=59
 
 # Prepare for python script execution
 source sbatch_env_setup.sh
