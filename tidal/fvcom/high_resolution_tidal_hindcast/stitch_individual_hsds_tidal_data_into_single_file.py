@@ -107,21 +107,30 @@ def analyze_temporal_file_structure(temporal_files):
     """Analyze structure of temporal files to determine yearly file dimensions"""
     print("Analyzing temporal file structure...")
 
+    print(f"Reading structure from first file: {temporal_files[0].name}\n")
+
     with h5py.File(temporal_files[0], "r", rdcc_nbytes=HDF5_READ_CACHE) as h5f:
         # Get basic structure from first file
         n_faces = len(h5f["meta"])
+        print(f"Number of faces: {n_faces}")
 
         # Get variable information
         variable_info = {}
         total_time_steps = 0
 
         # First pass: collect basic info
+        # Skip special datasets that are handled separately
+        skip_datasets = {"meta", "time_index", "sigma_layer", "sigma_level"}
+
+        print("\nCollecting variable info from first temporal file:")
         for var_name in h5f.keys():
-            if var_name not in ["meta", "time_index"]:
+            if var_name not in skip_datasets:
                 var_dataset = h5f[var_name]
                 dims = var_dataset.dims
                 shape = var_dataset.shape
                 dtype = var_dataset.dtype
+
+                print(f"  {var_name}: shape={shape}, dtype={dtype}")
 
                 variable_info[var_name] = {
                     "dims": [d.label for d in dims] if dims else None,
@@ -137,6 +146,8 @@ def analyze_temporal_file_structure(temporal_files):
             time_steps = len(h5f["time_index"])
             total_time_steps += time_steps
 
+    print(f"Total time steps across all files: {total_time_steps}")
+
     # Third pass: determine final shapes for yearly file
     # Define static variables that should NOT have time dimension added
     static_vars = {
@@ -149,22 +160,30 @@ def analyze_temporal_file_structure(temporal_files):
         "node",
         "sigma",
         "sigma_layer",
+        "sigma_level",
         "h_center",
         "x_center",
         "y_center",
     }
 
+    print("\nDetermining yearly shapes for each variable:")
     for var_name, var_info in variable_info.items():
         shape_template = var_info["shape_template"]
+        print(f"  {var_name}:")
+        print(f"    Template shape: {shape_template}")
+        print(f"    Is in static_vars: {var_name in static_vars}")
 
         # Static variables keep their original shape (no time dimension)
         if var_name in static_vars:
             yearly_shape = shape_template
+            print(f"    → Keeping static shape: {yearly_shape}")
         # For time-dependent variables, update time dimension
         elif len(shape_template) > 1:  # Multi-dimensional time-varying
             yearly_shape = (total_time_steps,) + shape_template[1:]
+            print(f"    → Time-varying (multi-dim): {yearly_shape}")
         else:  # 1D time-varying
             yearly_shape = (total_time_steps,)
+            print(f"    → Time-varying (1D): {yearly_shape}")
 
         var_info["yearly_shape"] = yearly_shape
         var_info["is_static"] = var_name in static_vars
@@ -190,6 +209,17 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
             meta_data = template_h5["meta"][:]
             yearly_h5.create_dataset("meta", data=meta_data)
 
+            # Copy sigma coordinates (same for all months)
+            if "sigma_layer" in template_h5:
+                sigma_layer_data = template_h5["sigma_layer"][:]
+                yearly_h5.create_dataset("sigma_layer", data=sigma_layer_data)
+                print(f"Copied sigma_layer: {sigma_layer_data.shape}")
+
+            if "sigma_level" in template_h5:
+                sigma_level_data = template_h5["sigma_level"][:]
+                yearly_h5.create_dataset("sigma_level", data=sigma_level_data)
+                print(f"Copied sigma_level: {sigma_level_data.shape}")
+
             # Create empty time_index with yearly size
             time_dtype = template_h5["time_index"].dtype
             yearly_h5.create_dataset(
@@ -199,8 +229,15 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
             )
 
             # Create empty datasets for all variables with yearly dimensions
+            print("\nCreating yearly datasets:")
             for var_name, var_info in file_structure["variable_info"].items():
                 yearly_shape = var_info["yearly_shape"]
+                is_static = var_info.get("is_static", False)
+
+                print(f"\n  Variable: {var_name}")
+                print(f"    Shape: {yearly_shape}")
+                print(f"    Dtype: {var_info['dtype']}")
+                print(f"    Is static: {is_static}")
 
                 # Create dataset with chunking
                 if len(yearly_shape) > 1:
@@ -214,16 +251,31 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
                     chunks = (chunk_time, chunk_spatial)
                     if len(yearly_shape) > 2:
                         chunks = chunks + yearly_shape[2:]
+
+                    print(f"    Chunks: {chunks}")
+
+                    # Validate chunk size (rough estimate: chunks * dtype_size)
+                    dtype_size = np.dtype(var_info["dtype"]).itemsize
+                    chunk_elements = np.prod(chunks)
+                    chunk_bytes = chunk_elements * dtype_size
+                    chunk_gb = chunk_bytes / (1024**3)
+                    print(f"    Estimated chunk size: {chunk_gb:.3f} GB ({chunk_bytes:,} bytes)")
+
+                    if chunk_gb >= 4.0:
+                        print(f"    WARNING: Chunk size exceeds 4GB limit!")
                 else:
                     # 1D time series
                     chunks = (min(10000, yearly_shape[0]),)
+                    print(f"    Chunks: {chunks}")
 
+                print(f"    Creating dataset...")
                 dataset = yearly_h5.create_dataset(
                     var_name,
                     shape=yearly_shape,
                     dtype=var_info["dtype"],
                     chunks=chunks,
                 )
+                print(f"    ✓ Dataset created successfully")
 
                 # Copy attributes
                 for attr_name, attr_value in var_info["attrs"].items():
@@ -231,36 +283,50 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
                         dataset.attrs[attr_name] = attr_value
                     except Exception as e:
                         print(
-                            f"Warning: Could not set attribute {attr_name} for {var_name}: {e}"
+                            f"    Warning: Could not set attribute {attr_name}: {e}"
                         )
-
-                print(f"Created yearly dataset {var_name} with shape {yearly_shape}")
 
 
 def stitch_data_into_yearly_file(output_file, monthly_files, file_structure):
     """Stitch data from monthly files into yearly file"""
 
     with h5py.File(output_file, "a", rdcc_nbytes=HDF5_WRITE_CACHE) as yearly_h5:
-        time_offset = 0
+        # First, copy static variables from the first file (they're the same in all files)
+        print("Copying static variables from first file...")
+        with h5py.File(monthly_files[0], "r", rdcc_nbytes=HDF5_READ_CACHE) as first_h5:
+            for var_name, var_info in file_structure["variable_info"].items():
+                if var_info.get("is_static", False):
+                    static_data = first_h5[var_name][:]
+                    yearly_h5[var_name][:] = static_data
+                    print(f"  Copied static {var_name}: {static_data.shape}")
 
+        # Now stitch time-varying variables
+        time_offset = 0
         for i, monthly_file in enumerate(monthly_files):
-            print(f"Stitching month {i + 1}/12: {monthly_file.name}")
+            print(
+                f"Stitching temporal chunk {i + 1}/{len(monthly_files)}: {monthly_file.name}"
+            )
 
             with h5py.File(
                 monthly_file, "r", rdcc_nbytes=HDF5_READ_CACHE
             ) as monthly_h5:
-                # Get time steps for this month
+                # Get time steps for this chunk
                 monthly_time_steps = len(monthly_h5["time_index"])
                 time_slice = slice(time_offset, time_offset + monthly_time_steps)
 
                 # Copy time_index data
                 yearly_h5["time_index"][time_slice] = monthly_h5["time_index"][:]
 
-                # Copy variable data
-                for var_name in file_structure["variable_info"].keys():
-                    monthly_data = monthly_h5[var_name][:]
-                    yearly_h5[var_name][time_slice, :] = monthly_data
-                    print(f"  Copied {var_name}: {monthly_data.shape}")
+                # Copy time-varying variable data
+                for var_name, var_info in file_structure["variable_info"].items():
+                    if not var_info.get("is_static", False):
+                        monthly_data = monthly_h5[var_name][:]
+                        # Handle different dimensionalities
+                        if len(monthly_data.shape) == 1:
+                            yearly_h5[var_name][time_slice] = monthly_data
+                        else:
+                            yearly_h5[var_name][time_slice, ...] = monthly_data
+                        print(f"  Copied {var_name}: {monthly_data.shape}")
 
                 time_offset += monthly_time_steps
 
