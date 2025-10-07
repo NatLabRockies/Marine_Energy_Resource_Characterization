@@ -462,6 +462,9 @@ def should_include_variable(var_name, include_vars):
         "h_center",
         "x_center",
         "y_center",
+        "x",
+        "y",
+        "zeta",
     ]
 
     if var_name in skip_vars:
