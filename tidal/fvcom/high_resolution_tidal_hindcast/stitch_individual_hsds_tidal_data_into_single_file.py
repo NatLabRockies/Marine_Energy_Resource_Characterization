@@ -20,6 +20,67 @@ from src.file_manager import get_hsds_temp_dir, get_hsds_final_file_path
 HDF5_READ_CACHE = config["hdf5_cache"]["read_cache_bytes"]
 HDF5_WRITE_CACHE = config["hdf5_cache"]["stitch_write_cache_bytes"]
 
+# Global NaN replacement value
+NAN_FILL_VALUE = -999.0
+
+
+def replace_nans_with_fill_value(data, fill_value=NAN_FILL_VALUE):
+    """
+    Replace all NaN values in data with fill_value.
+
+    Handles both floating point arrays and structured arrays (for meta compound dataset).
+
+    Args:
+        data: numpy array (can be regular array or structured array)
+        fill_value: Value to replace NaNs with (default: -999.0)
+
+    Returns:
+        numpy array with NaNs replaced
+    """
+    # Make a copy to avoid modifying original
+    data_filled = data.copy()
+
+    # Handle structured arrays (meta compound dataset)
+    if data.dtype.names is not None:
+        for field_name in data.dtype.names:
+            field_data = data_filled[field_name]
+            # Only process numeric fields that can have NaNs
+            if np.issubdtype(field_data.dtype, np.floating):
+                nan_mask = np.isnan(field_data)
+                nan_count = np.sum(nan_mask)
+                if nan_count > 0:
+                    field_data[nan_mask] = fill_value
+                    print(f"    Replaced {nan_count} NaNs in field '{field_name}' with {fill_value}")
+    # Handle regular arrays
+    elif np.issubdtype(data.dtype, np.floating):
+        nan_mask = np.isnan(data_filled)
+        nan_count = np.sum(nan_mask)
+        if nan_count > 0:
+            data_filled[nan_mask] = fill_value
+            print(f"    Replaced {nan_count} NaNs with {fill_value}")
+
+    return data_filled
+
+
+def add_fill_value_attr(dataset, fill_value=NAN_FILL_VALUE):
+    """
+    Add _FillValue attribute to dataset.
+
+    Args:
+        dataset: h5py Dataset object
+        fill_value: Fill value to document in attributes
+    """
+    try:
+        # Convert fill_value to appropriate dtype
+        if np.issubdtype(dataset.dtype, np.floating):
+            dataset.attrs['_FillValue'] = np.float32(fill_value)
+            print(f"    Added _FillValue={fill_value} attribute")
+        elif np.issubdtype(dataset.dtype, np.integer):
+            dataset.attrs['_FillValue'] = int(fill_value)
+            print(f"    Added _FillValue={int(fill_value)} attribute")
+    except Exception as e:
+        print(f"    Warning: Could not set _FillValue attribute: {e}")
+
 
 def stitch_single_b1_file_for_hsds(
     monthly_dir, output_file, location_name, perform_checks=True
@@ -297,7 +358,11 @@ def assemble_h5_data_for_meta(template_file, meta_field_info, n_faces):
             meta_data[field_name] = field_data
             print(f"  Loaded {field_name}: shape={field_data.shape}, dtype={field_data.dtype}")
 
-    print(f"Meta compound array assembled: shape={meta_data.shape}, {len(meta_dtype)} fields")
+    # Replace NaNs in meta compound array
+    print("\n  Replacing NaNs in meta fields:")
+    meta_data = replace_nans_with_fill_value(meta_data)
+
+    print(f"\nMeta compound array assembled: shape={meta_data.shape}, {len(meta_dtype)} fields")
     return meta_data
 
 
@@ -405,8 +470,11 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
                 yearly_h5.attrs[attr_name] = attr_value
 
             # Create meta compound dataset
-            yearly_h5.create_dataset("meta", data=meta_data)
+            meta_dataset = yearly_h5.create_dataset("meta", data=meta_data)
+            # Add _FillValue as global attribute for meta (compound datasets can't have _FillValue directly)
+            yearly_h5.attrs['meta:_FillValue'] = NAN_FILL_VALUE
             print(f"Created meta dataset: shape={meta_data.shape}, {len(meta_data.dtype.names)} fields")
+            print(f"Added global attribute meta:_FillValue={NAN_FILL_VALUE}")
 
             # Copy sigma coordinates (same for all months)
             if "sigma_layer" in template_h5:
@@ -485,6 +553,9 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
                             f"    Warning: Could not set attribute {attr_name}: {e}"
                         )
 
+                # Add _FillValue attribute for numeric datasets
+                add_fill_value_attr(dataset)
+
 
 def stitch_data_into_yearly_file(output_file, monthly_files, file_structure):
     """
@@ -520,6 +591,9 @@ def stitch_data_into_yearly_file(output_file, monthly_files, file_structure):
                 # Note: face-only variables (in meta) are not in variable_info and won't be processed here
                 for var_name, var_info in file_structure["variable_info"].items():
                     monthly_data = monthly_h5[var_name][:]
+
+                    # Replace NaNs with fill value
+                    monthly_data = replace_nans_with_fill_value(monthly_data)
 
                     # Handle different dimensionalities
                     if len(monthly_data.shape) == 1:
