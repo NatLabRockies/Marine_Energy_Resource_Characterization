@@ -23,6 +23,17 @@ HDF5_WRITE_CACHE = config["hdf5_cache"]["stitch_write_cache_bytes"]
 # Global NaN replacement value
 NAN_FILL_VALUE = -999.0
 
+# Variables to exclude from final stitched output
+SKIP_VARIABLES = {
+    "vap_water_column_max_sea_water_power_density",
+    "vap_water_column_max_sea_water_speed",
+    "vap_water_column_mean_sea_water_power_density",
+    "vap_water_column_mean_sea_water_speed",
+    "vap_water_column_mean_sea_water_to_direction",
+    "vap_water_column_mean_u",
+    "vap_water_column_mean_v",
+}
+
 
 def replace_nans_with_fill_value(data, fill_value=NAN_FILL_VALUE):
     """
@@ -188,6 +199,11 @@ def analyze_temporal_file_structure(temporal_files):
 
         for var_name in h5f.keys():
             if var_name not in skip_datasets:
+                # Check if this variable should be excluded from final output
+                if var_name in SKIP_VARIABLES:
+                    print(f"  {var_name}: SKIPPED (in exclude list)")
+                    continue
+
                 var_dataset = h5f[var_name]
                 dims = var_dataset.dims
                 shape = var_dataset.shape
@@ -311,6 +327,11 @@ def analyze_temporal_file_structure(temporal_files):
         print(f"  - {field_name}")
 
     print(f"\nTime-varying variables: {len(variable_info)}")
+
+    if SKIP_VARIABLES:
+        print(f"\nExcluded variables (not in output): {len(SKIP_VARIABLES)}")
+        for skip_var in sorted(SKIP_VARIABLES):
+            print(f"  - {skip_var}")
 
     return {
         "n_faces": n_faces,
@@ -529,20 +550,20 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
                     print(f"    Estimated chunk size: {chunk_gb:.3f} GB ({chunk_bytes:,} bytes)")
 
                     if chunk_gb >= 4.0:
-                        print(f"    WARNING: Chunk size exceeds 4GB limit!")
+                        print("    WARNING: Chunk size exceeds 4GB limit!")
                 else:
                     # 1D time series
                     chunks = (min(10000, yearly_shape[0]),)
                     print(f"    Chunks: {chunks}")
 
-                print(f"    Creating dataset...")
+                print("    Creating dataset...")
                 dataset = yearly_h5.create_dataset(
                     var_name,
                     shape=yearly_shape,
                     dtype=var_info["dtype"],
                     chunks=chunks,
                 )
-                print(f"    ✓ Dataset created successfully")
+                print("    ✓ Dataset created successfully")
 
                 # Copy attributes
                 for attr_name, attr_value in var_info["attrs"].items():
@@ -567,7 +588,7 @@ def stitch_data_into_yearly_file(output_file, monthly_files, file_structure):
 
     with h5py.File(output_file, "a", rdcc_nbytes=HDF5_WRITE_CACHE) as yearly_h5:
         print("\nStitching time-varying variables across temporal chunks...")
-        print(f"Note: Face-only variables already assembled in meta dataset")
+        print("Note: Face-only variables already assembled in meta dataset")
         print(f"Processing {len(file_structure['variable_info'])} time-varying variables\n")
 
         # Stitch time-varying variables across temporal chunks
