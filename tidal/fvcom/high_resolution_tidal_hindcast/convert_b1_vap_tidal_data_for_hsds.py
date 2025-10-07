@@ -155,9 +155,13 @@ def analyze_file_structure(nc_files, include_vars=None):
                 # Convert dtype to h5py-compatible format
                 dtype_str = np.dtype(var.dtype).str
 
-                # h5py cannot handle Unicode strings (<U) or datetime/timedelta types
-                # Convert Unicode to byte strings (S type)
-                if (
+                # Special handling for time variable - always store as string
+                if var_name == "time":
+                    # Time will be converted to string format (25 chars for YYYY-MM-DD HH:MM:SS+00:00)
+                    dtype_str = "S25"
+                    print("  Note: Converting time variable to string S25 for HDF5")
+                # h5py cannot handle Unicode strings (<U)
+                elif (
                     dtype_str.startswith("<U")
                     or dtype_str.startswith(">U")
                     or dtype_str.startswith("|U")
@@ -170,10 +174,10 @@ def analyze_file_structure(nc_files, include_vars=None):
                         f"  Note: Converting {var_name} from Unicode {var.dtype} to byte string S{char_length} for HDF5"
                     )
                 elif "datetime64" in str(var.dtype) or "timedelta64" in str(var.dtype):
-                    # Convert datetime/timedelta to int64
-                    dtype_str = "<i8"
+                    # Convert datetime/timedelta to string format (25 chars for YYYY-MM-DD HH:MM:SS+00:00)
+                    dtype_str = "S25"
                     print(
-                        f"  Note: Converting {var_name} from {var.dtype} to int64 for HDF5"
+                        f"  Note: Converting {var_name} from {var.dtype} to string S25 for HDF5"
                     )
 
                 variable_info[var_name] = {
@@ -357,8 +361,13 @@ def stream_monthly_data_to_h5(
                             # Determine max length
                             max_len = max(len(s) for s in time_strings)
                             # Convert to byte strings
-                            data = np.array([s.encode("utf-8") for s in time_strings], dtype=f"S{max_len}")
-                            print(f"      Converting datetime64 to string format S{max_len} for HDF5 storage")
+                            data = np.array(
+                                [s.encode("utf-8") for s in time_strings],
+                                dtype=f"S{max_len}",
+                            )
+                            print(
+                                f"      Converting datetime64 to string format S{max_len} for HDF5 storage"
+                            )
 
                         # Convert Unicode strings to byte strings for h5py
                         elif data.dtype.kind == "U":  # Unicode string
