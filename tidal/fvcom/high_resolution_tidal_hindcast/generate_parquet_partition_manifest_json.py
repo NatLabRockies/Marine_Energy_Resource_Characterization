@@ -31,9 +31,12 @@ def parse_parquet_filename(filename):
 
     Expected format:
     {location}.{dataset}.face={faceid}.lat={lat}.lon={lon}.{temporal}.b4.parquet
+    or with timestamp:
+    {location}.{dataset}.face={faceid}.lat={lat}.lon={lon}.{temporal}.b4.{timestamp}.parquet
 
     Example:
     AK_cook_inlet.wpto_high_res_tidal.face=000123.lat=59.1234567.lon=-152.7890123.1h.b4.parquet
+    AK_aleutian_islands.wpto_high_res_tidal.face=406607.lat=54.6320000.lon=-163.7436523.1h.b4.20100603.000000.parquet
 
     Parameters
     ----------
@@ -46,8 +49,9 @@ def parse_parquet_filename(filename):
         Dictionary with keys: face_id, lat, lon, temporal, location, dataset
         Returns None if filename doesn't match expected pattern
     """
-    # Pattern: {location}.{dataset}.face={faceid}.lat={lat}.lon={lon}.{temporal}.b4.parquet
-    pattern = r"^(.+?)\.(.+?)\.face=(\d+)\.lat=([-+]?\d+\.\d+)\.lon=([-+]?\d+\.\d+)\.(\w+)\.b4\.parquet$"
+    # Pattern with optional timestamp: {location}.{dataset}.face={faceid}.lat={lat}.lon={lon}.{temporal}.b4[.{timestamp}].parquet
+    # The key fix: use \.(?=\w+\.b4) to ensure we match the dot before temporal, not the minus sign
+    pattern = r"^(.+?)\.(.+?)\.face=(\d+)\.lat=([-+]?\d+\.\d+)\.lon=([-+]?\d+\.\d+)\.(\w+)\.b4(?:\.\d+\.\d+)?\.parquet$"
 
     match = re.match(pattern, filename)
     if not match:
@@ -139,15 +143,17 @@ def scan_parquet_partitions(partition_dir):
         # Parse filename
         file_info = parse_parquet_filename(file_path.name)
         if file_info is None:
-            print(f"  WARNING: Could not parse filename: {file_path.name}")
-            continue
+            print(f"\nERROR: Could not parse filename: {file_path.name}")
+            print(f"Full path: {file_path}")
+            raise ValueError(f"Failed to parse parquet filename: {file_path.name}")
 
         # Parse partition path
         relative_path = file_path.relative_to(partition_dir)
         partition_info = parse_partition_path(relative_path.parent)
         if partition_info is None:
-            print(f"  WARNING: Could not parse partition path: {relative_path.parent}")
-            continue
+            print(f"\nERROR: Could not parse partition path: {relative_path.parent}")
+            print(f"Full path: {file_path}")
+            raise ValueError(f"Failed to parse partition path: {relative_path.parent}")
 
         # Get file size
         file_size = file_path.stat().st_size
