@@ -383,7 +383,8 @@ def analyze_file_structure(nc_files, timezone_offset=None, jurisdiction_array=No
                         f"  Note: Splitting 3D variable {var_name} into {n_sigma} sigma layers"
                     )
                     for sigma_idx in range(n_sigma):
-                        layer_var_name = f"{var_name}_sigma_layer_{sigma_idx + 1}"
+                        # Pad layer name index with leading zero for sorting
+                        layer_var_name = f"{var_name}_sigma_layer_{sigma_idx + 1:02d}"
                         layer_attrs = dict(var.attrs)
                         layer_attrs["sigma_layer_index"] = sigma_idx + 1
                         layer_attrs["original_variable"] = var_name
