@@ -29,14 +29,22 @@ def parse_parquet_filename(filename):
     """
     Parse parquet filename to extract face ID, lat, lon, and temporal resolution.
 
-    Expected format:
-    {location}.{dataset}.face={faceid}.lat={lat}.lon={lon}.{temporal}.b4.parquet
-    or with timestamp:
-    {location}.{dataset}.face={faceid}.lat={lat}.lon={lon}.{temporal}.b4.{timestamp}.parquet
+    This parser mirrors the logic in file_name_convention_manager.generate_filename_for_data_level()
+    and vap_simple_create_parquet_all_time_partition.get_partition_file_name().
 
-    Example:
-    AK_cook_inlet.wpto_high_res_tidal.face=000123.lat=59.1234567.lon=-152.7890123.1h.b4.parquet
-    AK_aleutian_islands.wpto_high_res_tidal.face=406607.lat=54.6320000.lon=-163.7436523.1h.b4.20100603.000000.parquet
+    Expected format (from generate_filename_for_data_level):
+    {location}.{dataset_name-temporal}.{data_level}.{date}.{time}.{ext}
+
+    Where dataset_name is built as:
+    {dataset}.face={faceid}.lat={lat}.lon={lon}
+    and temporal is appended with '-' (hyphen), not '.'
+
+    Full format:
+    {location}.{dataset}.face={faceid}.lat={lat}.lon={lon}-{temporal}.b4.{date}.{time}.parquet
+
+    Examples:
+    AK_cook_inlet.wpto_high_res_tidal.face=000123.lat=59.1234567.lon=-152.7890123-1h.b4.20050101.000000.parquet
+    AK_aleutian_islands.wpto_high_res_tidal.face=000299.lat=49.9379654.lon=-174.9613647-1h.b4.20100603.000000.parquet
 
     Parameters
     ----------
@@ -45,25 +53,79 @@ def parse_parquet_filename(filename):
 
     Returns
     -------
-    dict or None
+    dict
         Dictionary with keys: face_id, lat, lon, temporal, location, dataset
-        Returns None if filename doesn't match expected pattern
-    """
-    # Pattern with optional timestamp: {location}.{dataset}.face={faceid}.lat={lat}.lon={lon}.{temporal}.b4[.{timestamp}].parquet
-    # The key fix: use \.(?=\w+\.b4) to ensure we match the dot before temporal, not the minus sign
-    pattern = r"^(.+?)\.(.+?)\.face=(\d+)\.lat=([-+]?\d+\.\d+)\.lon=([-+]?\d+\.\d+)\.(\w+)\.b4(?:\.\d+\.\d+)?\.parquet$"
 
-    match = re.match(pattern, filename)
-    if not match:
-        return None
+    Raises
+    ------
+    ValueError
+        If filename doesn't match expected pattern
+    """
+    # Split by '.' to get components
+    parts = filename.split('.')
+
+    # Minimum structure: location.dataset.face=X.lat=Y.lon=Z-temporal.b4.date.time.parquet
+    # That's at least 9 parts
+    if len(parts) < 9:
+        raise ValueError(f"Filename has too few components (expected >= 9, got {len(parts)}): {filename}")
+
+    # Extract components by position and known patterns
+    location = parts[0]
+    dataset = parts[1]
+
+    # Find face= component
+    face_part = None
+    lat_part = None
+    lon_temporal_part = None
+
+    for i, part in enumerate(parts):
+        if part.startswith('face='):
+            face_part = part
+        elif part.startswith('lat='):
+            lat_part = part
+        elif part.startswith('lon='):
+            # This part contains lon and temporal: lon={value}-{temporal}
+            lon_temporal_part = part
+
+    if not face_part or not lat_part or not lon_temporal_part:
+        raise ValueError(f"Missing required components (face=, lat=, lon=) in filename: {filename}")
+
+    # Parse face ID
+    face_id = int(face_part.replace('face=', ''))
+
+    # Parse latitude
+    lat = float(lat_part.replace('lat=', ''))
+
+    # Parse longitude and temporal (format: lon={value}-{temporal})
+    # The temporal is separated by hyphen
+    lon_and_temporal = lon_temporal_part.replace('lon=', '')
+
+    # Find the last hyphen which separates lon from temporal
+    # Need to handle negative longitudes like -174.9613647-1h
+    last_hyphen_idx = lon_and_temporal.rfind('-')
+    if last_hyphen_idx == -1:
+        raise ValueError(f"Could not find temporal separator in lon component: {lon_temporal_part}")
+
+    # For negative longitudes, we need to find the hyphen that's NOT at position 0
+    if lon_and_temporal[0] == '-':
+        # Negative longitude, find the second hyphen
+        second_hyphen = lon_and_temporal.find('-', 1)
+        if second_hyphen == -1:
+            raise ValueError(f"Could not find temporal separator for negative longitude: {lon_temporal_part}")
+        lon = float(lon_and_temporal[:second_hyphen])
+        temporal = lon_and_temporal[second_hyphen + 1:]
+    else:
+        # Positive longitude, use last hyphen
+        lon = float(lon_and_temporal[:last_hyphen_idx])
+        temporal = lon_and_temporal[last_hyphen_idx + 1:]
 
     return {
-        "location": match.group(1),
-        "dataset": match.group(2),
-        "face_id": int(match.group(3)),
-        "lat": float(match.group(4)),
-        "lon": float(match.group(5)),
-        "temporal": match.group(6),
+        "location": location,
+        "dataset": dataset,
+        "face_id": face_id,
+        "lat": lat,
+        "lon": lon,
+        "temporal": temporal,
     }
 
 
@@ -140,12 +202,14 @@ def scan_parquet_partitions(partition_dir):
         if idx % 10000 == 0 and idx > 0:
             print(f"  Processed {idx}/{len(parquet_files)} files...")
 
-        # Parse filename
-        file_info = parse_parquet_filename(file_path.name)
-        if file_info is None:
+        # Parse filename - will raise ValueError on failure
+        try:
+            file_info = parse_parquet_filename(file_path.name)
+        except ValueError as e:
             print(f"\nERROR: Could not parse filename: {file_path.name}")
             print(f"Full path: {file_path}")
-            raise ValueError(f"Failed to parse parquet filename: {file_path.name}")
+            print(f"Parse error: {e}")
+            raise
 
         # Parse partition path
         relative_path = file_path.relative_to(partition_dir)
