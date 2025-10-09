@@ -604,20 +604,35 @@ def generate_compact_manifest(config, output_dir):
     grids_dir = output_dir / "grids"
     grids_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write individual grid detail files
+    # Write individual grid detail files with nested directory structure
+    # Organize by lat_deg/lon_deg to keep subdirectories manageable
     print(f"\nWriting {len(grid_details)} grid detail files to: {grids_dir}")
+    print("  Organizing into lat_deg/lon_deg subdirectories...")
+
     for idx, (grid_id, details) in enumerate(grid_details.items()):
         if idx % 10000 == 0 and idx > 0:
             print(f"  Written {idx}/{len(grid_details)} grid files...")
 
-        grid_file = grids_dir / f"{grid_id}.json"
+        # Parse grid_id to extract lat_deg and lon_deg
+        # Format: "lat_deg_lon_deg_lat_dec_lon_dec"
+        parts = grid_id.split("_")
+        lat_deg = parts[0]
+        lon_deg = parts[1]
+
+        # Create nested directory structure: grids/lat_deg/lon_deg/
+        lat_dir = grids_dir / f"lat_{lat_deg}"
+        lon_dir = lat_dir / f"lon_{lon_deg}"
+        lon_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write grid file
+        grid_file = lon_dir / f"{grid_id}.json"
         with open(grid_file, "w") as f:
-            json.dump(details, f)
+            json.dump(details, f, indent=2)
 
     print("  Completed writing all grid detail files")
 
-    # Calculate total size
-    total_size_mb = sum(f.stat().st_size for f in grids_dir.glob("*.json")) / (
+    # Calculate total size (need to use rglob for nested structure)
+    total_size_mb = sum(f.stat().st_size for f in grids_dir.rglob("*.json")) / (
         1024 * 1024
     )
     total_size_mb += file_size_mb
