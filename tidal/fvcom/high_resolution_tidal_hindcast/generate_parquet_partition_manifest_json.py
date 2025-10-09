@@ -176,7 +176,61 @@ def parse_partition_path(partition_path):
     return None
 
 
-def scan_parquet_partitions(partition_dir):
+def get_parquet_file_list(partition_dir, location_name, config, use_cache=True):
+    """
+    Get list of parquet files, using cache if available.
+
+    Parameters
+    ----------
+    partition_dir : Path
+        Root directory containing parquet partitions
+    location_name : str
+        Name of location for cache file naming
+    config : dict
+        Configuration dictionary
+    use_cache : bool
+        Whether to use cached file list (default: True)
+
+    Returns
+    -------
+    list
+        List of Path objects for parquet files
+    """
+    partition_dir = Path(partition_dir)
+
+    # Create cache directory in current working directory
+    cache_dir = Path.cwd() / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # Cache filename with version
+    version = config["dataset"]["version"]
+    cache_file = cache_dir / f"{location_name}_file_list.v{version}.parquet"
+
+    # Try to load from cache
+    if use_cache and cache_file.exists():
+        print(f"Loading file list from cache: {cache_file}")
+        df_cache = pd.read_parquet(cache_file)
+        parquet_files = [Path(p) for p in df_cache['file_path'].tolist()]
+        print(f"Loaded {len(parquet_files)} files from cache")
+        return sorted(parquet_files)
+
+    # Cache miss or disabled - scan filesystem
+    print(f"Scanning directory for parquet files: {partition_dir}")
+    parquet_files = sorted(partition_dir.rglob("*.parquet"))
+    print(f"Found {len(parquet_files)} parquet files")
+
+    # Save to cache
+    print(f"Saving file list to cache: {cache_file}")
+    df_cache = pd.DataFrame({
+        'file_path': [str(p) for p in parquet_files]
+    })
+    df_cache.to_parquet(cache_file, index=False)
+    print("Cache saved")
+
+    return parquet_files
+
+
+def scan_parquet_partitions(partition_dir, location_name, config, use_cache=True):
     """
     Scan parquet partition directory and collect metadata for all files.
     Uses pandas apply for fast batch processing.
@@ -185,6 +239,12 @@ def scan_parquet_partitions(partition_dir):
     ----------
     partition_dir : Path
         Root directory containing parquet partitions
+    location_name : str
+        Name of location for cache file naming
+    config : dict
+        Configuration dictionary
+    use_cache : bool
+        Whether to use cached file list (default: True)
 
     Returns
     -------
@@ -198,10 +258,8 @@ def scan_parquet_partitions(partition_dir):
 
     print(f"Scanning directory: {partition_dir}")
 
-    # Find all parquet files
-    print("Finding parquet files...")
-    parquet_files = sorted(partition_dir.rglob("*.parquet"))
-    print(f"Found {len(parquet_files)} parquet files")
+    # Get parquet files (from cache or filesystem scan)
+    parquet_files = get_parquet_file_list(partition_dir, location_name, config, use_cache=use_cache)
 
     # Build dataframe with file paths
     print("Building file path dataframe...")
@@ -397,7 +455,7 @@ def generate_combined_manifest(config, output_path):
             print(f"  Partition directory does not exist, skipping: {partition_dir}")
             continue
 
-        file_metadata = scan_parquet_partitions(partition_dir)
+        file_metadata = scan_parquet_partitions(partition_dir, location['output_name'], config, use_cache=True)
 
         # Add location prefix to file paths
         for metadata in file_metadata:
