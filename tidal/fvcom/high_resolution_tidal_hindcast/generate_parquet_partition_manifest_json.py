@@ -67,18 +67,22 @@ def parse_parquet_filename(filename):
     # Step 1: Extract temporal string first (must be either "1h" or "30m")
     # Search for -1h or -30m in the filename
     temporal = None
-    if '-1h.' in filename:
-        temporal = '1h'
-    elif '-30m.' in filename:
-        temporal = '30m'
+    if "-1h." in filename:
+        temporal = "1h"
+    elif "-30m." in filename:
+        temporal = "30m"
     else:
-        raise ValueError(f"Could not find required temporal string (-1h or -30m) in filename: {filename}")
+        raise ValueError(
+            f"Could not find required temporal string (-1h or -30m) in filename: {filename}"
+        )
 
     # Step 2: Split by '.' to get components
-    parts = filename.split('.')
+    parts = filename.split(".")
 
     if len(parts) < 9:
-        raise ValueError(f"Filename has too few components (expected >= 9, got {len(parts)}): {filename}")
+        raise ValueError(
+            f"Filename has too few components (expected >= 9, got {len(parts)}): {filename}"
+        )
 
     # Step 3: Extract location and dataset
     location = parts[0]
@@ -90,21 +94,23 @@ def parse_parquet_filename(filename):
     lon_start_idx = None
 
     for i, part in enumerate(parts):
-        if part.startswith('face='):
+        if part.startswith("face="):
             face_part = part
-        elif part.startswith('lat='):
+        elif part.startswith("lat="):
             lat_part = part
-        elif part.startswith('lon='):
+        elif part.startswith("lon="):
             lon_start_idx = i
 
     if not face_part or not lat_part or lon_start_idx is None:
-        raise ValueError(f"Missing required components (face=, lat=, lon=) in filename: {filename}")
+        raise ValueError(
+            f"Missing required components (face=, lat=, lon=) in filename: {filename}"
+        )
 
     # Step 5: Parse face ID
-    face_id = int(face_part.replace('face=', ''))
+    face_id = int(face_part.replace("face=", ""))
 
     # Step 6: Parse latitude
-    lat = float(lat_part.replace('lat=', ''))
+    lat = float(lat_part.replace("lat=", ""))
 
     # Step 7: Parse longitude - reconstruct from parts, stop at temporal separator
     # The lon spans from lon_start_idx until we hit -{temporal}
@@ -113,15 +119,15 @@ def parse_parquet_filename(filename):
         part = parts[i]
 
         # Check if this part ends with the temporal separator
-        if part.endswith(f'-{temporal}'):
+        if part.endswith(f"-{temporal}"):
             # Remove the temporal suffix and add this final part
-            lon_parts.append(part[:-len(f'-{temporal}')])
+            lon_parts.append(part[: -len(f"-{temporal}")])
             break
         else:
             lon_parts.append(part)
 
     # Join with '.' and remove 'lon=' prefix
-    lon_str = '.'.join(lon_parts).replace('lon=', '')
+    lon_str = ".".join(lon_parts).replace("lon=", "")
     lon = float(lon_str)
 
     return {
@@ -210,7 +216,7 @@ def get_parquet_file_list(partition_dir, location_name, config, use_cache=True):
     if use_cache and cache_file.exists():
         print(f"Loading file list from cache: {cache_file}")
         df_cache = pd.read_parquet(cache_file)
-        parquet_files = [Path(p) for p in df_cache['file_path'].tolist()]
+        parquet_files = [Path(p) for p in df_cache["file_path"].tolist()]
         print(f"Loaded {len(parquet_files)} files from cache")
         return sorted(parquet_files)
 
@@ -221,9 +227,7 @@ def get_parquet_file_list(partition_dir, location_name, config, use_cache=True):
 
     # Save to cache
     print(f"Saving file list to cache: {cache_file}")
-    df_cache = pd.DataFrame({
-        'file_path': [str(p) for p in parquet_files]
-    })
+    df_cache = pd.DataFrame({"file_path": [str(p) for p in parquet_files]})
     df_cache.to_parquet(cache_file, index=False)
     print("Cache saved")
 
@@ -259,19 +263,23 @@ def scan_parquet_partitions(partition_dir, location_name, config, use_cache=True
     print(f"Scanning directory: {partition_dir}")
 
     # Get parquet files (from cache or filesystem scan)
-    parquet_files = get_parquet_file_list(partition_dir, location_name, config, use_cache=use_cache)
+    parquet_files = get_parquet_file_list(
+        partition_dir, location_name, config, use_cache=use_cache
+    )
 
     # Build dataframe with file paths
     print("Building file path dataframe...")
-    df = pd.DataFrame({
-        'file_path': parquet_files
-    })
+    df = pd.DataFrame({"file_path": parquet_files})
 
     # Extract basic file info
     print("Extracting file metadata...")
-    df['filename'] = df['file_path'].apply(lambda x: x.name)
-    df['relative_path'] = df['file_path'].apply(lambda x: str(x.relative_to(partition_dir)))
-    df['parent_path'] = df['file_path'].apply(lambda x: str(x.relative_to(partition_dir).parent))
+    df["filename"] = df["file_path"].apply(lambda x: x.name)
+    df["relative_path"] = df["file_path"].apply(
+        lambda x: str(x.relative_to(partition_dir))
+    )
+    df["parent_path"] = df["file_path"].apply(
+        lambda x: str(x.relative_to(partition_dir).parent)
+    )
 
     print(f"Created dataframe with {len(df)} files")
 
@@ -281,11 +289,11 @@ def scan_parquet_partitions(partition_dir, location_name, config, use_cache=True
     def safe_parse_filename(filename):
         try:
             return pd.Series(parse_parquet_filename(filename))
-        except ValueError as e:
+        except ValueError:
             print(f"\nERROR: Could not parse filename: {filename}")
             raise
 
-    parsed_df = df['filename'].apply(safe_parse_filename)
+    parsed_df = df["filename"].apply(safe_parse_filename)
     df = pd.concat([df, parsed_df], axis=1)
     print("  Filename parsing complete")
 
@@ -299,8 +307,8 @@ def scan_parquet_partitions(partition_dir, location_name, config, use_cache=True
             raise ValueError(f"Failed to parse partition path: {parent_path}")
         return pd.Series(partition_info)
 
-    partition_df = df['parent_path'].apply(safe_parse_partition)
-    partition_df.columns = ['lat_deg', 'lon_deg', 'lat_dec', 'lon_dec']
+    partition_df = df["parent_path"].apply(safe_parse_partition)
+    partition_df.columns = ["lat_deg", "lon_deg", "lat_dec", "lon_dec"]
     print("  Partition path parsing complete")
 
     # Build final metadata list
@@ -318,10 +326,10 @@ def scan_parquet_partitions(partition_dir, location_name, config, use_cache=True
             "dataset": row["dataset"],
             "temporal": row["temporal"],
             "partition": {
-                "lat_deg": int(partition_df.loc[idx, 'lat_deg']),
-                "lon_deg": int(partition_df.loc[idx, 'lon_deg']),
-                "lat_dec": int(partition_df.loc[idx, 'lat_dec']),
-                "lon_dec": int(partition_df.loc[idx, 'lon_dec']),
+                "lat_deg": int(partition_df.loc[idx, "lat_deg"]),
+                "lon_deg": int(partition_df.loc[idx, "lon_deg"]),
+                "lat_dec": int(partition_df.loc[idx, "lat_dec"]),
+                "lon_dec": int(partition_df.loc[idx, "lon_dec"]),
             },
             "file_path": row["relative_path"],
         }
@@ -350,7 +358,7 @@ def build_compact_grid_index(file_metadata, config):
         - grid_details_dict: Dict mapping grid_id to detailed point data
     """
     decimal_places = config["partition"]["decimal_places"]
-    grid_resolution = 1.0 / (10 ** decimal_places)  # 0.01 for decimal_places=2
+    grid_resolution = 1.0 / (10**decimal_places)  # 0.01 for decimal_places=2
 
     # Group points by grid
     grid_groups = {}
@@ -363,21 +371,23 @@ def build_compact_grid_index(file_metadata, config):
 
         if grid_id not in grid_groups:
             grid_groups[grid_id] = {
-                "lat_deg": partition['lat_deg'],
-                "lon_deg": partition['lon_deg'],
-                "lat_dec": partition['lat_dec'],
-                "lon_dec": partition['lon_dec'],
+                "lat_deg": partition["lat_deg"],
+                "lon_deg": partition["lon_deg"],
+                "lat_dec": partition["lat_dec"],
+                "lon_dec": partition["lon_dec"],
                 "points": [],
                 "location": metadata["location"],
                 "temporal": metadata["temporal"],
             }
 
-        grid_groups[grid_id]["points"].append({
-            "face": metadata["face_id"],
-            "lat": metadata["lat"],
-            "lon": metadata["lon"],
-            "file_path": metadata["file_path"],
-        })
+        grid_groups[grid_id]["points"].append(
+            {
+                "face": metadata["face_id"],
+                "lat": metadata["lat"],
+                "lon": metadata["lon"],
+                "file_path": metadata["file_path"],
+            }
+        )
 
     # Build grid index and details
     grid_index = []
@@ -385,8 +395,8 @@ def build_compact_grid_index(file_metadata, config):
 
     for grid_id, group in grid_groups.items():
         # Calculate grid bounds
-        lat_min = group["lat_deg"] + group["lat_dec"] / (10 ** decimal_places)
-        lon_min = group["lon_deg"] + group["lon_dec"] / (10 ** decimal_places)
+        lat_min = group["lat_deg"] + group["lat_dec"] / (10**decimal_places)
+        lon_min = group["lon_deg"] + group["lon_dec"] / (10**decimal_places)
         lat_max = lat_min + grid_resolution
         lon_max = lon_min + grid_resolution
 
@@ -395,18 +405,20 @@ def build_compact_grid_index(file_metadata, config):
         centroid_lon = (lon_min + lon_max) / 2
 
         # Grid metadata for main manifest
-        grid_index.append({
-            "id": grid_id,
-            "lat_deg": group["lat_deg"],
-            "lon_deg": group["lon_deg"],
-            "lat_dec": group["lat_dec"],
-            "lon_dec": group["lon_dec"],
-            "bounds": [lat_min, lat_max, lon_min, lon_max],
-            "centroid": [centroid_lat, centroid_lon],
-            "n": len(group["points"]),
-            "loc": group["location"],
-            "temporal": group["temporal"],
-        })
+        grid_index.append(
+            {
+                "id": grid_id,
+                "lat_deg": group["lat_deg"],
+                "lon_deg": group["lon_deg"],
+                "lat_dec": group["lat_dec"],
+                "lon_dec": group["lon_dec"],
+                "bounds": [lat_min, lat_max, lon_min, lon_max],
+                "centroid": [centroid_lat, centroid_lon],
+                "n": len(group["points"]),
+                "loc": group["location"],
+                "temporal": group["temporal"],
+            }
+        )
 
         # Detailed point data for grid detail file
         grid_details[grid_id] = {
@@ -414,9 +426,14 @@ def build_compact_grid_index(file_metadata, config):
             "location": group["location"],
             "temporal": group["temporal"],
             "points": [
-                {"face": p["face"], "lat": p["lat"], "lon": p["lon"], "file_path": p["file_path"]}
+                {
+                    "face": p["face"],
+                    "lat": p["lat"],
+                    "lon": p["lon"],
+                    "file_path": p["file_path"],
+                }
                 for p in group["points"]
-            ]
+            ],
         }
 
     return grid_index, grid_details
@@ -512,7 +529,9 @@ def generate_compact_manifest(config, output_dir):
             print(f"  Partition directory does not exist, skipping: {partition_dir}")
             continue
 
-        file_metadata = scan_parquet_partitions(partition_dir, location['output_name'], config, use_cache=True)
+        file_metadata = scan_parquet_partitions(
+            partition_dir, location["output_name"], config, use_cache=True
+        )
 
         # Add location prefix to file paths
         for metadata in file_metadata:
@@ -595,10 +614,12 @@ def generate_compact_manifest(config, output_dir):
         with open(grid_file, "w") as f:
             json.dump(details, f)
 
-    print(f"  Completed writing all grid detail files")
+    print("  Completed writing all grid detail files")
 
     # Calculate total size
-    total_size_mb = sum(f.stat().st_size for f in grids_dir.glob("*.json")) / (1024 * 1024)
+    total_size_mb = sum(f.stat().st_size for f in grids_dir.glob("*.json")) / (
+        1024 * 1024
+    )
     total_size_mb += file_size_mb
     print(f"\nTotal manifest size: {total_size_mb:.2f} MB")
     print(f"  Main manifest: {file_size_mb:.2f} MB")
@@ -629,11 +650,13 @@ def main():
     print("\n" + "=" * 80)
     print("Manifest generation complete!")
     print("=" * 80)
-    print(f"\nGenerated structure:")
+    print("\nGenerated structure:")
     print(f"  {output_dir}/")
-    print(f"    ├── manifest.json          (main index)")
-    print(f"    └── grids/                 ({manifest['total_grids']} grid detail files)")
-    print(f"\nUsage:")
+    print("    ├── manifest.json          (main index)")
+    print(
+        f"    └── grids/                 ({manifest['total_grids']} grid detail files)"
+    )
+    print("\nUsage:")
     print("  - Load manifest.json for fast grid-level queries")
     print("  - Lazy-load individual grid files as needed")
     print("  - Use TidalManifestQuery class for spatial queries")
