@@ -214,7 +214,6 @@ def scan_parquet_partitions(partition_dir):
     df['filename'] = df['file_path'].apply(lambda x: x.name)
     df['relative_path'] = df['file_path'].apply(lambda x: str(x.relative_to(partition_dir)))
     df['parent_path'] = df['file_path'].apply(lambda x: str(x.relative_to(partition_dir).parent))
-    df['file_size'] = df['file_path'].apply(lambda x: x.stat().st_size)
 
     print(f"Created dataframe with {len(df)} files")
 
@@ -267,7 +266,6 @@ def scan_parquet_partitions(partition_dir):
                 "lon_dec": int(partition_df.loc[idx, 'lon_dec']),
             },
             "file_path": row["relative_path"],
-            "file_size": int(row["file_size"]),
         }
         file_metadata.append(metadata)
 
