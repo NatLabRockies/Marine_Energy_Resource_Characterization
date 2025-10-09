@@ -4,9 +4,11 @@
 #SBATCH --job-name=generate_manifest
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=8:00:00
-#SBATCH --partition=shared
-#SBATCH --mem=64G
+##SBATCH --time=8:00:00
+##SBATCH --partition=shared
+##SBATCH --mem=64G
+#SBATCH --time=59:00
+#SBATCH --partition=debug
 
 # Prepare for python script execution
 source sbatch_env_setup.sh
