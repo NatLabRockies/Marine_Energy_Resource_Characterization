@@ -544,13 +544,17 @@ def generate_compact_manifest(config, output_dir):
     bounds = compute_bounds(all_file_metadata)
 
     # Extract grid centroids for ultra-compact manifest
-    grid_lats = [g["centroid"][0] for g in grid_index]
-    grid_lons = [g["centroid"][1] for g in grid_index]
+    # Round to 1 extra from the spec decimal places to avoid floating point precision bloat
+    # (e.g., -65.95499999999998 -> -65.955)
+    # Spec Grid resolution is 0.01°, centroids are at midpoint, so 3 decimals handles the centroid conversion
+    spec_decimal_places = config["partition"]["decimal_places"]
+    grid_lats = [round(g["centroid"][0], spec_decimal_places + 1) for g in grid_index]
+    grid_lons = [round(g["centroid"][1], spec_decimal_places + 1) for g in grid_index]
 
     # Create ultra-compact main manifest (grid centroids only)
     manifest = {
         "version": config["dataset"]["version"],
-        "decimal_places": config["partition"]["decimal_places"],
+        "decimal_places": spec_decimal_places,
         "grid_resolution_deg": 1.0 / (10 ** config["partition"]["decimal_places"]),
         "total_grids": len(grid_index),
         "total_points": len(all_file_metadata),
