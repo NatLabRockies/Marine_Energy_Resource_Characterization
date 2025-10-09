@@ -331,41 +331,95 @@ def scan_parquet_partitions(partition_dir, location_name, config, use_cache=True
     return file_metadata
 
 
-def build_spatial_index(file_metadata):
+def build_compact_grid_index(file_metadata, config):
     """
-    Build spatial grid index for fast lat/lon lookups.
-
-    The index is organized by partition keys for O(1) lookup time.
+    Build compact grid index with centroids and point counts.
 
     Parameters
     ----------
     file_metadata : list
         List of file metadata dictionaries
+    config : dict
+        Configuration dictionary
 
     Returns
     -------
-    dict
-        Spatial index mapping partition keys to file lists
+    tuple
+        (grid_index_list, grid_details_dict)
+        - grid_index_list: List of grid metadata for main manifest
+        - grid_details_dict: Dict mapping grid_id to detailed point data
     """
-    spatial_index = {}
+    decimal_places = config["partition"]["decimal_places"]
+    grid_resolution = 1.0 / (10 ** decimal_places)  # 0.01 for decimal_places=2
+
+    # Group points by grid
+    grid_groups = {}
 
     for metadata in file_metadata:
         partition = metadata["partition"]
 
-        # Create partition key
-        key = f"lat_deg={partition['lat_deg']}/lon_deg={partition['lon_deg']}/lat_dec={partition['lat_dec']}/lon_dec={partition['lon_dec']}"
+        # Create grid ID
+        grid_id = f"{partition['lat_deg']}_{partition['lon_deg']}_{partition['lat_dec']}_{partition['lon_dec']}"
 
-        if key not in spatial_index:
-            spatial_index[key] = []
+        if grid_id not in grid_groups:
+            grid_groups[grid_id] = {
+                "lat_deg": partition['lat_deg'],
+                "lon_deg": partition['lon_deg'],
+                "lat_dec": partition['lat_dec'],
+                "lon_dec": partition['lon_dec'],
+                "points": [],
+                "location": metadata["location"],
+                "temporal": metadata["temporal"],
+            }
 
-        spatial_index[key].append({
-            "face_id": metadata["face_id"],
+        grid_groups[grid_id]["points"].append({
+            "face": metadata["face_id"],
             "lat": metadata["lat"],
             "lon": metadata["lon"],
             "file_path": metadata["file_path"],
         })
 
-    return spatial_index
+    # Build grid index and details
+    grid_index = []
+    grid_details = {}
+
+    for grid_id, group in grid_groups.items():
+        # Calculate grid bounds
+        lat_min = group["lat_deg"] + group["lat_dec"] / (10 ** decimal_places)
+        lon_min = group["lon_deg"] + group["lon_dec"] / (10 ** decimal_places)
+        lat_max = lat_min + grid_resolution
+        lon_max = lon_min + grid_resolution
+
+        # Calculate centroid
+        centroid_lat = (lat_min + lat_max) / 2
+        centroid_lon = (lon_min + lon_max) / 2
+
+        # Grid metadata for main manifest
+        grid_index.append({
+            "id": grid_id,
+            "lat_deg": group["lat_deg"],
+            "lon_deg": group["lon_deg"],
+            "lat_dec": group["lat_dec"],
+            "lon_dec": group["lon_dec"],
+            "bounds": [lat_min, lat_max, lon_min, lon_max],
+            "centroid": [centroid_lat, centroid_lon],
+            "n": len(group["points"]),
+            "loc": group["location"],
+            "temporal": group["temporal"],
+        })
+
+        # Detailed point data for grid detail file
+        grid_details[grid_id] = {
+            "grid_id": grid_id,
+            "location": group["location"],
+            "temporal": group["temporal"],
+            "points": [
+                {"face": p["face"], "lat": p["lat"], "lon": p["lon"], "file_path": p["file_path"]}
+                for p in group["points"]
+            ]
+        }
+
+    return grid_index, grid_details
 
 
 def build_faceid_index(file_metadata):
@@ -429,22 +483,25 @@ def compute_bounds(file_metadata):
     }
 
 
-def generate_combined_manifest(config, output_path):
+def generate_compact_manifest(config, output_dir):
     """
-    Generate combined manifest with spatial and face ID indices.
+    Generate compact two-tier manifest structure:
+    - Main manifest.json with grid metadata
+    - Individual grid detail JSON files in grids/ subdirectory
 
     Parameters
     ----------
     config : dict
         Configuration dictionary
-    output_path : Path
-        Output path for the combined manifest JSON
+    output_dir : Path
+        Output directory for manifest files
     """
-    print("\n=== Generating Combined Manifest ===")
+    print("\n=== Generating Compact Manifest ===")
 
     # Collect file metadata from all locations
     all_file_metadata = []
     location_stats = {}
+    location_list = []
 
     for location_key, location in config["location_specification"].items():
         print(f"\nProcessing location: {location['label']} ({location_key})")
@@ -470,145 +527,105 @@ def generate_combined_manifest(config, output_path):
             "expected_face_count": location["face_count"],
         }
 
+        # Track unique locations
+        if location["output_name"] not in location_list:
+            location_list.append(location["output_name"])
+
     print(f"\nTotal files across all locations: {len(all_file_metadata)}")
 
-    # Build indices
-    print("\nBuilding spatial index...")
-    spatial_index = build_spatial_index(all_file_metadata)
-    print(f"  Created {len(spatial_index)} spatial grid cells")
-
-    print("\nBuilding face ID index...")
-    faceid_index = build_faceid_index(all_file_metadata)
-    print(f"  Created indices for {len(faceid_index)} locations")
+    # Build compact grid index
+    print("\nBuilding compact grid index...")
+    grid_index, grid_details = build_compact_grid_index(all_file_metadata, config)
+    print(f"  Created {len(grid_index)} grid cells")
+    print(f"  Created {len(grid_details)} grid detail files")
 
     # Compute bounds
     print("\nComputing spatial bounds...")
     bounds = compute_bounds(all_file_metadata)
 
-    # Create combined manifest
+    # Create main manifest (compact, grid-level only)
     manifest = {
-        "manifest_version": config["dataset"]["version"],
+        "version": config["dataset"]["version"],
+        "decimal_places": config["partition"]["decimal_places"],
+        "grid_resolution_deg": 1.0 / (10 ** config["partition"]["decimal_places"]),
+        "total_grids": len(grid_index),
+        "total_points": len(all_file_metadata),
+        "locations": location_list,
+        "spatial_bounds": bounds,
         "metadata": {
             "dataset_name": config["dataset"]["name"],
             "dataset_label": config["dataset"]["label"],
-            "dataset_version": config["dataset"]["version"],
             "manifest_generated": datetime.now().isoformat(),
-            "total_points": len(all_file_metadata),
-            "total_grid_cells": len(spatial_index),
-            "partition_decimal_places": config["partition"]["decimal_places"],
-            "locations": location_stats,
+            "location_stats": location_stats,
         },
-        "spatial_bounds": bounds,
-        "spatial_index": spatial_index,
-        "faceid_index": faceid_index,
+        "grids": grid_index,
     }
 
-    # Write manifest
-    print(f"\nWriting combined manifest to: {output_path}")
-    with open(output_path, "w") as f:
+    # Write main manifest
+    manifest_file = output_dir / "manifest.json"
+    print(f"\nWriting main manifest to: {manifest_file}")
+    with open(manifest_file, "w") as f:
         json.dump(manifest, f, indent=2)
 
-    file_size_mb = output_path.stat().st_size / (1024 * 1024)
-    print(f"  Manifest size: {file_size_mb:.2f} MB")
+    file_size_mb = manifest_file.stat().st_size / (1024 * 1024)
+    print(f"  Main manifest size: {file_size_mb:.2f} MB")
+
+    # Create grids subdirectory
+    grids_dir = output_dir / "grids"
+    grids_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write individual grid detail files
+    print(f"\nWriting {len(grid_details)} grid detail files to: {grids_dir}")
+    for idx, (grid_id, details) in enumerate(grid_details.items()):
+        if idx % 10000 == 0 and idx > 0:
+            print(f"  Written {idx}/{len(grid_details)} grid files...")
+
+        grid_file = grids_dir / f"{grid_id}.json"
+        with open(grid_file, "w") as f:
+            json.dump(details, f)
+
+    print(f"  Completed writing all grid detail files")
+
+    # Calculate total size
+    total_size_mb = sum(f.stat().st_size for f in grids_dir.glob("*.json")) / (1024 * 1024)
+    total_size_mb += file_size_mb
+    print(f"\nTotal manifest size: {total_size_mb:.2f} MB")
+    print(f"  Main manifest: {file_size_mb:.2f} MB")
+    print(f"  Grid details: {total_size_mb - file_size_mb:.2f} MB")
 
     return manifest
 
 
-def generate_spatial_manifest(manifest, output_path):
-    """
-    Generate spatial-only manifest (grid index without face IDs).
-
-    Parameters
-    ----------
-    manifest : dict
-        Combined manifest dictionary
-    output_path : Path
-        Output path for the spatial manifest JSON
-    """
-    print("\n=== Generating Spatial-Only Manifest ===")
-
-    spatial_manifest = {
-        "metadata": manifest["metadata"],
-        "spatial_bounds": manifest["spatial_bounds"],
-        "spatial_index": manifest["spatial_index"],
-    }
-
-    print(f"Writing spatial manifest to: {output_path}")
-    with open(output_path, "w") as f:
-        json.dump(spatial_manifest, f, indent=2)
-
-    file_size_mb = output_path.stat().st_size / (1024 * 1024)
-    print(f"  Manifest size: {file_size_mb:.2f} MB")
-
-
-def generate_faceid_manifest(manifest, output_path):
-    """
-    Generate face ID-only manifest (direct face lookup without spatial index).
-
-    Parameters
-    ----------
-    manifest : dict
-        Combined manifest dictionary
-    output_path : Path
-        Output path for the face ID manifest JSON
-    """
-    print("\n=== Generating Face ID-Only Manifest ===")
-
-    faceid_manifest = {
-        "metadata": manifest["metadata"],
-        "faceid_index": manifest["faceid_index"],
-    }
-
-    print(f"Writing face ID manifest to: {output_path}")
-    with open(output_path, "w") as f:
-        json.dump(faceid_manifest, f, indent=2)
-
-    file_size_mb = output_path.stat().st_size / (1024 * 1024)
-    print(f"  Manifest size: {file_size_mb:.2f} MB")
-
-
 def main():
     """
-    Main function to generate all manifest files.
+    Main function to generate compact two-tier manifest.
     """
     print("=" * 80)
-    print("Parquet Partition Manifest Generation")
+    print("Compact Parquet Partition Manifest Generation")
     print("=" * 80)
 
-    # Define output directory (same as base or separate manifest directory)
+    # Define output directory
     base_path = Path(config["dir"]["base"])
-    output_dir = base_path / "manifests"
+    version = config["dataset"]["version"]
+    output_dir = base_path / "manifests" / f"v{version}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\nOutput directory: {output_dir}")
 
-    # Get version for manifest filenames
-    version = config["dataset"]["version"]
-
-    # Generate combined manifest
-    combined_manifest_path = output_dir / f"high_res_tidal_point_manifest.v{version}.json"
-    manifest = generate_combined_manifest(config, combined_manifest_path)
-
-    # Generate spatial-only manifest
-    spatial_manifest_path = output_dir / f"high_res_tidal_spatial_manifest.v{version}.json"
-    generate_spatial_manifest(manifest, spatial_manifest_path)
-
-    # Generate face ID-only manifest
-    faceid_manifest_path = output_dir / f"high_res_tidal_faceid_manifest.v{version}.json"
-    generate_faceid_manifest(manifest, faceid_manifest_path)
+    # Generate compact manifest
+    manifest = generate_compact_manifest(config, output_dir)
 
     print("\n" + "=" * 80)
     print("Manifest generation complete!")
     print("=" * 80)
-    print(f"\nGenerated files:")
-    print(f"  1. {combined_manifest_path}")
-    print(f"  2. {spatial_manifest_path}")
-    print(f"  3. {faceid_manifest_path}")
-    print("\nThese manifests can be used for efficient spatial queries:")
-    print("  - Point queries: Find nearest parquet file for a given lat/lon")
-    print("  - Polygon queries: Find all files within a bounding box")
-    print("  - Face ID queries: Direct lookup by face identifier")
-    print("  - Compatible with both Python and JavaScript (JSON format)")
+    print(f"\nGenerated structure:")
+    print(f"  {output_dir}/")
+    print(f"    ├── manifest.json          (main index)")
+    print(f"    └── grids/                 ({manifest['total_grids']} grid detail files)")
+    print(f"\nUsage:")
+    print("  - Load manifest.json for fast grid-level queries")
+    print("  - Lazy-load individual grid files as needed")
+    print("  - Use TidalManifestQuery class for spatial queries")
 
 
 if __name__ == "__main__":
