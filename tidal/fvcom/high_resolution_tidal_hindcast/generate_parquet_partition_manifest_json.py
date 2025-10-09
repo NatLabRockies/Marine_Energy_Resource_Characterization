@@ -61,22 +61,30 @@ def parse_parquet_filename(filename):
     ValueError
         If filename doesn't match expected pattern
     """
-    # Split by '.' to get components
+    # Step 1: Extract temporal string first (must be either "1h" or "30m")
+    # Search for -1h or -30m in the filename
+    temporal = None
+    if '-1h.' in filename:
+        temporal = '1h'
+    elif '-30m.' in filename:
+        temporal = '30m'
+    else:
+        raise ValueError(f"Could not find required temporal string (-1h or -30m) in filename: {filename}")
+
+    # Step 2: Split by '.' to get components
     parts = filename.split('.')
 
-    # Minimum structure: location.dataset.face=X.lat=Y.lon=Z-temporal.b4.date.time.parquet
-    # That's at least 9 parts
     if len(parts) < 9:
         raise ValueError(f"Filename has too few components (expected >= 9, got {len(parts)}): {filename}")
 
-    # Extract components by position and known patterns
+    # Step 3: Extract location and dataset
     location = parts[0]
     dataset = parts[1]
 
-    # Find face= component
+    # Step 4: Find face= and lat= components
     face_part = None
     lat_part = None
-    lon_temporal_part = None
+    lon_start_idx = None
 
     for i, part in enumerate(parts):
         if part.startswith('face='):
@@ -84,40 +92,34 @@ def parse_parquet_filename(filename):
         elif part.startswith('lat='):
             lat_part = part
         elif part.startswith('lon='):
-            # This part contains lon and temporal: lon={value}-{temporal}
-            lon_temporal_part = part
+            lon_start_idx = i
 
-    if not face_part or not lat_part or not lon_temporal_part:
+    if not face_part or not lat_part or lon_start_idx is None:
         raise ValueError(f"Missing required components (face=, lat=, lon=) in filename: {filename}")
 
-    # Parse face ID
+    # Step 5: Parse face ID
     face_id = int(face_part.replace('face=', ''))
 
-    # Parse latitude
+    # Step 6: Parse latitude
     lat = float(lat_part.replace('lat=', ''))
 
-    # Parse longitude and temporal (format: lon={value}-{temporal})
-    # The temporal is separated by hyphen
-    lon_and_temporal = lon_temporal_part.replace('lon=', '')
+    # Step 7: Parse longitude - reconstruct from parts, stop at temporal separator
+    # The lon spans from lon_start_idx until we hit -{temporal}
+    lon_parts = []
+    for i in range(lon_start_idx, len(parts)):
+        part = parts[i]
 
-    # Find the last hyphen which separates lon from temporal
-    # Need to handle negative longitudes like -174.9613647-1h
-    last_hyphen_idx = lon_and_temporal.rfind('-')
-    if last_hyphen_idx == -1:
-        raise ValueError(f"Could not find temporal separator in lon component: {lon_temporal_part}")
+        # Check if this part ends with the temporal separator
+        if part.endswith(f'-{temporal}'):
+            # Remove the temporal suffix and add this final part
+            lon_parts.append(part[:-len(f'-{temporal}')])
+            break
+        else:
+            lon_parts.append(part)
 
-    # For negative longitudes, we need to find the hyphen that's NOT at position 0
-    if lon_and_temporal[0] == '-':
-        # Negative longitude, find the second hyphen
-        second_hyphen = lon_and_temporal.find('-', 1)
-        if second_hyphen == -1:
-            raise ValueError(f"Could not find temporal separator for negative longitude: {lon_temporal_part}")
-        lon = float(lon_and_temporal[:second_hyphen])
-        temporal = lon_and_temporal[second_hyphen + 1:]
-    else:
-        # Positive longitude, use last hyphen
-        lon = float(lon_and_temporal[:last_hyphen_idx])
-        temporal = lon_and_temporal[last_hyphen_idx + 1:]
+    # Join with '.' and remove 'lon=' prefix
+    lon_str = '.'.join(lon_parts).replace('lon=', '')
+    lon = float(lon_str)
 
     return {
         "location": location,
