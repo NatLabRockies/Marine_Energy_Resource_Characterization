@@ -21,6 +21,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
+import numpy as np
+
 from config import config
 from src import file_manager
 
@@ -176,6 +179,7 @@ def parse_partition_path(partition_path):
 def scan_parquet_partitions(partition_dir):
     """
     Scan parquet partition directory and collect metadata for all files.
+    Uses pandas apply for fast batch processing.
 
     Parameters
     ----------
@@ -195,48 +199,76 @@ def scan_parquet_partitions(partition_dir):
     print(f"Scanning directory: {partition_dir}")
 
     # Find all parquet files
+    print("Finding parquet files...")
     parquet_files = sorted(partition_dir.rglob("*.parquet"))
     print(f"Found {len(parquet_files)} parquet files")
 
-    file_metadata = []
+    # Build dataframe with file paths
+    print("Building file path dataframe...")
+    df = pd.DataFrame({
+        'file_path': parquet_files
+    })
 
-    for idx, file_path in enumerate(parquet_files):
-        if idx % 10000 == 0 and idx > 0:
-            print(f"  Processed {idx}/{len(parquet_files)} files...")
+    # Extract basic file info
+    print("Extracting file metadata...")
+    df['filename'] = df['file_path'].apply(lambda x: x.name)
+    df['relative_path'] = df['file_path'].apply(lambda x: str(x.relative_to(partition_dir)))
+    df['parent_path'] = df['file_path'].apply(lambda x: str(x.relative_to(partition_dir).parent))
+    df['file_size'] = df['file_path'].apply(lambda x: x.stat().st_size)
 
-        # Parse filename - will raise ValueError on failure
+    print(f"Created dataframe with {len(df)} files")
+
+    # Parse all filenames using apply
+    print("Parsing filenames...")
+
+    def safe_parse_filename(filename):
         try:
-            file_info = parse_parquet_filename(file_path.name)
+            return pd.Series(parse_parquet_filename(filename))
         except ValueError as e:
-            print(f"\nERROR: Could not parse filename: {file_path.name}")
-            print(f"Full path: {file_path}")
-            print(f"Parse error: {e}")
+            print(f"\nERROR: Could not parse filename: {filename}")
             raise
 
-        # Parse partition path
-        relative_path = file_path.relative_to(partition_dir)
-        partition_info = parse_partition_path(relative_path.parent)
+    parsed_df = df['filename'].apply(safe_parse_filename)
+    df = pd.concat([df, parsed_df], axis=1)
+    print("  Filename parsing complete")
+
+    # Parse partition paths using apply
+    print("Parsing partition paths...")
+
+    def safe_parse_partition(parent_path):
+        partition_info = parse_partition_path(parent_path)
         if partition_info is None:
-            print(f"\nERROR: Could not parse partition path: {relative_path.parent}")
-            print(f"Full path: {file_path}")
-            raise ValueError(f"Failed to parse partition path: {relative_path.parent}")
+            print(f"\nERROR: Could not parse partition path: {parent_path}")
+            raise ValueError(f"Failed to parse partition path: {parent_path}")
+        return pd.Series(partition_info)
 
-        # Get file size
-        file_size = file_path.stat().st_size
+    partition_df = df['parent_path'].apply(safe_parse_partition)
+    partition_df.columns = ['lat_deg', 'lon_deg', 'lat_dec', 'lon_dec']
+    print("  Partition path parsing complete")
 
-        # Combine metadata
+    # Build final metadata list
+    print("Building final metadata list...")
+    file_metadata = []
+    for idx, row in df.iterrows():
+        if idx % 50000 == 0 and idx > 0:
+            print(f"  Assembled {idx}/{len(df)} records...")
+
         metadata = {
-            "face_id": file_info["face_id"],
-            "lat": file_info["lat"],
-            "lon": file_info["lon"],
-            "location": file_info["location"],
-            "dataset": file_info["dataset"],
-            "temporal": file_info["temporal"],
-            "partition": partition_info,
-            "file_path": str(relative_path),
-            "file_size": file_size,
+            "face_id": int(row["face_id"]),
+            "lat": float(row["lat"]),
+            "lon": float(row["lon"]),
+            "location": row["location"],
+            "dataset": row["dataset"],
+            "temporal": row["temporal"],
+            "partition": {
+                "lat_deg": int(partition_df.loc[idx, 'lat_deg']),
+                "lon_deg": int(partition_df.loc[idx, 'lon_deg']),
+                "lat_dec": int(partition_df.loc[idx, 'lat_dec']),
+                "lon_dec": int(partition_df.loc[idx, 'lon_dec']),
+            },
+            "file_path": row["relative_path"],
+            "file_size": int(row["file_size"]),
         }
-
         file_metadata.append(metadata)
 
     print(f"Successfully processed {len(file_metadata)} files")
