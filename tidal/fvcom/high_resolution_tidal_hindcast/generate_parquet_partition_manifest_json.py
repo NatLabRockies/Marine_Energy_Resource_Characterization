@@ -543,14 +543,17 @@ def generate_compact_manifest(config, output_dir):
     print("\nComputing spatial bounds...")
     bounds = compute_bounds(all_file_metadata)
 
-    # Create main manifest (compact, grid-level only)
+    # Extract grid centroids for ultra-compact manifest
+    grid_lats = [g["centroid"][0] for g in grid_index]
+    grid_lons = [g["centroid"][1] for g in grid_index]
+
+    # Create ultra-compact main manifest (grid centroids only)
     manifest = {
         "version": config["dataset"]["version"],
         "decimal_places": config["partition"]["decimal_places"],
         "grid_resolution_deg": 1.0 / (10 ** config["partition"]["decimal_places"]),
         "total_grids": len(grid_index),
         "total_points": len(all_file_metadata),
-        "locations": location_list,
         "spatial_bounds": bounds,
         "metadata": {
             "dataset_name": config["dataset"]["name"],
@@ -558,14 +561,18 @@ def generate_compact_manifest(config, output_dir):
             "manifest_generated": datetime.now().isoformat(),
             "location_stats": location_stats,
         },
-        "grids": grid_index,
+        "grid_centroids": {
+            "lat": grid_lats,
+            "lon": grid_lons,
+        },
     }
 
     # Write main manifest
+    # Use compact JSON encoding (no indent) to keep file size small
     manifest_file = output_dir / "manifest.json"
     print(f"\nWriting main manifest to: {manifest_file}")
     with open(manifest_file, "w") as f:
-        json.dump(manifest, f, indent=2)
+        json.dump(manifest, f)
 
     file_size_mb = manifest_file.stat().st_size / (1024 * 1024)
     print(f"  Main manifest size: {file_size_mb:.2f} MB")
