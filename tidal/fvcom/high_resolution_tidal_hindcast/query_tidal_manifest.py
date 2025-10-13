@@ -38,7 +38,7 @@ class TidalManifestQuery:
         self.grids_dir = self.manifest_dir / "grids"
 
         # Load manifest
-        with open(self.manifest_path, 'r') as f:
+        with open(self.manifest_path, "r") as f:
             self.manifest = json.load(f)
 
         # Extract configuration
@@ -88,10 +88,10 @@ class TidalManifestQuery:
 
         # Extract integer and decimal parts
         lat_deg = int(np.floor(corner_lat))
-        lat_dec = int(round((corner_lat - lat_deg) * (10 ** self.decimal_places)))
+        lat_dec = int(round((corner_lat - lat_deg) * (10**self.decimal_places)))
 
         lon_deg = int(np.floor(corner_lon))
-        lon_dec = int(round((corner_lon - lon_deg) * (10 ** self.decimal_places)))
+        lon_dec = int(round((corner_lon - lon_deg) * (10**self.decimal_places)))
 
         return f"{lat_deg}_{lon_deg}_{lat_dec}_{lon_dec}"
 
@@ -119,12 +119,14 @@ class TidalManifestQuery:
         lon_deg = parts[1]
 
         # Construct path to nested grid file
-        grid_file = self.grids_dir / f"lat_{lat_deg}" / f"lon_{lon_deg}" / f"{grid_id}.json"
+        grid_file = (
+            self.grids_dir / f"lat_{lat_deg}" / f"lon_{lon_deg}" / f"{grid_id}.json"
+        )
 
         if not grid_file.exists():
             raise FileNotFoundError(f"Grid detail file not found: {grid_file}")
 
-        with open(grid_file, 'r') as f:
+        with open(grid_file, "r") as f:
             return json.load(f)
 
     def query_nearest_point(
@@ -132,7 +134,7 @@ class TidalManifestQuery:
         lat: float,
         lon: float,
         max_distance_deg: Optional[float] = None,
-        load_details: bool = True
+        load_details: bool = True,
     ) -> Dict[str, Any]:
         """
         Find nearest grid to a given point.
@@ -207,7 +209,7 @@ class TidalManifestQuery:
         lon_min: float,
         lon_max: float,
         max_distance_deg: Optional[float] = None,
-        load_details: bool = True
+        load_details: bool = True,
     ) -> List[Dict[str, Any]]:
         """
         Find all grids within a rectangular bounding box.
@@ -250,10 +252,10 @@ class TidalManifestQuery:
         if max_distance_deg is None:
             # No buffer - direct bounding box
             mask = (
-                (self.grid_lats >= lat_min) &
-                (self.grid_lats <= lat_max) &
-                (self.grid_lons >= lon_min) &
-                (self.grid_lons <= lon_max)
+                (self.grid_lats >= lat_min)
+                & (self.grid_lats <= lat_max)
+                & (self.grid_lons >= lon_min)
+                & (self.grid_lons <= lon_max)
             )
             indices = np.where(mask)[0]
         else:
@@ -263,24 +265,20 @@ class TidalManifestQuery:
             n_test = 100  # Number of test points per edge
 
             # Top and bottom edges
-            top_edge = np.column_stack([
-                np.full(n_test, lat_max),
-                np.linspace(lon_min, lon_max, n_test)
-            ])
-            bottom_edge = np.column_stack([
-                np.full(n_test, lat_min),
-                np.linspace(lon_min, lon_max, n_test)
-            ])
+            top_edge = np.column_stack(
+                [np.full(n_test, lat_max), np.linspace(lon_min, lon_max, n_test)]
+            )
+            bottom_edge = np.column_stack(
+                [np.full(n_test, lat_min), np.linspace(lon_min, lon_max, n_test)]
+            )
 
             # Left and right edges
-            left_edge = np.column_stack([
-                np.linspace(lat_min, lat_max, n_test),
-                np.full(n_test, lon_min)
-            ])
-            right_edge = np.column_stack([
-                np.linspace(lat_min, lat_max, n_test),
-                np.full(n_test, lon_max)
-            ])
+            left_edge = np.column_stack(
+                [np.linspace(lat_min, lat_max, n_test), np.full(n_test, lon_min)]
+            )
+            right_edge = np.column_stack(
+                [np.linspace(lat_min, lat_max, n_test), np.full(n_test, lon_max)]
+            )
 
             # Combine all edge points
             edge_points = np.vstack([top_edge, bottom_edge, left_edge, right_edge])
@@ -318,7 +316,7 @@ class TidalManifestQuery:
         end_lon: float,
         max_distance_deg: float = 0.1,
         max_points: Optional[int] = None,
-        load_details: bool = True
+        load_details: bool = True,
     ) -> List[Dict[str, Any]]:
         """
         Find all grids along a line segment.
@@ -388,7 +386,9 @@ class TidalManifestQuery:
         mask = distances_perp <= max_distance_deg
 
         # Also filter to points between start and end (with some buffer)
-        mask &= (distances_along >= -max_distance_deg) & (distances_along <= line_length + max_distance_deg)
+        mask &= (distances_along >= -max_distance_deg) & (
+            distances_along <= line_length + max_distance_deg
+        )
 
         indices = np.where(mask)[0]
 
@@ -420,7 +420,9 @@ class TidalManifestQuery:
         # Limit to max_points if specified
         if max_points is not None:
             # Sort by perpendicular distance to get closest points
-            results_sorted_by_distance = sorted(results, key=lambda x: x["distance_from_line_deg"])
+            results_sorted_by_distance = sorted(
+                results, key=lambda x: x["distance_from_line_deg"]
+            )
             results = results_sorted_by_distance[:max_points]
             # Re-sort by distance along line
             results.sort(key=lambda x: x["distance_along_line_deg"])
@@ -428,8 +430,7 @@ class TidalManifestQuery:
         return results
 
     def generate_grid_boundaries_geojson(
-        self,
-        aggregation_deg: Optional[float] = None
+        self, aggregation_deg: Optional[float] = None
     ) -> Dict[str, Any]:
         """
         Generate GeoJSON FeatureCollection of grid boundaries.
@@ -473,15 +474,17 @@ class TidalManifestQuery:
                     "type": "Feature",
                     "geometry": {
                         "type": "Polygon",
-                        "coordinates": [[
-                            [float(lon_mins[i]), float(lat_mins[i])],
-                            [float(lon_maxs[i]), float(lat_mins[i])],
-                            [float(lon_maxs[i]), float(lat_maxs[i])],
-                            [float(lon_mins[i]), float(lat_maxs[i])],
-                            [float(lon_mins[i]), float(lat_mins[i])],
-                        ]]
+                        "coordinates": [
+                            [
+                                [float(lon_mins[i]), float(lat_mins[i])],
+                                [float(lon_maxs[i]), float(lat_mins[i])],
+                                [float(lon_maxs[i]), float(lat_maxs[i])],
+                                [float(lon_mins[i]), float(lat_maxs[i])],
+                                [float(lon_mins[i]), float(lat_mins[i])],
+                            ]
+                        ],
                     },
-                    "properties": {}
+                    "properties": {},
                 }
                 for i in range(len(self.grid_lats))
             ]
@@ -505,21 +508,23 @@ class TidalManifestQuery:
             # Vectorized bounds calculation for all unique boxes
             # Use pandas groupby for vectorized min/max operations
             import pandas as pd
-            df = pd.DataFrame({
-                'lat': self.grid_lats,
-                'lon': self.grid_lons,
-                'box_idx': inverse_indices
-            })
 
-            grouped = df.groupby('box_idx').agg({
-                'lat': ['min', 'max'],
-                'lon': ['min', 'max']
-            })
+            df = pd.DataFrame(
+                {
+                    "lat": self.grid_lats,
+                    "lon": self.grid_lons,
+                    "box_idx": inverse_indices,
+                }
+            )
 
-            lat_mins_agg = grouped['lat']['min'].values - half_grid
-            lat_maxs_agg = grouped['lat']['max'].values + half_grid
-            lon_mins_agg = grouped['lon']['min'].values - half_grid
-            lon_maxs_agg = grouped['lon']['max'].values + half_grid
+            grouped = df.groupby("box_idx").agg(
+                {"lat": ["min", "max"], "lon": ["min", "max"]}
+            )
+
+            lat_mins_agg = grouped["lat"]["min"].values - half_grid
+            lat_maxs_agg = grouped["lat"]["max"].values + half_grid
+            lon_mins_agg = grouped["lon"]["min"].values - half_grid
+            lon_maxs_agg = grouped["lon"]["max"].values + half_grid
 
             # Build all features using list comprehension
             features = [
@@ -527,27 +532,26 @@ class TidalManifestQuery:
                     "type": "Feature",
                     "geometry": {
                         "type": "Polygon",
-                        "coordinates": [[
-                            [float(lon_mins_agg[i]), float(lat_mins_agg[i])],
-                            [float(lon_maxs_agg[i]), float(lat_mins_agg[i])],
-                            [float(lon_maxs_agg[i]), float(lat_maxs_agg[i])],
-                            [float(lon_mins_agg[i]), float(lat_maxs_agg[i])],
-                            [float(lon_mins_agg[i]), float(lat_mins_agg[i])],
-                        ]]
+                        "coordinates": [
+                            [
+                                [float(lon_mins_agg[i]), float(lat_mins_agg[i])],
+                                [float(lon_maxs_agg[i]), float(lat_mins_agg[i])],
+                                [float(lon_maxs_agg[i]), float(lat_maxs_agg[i])],
+                                [float(lon_mins_agg[i]), float(lat_maxs_agg[i])],
+                                [float(lon_mins_agg[i]), float(lat_mins_agg[i])],
+                            ]
+                        ],
                     },
-                    "properties": {
-                        "grid_count": int(counts[i])
-                    }
+                    "properties": {"grid_count": int(counts[i])},
                 }
                 for i in range(len(unique_boxes))
             ]
 
-            print(f"Aggregated {self.total_grids:,} grids into {len(features):,} regions")
+            print(
+                f"Aggregated {self.total_grids:,} grids into {len(features):,} regions"
+            )
 
-        geojson = {
-            "type": "FeatureCollection",
-            "features": features
-        }
+        geojson = {"type": "FeatureCollection", "features": features}
 
         return geojson
 
@@ -557,62 +561,68 @@ def main():
     Example usage of TidalManifestQuery.
     """
     # Example manifest path (adjust for your environment)
-    manifest_path = Path("/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/manifests/v0.3.0/manifest.json")
+    manifest_path = Path(
+        "/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/manifests/v0.3.0/manifest.json"
+    )
 
     if not manifest_path.exists():
         print(f"Manifest not found at {manifest_path}")
-        print("Please update the path in the script or run generate_parquet_partition_manifest_json.py first.")
+        print(
+            "Please update the path in the script or run generate_parquet_partition_manifest_json.py first."
+        )
         return
 
     # Initialize query interface
     query = TidalManifestQuery(manifest_path)
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Example 1: Query nearest point")
-    print("="*80)
+    print("=" * 80)
 
     result = query.query_nearest_point(lat=49.94, lon=-174.96, load_details=False)
     if result:
-        print(f"Query point: (49.94, -174.96)")
+        print("Query point: (49.94, -174.96)")
         print(f"Nearest grid: {result['grid_id']}")
         print(f"Grid centroid: {result['centroid']}")
         print(f"Distance: {result['distance_deg']:.6f}°")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Example 2: Query rectangular area")
-    print("="*80)
+    print("=" * 80)
 
     results = query.query_all_within_rectangular_area(
-        lat_min=49.9, lat_max=50.0,
-        lon_min=-175.0, lon_max=-174.9,
-        load_details=False
+        lat_min=49.9, lat_max=50.0, lon_min=-175.0, lon_max=-174.9, load_details=False
     )
-    print(f"Bounding box: lat=[49.9, 50.0], lon=[-175.0, -174.9]")
+    print("Bounding box: lat=[49.9, 50.0], lon=[-175.0, -174.9]")
     print(f"Found {len(results)} grids")
     if results:
-        print(f"First 5 grids:")
+        print("First 5 grids:")
         for r in results[:5]:
             print(f"  {r['grid_id']}: {r['centroid']}")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Example 3: Query along line")
-    print("="*80)
+    print("=" * 80)
 
     results = query.query_all_on_line(
-        start_lat=49.9, start_lon=-175.0,
-        end_lat=50.0, end_lon=-174.9,
+        start_lat=49.9,
+        start_lon=-175.0,
+        end_lat=50.0,
+        end_lon=-174.9,
         max_distance_deg=0.05,
         max_points=10,
-        load_details=False
+        load_details=False,
     )
-    print(f"Line: (49.9, -175.0) → (50.0, -174.9)")
-    print(f"Max distance from line: 0.05°")
-    print(f"Max points: 10")
+    print("Line: (49.9, -175.0) → (50.0, -174.9)")
+    print("Max distance from line: 0.05°")
+    print("Max points: 10")
     print(f"Found {len(results)} grids")
     if results:
-        print(f"Grids along line:")
+        print("Grids along line:")
         for r in results:
-            print(f"  {r['grid_id']}: {r['distance_along_line_deg']:.4f}° along, {r['distance_from_line_deg']:.4f}° perp")
+            print(
+                f"  {r['grid_id']}: {r['distance_along_line_deg']:.4f}° along, {r['distance_from_line_deg']:.4f}° perp"
+            )
 
 
 if __name__ == "__main__":
