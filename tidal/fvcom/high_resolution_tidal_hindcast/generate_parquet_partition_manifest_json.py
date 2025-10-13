@@ -89,20 +89,20 @@ def parse_parquet_filename(filename):
     location = parts[0]
     dataset = parts[1]
 
-    # Step 4: Find face= and lat= components
+    # Step 4: Find face=, lat=, and lon= component indices
     face_part = None
-    lat_part = None
+    lat_start_idx = None
     lon_start_idx = None
 
     for i, part in enumerate(parts):
         if part.startswith("face="):
             face_part = part
         elif part.startswith("lat="):
-            lat_part = part
+            lat_start_idx = i
         elif part.startswith("lon="):
             lon_start_idx = i
 
-    if not face_part or not lat_part or lon_start_idx is None:
+    if not face_part or lat_start_idx is None or lon_start_idx is None:
         raise ValueError(
             f"Missing required components (face=, lat=, lon=) in filename: {filename}"
         )
@@ -110,8 +110,15 @@ def parse_parquet_filename(filename):
     # Step 5: Parse face ID
     face_id = int(face_part.replace("face=", ""))
 
-    # Step 6: Parse latitude
-    lat = float(lat_part.replace("lat=", ""))
+    # Step 6: Parse latitude - reconstruct from parts until we hit lon=
+    # The lat spans from lat_start_idx until lon_start_idx
+    lat_parts = []
+    for i in range(lat_start_idx, lon_start_idx):
+        lat_parts.append(parts[i])
+
+    # Join with '.' and remove 'lat=' prefix
+    lat_str = ".".join(lat_parts).replace("lat=", "")
+    lat = float(lat_str)
 
     # Step 7: Parse longitude - reconstruct from parts, stop at temporal separator
     # The lon spans from lon_start_idx until we hit -{temporal}
