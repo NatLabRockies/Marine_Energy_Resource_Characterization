@@ -8,6 +8,7 @@ Uses scipy.spatial.cKDTree for fast nearest-neighbor spatial indexing.
 """
 
 import json
+import re
 from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Any
 import numpy as np
@@ -23,6 +24,46 @@ class TidalManifestQuery:
     - query_all_within_rectangular_area: Find all grids in bounding box
     - query_all_on_line: Find grids along a line
     """
+
+    @staticmethod
+    def parse_wkt_polygon(wkt_string: str) -> List[List[float]]:
+        """
+        Parse WKT POLYGON string to list of coordinate pairs.
+
+        Parameters
+        ----------
+        wkt_string : str
+            WKT POLYGON string, e.g., "POLYGON ((lon1 lat1, lon2 lat2, ...))"
+
+        Returns
+        -------
+        list of list of float
+            List of [lon, lat] coordinate pairs in GeoJSON order
+
+        Examples
+        --------
+        >>> wkt = "POLYGON ((-175.0 49.9, -174.9 49.9, -174.9 50.0, -175.0 50.0, -175.0 49.9))"
+        >>> coords = TidalManifestQuery.parse_wkt_polygon(wkt)
+        >>> len(coords)
+        5
+        """
+        # Extract coordinate string from POLYGON ((...))
+        match = re.search(r"POLYGON\s*\(\(([^)]+)\)\)", wkt_string)
+        if not match:
+            raise ValueError(f"Invalid WKT POLYGON format: {wkt_string}")
+
+        coord_string = match.group(1)
+
+        # Parse coordinate pairs
+        coords = []
+        for pair in coord_string.split(","):
+            parts = pair.strip().split()
+            if len(parts) != 2:
+                raise ValueError(f"Invalid coordinate pair: {pair}")
+            lon, lat = float(parts[0]), float(parts[1])
+            coords.append([lon, lat])
+
+        return coords
 
     def __init__(self, manifest_path: Path):
         """
@@ -552,6 +593,72 @@ class TidalManifestQuery:
             )
 
         geojson = {"type": "FeatureCollection", "features": features}
+
+        return geojson
+
+    def generate_location_boundaries_geojson(self) -> Dict[str, Any]:
+        """
+        Generate GeoJSON FeatureCollection of location boundaries from manifest.
+
+        Uses the geospatial_bounds (WKT POLYGON) from each location in the manifest.
+
+        Returns
+        -------
+        dict
+            GeoJSON FeatureCollection with location boundary polygons.
+            Each feature has properties: location, label, point_count
+
+        Examples
+        --------
+        >>> query = TidalManifestQuery(Path("manifests/v0.3.0/manifest.json"))
+        >>> geojson = query.generate_location_boundaries_geojson()
+        >>> print(f"Generated {len(geojson['features'])} location boundaries")
+        """
+        if "locations" not in self.manifest:
+            raise ValueError(
+                "Manifest does not contain 'locations' data. "
+                "Please regenerate manifest with updated generate_parquet_partition_manifest_json.py"
+            )
+
+        locations = self.manifest["locations"]
+        features = []
+
+        for location_name, location_data in locations.items():
+            # Check if geospatial_bounds exists
+            if "geospatial_bounds" not in location_data:
+                print(
+                    f"Warning: Location '{location_name}' has no geospatial_bounds, skipping"
+                )
+                continue
+
+            wkt_polygon = location_data["geospatial_bounds"]
+
+            try:
+                # Parse WKT POLYGON to coordinates
+                coordinates = self.parse_wkt_polygon(wkt_polygon)
+
+                # Create GeoJSON feature
+                feature = {
+                    "type": "Feature",
+                    "geometry": {"type": "Polygon", "coordinates": [coordinates]},
+                    "properties": {
+                        "location": location_name,
+                        "label": location_data.get("label", location_name),
+                        "point_count": location_data.get("point_count", 0),
+                    },
+                }
+
+                features.append(feature)
+
+            except ValueError as e:
+                print(
+                    f"Warning: Could not parse geospatial_bounds for location '{location_name}': {e}"
+                )
+                continue
+
+        geojson = {"type": "FeatureCollection", "features": features}
+
+        print(f"Generated {len(features)} location boundary polygons")
 
         return geojson
 

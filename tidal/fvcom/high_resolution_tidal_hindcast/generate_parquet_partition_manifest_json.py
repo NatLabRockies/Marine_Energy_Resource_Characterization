@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pandas as pd
 import numpy as np
+import xarray as xr
 
 from config import config
 from src import file_manager
@@ -500,6 +501,63 @@ def compute_bounds(file_metadata):
     }
 
 
+def extract_geospatial_bounds_from_nc(config, location):
+    """
+    Extract geospatial bounds from a b1_vap NetCDF file.
+
+    Loads one representative NC file and extracts the geospatial_* attributes
+    that were computed by compute_geospatial_bounds() in attrs_manager.py.
+
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary
+    location : dict
+        Location specification dictionary
+
+    Returns
+    -------
+    dict or None
+        Dictionary with geospatial bounds attributes, or None if file not found
+    """
+    # Get b1_vap directory
+    vap_dir = file_manager.get_vap_output_dir(config, location)
+
+    if not vap_dir.exists():
+        print(f"  Warning: VAP directory does not exist: {vap_dir}")
+        return None
+
+    # Find first NC file
+    nc_files = sorted(vap_dir.glob("*.nc"))
+    if not nc_files:
+        print(f"  Warning: No NC files found in: {vap_dir}")
+        return None
+
+    nc_file = nc_files[0]
+    print(f"  Loading geospatial bounds from: {nc_file.name}")
+
+    try:
+        # Open dataset and extract geospatial attributes
+        with xr.open_dataset(nc_file, decode_times=False) as ds:
+            # Extract all geospatial_* attributes
+            geospatial_attrs = {}
+            for key, value in ds.attrs.items():
+                if key.startswith("geospatial_"):
+                    geospatial_attrs[key] = value
+
+            if not geospatial_attrs:
+                print(
+                    f"  Warning: No geospatial_* attributes found in {nc_file.name}"
+                )
+                return None
+
+            return geospatial_attrs
+
+    except Exception as e:
+        print(f"  Error loading {nc_file.name}: {e}")
+        return None
+
+
 def generate_compact_manifest(config, output_dir):
     """
     Generate compact two-tier manifest structure:
@@ -519,6 +577,7 @@ def generate_compact_manifest(config, output_dir):
     all_file_metadata = []
     location_stats = {}
     location_list = []
+    location_data = {}  # New: per-location data structure
 
     for location_key, location in config["location_specification"].items():
         print(f"\nProcessing location: {location['label']} ({location_key})")
@@ -538,6 +597,29 @@ def generate_compact_manifest(config, output_dir):
             metadata["file_path"] = f"{location['output_name']}/{metadata['file_path']}"
 
         all_file_metadata.extend(file_metadata)
+
+        # Extract geospatial bounds from b1_vap NC file
+        print(f"  Extracting geospatial bounds from NC file...")
+        geospatial_bounds = extract_geospatial_bounds_from_nc(config, location)
+
+        # Build location-specific coordinate lists
+        location_lats = [m["lat"] for m in file_metadata]
+        location_lons = [m["lon"] for m in file_metadata]
+
+        # Store location data
+        location_data[location["output_name"]] = {
+            "label": location["label"],
+            "output_name": location["output_name"],
+            "point_count": len(file_metadata),
+            "grid_centroids": {
+                "lat": location_lats,
+                "lon": location_lons,
+            },
+        }
+
+        # Add geospatial bounds if available
+        if geospatial_bounds:
+            location_data[location["output_name"]].update(geospatial_bounds)
 
         location_stats[location_key] = {
             "label": location["label"],
@@ -588,6 +670,7 @@ def generate_compact_manifest(config, output_dir):
             "lat": grid_lats,
             "lon": grid_lons,
         },
+        "locations": location_data,  # Per-location data with geospatial bounds
     }
 
     # Write main manifest
