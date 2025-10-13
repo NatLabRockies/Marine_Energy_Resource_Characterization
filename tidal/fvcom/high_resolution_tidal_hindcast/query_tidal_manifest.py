@@ -427,92 +427,127 @@ class TidalManifestQuery:
 
         return results
 
-    def generate_aggregated_grid_boundaries_geojson(
+    def generate_grid_boundaries_geojson(
         self,
-        aggregation_deg: float = 0.1
+        aggregation_deg: Optional[float] = None
     ) -> Dict[str, Any]:
         """
-        Generate GeoJSON FeatureCollection of aggregated grid boundaries.
+        Generate GeoJSON FeatureCollection of grid boundaries.
 
-        Groups fine-resolution grids into coarser regional boxes to reduce
-        the number of shapes for efficient folium rendering. Each aggregated
-        region shows the approximate coverage area.
+        Can generate either individual grid cells or aggregated regions.
 
         Parameters
         ----------
-        aggregation_deg : float, default=0.1
-            Size of aggregation boxes in degrees. Larger values = fewer polygons.
-            Recommended: 0.1° (fast) to 0.05° (more detailed).
+        aggregation_deg : float, optional
+            If specified, groups grids into coarser regions (e.g., 0.1° boxes).
+            If None (default), generates individual grid cells for all grids.
 
         Returns
         -------
         dict
-            GeoJSON FeatureCollection with aggregated boundary polygons.
-            Each feature includes grid count and bounds as properties.
+            GeoJSON FeatureCollection with grid boundary polygons.
 
         Examples
         --------
         >>> query = TidalManifestQuery(Path("manifests/v0.3.0/manifest.json"))
-        >>> geojson = query.generate_aggregated_grid_boundaries_geojson(aggregation_deg=0.1)
-        >>> print(f"Aggregated {query.total_grids:,} grids into {len(geojson['features'])} regions")
-        Aggregated 227,000 grids into 3,450 regions
+        >>> # All individual grids
+        >>> geojson = query.generate_grid_boundaries_geojson()
+        >>> # Aggregated grids
+        >>> geojson = query.generate_grid_boundaries_geojson(aggregation_deg=0.1)
         """
-        # Bin grids into aggregation boxes (vectorized)
-        box_lats = np.floor(self.grid_lats / aggregation_deg) * aggregation_deg
-        box_lons = np.floor(self.grid_lons / aggregation_deg) * aggregation_deg
-
-        # Create unique box identifiers
-        box_keys = np.column_stack([box_lats, box_lons])
-        unique_boxes, inverse_indices, counts = np.unique(
-            box_keys, axis=0, return_inverse=True, return_counts=True
-        )
-
-        # Calculate bounds for each unique box using groupby operations
         half_grid = self.grid_resolution_deg / 2
-        features = []
 
-        for box_idx in range(len(unique_boxes)):
-            # Get all grids in this box
-            mask = inverse_indices == box_idx
-            box_grid_lats = self.grid_lats[mask]
-            box_grid_lons = self.grid_lons[mask]
+        if aggregation_deg is None:
+            # Generate individual grid cells for all grids (fully vectorized)
+            print(f"Generating {self.total_grids:,} individual grid boundaries...")
 
-            # Calculate bounds
-            lat_min = float(box_grid_lats.min() - half_grid)
-            lat_max = float(box_grid_lats.max() + half_grid)
-            lon_min = float(box_grid_lons.min() - half_grid)
-            lon_max = float(box_grid_lons.max() + half_grid)
+            # Vectorized calculation of all grid corners
+            lat_mins = self.grid_lats - half_grid
+            lat_maxs = self.grid_lats + half_grid
+            lon_mins = self.grid_lons - half_grid
+            lon_maxs = self.grid_lons + half_grid
 
-            # Create rectangle polygon
-            coordinates = [[
-                [lon_min, lat_min],
-                [lon_max, lat_min],
-                [lon_max, lat_max],
-                [lon_min, lat_max],
-                [lon_min, lat_min],
-            ]]
-
-            feature = {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": coordinates
-                },
-                "properties": {
-                    "grid_count": int(counts[box_idx]),
-                    "box_lat": float(unique_boxes[box_idx, 0]),
-                    "box_lon": float(unique_boxes[box_idx, 1]),
+            # Build all features using list comprehension (Python-level vectorization)
+            features = [
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            [float(lon_mins[i]), float(lat_mins[i])],
+                            [float(lon_maxs[i]), float(lat_mins[i])],
+                            [float(lon_maxs[i]), float(lat_maxs[i])],
+                            [float(lon_mins[i]), float(lat_maxs[i])],
+                            [float(lon_mins[i]), float(lat_mins[i])],
+                        ]]
+                    },
+                    "properties": {}
                 }
-            }
-            features.append(feature)
+                for i in range(len(self.grid_lats))
+            ]
+
+            print(f"Generated {len(features):,} grid boundaries")
+
+        else:
+            # Aggregated mode (fully vectorized)
+            print(f"Aggregating grids into {aggregation_deg}° regions...")
+
+            # Bin grids into aggregation boxes (vectorized)
+            box_lats = np.floor(self.grid_lats / aggregation_deg) * aggregation_deg
+            box_lons = np.floor(self.grid_lons / aggregation_deg) * aggregation_deg
+
+            # Create unique box identifiers
+            box_keys = np.column_stack([box_lats, box_lons])
+            unique_boxes, inverse_indices, counts = np.unique(
+                box_keys, axis=0, return_inverse=True, return_counts=True
+            )
+
+            # Vectorized bounds calculation for all unique boxes
+            # Use pandas groupby for vectorized min/max operations
+            import pandas as pd
+            df = pd.DataFrame({
+                'lat': self.grid_lats,
+                'lon': self.grid_lons,
+                'box_idx': inverse_indices
+            })
+
+            grouped = df.groupby('box_idx').agg({
+                'lat': ['min', 'max'],
+                'lon': ['min', 'max']
+            })
+
+            lat_mins_agg = grouped['lat']['min'].values - half_grid
+            lat_maxs_agg = grouped['lat']['max'].values + half_grid
+            lon_mins_agg = grouped['lon']['min'].values - half_grid
+            lon_maxs_agg = grouped['lon']['max'].values + half_grid
+
+            # Build all features using list comprehension
+            features = [
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            [float(lon_mins_agg[i]), float(lat_mins_agg[i])],
+                            [float(lon_maxs_agg[i]), float(lat_mins_agg[i])],
+                            [float(lon_maxs_agg[i]), float(lat_maxs_agg[i])],
+                            [float(lon_mins_agg[i]), float(lat_maxs_agg[i])],
+                            [float(lon_mins_agg[i]), float(lat_mins_agg[i])],
+                        ]]
+                    },
+                    "properties": {
+                        "grid_count": int(counts[i])
+                    }
+                }
+                for i in range(len(unique_boxes))
+            ]
+
+            print(f"Aggregated {self.total_grids:,} grids into {len(features):,} regions")
 
         geojson = {
             "type": "FeatureCollection",
             "features": features
         }
-
-        print(f"Aggregated {self.total_grids:,} grids into {len(features):,} regions")
-        print(f"Aggregation resolution: {aggregation_deg}°")
 
         return geojson
 
