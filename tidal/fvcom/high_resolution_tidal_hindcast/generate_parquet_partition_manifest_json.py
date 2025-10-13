@@ -602,19 +602,11 @@ def generate_compact_manifest(config, output_dir):
         print(f"  Extracting geospatial bounds from NC file...")
         geospatial_bounds = extract_geospatial_bounds_from_nc(config, location)
 
-        # Build location-specific coordinate lists
-        location_lats = [m["lat"] for m in file_metadata]
-        location_lons = [m["lon"] for m in file_metadata]
-
-        # Store location data
+        # Store location data (minimal - just metadata and geospatial bounds)
         location_data[location["output_name"]] = {
             "label": location["label"],
             "output_name": location["output_name"],
             "point_count": len(file_metadata),
-            "grid_centroids": {
-                "lat": location_lats,
-                "lon": location_lons,
-            },
         }
 
         # Add geospatial bounds if available
