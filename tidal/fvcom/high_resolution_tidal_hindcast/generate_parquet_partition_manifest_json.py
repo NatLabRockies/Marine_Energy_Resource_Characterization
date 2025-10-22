@@ -351,6 +351,9 @@ def build_compact_grid_index(file_metadata, config):
     """
     Build compact grid index with centroids and point counts.
 
+    Creates ultra-compact grid detail files with just string arrays for points.
+    All path reconstruction metadata is stored in the main manifest.
+
     Parameters
     ----------
     file_metadata : list
@@ -363,7 +366,7 @@ def build_compact_grid_index(file_metadata, config):
     tuple
         (grid_index_list, grid_details_dict)
         - grid_index_list: List of grid metadata for main manifest
-        - grid_details_dict: Dict mapping grid_id to detailed point data
+        - grid_details_dict: Dict mapping grid_id to compact point data
     """
     decimal_places = config["partition"]["decimal_places"]
     grid_resolution = 1.0 / (10**decimal_places)  # 0.01 for decimal_places=2
@@ -384,18 +387,19 @@ def build_compact_grid_index(file_metadata, config):
                 "lat_dec": partition["lat_dec"],
                 "lon_dec": partition["lon_dec"],
                 "points": [],
-                "location": metadata["location"],
-                "temporal": metadata["temporal"],
             }
 
-        grid_groups[grid_id]["points"].append(
-            {
-                "face": metadata["face_id"],
-                "lat": metadata["lat"],
-                "lon": metadata["lon"],
-                "file_path": metadata["file_path"],
-            }
-        )
+        # Store as string array: [lat_str, lon_str, face_id_str]
+        # face_id from metadata is already an int, format as zero-padded string
+        face_id_str = f"{metadata['face_id']:06d}"
+        lat_str = f"{metadata['lat']:.7f}"  # Match coord_digits_max from config
+        lon_str = f"{metadata['lon']:.7f}"
+
+        grid_groups[grid_id]["points"].append([lat_str, lon_str, face_id_str])
+
+        # Track location for this grid (all points in a grid should have same location)
+        if "location" not in grid_groups[grid_id]:
+            grid_groups[grid_id]["location"] = metadata["location"]
 
     # Build grid index and details
     grid_index = []
@@ -412,7 +416,7 @@ def build_compact_grid_index(file_metadata, config):
         centroid_lat = (lat_min + lat_max) / 2
         centroid_lon = (lon_min + lon_max) / 2
 
-        # Grid metadata for main manifest
+        # Grid metadata for main manifest (centroids only)
         grid_index.append(
             {
                 "id": grid_id,
@@ -423,25 +427,15 @@ def build_compact_grid_index(file_metadata, config):
                 "bounds": [lat_min, lat_max, lon_min, lon_max],
                 "centroid": [centroid_lat, centroid_lon],
                 "n": len(group["points"]),
-                "loc": group["location"],
-                "temporal": group["temporal"],
             }
         )
 
-        # Detailed point data for grid detail file
+        # Compact grid detail file - just string arrays plus location for path reconstruction
         grid_details[grid_id] = {
             "grid_id": grid_id,
             "location": group["location"],
-            "temporal": group["temporal"],
-            "points": [
-                {
-                    "face": p["face"],
-                    "lat": p["lat"],
-                    "lon": p["lon"],
-                    "file_path": p["file_path"],
-                }
-                for p in group["points"]
-            ],
+            "points_columns": ["lat", "lon", "face_id"],
+            "points": group["points"],
         }
 
     return grid_index, grid_details
@@ -480,32 +474,6 @@ def build_faceid_index(file_metadata):
     return faceid_index
 
 
-def compute_bounds(file_metadata):
-    """
-    Compute spatial bounds of the dataset.
-
-    Parameters
-    ----------
-    file_metadata : list
-        List of file metadata dictionaries
-
-    Returns
-    -------
-    dict
-        Dictionary with lat_min, lat_max, lon_min, lon_max
-    """
-    if not file_metadata:
-        return {"lat_min": None, "lat_max": None, "lon_min": None, "lon_max": None}
-
-    lats = [m["lat"] for m in file_metadata]
-    lons = [m["lon"] for m in file_metadata]
-
-    return {
-        "lat_min": min(lats),
-        "lat_max": max(lats),
-        "lon_min": min(lons),
-        "lon_max": max(lons),
-    }
 
 
 def extract_geospatial_bounds_from_nc(config, location):
@@ -568,7 +536,7 @@ def extract_geospatial_bounds_from_nc(config, location):
 def generate_compact_manifest(config, output_dir):
     """
     Generate compact two-tier manifest structure:
-    - Main manifest.json with grid metadata
+    - Main manifest.json with grid metadata and path template
     - Individual grid detail JSON files in grids/ subdirectory
 
     Parameters
@@ -584,7 +552,7 @@ def generate_compact_manifest(config, output_dir):
     all_file_metadata = []
     location_stats = {}
     location_list = []
-    location_data = {}  # New: per-location data structure
+    location_data = {}  # Per-location data structure
 
     for location_key, location in config["location_specification"].items():
         print(f"\nProcessing location: {location['label']} ({location_key})")
@@ -599,21 +567,37 @@ def generate_compact_manifest(config, output_dir):
             partition_dir, location["output_name"], config, use_cache=True
         )
 
-        # Add location prefix to file paths
-        for metadata in file_metadata:
-            metadata["file_path"] = f"{location['output_name']}/{metadata['file_path']}"
-
+        # Don't add location prefix to file paths - we'll reconstruct them using the template
         all_file_metadata.extend(file_metadata)
 
         # Extract geospatial bounds from b1_vap NC file
         print(f"  Extracting geospatial bounds from NC file...")
         geospatial_bounds = extract_geospatial_bounds_from_nc(config, location)
 
-        # Store location data (minimal - just metadata and geospatial bounds)
+        # Parse start_date_utc to extract date and time components
+        # Format: "2005-01-01 00:00:00" -> date="20050101", time="000000"
+        start_date_str = location["start_date_utc"]
+        date_part, time_part = start_date_str.split(" ")
+        date_formatted = date_part.replace("-", "")  # "2005-01-01" -> "20050101"
+        time_formatted = time_part.replace(":", "")  # "00:00:00" -> "000000"
+
+        # Determine temporal string from expected_delta_t_seconds
+        expected_delta_t_seconds = location["expected_delta_t_seconds"]
+        temporal_mapping = {3600: "1h", 1800: "30m"}
+        if expected_delta_t_seconds not in temporal_mapping:
+            raise ValueError(
+                f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
+            )
+        temporal_string = temporal_mapping[expected_delta_t_seconds]
+
+        # Store location data with path reconstruction metadata
         location_data[location["output_name"]] = {
             "label": location["label"],
             "output_name": location["output_name"],
             "point_count": len(file_metadata),
+            "date": date_formatted,
+            "time": time_formatted,
+            "temporal": temporal_string,
         }
 
         # Add geospatial bounds if available
@@ -639,10 +623,6 @@ def generate_compact_manifest(config, output_dir):
     print(f"  Created {len(grid_index)} grid cells")
     print(f"  Created {len(grid_details)} grid detail files")
 
-    # Compute bounds
-    print("\nComputing spatial bounds...")
-    bounds = compute_bounds(all_file_metadata)
-
     # Extract grid centroids for ultra-compact manifest
     # Round to 1 extra from the spec decimal places to avoid floating point precision bloat
     # (e.g., -65.95499999999998 -> -65.955)
@@ -651,14 +631,21 @@ def generate_compact_manifest(config, output_dir):
     grid_lats = [round(g["centroid"][0], spec_decimal_places + 1) for g in grid_index]
     grid_lons = [round(g["centroid"][1], spec_decimal_places + 1) for g in grid_index]
 
-    # Create ultra-compact main manifest (grid centroids only)
+    # Define path template for reconstructing full file paths
+    path_template = (
+        "{location}/lat_deg={lat_deg:02d}/lon_deg={lon_deg:03d}/"
+        "lat_dec={lat_dec:02d}/lon_dec={lon_dec:02d}/"
+        "{location}.wpto_high_res_tidal.face={face_id}.lat={lat}.lon={lon}-{temporal}.b4.{date}.{time}.parquet"
+    )
+
+    # Create ultra-compact main manifest (grid centroids only, no spatial_bounds)
     manifest = {
         "version": config["dataset"]["version"],
         "decimal_places": spec_decimal_places,
         "grid_resolution_deg": 1.0 / (10 ** config["partition"]["decimal_places"]),
         "total_grids": len(grid_index),
         "total_points": len(all_file_metadata),
-        "spatial_bounds": bounds,
+        "path_template": path_template,
         "metadata": {
             "dataset_name": config["dataset"]["name"],
             "dataset_label": config["dataset"]["label"],
@@ -669,7 +656,7 @@ def generate_compact_manifest(config, output_dir):
             "lat": grid_lats,
             "lon": grid_lons,
         },
-        "locations": location_data,  # Per-location data with geospatial bounds
+        "locations": location_data,  # Per-location data with path reconstruction metadata
     }
 
     # Write main manifest

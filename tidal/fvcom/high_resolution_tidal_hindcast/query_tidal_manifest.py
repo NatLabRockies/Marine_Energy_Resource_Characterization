@@ -26,6 +26,45 @@ class TidalManifestQuery:
     """
 
     @staticmethod
+    def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """
+        Calculate the great circle distance between two points on Earth using haversine formula.
+
+        Parameters
+        ----------
+        lat1, lon1 : float
+            Latitude and longitude of first point in decimal degrees
+        lat2, lon2 : float
+            Latitude and longitude of second point in decimal degrees
+
+        Returns
+        -------
+        float
+            Distance in kilometers
+
+        Notes
+        -----
+        Uses mean Earth radius of 6371 km.
+        """
+        # Convert to radians
+        lat1_rad = np.radians(lat1)
+        lat2_rad = np.radians(lat2)
+        lon1_rad = np.radians(lon1)
+        lon2_rad = np.radians(lon2)
+
+        # Haversine formula
+        dlat = lat2_rad - lat1_rad
+        dlon = lon2_rad - lon1_rad
+
+        a = np.sin(dlat / 2) ** 2 + np.cos(lat1_rad) * np.cos(lat2_rad) * np.sin(dlon / 2) ** 2
+        c = 2 * np.arcsin(np.sqrt(a))
+
+        # Earth radius in kilometers
+        r = 6371.0
+
+        return r * c
+
+    @staticmethod
     def parse_wkt_polygon(wkt_string: str) -> List[List[float]]:
         """
         Parse WKT POLYGON string to list of coordinate pairs.
@@ -99,7 +138,7 @@ class TidalManifestQuery:
 
         print(f"Loaded manifest v{self.version} with {self.total_grids:,} grids")
         print(f"Grid resolution: {self.grid_resolution_deg}°")
-        print(f"Spatial bounds: {self.manifest['spatial_bounds']}")
+        print(f"Locations: {list(self.manifest['locations'].keys())}")
 
     def _centroid_to_grid_id(self, centroid_lat: float, centroid_lon: float) -> str:
         """
@@ -143,6 +182,13 @@ class TidalManifestQuery:
         Grid files are organized in nested directories:
         grids/lat_{lat_deg}/lon_{lon_deg}/{grid_id}.json
 
+        New compact format:
+        {
+            "grid_id": "61_-149_46_63",
+            "points_columns": ["lat", "lon", "face_id"],
+            "points": [["61.4657288", "-149.6356201", "002499"], ...]
+        }
+
         Parameters
         ----------
         grid_id : str
@@ -151,7 +197,7 @@ class TidalManifestQuery:
         Returns
         -------
         dict
-            Grid details including points, bounds, location, temporal resolution
+            Grid details with compact point arrays
         """
         # Parse grid_id to extract lat_deg and lon_deg
         # Format: "lat_deg_lon_deg_lat_dec_lon_dec"
@@ -170,6 +216,65 @@ class TidalManifestQuery:
         with open(grid_file, "r") as f:
             return json.load(f)
 
+    def reconstruct_path(self, point: List[str], location_name: str) -> str:
+        """
+        Reconstruct full parquet file path from point data.
+
+        Uses the path_template and location metadata from the manifest
+        to rebuild the exact file path.
+
+        Parameters
+        ----------
+        point : list of str
+            Point data as [lat_str, lon_str, face_id_str]
+        location_name : str
+            Location identifier (e.g., "AK_cook_inlet")
+
+        Returns
+        -------
+        str
+            Full path to parquet file
+
+        Examples
+        --------
+        >>> point = ["61.4657288", "-149.6356201", "002499"]
+        >>> path = query.reconstruct_path(point, "AK_cook_inlet")
+        >>> print(path)
+        AK_cook_inlet/lat_deg=61/lon_deg=-149/lat_dec=46/lon_dec=63/AK_cook_inlet.wpto_high_res_tidal.face=002499.lat=61.4657288.lon=-149.6356201-1h.b4.20050101.000000.parquet
+        """
+        lat_str, lon_str, face_id_str = point
+        lat = float(lat_str)
+        lon = float(lon_str)
+
+        # Calculate partition components
+        lat_deg = int(lat)
+        lon_deg = int(lon)
+        lat_dec = int(abs(lat * 100) % 100)
+        lon_dec = int(abs(lon * 100) % 100)
+
+        # Get location-specific metadata
+        if location_name not in self.manifest["locations"]:
+            raise ValueError(f"Unknown location: {location_name}")
+
+        loc_meta = self.manifest["locations"][location_name]
+
+        # Substitute into path template
+        path = self.manifest["path_template"].format(
+            location=location_name,
+            lat_deg=lat_deg,
+            lon_deg=lon_deg,
+            lat_dec=lat_dec,
+            lon_dec=lon_dec,
+            face_id=face_id_str,  # Use string directly (already formatted)
+            lat=lat_str,  # Use string directly (preserves precision)
+            lon=lon_str,  # Use string directly (preserves precision)
+            temporal=loc_meta["temporal"],
+            date=loc_meta["date"],
+            time=loc_meta["time"],
+        )
+
+        return path
+
     def query_nearest_point(
         self,
         lat: float,
@@ -178,7 +283,10 @@ class TidalManifestQuery:
         load_details: bool = True,
     ) -> Dict[str, Any]:
         """
-        Find nearest grid to a given point.
+        Find nearest data point to a given location.
+
+        Searches neighboring grids to ensure the truly closest point is found,
+        since the nearest point may be in an adjacent grid.
 
         Parameters
         ----------
@@ -188,58 +296,107 @@ class TidalManifestQuery:
             Query longitude
         max_distance_deg : float, optional
             Maximum distance threshold in degrees. If specified, returns None
-            if nearest grid is farther than this distance.
+            if nearest point is farther than this distance.
         load_details : bool, default=True
-            Whether to load full grid details from grids/ directory.
-            If False, returns only centroid and distance.
+            Whether to load full grid details.
 
         Returns
         -------
-        dict
+        dict or None
             Result dictionary with keys:
-            - centroid: (lat, lon) tuple
-            - distance_deg: distance in degrees
-            - grid_id: grid identifier
+            - point: dict with face, lat, lon, file_path
+            - distance_km: great circle distance from query to point in kilometers (haversine)
+            - grid_id: grid identifier containing the point
             - details: grid details (if load_details=True)
 
-            Returns None if max_distance_deg is exceeded.
+            Returns None if no points found or max_distance_deg is exceeded.
 
         Examples
         --------
         >>> query = TidalManifestQuery(Path("manifests/v0.3.0/manifest.json"))
         >>> result = query.query_nearest_point(lat=49.94, lon=-174.96)
-        >>> print(result['grid_id'])
-        '49_-175_93_96'
-        >>> print(result['distance_deg'])
-        0.0045
+        >>> print(result['point']['face'])
+        23497
+        >>> print(result['distance_km'])
+        0.50
         """
-        query_point = np.array([[lat, lon]])
+        # Search multiple nearby grids (use 3x grid resolution to capture neighbors)
+        search_radius = 3 * self.grid_resolution_deg
 
-        # Query KDTree for nearest neighbor
-        distance, index = self.kdtree.query(query_point, k=1)
-        distance = distance[0]
-        index = index[0]
+        # Get all grids within search radius using KDTree
+        # Use query_ball_point to get ALL grids within radius (not just k nearest)
+        query_point = np.array([lat, lon])
+        valid_indices = self.kdtree.query_ball_point(query_point, r=search_radius)
 
-        # Check distance threshold
-        if max_distance_deg is not None and distance > max_distance_deg:
+        if len(valid_indices) == 0:
             return None
 
-        # Get centroid coordinates
-        centroid_lat = self.grid_lats[index]
-        centroid_lon = self.grid_lons[index]
+        # Search all nearby grids for the closest point using haversine distance
+        min_distance_km = float('inf')
+        closest_point_array = None
+        closest_location = None
+        closest_grid_id = None
+        closest_details = None
 
-        # Calculate grid ID
-        grid_id = self._centroid_to_grid_id(centroid_lat, centroid_lon)
+        for idx in valid_indices:
+            centroid_lat = self.grid_lats[idx]
+            centroid_lon = self.grid_lons[idx]
+            grid_id = self._centroid_to_grid_id(centroid_lat, centroid_lon)
+
+            try:
+                details = self._load_grid_details(grid_id)
+                location_name = details['location']
+
+                # Check all points in this grid
+                # New format: points = [["lat_str", "lon_str", "face_id_str"], ...]
+                for point_array in details['points']:
+                    lat_str, lon_str, face_id_str = point_array
+                    point_lat = float(lat_str)
+                    point_lon = float(lon_str)
+
+                    # Calculate proper haversine distance
+                    distance_km = self.haversine_distance(lat, lon, point_lat, point_lon)
+
+                    if distance_km < min_distance_km:
+                        min_distance_km = distance_km
+                        closest_point_array = point_array
+                        closest_location = location_name
+                        closest_grid_id = grid_id
+                        closest_details = details
+
+            except FileNotFoundError:
+                continue
+
+        # Check distance threshold (convert to km if specified in degrees)
+        if max_distance_deg is not None:
+            # Convert degree threshold to km using approximate conversion
+            max_distance_km = max_distance_deg * 111.0
+            if min_distance_km > max_distance_km:
+                return None
+
+        if closest_point_array is None:
+            return None
+
+        # Parse point array to create structured result
+        lat_str, lon_str, face_id_str = closest_point_array
+
+        # Reconstruct file path
+        file_path = self.reconstruct_path(closest_point_array, closest_location)
 
         result = {
-            "centroid": (float(centroid_lat), float(centroid_lon)),
-            "distance_deg": float(distance),
-            "grid_id": grid_id,
+            "point": {
+                "face_id": face_id_str,
+                "lat": float(lat_str),
+                "lon": float(lon_str),
+                "file_path": file_path,
+            },
+            "distance_km": float(min_distance_km),
+            "location": closest_location,
+            "grid_id": closest_grid_id,
         }
 
-        # Load full details if requested
         if load_details:
-            result["details"] = self._load_grid_details(grid_id)
+            result["details"] = closest_details
 
         return result
 
