@@ -27,6 +27,7 @@ POLYGON_COLUMNS = {
 }
 
 ATLAS_COLUMNS = {
+    "face_id": "Face ID",
     **POLYGON_COLUMNS,
     "lat_center": "Center Latitude",
     "lon_center": "Center Longitude",
@@ -629,6 +630,9 @@ def convert_tidal_summary_nc_to_dataframe(ds):
 
     # Create dataframe all at once
     result_df = pd.DataFrame(data_dict)
+
+    # Add face_id as an 8-digit zero-padded string
+    result_df.insert(0, "face_id", result_df.index.map(lambda x: f"{x:08d}"))
 
     result_df = compute_grid_resolution(result_df)
     result_df = compute_max_to_mean_ratio(result_df)
