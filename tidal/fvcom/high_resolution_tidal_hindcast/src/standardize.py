@@ -165,22 +165,23 @@ class FVCOMStandardizer:
 
     def _add_mesh_topology_attrs(self, ds):
         """
-        Add mesh topology attributes following UGRID conventions for a 3D unstructured mesh.
+        Add mesh topology attributes following UGRID conventions for a 3D layered mesh.
+
+        For 3D layered meshes, UGRID treats horizontal and vertical dimensions separately:
+        - The horizontal plane uses a 2D unstructured mesh topology (triangular faces)
+        - The vertical dimension is handled via CF-compliant sigma coordinates
+
+        This approach ensures compatibility with ParaView's UGRID reader.
         Uses standardized dimension and coordinate names.
         """
         ds["mesh"] = xr.DataArray(
             attrs={
                 "cf_role": "mesh_topology",
-                "long_name": "3D unstructured mesh topology",
-                "topology_dimension": 3,
-                "node_coordinates": "lon_corners lat_corners",
-                "face_coordinates": "lon_centers lat_centers",
+                "long_name": "Topology data of 2D unstructured mesh",
+                "topology_dimension": 2,  # 2D horizontal topology, extended vertically by sigma layers
+                "node_coordinates": "lon_node lat_node",  # Corrected: actual variable names
+                "face_coordinates": "lon_center lat_center",  # Corrected: actual variable names
                 "face_node_connectivity": "nv",
-                "vertical_coordinates": "sigma_layer sigma_level",
-                "coordinate_system": "sigma",
-                "face_dimension": "face",
-                "node_dimension": "node",
-                "vertical_dimension": ["layer", "level"],
             }
         )
         return ds
@@ -232,7 +233,18 @@ class FVCOMStandardizer:
         return ds
 
     def _add_vertical_coordinate_attrs(self, ds):
-        """Add vertical coordinate attributes following UGRID conventions."""
+        """
+        Add vertical coordinate attributes following CF and UGRID conventions.
+
+        Uses CF-compliant ocean sigma coordinate convention with formula_terms
+        to enable ParaView and other tools to compute actual depths from:
+        - sigma: dimensionless vertical coordinate (-1 to 0)
+        - eta: sea surface elevation (zeta)
+        - depth: bathymetric depth (h_center)
+
+        Formula: z(n,k,i) = eta(n,i) + sigma(k) * (eta(n,i) + depth(i))
+        where z is actual depth, n is time, k is layer, i is horizontal position
+        """
         if not hasattr(ds, "sigma_layer"):
             raise AttributeError("Dataset missing required 'sigma_layer' coordinate")
 
@@ -241,57 +253,62 @@ class FVCOMStandardizer:
 
         ds.sigma_layer.attrs.update(
             {
-                "standard_name": "ocean_sigma/general_coordinate",
-                "long_name": "Sigma Layer",
+                "standard_name": "ocean_sigma_coordinate",  # CF standard name
+                "long_name": "Sigma Layers",
                 "positive": "up",
                 "valid_min": -1.0,
                 "valid_max": 0.0,
-                "formula_terms": "sigma: sigma_layer eta: zeta depth: h",
-                "mesh": "mesh",
+                "formula_terms": "sigma: sigma_layer eta: zeta depth: h_center",
             }
         )
 
         ds.sigma_level.attrs.update(
             {
-                "standard_name": "ocean_sigma/general_coordinate",
-                "long_name": "Sigma Level",
+                "standard_name": "ocean_sigma_coordinate",  # CF standard name
+                "long_name": "Sigma Levels",
                 "positive": "up",
                 "valid_min": -1.0,
                 "valid_max": 0.0,
-                "formula_terms": "sigma: sigma_level eta: zeta depth: h",
-                "mesh": "mesh",
+                "formula_terms": "sigma: sigma_level eta: zeta depth: h_center",
             }
         )
 
         return ds
 
-    def add_face_node_connectivity(self, ds):
+    def _add_face_node_connectivity_attrs(self, ds):
         """
-        Add face node connectivity following UGRID conventions.
-        Dynamically determines start_index based on the minimum node index in the dataset.
+        Add UGRID-compliant attributes to the face_node_connectivity array (nv).
+
+        The nv array maps each triangular face to its three corner nodes.
+        UGRID requires specific attributes including cf_role and start_index.
+
+        Dimension ordering: After renaming, 'nv' should have dimensions (face, face_node_index)
+        which corresponds to the UGRID convention of (nFaces, nNodesPerFace).
+
+        Returns
+        -------
+        xarray.Dataset
+            Dataset with properly attributed face_node_connectivity
         """
-        # Assuming the original FVCOM connectivity array is called 'nv'
         if "nv" not in ds:
             raise ValueError("Dataset missing required connectivity array 'nv'")
 
-        # Determine start_index dynamically
-        start_index = int(ds.nv.min().values)  # Convert from numpy type to Python int
+        # Determine start_index dynamically (0-based or 1-based)
+        start_index = int(ds.nv.min().values)
 
-        # Create face_node coordinate with proper attributes
-        ds["face_node"] = ds["nv"].rename({"three": "nodes_per_face"})
-        ds["face_node"].attrs.update(
+        # Add UGRID-compliant attributes to nv
+        ds["nv"].attrs.update(
             {
-                "long_name": "Nodes defining each face",
-                "standard_name": "face_node_connectivity",
                 "cf_role": "face_node_connectivity",
-                "start_index": start_index,  # Dynamically determined
-                "mesh": "mesh",
+                "long_name": "Nodes defining each triangular face",
+                "start_index": start_index,
+                "_FillValue": -1,  # For mixed-element meshes (not used for pure triangular)
             }
         )
 
-        # Update the mesh topology attributes to reference this connectivity
+        # Update mesh topology to reference this connectivity
         if "mesh" in ds:
-            ds.mesh.attrs["face_node_connectivity"] = "face_node"
+            ds.mesh.attrs["face_node_connectivity"] = "nv"
 
         return ds
 
@@ -678,6 +695,7 @@ class FVCOMStandardizer:
         ds = self._add_mesh_topology_attrs(ds)
         ds = self._add_coordinate_attrs(ds)
         ds = self._add_vertical_coordinate_attrs(ds)
+        ds = self._add_face_node_connectivity_attrs(ds)
 
         ds = self.add_face_nodes_dimension(ds, face_nodes)
 
