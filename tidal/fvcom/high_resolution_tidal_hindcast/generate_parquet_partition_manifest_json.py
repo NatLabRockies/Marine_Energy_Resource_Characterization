@@ -407,8 +407,20 @@ def build_compact_grid_index(file_metadata, config):
 
     for grid_id, group in grid_groups.items():
         # Calculate grid bounds
-        lat_min = group["lat_deg"] + group["lat_dec"] / (10**decimal_places)
-        lon_min = group["lon_deg"] + group["lon_dec"] / (10**decimal_places)
+        # IMPORTANT: Partition encoding uses int(coord) for deg and int(abs(coord*100) % 100) for dec
+        # Example: lon=-70.70 gives lon_deg=-70, lon_dec=70
+        # To reconstruct: deg is already signed, dec is always positive offset
+        # For negative: -70 - 0.70 = -70.70 ✓
+        # For positive: 43 + 0.05 = 43.05 ✓
+        lat_deg = group["lat_deg"]
+        lat_dec = group["lat_dec"]
+        lon_deg = group["lon_deg"]
+        lon_dec = group["lon_dec"]
+
+        # Reconstruct coordinate from degree and decimal parts
+        # Sign of deg determines whether to add or subtract the decimal part
+        lat_min = lat_deg + lat_dec / (10**decimal_places) if lat_deg >= 0 else lat_deg - lat_dec / (10**decimal_places)
+        lon_min = lon_deg + lon_dec / (10**decimal_places) if lon_deg >= 0 else lon_deg - lon_dec / (10**decimal_places)
         lat_max = lat_min + grid_resolution
         lon_max = lon_min + grid_resolution
 
