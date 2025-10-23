@@ -57,16 +57,16 @@ if __name__ == "__main__":
     # print("Step 1: Verifying Dataset Integrity...")
     # valid_timestamps_df = verify_dataset(config, location, nc_files)
 
-    # tracking_folder = get_tracking_output_dir(config, location)
-    # tracking_path = Path(
-    #     tracking_folder, f"{location['output_name']}_verify_step_tracking.parquet"
-    # )
-    # valid_timestamps_df = pd.read_parquet(tracking_path)
-    #
-    # print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
-    # valid_std_files_df = standardize_dataset(
-    #     config, args.location, valid_timestamps_df, skip_if_verified=False
-    # )
+    tracking_folder = get_tracking_output_dir(config, location)
+    tracking_path = Path(
+        tracking_folder, f"{location['output_name']}_verify_step_tracking.parquet"
+    )
+    valid_timestamps_df = pd.read_parquet(tracking_path)
+
+    print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
+    valid_std_files_df = standardize_dataset(
+        config, args.location, valid_timestamps_df, skip_if_verified=False
+    )
     #
     # print("Step 3: Partitioning Standardized Dataset by Time...")
     # partition_by_time(config, args.location, valid_std_files_df)
@@ -96,5 +96,5 @@ if __name__ == "__main__":
     # print("Step 7: Create Parquet Partition Dataset...")
     # partition_vap_into_parquet_dataset(config, args.location)
 
-    print("Step 8: Create Summary Parquet Dataset...")
-    convert_nc_summary_to_parquet(config, args.location)
+    # print("Step 8: Create Summary Parquet Dataset...")
+    # convert_nc_summary_to_parquet(config, args.location)
