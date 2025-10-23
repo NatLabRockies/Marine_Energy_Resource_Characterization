@@ -167,11 +167,16 @@ class TidalManifestQuery:
         corner_lon = centroid_lon - grid_res / 2
 
         # Extract integer and decimal parts
-        lat_deg = int(np.floor(corner_lat))
-        lat_dec = int(round((corner_lat - lat_deg) * (10**self.decimal_places)))
+        # IMPORTANT: Must match the encoding in vap_simple_create_parquet_all_time_partition.py:
+        #   lat_deg = int(lat)
+        #   lat_dec = int(abs(lat * 100) % 100)
+        # Example: corner_lon=-70.70 gives lon_deg=-70 (not -71!), lon_dec=70
+        # Reconstruction: -70 - 0.70 = -70.70 (for negative coords, we subtract dec)
+        lat_deg = int(corner_lat)
+        lat_dec = int(round(abs(corner_lat * (10**self.decimal_places)) % (10**self.decimal_places)))
 
-        lon_deg = int(np.floor(corner_lon))
-        lon_dec = int(round((corner_lon - lon_deg) * (10**self.decimal_places)))
+        lon_deg = int(corner_lon)
+        lon_dec = int(round(abs(corner_lon * (10**self.decimal_places)) % (10**self.decimal_places)))
 
         return f"{lat_deg}_{lon_deg}_{lat_dec}_{lon_dec}"
 
