@@ -4,9 +4,9 @@ config = {
     "dataset": {
         "label": "High Resolution Tidal Hindcast",
         "name": "wpto_high_res_tidal",
-        "version": "0.3.0",
-        "gis_output_version": "0.3.1",
-        "development_version": "0.4.0",
+        "version": "0.4.0",
+        "gis_output_version": "0.4.0",
+        "development_version": "0.5.0",
         "issue_date": "2025-02-01",
         "encoding": {
             "var": {
@@ -80,8 +80,8 @@ config = {
         "stitch_write_cache_bytes": None,
     },
     "code": {
-        "version": "0.3.0",
-        "development_version": "0.4.0",
+        "version": "0.4.0",
+        "development_version": "0.5.0",
     },
     "dir": {
         # Data Input and Output Directories
