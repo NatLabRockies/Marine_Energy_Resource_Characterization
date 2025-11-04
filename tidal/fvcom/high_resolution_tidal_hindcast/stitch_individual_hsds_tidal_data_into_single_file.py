@@ -113,8 +113,207 @@ def add_fill_value_attr(dataset, fill_value=NAN_FILL_VALUE):
         print(f"    Warning: Could not set _FillValue attribute: {e}")
 
 
+def pad_to_full_year(output_file, location_config, file_structure):
+    """
+    Ensure the yearly file has exactly 1 year of data with no gaps.
+
+    This function generates the complete expected timeline for a full year,
+    compares it against actual data, and fills any missing timestamps (at
+    beginning, middle, or end of year) with NaN fill values.
+
+    Parameters:
+    - output_file: Path to the yearly H5 file
+    - location_config: Location configuration from config.py
+    - file_structure: File structure dict from analyze_temporal_file_structure
+    """
+    print("\n" + "="*80)
+    print("PADDING TO FULL YEAR (FILLING ANY GAPS)")
+    print("="*80)
+
+    # Parse configuration
+    start_date = pd.to_datetime(location_config["start_date_utc"])
+    delta_t_seconds = location_config["expected_delta_t_seconds"]
+
+    # Calculate expected end date using pandas date offset (handles leap years automatically)
+    # Add 1 year, then subtract one timestep
+    expected_end_date = start_date + pd.DateOffset(years=1) - pd.Timedelta(seconds=delta_t_seconds)
+
+    print(f"Start date:        {start_date}")
+    print(f"Expected end date: {expected_end_date}")
+    print(f"Timestep:          {delta_t_seconds} seconds")
+
+    # Generate complete expected timeline for full year using pandas
+    print("\nGenerating expected full-year timeline...")
+    expected_timeline = pd.date_range(
+        start=start_date,
+        end=expected_end_date,
+        freq=pd.Timedelta(seconds=delta_t_seconds)
+    )
+
+    expected_count = len(expected_timeline)
+    print(f"Expected timesteps: {expected_count}")
+    print(f"First expected:     {expected_timeline[0]}")
+    print(f"Last expected:      {expected_timeline[-1]}")
+
+    # Read actual timeline from file
+    print("\nReading actual timeline from file...")
+    with h5py.File(output_file, "r", rdcc_nbytes=HDF5_READ_CACHE) as h5f:
+        actual_time_index = h5f["time_index"][:]
+        actual_count = len(actual_time_index)
+
+        # Decode and parse actual timestamps using pandas
+        if actual_time_index.dtype.kind == 'S':
+            actual_time_strings = [t.decode('utf-8') for t in actual_time_index]
+        else:
+            actual_time_strings = [str(t) for t in actual_time_index]
+
+        actual_timeline = pd.to_datetime(actual_time_strings)
+
+    print(f"Actual timesteps:   {actual_count}")
+    print(f"First actual:       {actual_timeline[0]}")
+    print(f"Last actual:        {actual_timeline[-1]}")
+
+    # Use pandas to find missing timestamps
+    print("\nAnalyzing timeline gaps...")
+
+    # Create DataFrames for comparison
+    expected_df = pd.DataFrame({'timestamp': expected_timeline, 'expected_idx': range(expected_count)})
+    actual_df = pd.DataFrame({'timestamp': actual_timeline, 'actual_idx': range(actual_count)})
+
+    # Merge to find which expected timestamps exist in actual data
+    merged_df = expected_df.merge(actual_df, on='timestamp', how='left')
+
+    # Find missing timestamps
+    missing_mask = merged_df['actual_idx'].isna()
+    missing_count = missing_mask.sum()
+
+    if missing_count == 0:
+        print("✓ No gaps found - timeline is complete")
+        print("="*80 + "\n")
+        return
+
+    print(f"Found {missing_count} missing timesteps")
+    print(f"Missing percentage: {100 * missing_count / expected_count:.2f}%")
+
+    # Show gap ranges using pandas
+    missing_indices = merged_df[missing_mask].index.tolist()
+    if len(missing_indices) > 0:
+        print("\nGap locations:")
+        # Group consecutive indices to show gap ranges
+        gap_starts = [missing_indices[0]]
+        gap_ends = []
+
+        for i in range(1, len(missing_indices)):
+            if missing_indices[i] != missing_indices[i-1] + 1:
+                gap_ends.append(missing_indices[i-1])
+                gap_starts.append(missing_indices[i])
+        gap_ends.append(missing_indices[-1])
+
+        for start, end in zip(gap_starts, gap_ends):
+            gap_size = end - start + 1
+            print(f"  Gap: index {start} to {end} ({gap_size} timesteps)")
+            print(f"       {expected_timeline[start]} to {expected_timeline[end]}")
+
+    # Create mapping array: for each expected index, what is the actual index (or None if missing)
+    print("\nCreating timestamp mapping...")
+    expected_to_actual_map = merged_df['actual_idx'].values  # Will have NaN for missing timestamps
+    mapped_count = (~pd.isna(expected_to_actual_map)).sum()
+    print(f"Mapped {mapped_count}/{expected_count} timestamps")
+
+    # Rebuild datasets with complete timeline
+    print("\nRebuilding datasets with complete timeline...")
+
+    with h5py.File(output_file, "a", rdcc_nbytes=HDF5_WRITE_CACHE) as h5f:
+        # 1. Update time_index
+        print("\n  Updating time_index...")
+        # Use pandas to format timestamps consistently
+        expected_time_strings = expected_timeline.strftime("%Y-%m-%d %H:%M:%S+00:00").tolist()
+
+        # Delete old dataset and create new one
+        del h5f["time_index"]
+
+        time_dtype = h5py.string_dtype(encoding='utf-8', length=26)
+        h5f.create_dataset("time_index", data=expected_time_strings, dtype=time_dtype)
+        print(f"    Updated time_index: {actual_count} → {expected_count} timesteps")
+
+        # 2. Update all time-varying variables
+        print("\n  Rebuilding time-varying variables...")
+        for var_name, var_info in file_structure["variable_info"].items():
+            if var_info.get("is_static", False):
+                print(f"    {var_name}: SKIPPED (static variable)")
+                continue
+
+            print(f"    Processing {var_name}...")
+
+            # Read actual data
+            actual_data = h5f[var_name][:]
+            actual_shape = actual_data.shape
+            dtype = actual_data.dtype
+
+            # Create full-year array filled with NaN
+            if len(actual_shape) == 1:
+                # 1D time series
+                full_data = np.full(expected_count, NAN_FILL_VALUE, dtype=dtype)
+            else:
+                # 2D (time, face)
+                full_shape = (expected_count,) + actual_shape[1:]
+                full_data = np.full(full_shape, NAN_FILL_VALUE, dtype=dtype)
+
+            # Copy actual data to correct positions using the mapping
+            valid_mask = ~pd.isna(expected_to_actual_map)
+            valid_expected_indices = np.where(valid_mask)[0]
+            valid_actual_indices = expected_to_actual_map[valid_mask].astype(int)
+
+            if len(actual_shape) == 1:
+                full_data[valid_expected_indices] = actual_data[valid_actual_indices]
+            else:
+                full_data[valid_expected_indices, :] = actual_data[valid_actual_indices, :]
+
+            # Delete old dataset and create new one with same chunking
+            attrs = dict(h5f[var_name].attrs)
+            chunks = h5f[var_name].chunks
+            del h5f[var_name]
+
+            new_dataset = h5f.create_dataset(var_name, data=full_data, chunks=chunks)
+
+            # Restore attributes
+            for attr_name, attr_value in attrs.items():
+                new_dataset.attrs[attr_name] = attr_value
+
+            print(f"      Shape: {actual_shape} → {full_data.shape}")
+            print(f"      Filled {missing_count} gaps with {NAN_FILL_VALUE}")
+
+    # Validation
+    print("\nValidating final timeline...")
+    with h5py.File(output_file, "r", rdcc_nbytes=HDF5_READ_CACHE) as h5f:
+        final_time_index = h5f["time_index"][:]
+        final_count = len(final_time_index)
+
+        if final_count != expected_count:
+            raise ValueError(f"Validation failed: expected {expected_count} timesteps, got {final_count}")
+
+        # Parse and validate using pandas
+        if final_time_index.dtype.kind == 'S':
+            final_time_strings = [t.decode('utf-8') for t in final_time_index]
+        else:
+            final_time_strings = [str(t) for t in final_time_index]
+
+        final_timeline = pd.to_datetime(final_time_strings)
+
+        # Check monotonicity using pandas
+        is_monotonic = final_timeline.is_monotonic_increasing
+
+        if not is_monotonic:
+            raise ValueError("Validation failed: timestamps are not monotonically increasing")
+
+        print(f"✓ Validation passed: {final_count} timesteps, monotonically increasing")
+
+    print(f"\n✓ Successfully filled {missing_count} gaps with {NAN_FILL_VALUE}")
+    print("="*80 + "\n")
+
+
 def stitch_single_b1_file_for_hsds(
-    monthly_dir, output_file, location_name, perform_checks=True
+    monthly_dir, output_file, location_name, location_config, perform_checks=True
 ):
     """
     Stitch together temporal HSDS files into single yearly file
@@ -123,6 +322,7 @@ def stitch_single_b1_file_for_hsds(
     - monthly_dir: Directory containing temporal H5 files
     - output_file: Output path for yearly H5 file
     - location_name: Location name for file pattern matching
+    - location_config: Location configuration from config.py (needed for padding)
     - perform_checks: Whether to perform sanity checks
     """
     monthly_dir = Path(monthly_dir)
@@ -159,9 +359,13 @@ def stitch_single_b1_file_for_hsds(
     print("Step 4: Stitching temporal data into yearly file...")
     stitch_data_into_yearly_file(output_file, temporal_files, file_structure)
 
-    # Step 5: Final validation
+    # Step 5: Pad to full year (fill any gaps with NaN values)
+    print("Step 5: Padding to ensure complete year of data...")
+    pad_to_full_year(output_file, location_config, file_structure)
+
+    # Step 6: Final validation
     if perform_checks:
-        print("Step 5: Performing final validation...")
+        print("Step 6: Performing final validation...")
         validate_yearly_file(output_file, temporal_files)
 
     print(f"Successfully created yearly HSDS file: {output_file}")
@@ -728,6 +932,7 @@ def main():
         monthly_dir=temp_dir,
         output_file=output_file,
         location_name=args.location,
+        location_config=location_config,
         perform_checks=not args.skip_checks,
     )
 
