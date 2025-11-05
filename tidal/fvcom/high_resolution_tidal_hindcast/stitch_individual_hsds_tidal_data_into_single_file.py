@@ -147,7 +147,8 @@ def pad_to_full_year(output_file, location_config, file_structure):
     expected_timeline = pd.date_range(
         start=start_date,
         end=expected_end_date,
-        freq=pd.Timedelta(seconds=delta_t_seconds)
+        freq=pd.Timedelta(seconds=delta_t_seconds),
+        tz='UTC'  # Ensure UTC timezone to match actual data
     )
 
     expected_count = len(expected_timeline)
