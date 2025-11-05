@@ -81,7 +81,9 @@ def replace_nans_with_fill_value(data, fill_value=NAN_FILL_VALUE):
                 nan_count = np.sum(nan_mask)
                 if nan_count > 0:
                     field_data[nan_mask] = fill_value
-                    print(f"    Replaced {nan_count} NaNs in field '{field_name}' with {fill_value}")
+                    print(
+                        f"    Replaced {nan_count} NaNs in field '{field_name}' with {fill_value}"
+                    )
     # Handle regular arrays
     elif np.issubdtype(data.dtype, np.floating):
         nan_mask = np.isnan(data_filled)
@@ -104,10 +106,10 @@ def add_fill_value_attr(dataset, fill_value=NAN_FILL_VALUE):
     try:
         # Convert fill_value to appropriate dtype
         if np.issubdtype(dataset.dtype, np.floating):
-            dataset.attrs['_FillValue'] = np.float32(fill_value)
+            dataset.attrs["_FillValue"] = np.float32(fill_value)
             print(f"    Added _FillValue={fill_value} attribute")
         elif np.issubdtype(dataset.dtype, np.integer):
-            dataset.attrs['_FillValue'] = int(fill_value)
+            dataset.attrs["_FillValue"] = int(fill_value)
             print(f"    Added _FillValue={int(fill_value)} attribute")
     except Exception as e:
         print(f"    Warning: Could not set _FillValue attribute: {e}")
@@ -126,9 +128,9 @@ def pad_to_full_year(output_file, location_config, file_structure):
     - location_config: Location configuration from config.py
     - file_structure: File structure dict from analyze_temporal_file_structure
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("PADDING TO FULL YEAR (FILLING ANY GAPS)")
-    print("="*80)
+    print("=" * 80)
 
     # Parse configuration
     start_date = pd.to_datetime(location_config["start_date_utc"])
@@ -136,7 +138,9 @@ def pad_to_full_year(output_file, location_config, file_structure):
 
     # Calculate expected end date using pandas date offset (handles leap years automatically)
     # Add 1 year, then subtract one timestep
-    expected_end_date = start_date + pd.DateOffset(years=1) - pd.Timedelta(seconds=delta_t_seconds)
+    expected_end_date = (
+        start_date + pd.DateOffset(years=1) - pd.Timedelta(seconds=delta_t_seconds)
+    )
 
     print(f"Start date:        {start_date}")
     print(f"Expected end date: {expected_end_date}")
@@ -148,7 +152,7 @@ def pad_to_full_year(output_file, location_config, file_structure):
         start=start_date,
         end=expected_end_date,
         freq=pd.Timedelta(seconds=delta_t_seconds),
-        tz='UTC'  # Ensure UTC timezone to match actual data
+        tz="UTC",  # Ensure UTC timezone to match actual data
     )
 
     expected_count = len(expected_timeline)
@@ -163,8 +167,8 @@ def pad_to_full_year(output_file, location_config, file_structure):
         actual_count = len(actual_time_index)
 
         # Decode and parse actual timestamps using pandas
-        if actual_time_index.dtype.kind == 'S':
-            actual_time_strings = [t.decode('utf-8') for t in actual_time_index]
+        if actual_time_index.dtype.kind == "S":
+            actual_time_strings = [t.decode("utf-8") for t in actual_time_index]
         else:
             actual_time_strings = [str(t) for t in actual_time_index]
 
@@ -178,19 +182,23 @@ def pad_to_full_year(output_file, location_config, file_structure):
     print("\nAnalyzing timeline gaps...")
 
     # Create DataFrames for comparison
-    expected_df = pd.DataFrame({'timestamp': expected_timeline, 'expected_idx': range(expected_count)})
-    actual_df = pd.DataFrame({'timestamp': actual_timeline, 'actual_idx': range(actual_count)})
+    expected_df = pd.DataFrame(
+        {"timestamp": expected_timeline, "expected_idx": range(expected_count)}
+    )
+    actual_df = pd.DataFrame(
+        {"timestamp": actual_timeline, "actual_idx": range(actual_count)}
+    )
 
     # Merge to find which expected timestamps exist in actual data
-    merged_df = expected_df.merge(actual_df, on='timestamp', how='left')
+    merged_df = expected_df.merge(actual_df, on="timestamp", how="left")
 
     # Find missing timestamps
-    missing_mask = merged_df['actual_idx'].isna()
+    missing_mask = merged_df["actual_idx"].isna()
     missing_count = missing_mask.sum()
 
     if missing_count == 0:
         print("✓ No gaps found - timeline is complete")
-        print("="*80 + "\n")
+        print("=" * 80 + "\n")
         return
 
     print(f"Found {missing_count} missing timesteps")
@@ -205,8 +213,8 @@ def pad_to_full_year(output_file, location_config, file_structure):
         gap_ends = []
 
         for i in range(1, len(missing_indices)):
-            if missing_indices[i] != missing_indices[i-1] + 1:
-                gap_ends.append(missing_indices[i-1])
+            if missing_indices[i] != missing_indices[i - 1] + 1:
+                gap_ends.append(missing_indices[i - 1])
                 gap_starts.append(missing_indices[i])
         gap_ends.append(missing_indices[-1])
 
@@ -217,7 +225,9 @@ def pad_to_full_year(output_file, location_config, file_structure):
 
     # Create mapping array: for each expected index, what is the actual index (or None if missing)
     print("\nCreating timestamp mapping...")
-    expected_to_actual_map = merged_df['actual_idx'].values  # Will have NaN for missing timestamps
+    expected_to_actual_map = merged_df[
+        "actual_idx"
+    ].values  # Will have NaN for missing timestamps
     mapped_count = (~pd.isna(expected_to_actual_map)).sum()
     print(f"Mapped {mapped_count}/{expected_count} timestamps")
 
@@ -228,12 +238,14 @@ def pad_to_full_year(output_file, location_config, file_structure):
         # 1. Update time_index
         print("\n  Updating time_index...")
         # Use pandas to format timestamps consistently
-        expected_time_strings = expected_timeline.strftime("%Y-%m-%d %H:%M:%S+00:00").tolist()
+        expected_time_strings = expected_timeline.strftime(
+            "%Y-%m-%d %H:%M:%S+00:00"
+        ).tolist()
 
         # Delete old dataset and create new one
         del h5f["time_index"]
 
-        time_dtype = h5py.string_dtype(encoding='utf-8', length=26)
+        time_dtype = h5py.string_dtype(encoding="utf-8", length=26)
         h5f.create_dataset("time_index", data=expected_time_strings, dtype=time_dtype)
         print(f"    Updated time_index: {actual_count} → {expected_count} timesteps")
 
@@ -268,7 +280,7 @@ def pad_to_full_year(output_file, location_config, file_structure):
                 shape=new_shape,
                 dtype=dtype,
                 chunks=chunks,
-                fillvalue=NAN_FILL_VALUE
+                fillvalue=NAN_FILL_VALUE,
             )
 
             # Copy actual data in chunks to correct positions
@@ -279,7 +291,9 @@ def pad_to_full_year(output_file, location_config, file_structure):
             valid_expected_indices = np.where(valid_mask)[0]
             valid_actual_indices = expected_to_actual_map[valid_mask].astype(int)
 
-            print(f"      Copying {len(valid_expected_indices)} timesteps in chunks of {CHUNK_SIZE}...")
+            print(
+                f"      Copying {len(valid_expected_indices)} timesteps in chunks of {CHUNK_SIZE}..."
+            )
 
             # Group indices by chunks for efficient processing
             for chunk_start in range(0, len(valid_expected_indices), CHUNK_SIZE):
@@ -310,7 +324,9 @@ def pad_to_full_year(output_file, location_config, file_structure):
             h5f[var_name] = new_dataset
             del h5f[temp_name]
 
-            print(f"      ✓ Complete: {actual_shape} → {new_shape}, filled {missing_count} gaps with {NAN_FILL_VALUE}")
+            print(
+                f"      ✓ Complete: {actual_shape} → {new_shape}, filled {missing_count} gaps with {NAN_FILL_VALUE}"
+            )
 
     # Validation
     print("\nValidating final timeline...")
@@ -319,11 +335,13 @@ def pad_to_full_year(output_file, location_config, file_structure):
         final_count = len(final_time_index)
 
         if final_count != expected_count:
-            raise ValueError(f"Validation failed: expected {expected_count} timesteps, got {final_count}")
+            raise ValueError(
+                f"Validation failed: expected {expected_count} timesteps, got {final_count}"
+            )
 
         # Parse and validate using pandas
-        if final_time_index.dtype.kind == 'S':
-            final_time_strings = [t.decode('utf-8') for t in final_time_index]
+        if final_time_index.dtype.kind == "S":
+            final_time_strings = [t.decode("utf-8") for t in final_time_index]
         else:
             final_time_strings = [str(t) for t in final_time_index]
 
@@ -333,12 +351,14 @@ def pad_to_full_year(output_file, location_config, file_structure):
         is_monotonic = final_timeline.is_monotonic_increasing
 
         if not is_monotonic:
-            raise ValueError("Validation failed: timestamps are not monotonically increasing")
+            raise ValueError(
+                "Validation failed: timestamps are not monotonically increasing"
+            )
 
         print(f"✓ Validation passed: {final_count} timesteps, monotonically increasing")
 
     print(f"\n✓ Successfully filled {missing_count} gaps with {NAN_FILL_VALUE}")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
 
 def stitch_single_b1_file_for_hsds(
@@ -380,22 +400,20 @@ def stitch_single_b1_file_for_hsds(
     print("Step 2: Analyzing file structure...")
     file_structure = analyze_temporal_file_structure(temporal_files)
 
-    # Step 3: Create yearly file structure
-    print(f"Step 3: Creating yearly H5 file {output_file}")
-    create_yearly_file_structure(output_file, temporal_files[0], file_structure)
+    # Step 3: Create yearly file structure with full year dimensions
+    print("Step 3: Creating yearly H5 file with full year dimensions")
+    create_yearly_file_structure(
+        output_file, temporal_files[0], file_structure, location_config
+    )
 
-    # Step 4: Stitch data from all temporal files
-    print("Step 4: Stitching temporal data into yearly file...")
+    # Step 4: Stitch data with timestamp mapping (gaps automatically filled)
+    print("Step 4: Stitching temporal data with timestamp mapping...")
     stitch_data_into_yearly_file(output_file, temporal_files, file_structure)
 
-    # Step 5: Pad to full year (fill any gaps with NaN values)
-    print("Step 5: Padding to ensure complete year of data...")
-    pad_to_full_year(output_file, location_config, file_structure)
-
-    # Step 6: Final validation
+    # Step 5: Final validation
     if perform_checks:
-        print("Step 6: Performing final validation...")
-        validate_yearly_file(output_file, temporal_files)
+        print("Step 5: Performing final validation...")
+        validate_yearly_file(output_file, file_structure)
 
     print(f"Successfully created yearly HSDS file: {output_file}")
     return output_file
@@ -488,16 +506,18 @@ def analyze_temporal_file_structure(temporal_files):
 
         # Validate we found n_faces
         if n_faces is None:
-            raise ValueError("Could not determine n_faces - latitude or longitude variable not found")
+            raise ValueError(
+                "Could not determine n_faces - latitude or longitude variable not found"
+            )
 
         print(f"\nNumber of faces: {n_faces}")
 
         # Raise error if any 3D variables found
         if invalid_3d_vars:
             error_msg = (
-                "\n" + "="*80 + "\n"
+                "\n" + "=" * 80 + "\n"
                 "ERROR: NREL spec violation - 3D variables detected in H5 file!\n"
-                "="*80 + "\n"
+                "=" * 80 + "\n"
                 "The NREL standardization spec requires all data variables to be 1D or 2D.\n"
                 "3D variables (time, sigma, face) must be split into separate 2D variables.\n\n"
                 "Found the following 3D variables:\n"
@@ -510,7 +530,7 @@ def analyze_temporal_file_structure(temporal_files):
                 "2. Re-run the conversion step to regenerate temporal H5 files\n"
                 "3. Each 3D variable should be split into N separate 2D variables:\n"
                 "   {var_name}_sigma_layer_1, {var_name}_sigma_layer_2, ..., {var_name}_sigma_layer_N\n"
-                "="*80
+                "=" * 80
             )
             raise ValueError(error_msg)
 
@@ -556,7 +576,9 @@ def analyze_temporal_file_structure(temporal_files):
             yearly_shape = (total_time_steps, n_faces)
             var_info["yearly_shape"] = yearly_shape
             var_info["is_static"] = False
-            print(f"  {var_name}: shape={shape_template} → Time-varying (yearly: {yearly_shape})")
+            print(
+                f"  {var_name}: shape={shape_template} → Time-varying (yearly: {yearly_shape})"
+            )
         else:
             # Other patterns - keep as-is (shouldn't happen in this dataset)
             var_info["yearly_shape"] = shape_template
@@ -571,7 +593,9 @@ def analyze_temporal_file_structure(temporal_files):
             sorted_meta_fields[field_name] = meta_field_info[field_name]
 
     # Then add any remaining fields alphabetically
-    remaining_fields = sorted([f for f in meta_field_info.keys() if f not in meta_field_order])
+    remaining_fields = sorted(
+        [f for f in meta_field_info.keys() if f not in meta_field_order]
+    )
     for field_name in remaining_fields:
         sorted_meta_fields[field_name] = meta_field_info[field_name]
 
@@ -630,13 +654,17 @@ def assemble_h5_data_for_meta(template_file, meta_field_info, n_faces):
 
             field_data = h5f[field_name][:]
             meta_data[field_name] = field_data
-            print(f"  Loaded {field_name}: shape={field_data.shape}, dtype={field_data.dtype}")
+            print(
+                f"  Loaded {field_name}: shape={field_data.shape}, dtype={field_data.dtype}"
+            )
 
     # Replace NaNs in meta compound array
     print("\n  Replacing NaNs in meta fields:")
     meta_data = replace_nans_with_fill_value(meta_data)
 
-    print(f"\nMeta compound array assembled: shape={meta_data.shape}, {len(meta_dtype)} fields")
+    print(
+        f"\nMeta compound array assembled: shape={meta_data.shape}, {len(meta_dtype)} fields"
+    )
     return meta_data
 
 
@@ -701,9 +729,9 @@ def assemble_hsds_meta(template_file, meta_field_info, n_faces, existing_global_
             - meta_data: numpy structured array for meta dataset
             - meta_attrs: dict of global attributes for meta fields
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("ASSEMBLING HSDS META DATASET")
-    print("="*80)
+    print("=" * 80)
 
     # Assemble the compound data array
     meta_data = assemble_h5_data_for_meta(template_file, meta_field_info, n_faces)
@@ -711,15 +739,44 @@ def assemble_hsds_meta(template_file, meta_field_info, n_faces, existing_global_
     # Assemble the attributes
     meta_attrs = assemble_attrs_for_meta(meta_field_info, existing_global_attrs)
 
-    print("="*80)
+    print("=" * 80)
     print("META ASSEMBLY COMPLETE")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     return meta_data, meta_attrs
 
 
-def create_yearly_file_structure(output_file, template_file, file_structure):
-    """Create the structure of the yearly H5 file with meta compound dataset"""
+def create_yearly_file_structure(
+    output_file, template_file, file_structure, location_config
+):
+    """Create the structure of the yearly H5 file with meta compound dataset and full year dimensions"""
+
+    # Calculate expected full-year dimensions (with padding)
+    start_date = pd.to_datetime(location_config["start_date_utc"])
+    delta_t_seconds = location_config["expected_delta_t_seconds"]
+    expected_end_date = (
+        start_date + pd.DateOffset(years=1) - pd.Timedelta(seconds=delta_t_seconds)
+    )
+
+    expected_timeline = pd.date_range(
+        start=start_date,
+        end=expected_end_date,
+        freq=pd.Timedelta(seconds=delta_t_seconds),
+        tz="UTC",
+    )
+    expected_time_steps = len(expected_timeline)
+
+    print("\nFull year dimensions:")
+    print(f"  Expected timesteps (full year): {expected_time_steps}")
+    print(f"  Actual timesteps (from files):  {file_structure['total_time_steps']}")
+    if expected_time_steps > file_structure["total_time_steps"]:
+        print(
+            f"  → Will pad {expected_time_steps - file_structure['total_time_steps']} timesteps with fill values"
+        )
+
+    # Store for later use in stitching
+    file_structure["expected_time_steps"] = expected_time_steps
+    file_structure["expected_timeline"] = expected_timeline
 
     # First, assemble meta outside of file context
     existing_global_attrs = {}
@@ -746,8 +803,10 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
             # Create meta compound dataset
             meta_dataset = yearly_h5.create_dataset("meta", data=meta_data)
             # Add _FillValue as global attribute for meta (compound datasets can't have _FillValue directly)
-            yearly_h5.attrs['meta:_FillValue'] = NAN_FILL_VALUE
-            print(f"Created meta dataset: shape={meta_data.shape}, {len(meta_data.dtype.names)} fields")
+            yearly_h5.attrs["meta:_FillValue"] = NAN_FILL_VALUE
+            print(
+                f"Created meta dataset: shape={meta_data.shape}, {len(meta_data.dtype.names)} fields"
+            )
             print(f"Added global attribute meta:_FillValue={NAN_FILL_VALUE}")
 
             # Copy sigma coordinates (same for all months)
@@ -761,19 +820,29 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
                 yearly_h5.create_dataset("sigma_level", data=sigma_level_data)
                 print(f"Copied sigma_level: {sigma_level_data.shape}")
 
-            # Create empty time_index with yearly size
+            # Create empty time_index with FULL YEAR size
             time_dtype = template_h5["time_index"].dtype
             yearly_h5.create_dataset(
                 "time_index",
-                shape=(file_structure["total_time_steps"],),
+                shape=(expected_time_steps,),
                 dtype=time_dtype,
             )
 
-            # Create empty datasets for all variables with yearly dimensions
-            print("\nCreating yearly datasets:")
+            # Create empty datasets for all variables with FULL YEAR dimensions
+            print("\nCreating yearly datasets (with full year dimensions):")
             for var_name, var_info in file_structure["variable_info"].items():
-                yearly_shape = var_info["yearly_shape"]
+                # Use full year dimensions instead of actual data dimensions
+                actual_yearly_shape = var_info["yearly_shape"]
                 is_static = var_info.get("is_static", False)
+
+                # Replace time dimension with expected_time_steps
+                if len(actual_yearly_shape) > 1:
+                    yearly_shape = (expected_time_steps,) + actual_yearly_shape[1:]
+                else:
+                    yearly_shape = (expected_time_steps,)
+
+                # Store both shapes for later use
+                var_info["full_year_shape"] = yearly_shape
 
                 print(f"\n  Variable: {var_name}")
                 print(f"    Shape: {yearly_shape}")
@@ -800,7 +869,9 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
                     chunk_elements = np.prod(chunks)
                     chunk_bytes = chunk_elements * dtype_size
                     chunk_gb = chunk_bytes / (1024**3)
-                    print(f"    Estimated chunk size: {chunk_gb:.3f} GB ({chunk_bytes:,} bytes)")
+                    print(
+                        f"    Estimated chunk size: {chunk_gb:.3f} GB ({chunk_bytes:,} bytes)"
+                    )
 
                     if chunk_gb >= 4.0:
                         print("    WARNING: Chunk size exceeds 4GB limit!")
@@ -815,17 +886,16 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
                     shape=yearly_shape,
                     dtype=var_info["dtype"],
                     chunks=chunks,
+                    fillvalue=NAN_FILL_VALUE,  # Gaps automatically filled with NaN
                 )
-                print("    ✓ Dataset created successfully")
+                print("    ✓ Dataset created successfully (gaps pre-filled)")
 
                 # Copy attributes
                 for attr_name, attr_value in var_info["attrs"].items():
                     try:
                         dataset.attrs[attr_name] = attr_value
                     except Exception as e:
-                        print(
-                            f"    Warning: Could not set attribute {attr_name}: {e}"
-                        )
+                        print(f"    Warning: Could not set attribute {attr_name}: {e}")
 
                 # Add _FillValue attribute for numeric datasets
                 add_fill_value_attr(dataset)
@@ -833,55 +903,123 @@ def create_yearly_file_structure(output_file, template_file, file_structure):
 
 def stitch_data_into_yearly_file(output_file, monthly_files, file_structure):
     """
-    Stitch data from monthly files into yearly file.
+    Stitch data from monthly files into yearly file with timestamp mapping.
+
+    Uses timestamp mapping to write data to correct indices in full-year arrays,
+    automatically handling any gaps (which are pre-filled with NAN_FILL_VALUE).
 
     Note: Face-only variables are already in meta compound dataset and are not stitched.
     Only time-varying variables are stitched across temporal chunks.
     """
+    expected_timeline = file_structure["expected_timeline"]
+    expected_time_steps = file_structure["expected_time_steps"]
+
+    # First pass: collect all actual timestamps from temporal files
+    print("\nBuilding timestamp mapping...")
+    actual_timestamps = []
+    for monthly_file in monthly_files:
+        with h5py.File(monthly_file, "r", rdcc_nbytes=HDF5_READ_CACHE) as monthly_h5:
+            time_data = monthly_h5["time_index"][:]
+            # Decode and parse
+            if time_data.dtype.kind == "S":
+                time_strings = [t.decode("utf-8") for t in time_data]
+            else:
+                time_strings = [str(t) for t in time_data]
+            timestamps = pd.to_datetime(time_strings)
+            actual_timestamps.extend(timestamps)
+
+    actual_timestamps = pd.DatetimeIndex(actual_timestamps)
+    print(f"  Collected {len(actual_timestamps)} actual timestamps")
+
+    # Create mapping: expected_idx -> actual_idx
+    expected_df = pd.DataFrame(
+        {"timestamp": expected_timeline, "expected_idx": range(expected_time_steps)}
+    )
+    actual_df = pd.DataFrame(
+        {"timestamp": actual_timestamps, "actual_idx": range(len(actual_timestamps))}
+    )
+    merged_df = expected_df.merge(actual_df, on="timestamp", how="left")
+
+    # Find which expected indices have actual data
+    has_data_mask = ~merged_df["actual_idx"].isna()
+    expected_indices_with_data = merged_df[has_data_mask]["expected_idx"].values
+    actual_indices_for_data = merged_df[has_data_mask]["actual_idx"].values.astype(int)
+
+    gap_count = (~has_data_mask).sum()
+    print(f"  Mapped {len(expected_indices_with_data)} timesteps with data")
+    if gap_count > 0:
+        print(f"  Found {gap_count} gaps (pre-filled with {NAN_FILL_VALUE})")
 
     with h5py.File(output_file, "a", rdcc_nbytes=HDF5_WRITE_CACHE) as yearly_h5:
-        print("\nStitching time-varying variables across temporal chunks...")
-        print("Note: Face-only variables already assembled in meta dataset")
-        print(f"Processing {len(file_structure['variable_info'])} time-varying variables\n")
+        # Write complete expected timeline to time_index
+        print("\nWriting full year timeline to time_index...")
+        expected_time_strings = expected_timeline.strftime(
+            "%Y-%m-%d %H:%M:%S+00:00"
+        ).tolist()
+        yearly_h5["time_index"][:] = expected_time_strings
+        print(f"  ✓ Wrote {expected_time_steps} timestamps")
 
-        # Stitch time-varying variables across temporal chunks
-        time_offset = 0
+        # Stitch data from temporal files to correct positions
+        print("\nStitching data to correct time indices...")
+        print(
+            f"Processing {len(file_structure['variable_info'])} time-varying variables"
+        )
+
+        # Build cumulative index for reading from temporal files
+        actual_offset = 0
         for i, monthly_file in enumerate(monthly_files):
-            print(
-                f"Stitching temporal chunk {i + 1}/{len(monthly_files)}: {monthly_file.name}"
-            )
-
             with h5py.File(
                 monthly_file, "r", rdcc_nbytes=HDF5_READ_CACHE
             ) as monthly_h5:
-                # Get time steps for this chunk
                 monthly_time_steps = len(monthly_h5["time_index"])
-                time_slice = slice(time_offset, time_offset + monthly_time_steps)
 
-                # Copy time_index data
-                yearly_h5["time_index"][time_slice] = monthly_h5["time_index"][:]
+                # Find which indices in this chunk
+                chunk_mask = (actual_indices_for_data >= actual_offset) & (
+                    actual_indices_for_data < actual_offset + monthly_time_steps
+                )
 
-                # Copy time-varying variable data
-                # Note: face-only variables (in meta) are not in variable_info and won't be processed here
+                if not chunk_mask.any():
+                    print(
+                        f"  Chunk {i + 1}/{len(monthly_files)}: No data to copy (gap)"
+                    )
+                    actual_offset += monthly_time_steps
+                    continue
+
+                # Get local indices within this chunk
+                chunk_actual_indices = (
+                    actual_indices_for_data[chunk_mask] - actual_offset
+                )
+                chunk_expected_indices = expected_indices_with_data[chunk_mask]
+
+                print(
+                    f"  Chunk {i + 1}/{len(monthly_files)} ({monthly_file.name}): Copying {len(chunk_actual_indices)} timesteps"
+                )
+
+                # Copy data for each variable
                 for var_name, var_info in file_structure["variable_info"].items():
                     monthly_data = monthly_h5[var_name][:]
 
                     # Replace NaNs with fill value
                     monthly_data = replace_nans_with_fill_value(monthly_data)
 
-                    # Handle different dimensionalities
+                    # Write to correct positions in yearly file
                     if len(monthly_data.shape) == 1:
-                        yearly_h5[var_name][time_slice] = monthly_data
+                        yearly_h5[var_name][chunk_expected_indices] = monthly_data[
+                            chunk_actual_indices
+                        ]
                     else:
-                        yearly_h5[var_name][time_slice, ...] = monthly_data
-                    print(f"  Copied {var_name}: {monthly_data.shape}")
+                        yearly_h5[var_name][chunk_expected_indices, :] = monthly_data[
+                            chunk_actual_indices, :
+                        ]
 
-                time_offset += monthly_time_steps
+                actual_offset += monthly_time_steps
 
-        print(f"Total time steps stitched: {time_offset}")
+        print(
+            f"\n✓ Stitching complete: {len(expected_indices_with_data)} timesteps written, {gap_count} gaps filled"
+        )
 
 
-def validate_yearly_file(output_file, monthly_files):
+def validate_yearly_file(output_file, file_structure):
     """Perform final validation on the yearly file"""
     with h5py.File(output_file, "r", rdcc_nbytes=HDF5_READ_CACHE) as yearly_h5:
         # Check time index continuity
@@ -889,30 +1027,32 @@ def validate_yearly_file(output_file, monthly_files):
 
         # Time index is now string format: 'YYYY-MM-DD HH:MM:SS+00:00'
         # Decode bytes to strings and parse
-        time_strings = [t.decode('utf-8') if isinstance(t, bytes) else str(t) for t in time_index]
-        dt_timestamps = [pd.to_datetime(ts) for ts in time_strings]
+        time_strings = [
+            t.decode("utf-8") if isinstance(t, bytes) else str(t) for t in time_index
+        ]
+        dt_timestamps = pd.to_datetime(time_strings)
 
         # Timestamps must be monotonic
-        is_monotonic = all(
-            dt_timestamps[i] <= dt_timestamps[i + 1]
-            for i in range(len(dt_timestamps) - 1)
-        )
+        is_monotonic = dt_timestamps.is_monotonic_increasing
         if not is_monotonic:
             raise ValueError("Timestamps are not monotonic")
 
-        # Check data completeness
-        total_expected_steps = 0
-        for mf in monthly_files:
-            with h5py.File(mf, "r", rdcc_nbytes=HDF5_READ_CACHE) as monthly_h5:
-                total_expected_steps += len(monthly_h5["time_index"])
-
+        # Check data completeness - should match full year dimensions
+        expected_time_steps = file_structure["expected_time_steps"]
         actual_steps = len(yearly_h5["time_index"])
-        if actual_steps != total_expected_steps:
+        if actual_steps != expected_time_steps:
             raise ValueError(
-                f"Time step mismatch. Expected: {total_expected_steps}, Got: {actual_steps}"
+                f"Time step mismatch. Expected (full year): {expected_time_steps}, Got: {actual_steps}"
             )
 
-        print(f"Validation complete: {actual_steps} time steps")
+        # Verify no gaps in timeline (all timestamps should be present)
+        expected_timeline = file_structure["expected_timeline"]
+        if not dt_timestamps.equals(expected_timeline):
+            raise ValueError("Timeline does not match expected full-year timeline")
+
+        print(
+            f"✓ Validation complete: {actual_steps} timesteps, full year coverage, monotonically increasing"
+        )
 
 
 def main():
