@@ -237,7 +237,7 @@ def pad_to_full_year(output_file, location_config, file_structure):
         h5f.create_dataset("time_index", data=expected_time_strings, dtype=time_dtype)
         print(f"    Updated time_index: {actual_count} → {expected_count} timesteps")
 
-        # 2. Update all time-varying variables
+        # 2. Update all time-varying variables (chunked processing for memory efficiency)
         print("\n  Rebuilding time-varying variables...")
         for var_name, var_info in file_structure["variable_info"].items():
             if var_info.get("is_static", False):
@@ -246,43 +246,71 @@ def pad_to_full_year(output_file, location_config, file_structure):
 
             print(f"    Processing {var_name}...")
 
-            # Read actual data
-            actual_data = h5f[var_name][:]
-            actual_shape = actual_data.shape
-            dtype = actual_data.dtype
+            # Get metadata from old dataset
+            old_dataset = h5f[var_name]
+            actual_shape = old_dataset.shape
+            dtype = old_dataset.dtype
+            attrs = dict(old_dataset.attrs)
+            chunks = old_dataset.chunks
 
-            # Create full-year array filled with NaN
+            # Determine new shape
             if len(actual_shape) == 1:
-                # 1D time series
-                full_data = np.full(expected_count, NAN_FILL_VALUE, dtype=dtype)
+                new_shape = (expected_count,)
             else:
-                # 2D (time, face)
-                full_shape = (expected_count,) + actual_shape[1:]
-                full_data = np.full(full_shape, NAN_FILL_VALUE, dtype=dtype)
+                new_shape = (expected_count,) + actual_shape[1:]
 
-            # Copy actual data to correct positions using the mapping
+            print(f"      Old shape: {actual_shape}, New shape: {new_shape}")
+
+            # Create temporary dataset with full shape, filled with NaN
+            temp_name = f"{var_name}_temp"
+            new_dataset = h5f.create_dataset(
+                temp_name,
+                shape=new_shape,
+                dtype=dtype,
+                chunks=chunks,
+                fillvalue=NAN_FILL_VALUE
+            )
+
+            # Copy actual data in chunks to correct positions
+            # Process in chunks of time steps to avoid memory issues
+            CHUNK_SIZE = 500  # Process 500 timesteps at a time (~3.3 GB per chunk for Puget Sound)
+
             valid_mask = ~pd.isna(expected_to_actual_map)
             valid_expected_indices = np.where(valid_mask)[0]
             valid_actual_indices = expected_to_actual_map[valid_mask].astype(int)
 
-            if len(actual_shape) == 1:
-                full_data[valid_expected_indices] = actual_data[valid_actual_indices]
-            else:
-                full_data[valid_expected_indices, :] = actual_data[valid_actual_indices, :]
+            print(f"      Copying {len(valid_expected_indices)} timesteps in chunks of {CHUNK_SIZE}...")
 
-            # Delete old dataset and create new one with same chunking
-            attrs = dict(h5f[var_name].attrs)
-            chunks = h5f[var_name].chunks
-            del h5f[var_name]
+            # Group indices by chunks for efficient processing
+            for chunk_start in range(0, len(valid_expected_indices), CHUNK_SIZE):
+                chunk_end = min(chunk_start + CHUNK_SIZE, len(valid_expected_indices))
+                chunk_expected = valid_expected_indices[chunk_start:chunk_end]
+                chunk_actual = valid_actual_indices[chunk_start:chunk_end]
 
-            new_dataset = h5f.create_dataset(var_name, data=full_data, chunks=chunks)
+                # Read chunk of actual data
+                if len(actual_shape) == 1:
+                    # 1D time series
+                    actual_chunk = old_dataset[chunk_actual]
+                    new_dataset[chunk_expected] = actual_chunk
+                else:
+                    # 2D (time, face) - read all faces for this time chunk
+                    actual_chunk = old_dataset[chunk_actual, :]
+                    new_dataset[chunk_expected, :] = actual_chunk
 
-            # Restore attributes
+                if (chunk_start // CHUNK_SIZE + 1) % 10 == 0:
+                    progress = (chunk_end / len(valid_expected_indices)) * 100
+                    print(f"        Progress: {progress:.1f}%")
+
+            # Restore attributes to new dataset
             for attr_name, attr_value in attrs.items():
                 new_dataset.attrs[attr_name] = attr_value
 
-            print(f"      Shape: {actual_shape} → {full_data.shape}")
-            print(f"      Filled {missing_count} gaps with {NAN_FILL_VALUE}")
+            # Delete old dataset and rename temp to original name
+            del h5f[var_name]
+            h5f[var_name] = new_dataset
+            del h5f[temp_name]
+
+            print(f"      ✓ Complete: {actual_shape} → {new_shape}, filled {missing_count} gaps with {NAN_FILL_VALUE}")
 
     # Validation
     print("\nValidating final timeline...")
