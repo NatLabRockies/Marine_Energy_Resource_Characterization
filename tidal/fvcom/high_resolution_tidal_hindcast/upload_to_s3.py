@@ -18,12 +18,23 @@ import sys
 from pathlib import Path
 
 import boto3
+from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import ClientError
 
 # S3 Configuration - Global constants
 S3_BUCKET = "oedi-data-drop"
 S3_PROFILE = "us-tidal"
 S3_BASE_PATH = "us-tidal"
+
+# Multipart upload configuration for large files
+# AWS recommends 100MB part size for large files
+# For 4TB files, this gives ~40,000 parts (max is 10,000, so we use larger parts)
+TRANSFER_CONFIG = TransferConfig(
+    multipart_threshold=100 * 1024 * 1024,  # 100MB - start multipart for files > 100MB
+    max_concurrency=10,  # Upload 10 parts in parallel
+    multipart_chunksize=500 * 1024 * 1024,  # 500MB per part (4TB = ~8,000 parts)
+    use_threads=True,  # Enable parallel uploads
+)
 
 
 def calculate_file_size(file_path):
@@ -54,6 +65,38 @@ def calculate_md5(file_path, chunk_size=8192 * 1024):
     return md5_hash.hexdigest()
 
 
+def calculate_s3_etag(file_path, part_size):
+    """
+    Calculate S3 ETag for multipart uploads.
+
+    S3 multipart ETag format: MD5(part1_md5 + part2_md5 + ...)-part_count
+
+    Args:
+        file_path: Path to the file
+        part_size: Size of each part in bytes (must match upload config)
+
+    Returns:
+        Expected S3 ETag string (e.g., "abc123-5" for 5 parts)
+    """
+    md5_digests = []
+
+    with open(file_path, "rb") as f:
+        while True:
+            chunk = f.read(part_size)
+            if not chunk:
+                break
+            md5_digests.append(hashlib.md5(chunk).digest())
+
+    if len(md5_digests) == 1:
+        # Single part upload - just return the MD5
+        return md5_digests[0].hex()
+    else:
+        # Multipart upload - combine all part MD5s
+        combined = b"".join(md5_digests)
+        multipart_md5 = hashlib.md5(combined).hexdigest()
+        return f"{multipart_md5}-{len(md5_digests)}"
+
+
 def s3_file_exists(s3_client, bucket, key):
     """
     Check if a file exists in S3.
@@ -76,30 +119,29 @@ def s3_file_exists(s3_client, bucket, key):
             raise
 
 
-def verify_upload(s3_client, bucket, key, local_md5):
+def verify_upload(s3_client, bucket, key, expected_etag):
     """
-    Verify uploaded file matches local file using MD5 checksum.
+    Verify uploaded file matches local file using S3 ETag.
 
     Args:
         s3_client: Boto3 S3 client
         bucket: S3 bucket name
         key: S3 object key
-        local_md5: Local file MD5 hash
+        expected_etag: Expected ETag (MD5 for single-part, composite for multipart)
 
     Returns:
-        True if checksums match, False otherwise
+        True if ETags match, False otherwise
     """
     try:
         response = s3_client.head_object(Bucket=bucket, Key=key)
-        # S3 ETag is MD5 for single-part uploads (files < 5GB typically)
         s3_etag = response["ETag"].strip('"')
 
-        if s3_etag == local_md5:
+        if s3_etag == expected_etag:
             return True
         else:
-            print("Warning: Checksum mismatch!", file=sys.stderr)
-            print(f"  Local MD5:  {local_md5}", file=sys.stderr)
-            print(f"  S3 ETag:    {s3_etag}", file=sys.stderr)
+            print("Warning: ETag mismatch!", file=sys.stderr)
+            print(f"  Expected: {expected_etag}", file=sys.stderr)
+            print(f"  S3 ETag:  {s3_etag}", file=sys.stderr)
             return False
     except ClientError as e:
         print(f"Error verifying upload: {e}", file=sys.stderr)
@@ -164,26 +206,36 @@ def upload_file(
         else:
             print("File does not exist in S3, proceeding with upload")
 
-    # Calculate MD5 if verification is requested
-    local_md5 = None
-    if verify_checksum:
-        print("\nCalculating local file MD5...")
-        local_md5 = calculate_md5(local_file)
-        print(f"Local MD5: {local_md5}")
+    # Calculate expected S3 ETag if verification is requested
+    expected_etag = None
+    file_size_bytes = os.path.getsize(local_file)
 
-    # Upload file
+    if verify_checksum:
+        print("\nCalculating expected S3 ETag...")
+        # Use multipart chunk size to match what S3 will compute
+        expected_etag = calculate_s3_etag(local_file, TRANSFER_CONFIG.multipart_chunksize)
+
+        if "-" in expected_etag:
+            print(f"Expected ETag: {expected_etag} (multipart)")
+        else:
+            print(f"Expected ETag: {expected_etag} (single-part)")
+
+    # Upload file with optimized multipart configuration
     print("\nUploading file to S3...")
+    if file_size_bytes > TRANSFER_CONFIG.multipart_threshold:
+        num_parts = file_size_bytes // TRANSFER_CONFIG.multipart_chunksize + 1
+        print(f"Using multipart upload (~{num_parts} parts, {TRANSFER_CONFIG.max_concurrency} concurrent)")
     try:
-        s3_client.upload_file(local_file, S3_BUCKET, s3_key)
+        s3_client.upload_file(local_file, S3_BUCKET, s3_key, Config=TRANSFER_CONFIG)
         print("Upload successful!")
     except Exception as e:
         print(f"Error uploading file: {e}", file=sys.stderr)
         return 1
 
     # Verify upload
-    if verify_checksum and local_md5:
+    if verify_checksum and expected_etag:
         print("\nVerifying upload with checksum...")
-        if verify_upload(s3_client, S3_BUCKET, s3_key, local_md5):
+        if verify_upload(s3_client, S3_BUCKET, s3_key, expected_etag):
             print("Checksum verification successful!")
         else:
             print("Checksum verification failed!", file=sys.stderr)
