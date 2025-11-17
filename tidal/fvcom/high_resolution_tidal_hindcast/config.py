@@ -4,7 +4,7 @@ config = {
     "dataset": {
         "label": "High Resolution Tidal Hindcast",
         "name": "wpto_high_res_tidal",
-        "version": "0.4.0",
+        "version": "1.0.0",
         "gis_output_version": "1.0.0",
         "development_version": "1.0.0",
         "issue_date": "2025-11-12",
