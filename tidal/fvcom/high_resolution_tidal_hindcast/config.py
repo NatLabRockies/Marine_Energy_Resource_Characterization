@@ -5,9 +5,9 @@ config = {
         "label": "High Resolution Tidal Hindcast",
         "name": "wpto_high_res_tidal",
         "version": "0.4.0",
-        "gis_output_version": "0.4.0",
-        "development_version": "0.5.0",
-        "issue_date": "2025-02-01",
+        "gis_output_version": "1.0.0",
+        "development_version": "1.0.0",
+        "issue_date": "2025-11-12",
         "encoding": {
             "var": {
                 "time": {
@@ -40,8 +40,8 @@ config = {
         # Configuration for spatial partitioning of parquet files
         # Partition path structure: lat_deg={DD}/lon_deg={DD}/lat_dec={DD}/lon_dec={DD}/
         "decimal_places": 2,  # Number of decimal places used in partition path (lat*100 % 100)
-        "coord_digits_max": 7,  # Maximum decimal precision in filename
-        "index_max_digits": 6,  # Zero-padding for face ID in filename
+        "coord_digits_max": 2,  # Maximum decimal precision in filename
+        "index_max_digits": 8,  # Zero-padding for face ID in filename
     },
     "dependencies": {
         "gis": {
@@ -80,8 +80,8 @@ config = {
         "stitch_write_cache_bytes": None,
     },
     "code": {
-        "version": "0.4.0",
-        "development_version": "0.5.0",
+        "version": "1.0.0",
+        "development_version": "1.1.0",
     },
     "dir": {
         # Data Input and Output Directories
