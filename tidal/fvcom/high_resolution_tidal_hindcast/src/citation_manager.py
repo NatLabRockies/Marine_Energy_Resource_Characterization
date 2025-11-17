@@ -65,7 +65,10 @@ def format_reference(reference_id, show_warnings=False):
 
         # Check if the reference exists
         if reference_id not in bib_source:
-            return f"Reference '{reference_id}' not found"
+            raise ValueError(
+                f"Reference '{reference_id}' not found in {REFERENCES_FILE}. "
+                f"Available references: {', '.join(bib_source.keys())}"
+            )
 
         # Load CSL style
         style = CitationStylesStyle(CSL_FILE)
@@ -81,16 +84,25 @@ def format_reference(reference_id, show_warnings=False):
         bibliography.register(citation)
 
         # Generate formatted reference
-        for item in bibliography.bibliography():
-            formatted_text = str(item)
-            # Clean HTML formatting
-            clean_text = clean_html_formatting(formatted_text)
-            return clean_text
+        # Convert generator to list to avoid StopIteration issues
+        bib_items = list(bibliography.bibliography())
 
-        return f"Reference '{reference_id}' formatting failed"
+        if not bib_items:
+            raise ValueError(
+                f"Reference '{reference_id}' formatting failed - no bibliography items generated. "
+                f"Check that the reference exists in {REFERENCES_FILE} and is properly formatted."
+            )
 
+        formatted_text = str(bib_items[0])
+        # Clean HTML formatting
+        clean_text = clean_html_formatting(formatted_text)
+        return clean_text
+
+    except ValueError:
+        # Re-raise ValueError so configuration errors are caught
+        raise
     except Exception as e:
-        return f"Error formatting '{reference_id}': {str(e)}"
+        raise RuntimeError(f"Error formatting '{reference_id}': {str(e)}") from e
     finally:
         # Reset warning filters if we changed them
         if not show_warnings:
