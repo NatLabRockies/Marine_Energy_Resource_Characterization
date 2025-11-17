@@ -850,7 +850,7 @@ Elhwa2 ;
         # Source: ACDD, IOOS
         # The URL of the person (or other creator type specified by the creator_type
         # attribute) principally responsible for creating this data.
-        "creator_url": "https://www.pnnl.gov/",
+        "creator_url": "https://www.pnnl.gov/projects/ocean-dynamics-modeling/tidal-energy",
         # Source: ACDD
         # The name of any individuals, projects, or institutions that contributed to
         # the creation of this data.
