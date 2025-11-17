@@ -131,8 +131,8 @@ def upload_file(
         print(f"Error: Local file does not exist: {local_file}", file=sys.stderr)
         return 1
 
-    # Construct full S3 key
-    s3_key = s3_destination
+    # Construct full S3 key with base path
+    s3_key = f"{S3_BASE_PATH}/{s3_destination}"
 
     # Print upload details
     file_size = calculate_file_size(local_file)
@@ -141,6 +141,7 @@ def upload_file(
     print(f"S3 bucket:   {S3_BUCKET}")
     print(f"S3 key:      {s3_key}")
     print(f"S3 profile:  {S3_PROFILE}")
+    print(f"Full S3 URI: s3://{S3_BUCKET}/{s3_key}")
 
     if dry_run:
         print("\n[DRY RUN] Would upload file to S3")
