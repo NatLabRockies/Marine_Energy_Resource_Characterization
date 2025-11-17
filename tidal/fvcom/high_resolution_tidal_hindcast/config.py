@@ -983,7 +983,7 @@ Elhwa2 ;
         "publisher_email": "michael.lawson@nrel.gov",
         # Source: ACDD, IOOS
         # The institution of the publisher.
-        "publisher_institution": "Pacific Northwest National Laboratory (PNNL)",
+        "publisher_institution": "National Renewable Energy Laboratory (NREL)",
         # Source: ACDD
         # The name of the person responsible for publishing the data file or
         # product to users.
