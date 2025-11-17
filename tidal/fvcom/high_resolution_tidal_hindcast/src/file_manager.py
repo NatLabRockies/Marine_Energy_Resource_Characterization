@@ -46,13 +46,12 @@ def get_output_dirs(config, location, use_temp_base_path=False):
         else:
             base_path = temp_dir
 
-    def build_path(name):
-        str_path_with_vars = (
-            output_dirs[name]
-            .replace("<location>", output_location_name)
-            .replace("<version>", version)
-        )
-        return Path(base_path, str_path_with_vars)
+    def build_path(str_path_with_vars):
+        str_path = str_path_with_vars.replace(
+            "<location>", output_location_name
+        ).replace("<version>", version)
+
+        return Path(base_path, str_path)
 
     paths = {}
     for key, value in output_dirs.items():
