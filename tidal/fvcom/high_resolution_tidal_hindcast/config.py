@@ -36,6 +36,10 @@ config = {
         },
         "xarray_netcdf4_engine": "h5netcdf",
     },
+    "code": {
+        "version": "1.0.0",
+        "development_version": "1.1.0",
+    },
     "partition": {
         # Configuration for spatial partitioning of parquet files
         # Partition path structure: lat_deg={DD}/lon_deg={DD}/lat_dec={DD}/lon_dec={DD}/
@@ -78,10 +82,6 @@ config = {
         "write_cache_bytes": None,
         "read_cache_bytes": None,
         "stitch_write_cache_bytes": None,
-    },
-    "code": {
-        "version": "1.0.0",
-        "development_version": "1.1.0",
     },
     "dir": {
         # Data Input and Output Directories
