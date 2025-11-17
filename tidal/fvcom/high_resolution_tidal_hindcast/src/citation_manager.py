@@ -87,12 +87,12 @@ def format_reference(reference_id, show_warnings=False):
         # Convert generator to list to avoid StopIteration issues
         try:
             bib_items = list(bibliography.bibliography())
-        except StopIteration:
+        except StopIteration as si:
             raise ValueError(
                 f"Reference '{reference_id}' formatting failed - StopIteration raised during bibliography generation. "
                 f"This usually means the BibTeX entry is malformed or missing required fields. "
                 f"Check the entry in {REFERENCES_FILE}."
-            )
+            ) from si
 
         if not bib_items:
             raise ValueError(
@@ -108,6 +108,13 @@ def format_reference(reference_id, show_warnings=False):
     except ValueError:
         # Re-raise ValueError so configuration errors are caught
         raise
+    except StopIteration as si:
+        # Catch StopIteration at this level too
+        raise ValueError(
+            f"Reference '{reference_id}' formatting failed - StopIteration raised. "
+            f"This usually means the BibTeX entry is malformed or missing required fields. "
+            f"Check the entry in {REFERENCES_FILE}."
+        ) from si
     except Exception as e:
         raise RuntimeError(f"Error formatting '{reference_id}': {str(e)}") from e
     finally:
