@@ -961,7 +961,7 @@ Elhwa2 ;
         "comment": None,
         # Source: ACDD
         # A URL that gives the location of more complete metadata.
-        "metadata_link": "https://www.github.com/nrel/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast",
+        "metadata_link": "https://www.github.com/nrel/marine_energy_resource_characterization/",
         # Source: ACDD
         # The overarching program(s) of which the dataset is a part.
         "program": "U.S. Department of Energy (DOE) Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) Marine Energy Resource Assessment and Characterization",
