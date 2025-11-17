@@ -98,7 +98,7 @@ config = {
             "standardized": "<location>/<version>/a1_std",
             "standardized_partition": "<location>/<version>/a2_std_partition",
             "vap": "<location>/<version>/b1_vap",
-            "monthly_summary_vap": "<location>/<version>>/b2_monthly_mean_vap",
+            "monthly_summary_vap": "<location>/<version>/b2_monthly_mean_vap",
             "yearly_summary_vap": "<location>/<version>/b3_yearly_mean_vap",
             "yearly_summary_vap_by_face": "<location>/<version>/b3_yearly_mean_vap/by_face",
             "vap_partition": "<location>/<version>/b4_vap_partition",
@@ -560,6 +560,23 @@ config = {
             "partition_frequency": "1D",  # 7 Day Chunks
             "face_count": 797978,
             "citation": format_references(["ak_aleutian_spicer2025_spatially"]),
+            "original_attrs": """
+// global attributes:
+	:title = Aleutian_Islands_2010 ;
+	:institution = School for Marine Science and Technology ;
+	:source = FVCOM_4.3.1 ;
+	:history = model started at: 28/02/2024   14:16 ;
+	:references = http://fvcom.smast.umassd.edu, http://codfish.smast.umassd.edu ;
+	:Conventions = CF-1.0 ;
+	:CoordinateSystem = GeoReferenced ;
+	:CoordinateProjection = none ;
+	:Tidal_Forcing = Tidal Forcing Time Series Title: AI_hr ;
+	:River_Forcing = THERE ARE NO RIVERS IN THIS MODEL ;
+	:GroundWater_Forcing = GROUND WATER FORCING IS OFF! ;
+	:Surface_Heat_Forcing = SURFACE HEAT FORCING IS OFF ;
+	:Surface_Wind_Forcing = SURFACE WIND FORCING IS OFF ;
+	:Surface_PrecipEvap_Forcing = SURFACE PRECIPITATION FORCING IS OFF ;
+            """,
         },
         "cook_inlet": {
             "label": "Cook Inlet, Alaska",
@@ -579,6 +596,23 @@ config = {
             # "partition_frequency": "12h",
             "face_count": 392002,
             "citation": format_references(["ak_cook_deb2025_characterizing"]),
+            "original_attrs": """
+            // global attributes:
+	:title = cook_inlet_2005 ;
+	:institution = School for Marine Science and Technology ;
+	:source = FVCOM_4.3.1 ;
+	:history = model started at: 07/02/2023   15:01 ;
+	:references = http://fvcom.smast.umassd.edu, http://codfish.smast.umassd.edu ;
+	:Conventions = CF-1.0 ;
+	:CoordinateSystem = GeoReferenced ;
+	:CoordinateProjection = none ;
+	:Tidal_Forcing = Tidal Forcing Time Series Title: JULIAN time series obc forcing created from v2.7.1 input: _elj_obc.dat ;
+	:River_Forcing = THERE ARE NO RIVERS IN THIS MODEL ;
+	:GroundWater_Forcing = GROUND WATER FORCING IS OFF! ;
+	:Surface_Heat_Forcing = SURFACE HEAT FORCING IS OFF ;
+	:Surface_Wind_Forcing = SURFACE WIND FORCING IS OFF ;
+	:Surface_PrecipEvap_Forcing = SURFACE PRECIPITATION FORCING IS OFF ;
+            """,
         },
         "piscataqua_river": {
             "label": "Piscataqua River, New Hampshire",
@@ -597,6 +631,35 @@ config = {
             # "partition_frequency": "12h",
             "face_count": 292927,
             "citation": format_references(["nh_piscataqua_spicer2023_tidal"]),
+            "original_attrs": """
+            // global attributes:
+	:title = PIR CASE ;
+	:institution = School for Marine Science and Technology ;
+	:source = FVCOM_4.3.1 ;
+	:history = model started at: 01/02/2023   10:58 ;
+	:references = http://fvcom.smast.umassd.edu, http://codfish.smast.umassd.edu ;
+	:Conventions = CF-1.0 ;
+	:CoordinateSystem = Cartesian ;
+	:CoordinateProjection = proj=tmerc +datum=NAD83 +lon_0=-69 lat_0=0 k=.999600000 x_0=500000 y_0=0 ;
+	:Tidal_Forcing = Tidal Forcing Time Series Title: JULIAN time series obc forcing created from v2.7.1 input: _elj_obc.dat ;
+	:River_Forcing = THERE ARE 10 RIVERS IN THIS MODEL.
+RIVER INFLOW IS ON THE nodes WHERE TEMPERATURE AND SALINITY ARE calculated IN THE MODEL.
+THE FOLLOWING RIVER NAMES ARE USED:
+Exeter1
+Exeter2
+Cocheco1
+Cocheco2
+Winnicut1
+Winnicut2
+Oyster1
+Oyster2
+Lamprey1
+Lamprey2 ;
+	:GroundWater_Forcing = GROUND WATER FORCING IS OFF! ;
+	:Surface_Heat_Forcing = SURFACE HEAT FORCING IS OFF ;
+	:Surface_Wind_Forcing = SURFACE WIND FORCING IS OFF ;
+	:Surface_PrecipEvap_Forcing = SURFACE PRECIPITATION FORCING IS OFF ;
+            """,
         },
         "puget_sound": {
             "label": "Puget Sound, Washington",
@@ -633,6 +696,63 @@ config = {
                     "wa_puget_yang2021_tidal",
                 ]
             ),
+            "original_attrs": """
+            // global attributes:
+	:title = psm_TN_refined ;
+	:institution = School for Marine Science and Technology ;
+	:source = FVCOM_4.3.1 ;
+	:history = model started at: 12/04/2021   03:44 ;
+	:references = http://fvcom.smast.umassd.edu, http://codfish.smast.umassd.edu ;
+	:Conventions = CF-1.0 ;
+	:CoordinateSystem = Cartesian ;
+	:CoordinateProjection = none ;
+	:Tidal_Forcing = Tidal Forcing Time Series Title: psm_fullyear_2015 ;
+	:River_Forcing = THERE ARE 38 RIVERS IN THIS MODEL.
+RIVER INFLOW IS ON THE nodes WHERE TEMPERATURE AND SALINITY ARE calculated IN THE MODEL.
+THE FOLLOWING RIVER NAMES ARE USED:
+Fraser1
+Fraser2
+Nooksack1
+Nooksack2
+Samish1
+Samish2
+Skagit1
+Skagit2
+Stillaguamish1
+Stillaguamish2
+Snohomish1
+Snohomish2
+Lake_Wash_Ceda1
+Lake_Wash_Ceda2
+Duwamish1
+Duwamish2
+Puyallup1
+Puyallup2
+Nisqually1
+Nisqually2
+Deschutes1
+Deschutes2
+Tahuya1
+Tahuya2
+Skokomish1
+Skokomish2
+Hamma_Hamma1
+Hamma_Hamma2
+Duckabush1
+Duckabush2
+Doeswallops1
+Doeswallops2
+Big_Quilcene1
+Big_Quilcene2
+Dungeness1
+Dungeness2
+Elhwa1
+Elhwa2 ;
+	:GroundWater_Forcing = GROUND WATER FORCING IS OFF! ;
+	:Surface_Heat_Forcing = SURFACE HEAT FORCING IS OFF ;
+	:Surface_Wind_Forcing = SURFACE WIND FORCING IS OFF ;
+	:Surface_PrecipEvap_Forcing = SURFACE PRECIPITATION FORCING IS OFF ;
+            """,
         },
         "western_passage": {
             "label": "Western Passage, Maine",
@@ -655,7 +775,23 @@ config = {
             # "partition_frequency": "12h",
             "face_count": 231208,
             "citation": format_references(["me_western_deb2023_turbulence"]),
-        },
+            "original_attrs": """
+            // global attributes:
+	:title = WPS CASE ;
+	:institution = School for Marine Science and Technology ;
+	:source = FVCOM_4.3.1 ;
+	:history = model started at: 13/02/2023   16:37 ;
+	:references = http://fvcom.smast.umassd.edu, http://codfish.smast.umassd.edu ;
+	:Conventions = CF-1.0 ;
+	:CoordinateSystem = Cartesian ;
+	:CoordinateProjection = proj=tmerc +datum=NAD83 +lon_0=-70d10 lat_0=42d50 k=.9999666666666667 x_0=900000 y_0=0 ;
+	:Tidal_Forcing = Tidal Forcing Time Series Title: Western_Passage_2017 ;
+	:River_Forcing = THERE ARE NO RIVERS IN THIS MODEL ;
+	:GroundWater_Forcing = GROUND WATER FORCING IS OFF! ;
+	:Surface_Heat_Forcing = SURFACE HEAT FORCING IS OFF ;
+	:Surface_Wind_Forcing = SURFACE WIND FORCING IS OFF ;
+	:Surface_PrecipEvap_Forcing = SURFACE PRECIPITATION FORCING IS OFF ;
+    """
     },
     "global_attributes": {
         # Global attributes that will be recorded in the output dataset in `attrs` (attributes). These metadata are

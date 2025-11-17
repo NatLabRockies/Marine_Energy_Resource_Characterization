@@ -5,12 +5,100 @@ import platform
 import re
 import socket
 import subprocess
+import textwrap
 
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 import numpy as np
 import pandas as pd
+
+from src.citation_manager import format_references
+
+WORD_WRAP_WIDTH = 80
+
+
+def parse_model_forcing_configuration(original_attrs):
+    """
+    Parse model forcing configuration from FVCOM original_attrs string.
+    """
+    result = {
+        "included": [],
+        "excluded": [],
+        "summary_text": "",
+        "description_text": "",
+    }
+
+    # Split into lines for simple parsing
+    lines = original_attrs.split("\n")
+
+    for line in lines:
+        # River forcing
+        if ":River_Forcing" in line:
+            if "THERE ARE NO RIVERS" in line:
+                result["excluded"].append("river forcing")
+            elif "THERE ARE" in line and "RIVERS" in line:
+                # Rivers are included, reference the original attribute
+                result["included"].append(
+                    "river forcing (see global attribute `original_River_Forcing` for complete list)"
+                )
+
+        # Groundwater forcing
+        elif ":GroundWater_Forcing" in line:
+            if "OFF" in line:
+                result["excluded"].append("groundwater forcing")
+
+        # Surface heat forcing
+        elif ":Surface_Heat_Forcing" in line:
+            if "OFF" in line:
+                result["excluded"].append("surface heat forcing")
+
+        # Surface wind forcing
+        elif ":Surface_Wind_Forcing" in line:
+            if "OFF" in line:
+                result["excluded"].append("surface wind forcing")
+
+        # Precipitation/evaporation forcing
+        elif ":Surface_PrecipEvap_Forcing" in line:
+            if "OFF" in line:
+                result["excluded"].append("precipitation and evaporation forcing")
+
+    # Generate summary text (concise)
+    # Build a single sentence: "According to the model configuration, explicitly included is/are X and explicitly excluded are Y."
+    included_text = ""
+    excluded_text = ""
+
+    if result["included"]:
+        # Use "is" for singular, "are" for plural
+        verb = "is" if len(result["included"]) == 1 else "are"
+        included_text = f"explicitly included {verb} {', '.join(result['included'])}"
+
+    if result["excluded"]:
+        excluded_text = f"explicitly excluded are {', '.join(result['excluded'])}"
+
+    # Combine into single sentence
+    if included_text and excluded_text:
+        result["summary_text"] = (
+            f"According to the model configuration, {included_text} and {excluded_text}."
+        )
+    elif included_text:
+        result["summary_text"] = (
+            f"According to the model configuration, {included_text}."
+        )
+    elif excluded_text:
+        result["summary_text"] = (
+            f"According to the model configuration, {excluded_text}."
+        )
+    else:
+        # Should not happen, but handle gracefully
+        result["summary_text"] = (
+            "According to the model configuration, no forcing information available."
+        )
+
+    # Generate description text (same as summary for now)
+    result["description_text"] = result["summary_text"]
+
+    return result
 
 
 def get_system_info():
@@ -618,6 +706,9 @@ def standardize_dataset_global_attrs(
     print("Computing vertical attributes...")
     vertical_attributes = compute_vertical_attributes(ds)
 
+    print("Parsing model forcing configuration...")
+    forcing_config = parse_model_forcing_configuration(location["original_attrs"])
+
     # Use json to encode source files as a dict of lists of source files to track provenance
     # print("Computing input_history_json...")
     # if len(input_files) > 0:
@@ -725,27 +816,51 @@ def standardize_dataset_global_attrs(
         # Source: Global, ACDD
         # A user-friendly description of the dataset. It should provide enough context
         # about the data for new users to quickly understand how the data can be used.
-        "description": f"""
-High Resolution Tidal Hindcast dataset for {location['label']}, a strategically selected U.S. coastal location 
-with significant tidal energy potential, part of the standardized US Tidal hindcast dataset. Funded by the 
-U.S. Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) 
-Marine Energy Resource Assessment and Characterization project and developed by Pacific Northwest National Laboratory (PNNL) 
-and National Renewable Energy Laboratory (NREL) following IEC TC 114 best practices. 
-This dataset contains 1 year ({location['start_date_utc']} to {location['end_date_utc']}) of {location['temporal_resolution']} 
-resolved eastward sea water velocity (u) [m/s], northward  sea water velocity (v) [m/s], surface elevation [m] from NAVD88, 
-and calculated values including sea water speed [m/s], sea water to direction [deg clockwise from true north], power density [W/m²], 
-layer depths [m] below surface, and total depth [m] from surface across 10 uniform depth layers. 
-PNNL used {config["model_specification"]["model_version"]}, a finite volume coastal ocean model, to generate data and 
-validated data against available Acoustic Doppler Current Profiler (ADCP) measurements as described in 
-{location['citation']}. NREL performed data standardization, documentation, and publication using its Kestrel 
-HPC to produce full fidelity and summarized data products using software available at {code_metadata['code_url']}. 
-The model uses an unstructured triangular 3d layered mesh topology with 10 vertical coordinate (sigma) layers that adjust dynamically with 
-tides. Model results are computed at volume centroids with coordinates in WGS84 (EPSG:4326) format. Boundary 
-conditions incorporate 12 tidal constituents from OSU TPXO tide model. Atmospheric forcing is provided 
-by ERA5/CFSv2 wind data. This dataset meets IEC 62600-201 Stage 1 tidal resource analysis standards, with 
-most tidal energy areas having grid resolution  under 500 meters as required. Users should verify local grid 
-resolution for specific analysis requirements.
+        # ORIGINAL VERSION:
+        # "description": textwrap.fill(
+        #     f"""
+        # High Resolution Tidal Hindcast (US_tidal) dataset for {location["label"]}, a strategically selected U.S. coastal location
+        # with significant tidal energy potential, part of the standardized US Tidal hindcast dataset. Funded by the
+        # U.S. Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO)
+        # Marine Energy Resource Assessment and Characterization project and developed by Pacific Northwest National Laboratory (PNNL)
+        # and National Renewable Energy Laboratory (NREL) following IEC TC 114 best practices.
+        # This dataset contains 1 year ({location["start_date_utc"]} to {location["end_date_utc"]}) of {location["temporal_resolution"]}
+        # resolved eastward sea water velocity (u) [m/s], northward sea water velocity (v) [m/s], surface elevation [m] from NAVD88,
+        # and calculated values including sea water speed [m/s], sea water velocity to direction [deg clockwise from true north], power density [W/m²],
+        # layer depths [m] below surface, and total depth [m] from surface across 10 vertical sigma layers.
+        # PNNL used {config["model_specification"]["model_version"]}, a finite volume coastal ocean model, to generate data and
+        # validated data against available Acoustic Doppler Current Profiler (ADCP) measurements as described in
+        # {location["citation"]}. NREL performed data standardization, documentation, and publication using its Kestrel
+        # HPC to produce full fidelity and summarized data products using software available at {code_metadata["code_url"]}.
+        # The model uses an unstructured triangular 3d layered mesh topology with 10 vertical coordinate (sigma) layers that adjust dynamically with
+        # tides. Model results are computed at volume centroids with coordinates in WGS84 (EPSG:4326) format. Boundary
+        # conditions incorporate 12 tidal constituents from OSU TPXO tide model. Atmospheric forcing is provided
+        # by ERA5/CFSv2 wind data. This dataset meets IEC 62600-201 Stage 1 tidal resource analysis standards, with
+        # most tidal energy areas having grid resolution under 500 meters as required. Users should verify local grid
+        # resolution for specific analysis requirements.
+        # """,
+        #     width=WORD_WRAP_WIDTH,
+        # ),
+        "description": textwrap.fill(
+            f"""
+High-resolution tidal energy resource hindcast for {location["label"]}, developed under the U.S. Department of Energy Water Power
+Technologies Office Marine Energy Resource Assessment and Characterization project following IEC TC 114 best practices. The hindcast
+provides one year ({location["start_date_utc"]} to {location["end_date_utc"]}) of {location["temporal_resolution"]} resolved model output
+including eastward sea water velocity (u) [m/s], northward sea water velocity (v) [m/s], sea surface elevation [m] relative to NAVD88,
+sea water speed [m/s], sea water velocity to direction [degrees clockwise from true north], kinetic power density [W/m²], layer depths
+below surface [m], and total water column depth [m] across 10 vertical sigma layers. Pacific Northwest National Laboratory generated
+hindcast results using {config["model_specification"]["model_version"]}, a finite volume coastal ocean model with an unstructured
+triangular mesh topology. The model employs 10 terrain-following sigma coordinate layers that adjust dynamically with tidal elevation,
+with layer thickness varying proportionally to total water depth. Model outputs are computed at volume centroids with WGS84 (EPSG:4326)
+coordinates. Boundary conditions incorporate 12 tidal constituents from the OSU TPXO global tide model, and atmospheric forcing is
+provided by ERA5/CFSv2 reanalysis wind data. Model validation against available Acoustic Doppler Current Profiler (ADCP) measurements
+is documented in {location["citation"]}. National Renewable Energy Laboratory performed data standardization, quality control, and
+publication using Kestrel HPC resources and software available at {code_metadata["code_url"]}. The hindcast meets IEC 62600-201 Stage 1
+requirements for tidal resource characterization, with spatial resolution predominantly under 500 meters in areas of significant tidal
+energy potential.
 """,
+            width=WORD_WRAP_WIDTH,
+        ),
         # Source: Global
         # The DOI that has been registered for this dataset, if applicable.
         "doi": config_global_attrs["doi"],
@@ -925,21 +1040,37 @@ resolution for specific analysis requirements.
         "project": config_global_attrs["project"],
         # Source: ACDD
         # A paragraph describing the dataset, analogous to an abstract for a paper.
-        "summary": f"""
-High Resolution Tidal Hindcast dataset for {location['label']}, part of the standardized US Tidal hindcast 
-dataset funded by the Funded by the U.S. Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) 
-Marine Energy Resource Assessment and Characterization project and developed by Pacific Northwest National Laboratory (PNNL) 
-and National Renewable Energy Laboratory (NREL). This dataset 
-supports theoretical and technical resource potential assessments, providing foundational data for practical 
-assessments that incorporate engineering, economic, environmental, and regulatory constraints. Designed to meet IEC 62600-201 
-Stage 1 standards, this publicly accessible dataset supports commercial development, policy analysis, environmental 
-planning, and research applications. This 3D dataset captures tidal energy throughout the water column with 
-10 evenly spaced depth layers from the water surface to seafloor, that vary the thickness of each layer as the surface water lever changes.
-The dataset provides 1 year of {location['temporal_resolution']} model results of 
-eastward velocity (u) [m/s], northward velocity (v) [m/s], surface elevation [m] from NAVD88, and calculated 
-variables of speed [m/s], flow direction [deg clockwise from true north], power density [W/m²], layer 
-depths [m] below surface, and total depth [m] from surface from {location['start_date_utc']} to {location['end_date_utc']}.
+        # ORIGINAL VERSION:
+        # "summary": textwrap.fill(
+        #     f"""
+        # High Resolution Tidal Hindcast dataset for {location["label"]}, part of the standardized US Tidal hindcast
+        # dataset funded by the U.S. Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO)
+        # Marine Energy Resource Assessment and Characterization project and developed by Pacific Northwest National Laboratory (PNNL)
+        # and National Renewable Energy Laboratory (NREL). This dataset
+        # supports theoretical and technical resource potential assessments, providing foundational data for practical
+        # assessments that incorporate engineering, economic, environmental, and regulatory constraints. Designed to meet IEC 62600-201
+        # Stage 1 standards, this publicly accessible dataset supports commercial development, policy analysis, environmental
+        # planning, and research applications. This 3D dataset captures tidal energy throughout the water column with
+        # 10 depth layers spanning from surface to seafloor, with layer thickness varying proportionally to total water depth.
+        # The dataset provides 1 year of {location["temporal_resolution"]} model results of
+        # eastward velocity (u) [m/s], northward velocity (v) [m/s], surface elevation [m] from NAVD88, and calculated
+        # variables of speed [m/s], flow direction [deg clockwise from true north], power density [W/m²], layer
+        # depths [m] below surface, and total depth [m] from surface from {location["start_date_utc"]} to {location["end_date_utc"]}.
+        # """,
+        #     width=WORD_WRAP_WIDTH,
+        # ),
+        "summary": textwrap.fill(
+            f"""
+High-resolution tidal energy resource hindcast for {location["label"]}, developed by Pacific Northwest National Laboratory (PNNL)
+and National Renewable Energy Laboratory (NREL) under the U.S. Department of Energy Water Power Technologies Office Marine Energy
+Resource Assessment and Characterization project. Provides one year ({location["start_date_utc"]} to {location["end_date_utc"]}) of
+{location["temporal_resolution"]} three-dimensional hindcast model results including velocity components (u, v) [m/s], surface
+elevation [m] from NAVD88, and derived quantities (speed, direction, power density) across 10 depth layers spanning the water column.
+Designed to meet IEC TS 62600-201 Edition 1.0 (2015) Stage 1 requirements for tidal resource characterization, supporting resource
+assessments, commercial development, policy analysis, and research applications in marine energy.
 """,
+            width=WORD_WRAP_WIDTH,
+        ),
         # Source: IOOS
         # Country of the person or organization that distributes the data.
         "publisher_country": config_global_attrs["publisher_country"],
@@ -1106,7 +1237,7 @@ if __name__ == "__main__":
         print("\n" + "=" * 60)
         print("COMPLIANCE ANALYSIS")
         print("=" * 60)
-        print(f"Overall Score: {scored}/{possible} ({scored/possible*100:.1f}%)")
+        print(f"Overall Score: {scored}/{possible} ({scored / possible * 100:.1f}%)")
         print(
             f"Issues: {cf_results['high_count']} High Priority, {cf_results['medium_count']} Medium Priority"
         )
@@ -1132,7 +1263,7 @@ if __name__ == "__main__":
                     for msg in issue["msgs"][:2]:  # Show first 2 messages
                         print(f"    - {msg}")
                     if len(issue["msgs"]) > 2:
-                        print(f"    ... and {len(issue['msgs'])-2} more")
+                        print(f"    ... and {len(issue['msgs']) - 2} more")
 
         if med_issues:
             print(f"\nMedium Priority Issues ({len(med_issues)}):")
@@ -1146,9 +1277,9 @@ if __name__ == "__main__":
         print("\n" + "=" * 60)
         print("SUMMARY")
         print("=" * 60)
-        print(f"Score: {scored}/{possible} ({scored/possible*100:.1f}%)")
+        print(f"Score: {scored}/{possible} ({scored / possible * 100:.1f}%)")
         print(f"Status: {'Passed' if not return_value else 'Failed'}")
-        print(f"Points to gain: {possible-scored}")
+        print(f"Points to gain: {possible - scored}")
 
     # Clean up the JSON report file
     Path(output_filename).unlink()
