@@ -29,6 +29,7 @@ def get_output_dirs(config, location, use_temp_base_path=False):
     output_location_name = location["output_name"]
     version = f"v{config['dataset']['version']}"
     base_path = Path(config["dir"]["base"]).resolve()
+    output_dirs = config["dir"]["output"]
 
     if use_temp_base_path:
         # https://nrel.github.io/HPC/Documentation/Systems/Kestrel/Running/example_sbatch/
@@ -47,13 +48,11 @@ def get_output_dirs(config, location, use_temp_base_path=False):
 
     def build_path(name):
         str_path_with_vars = (
-            output_dirs["name"]
+            output_dirs[name]
             .replace("<location>", output_location_name)
             .replace("<version>", version)
         )
         return Path(base_path, str_path_with_vars)
-
-    output_dirs = config["dir"]["output"]
 
     paths = {}
     for key, value in output_dirs.items():
