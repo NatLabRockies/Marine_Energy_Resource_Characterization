@@ -105,6 +105,7 @@ def process_single_period(period_data, config, location, output_dir, count):
                 location["output_name"],
                 config["dataset"]["name"],
                 "a2",
+                version=config["dataset"]["version"],
                 temporal=temporal_string,
             )
         )

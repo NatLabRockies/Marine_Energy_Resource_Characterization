@@ -808,6 +808,7 @@ def standardize_dataset(
                 output_name,
                 config["dataset"]["name"],
                 "a1",
+                version=config["dataset"]["version"],
                 temporal=temporal_string,
             )
         )

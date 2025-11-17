@@ -2015,6 +2015,7 @@ def process_single_file(
                 location["output_name"],
                 config["dataset"]["name"],
                 "b1",
+                version=config["dataset"]["version"],
                 temporal=temporal_string,
             )
         )
