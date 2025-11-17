@@ -694,6 +694,7 @@ def standardize_dataset_global_attrs(
     code_metadata = extract_git_repo_versioning()
 
     config_global_attrs = config["global_attributes"]
+    version = f"v{config['dataset']['version']}"
 
     print("Computing geospatial bounds...")
     geospatial_bounds = compute_geospatial_bounds(
