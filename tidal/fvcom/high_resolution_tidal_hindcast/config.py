@@ -854,7 +854,7 @@ Elhwa2 ;
         # Source: ACDD
         # The name of any individuals, projects, or institutions that contributed to
         # the creation of this data.
-        "contributor_name": "Mithun Deb, Preston Spicer, Taiping Wang, Levi Kilcher, Kevin Haas, Andrew Simms, Ethan Young, Mike Lawson",
+        "contributor_name": "Mithun Deb, Preston Spicer, Taiping Wang, Levi Kilcher, Kevin Haas, Andrew Simms, Ethan Young, Michael Lawson",
         # Source: ACDD
         # The role of any individuals, projects, or institutions that contributed to
         # the creation of this data.
@@ -961,7 +961,8 @@ Elhwa2 ;
         "comment": None,
         # Source: ACDD
         # A URL that gives the location of more complete metadata.
-        "metadata_link": "https://www.github.com/nrel/marine_energy_resource_characterization/",
+        # "metadata_link": "https://www.github.com/nrel/marine_energy_resource_characterization/",
+        "metadata_link": None,
         # Source: ACDD
         # The overarching program(s) of which the dataset is a part.
         "program": "U.S. Department of Energy (DOE) Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) Marine Energy Resource Assessment and Characterization",
