@@ -649,7 +649,7 @@ config = {
             "expected_delta_t_seconds": 1800,  # 30 min
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 19},
-            "title": "Western Passage High Fidelity Tidal Hindcast",
+            "title": "Western Passage High Resolution Tidal Hindcast",
             "partition_frequency": "1",  # Monthly, Roughly 50GB per file
             # Trying to improve VAP compute time and find a balance between # of files and file size
             # "partition_frequency": "12h",

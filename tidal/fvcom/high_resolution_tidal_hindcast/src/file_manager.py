@@ -27,6 +27,7 @@ def get_specified_nc_files(config, location):
 
 def get_output_dirs(config, location, use_temp_base_path=False):
     output_location_name = location["output_name"]
+    version = f"v{config['dataset']['version']}"
     base_path = Path(config["dir"]["base"]).resolve()
 
     if use_temp_base_path:
@@ -44,70 +45,84 @@ def get_output_dirs(config, location, use_temp_base_path=False):
         else:
             base_path = temp_dir
 
+    def build_path(name):
+        str_path_with_vars = (
+            output_dirs["name"]
+            .replace("<location>", output_location_name)
+            .replace("<version>", version)
+        )
+        return Path(base_path, str_path_with_vars)
+
     output_dirs = config["dir"]["output"]
-    paths = {
-        "tracking": Path(
-            base_path,
-            output_dirs["tracking"].replace("<location>", output_location_name),
-        ),
-        "standardized": Path(
-            base_path,
-            output_dirs["standardized"].replace("<location>", output_location_name),
-        ),
-        "standardized_partition": Path(
-            base_path,
-            output_dirs["standardized_partition"].replace(
-                "<location>", output_location_name
-            ),
-        ),
-        "vap": Path(
-            base_path, output_dirs["vap"].replace("<location>", output_location_name)
-        ),
-        "monthly_summary_vap": Path(
-            base_path,
-            output_dirs["monthly_summary_vap"].replace(
-                "<location>", output_location_name
-            ),
-        ),
-        "yearly_summary_vap": Path(
-            base_path,
-            output_dirs["yearly_summary_vap"].replace(
-                "<location>", output_location_name
-            ),
-        ),
-        "yearly_summary_vap_by_face": Path(
-            base_path,
-            output_dirs["yearly_summary_vap"].replace(
-                "<location>", output_location_name
-            ),
-            "by_face",
-        ),
-        "vap_partition": Path(
-            base_path,
-            output_dirs["vap_partition"].replace("<location>", output_location_name),
-        ),
-        "vap_summary_parquet": Path(
-            base_path,
-            output_dirs["vap_summary_parquet"].replace(
-                "<location>", output_location_name
-            ),
-        ),
-        "vap_atlas_summary_parquet": Path(
-            base_path,
-            output_dirs["vap_atlas_summary_parquet"].replace(
-                "<location>", output_location_name
-            ),
-        ),
-        "combined_vap_atlas": Path(base_path, output_dirs["combined_vap_atlas"]),
-        "hsds": Path(
-            base_path,
-            output_dirs["hsds"].replace("<location>", output_location_name),
-        ),
-        "hsds_temp": Path(
-            base_path,
-            output_dirs["hsds_temp"].replace("<location>", output_location_name),
-        ),
-    }
+
+    paths = {}
+    for key, value in output_dirs.items():
+        paths[key] = build_path(value)
+
+    # paths = {
+    #     "tracking": Path(
+    #         base_path,
+    #         output_dirs["tracking"].replace("<location>", output_location_name),
+    #     ),
+    #     "standardized": Path(
+    #         base_path,
+    #         output_dirs["standardized"].replace("<location>", output_location_name),
+    #     ),
+    #     "standardized_partition": Path(
+    #         base_path,
+    #         output_dirs["standardized_partition"].replace(
+    #             "<location>", output_location_name
+    #         ),
+    #     ),
+    #     "vap": Path(
+    #         base_path, output_dirs["vap"].replace("<location>", output_location_name)
+    #     ),
+    #     "monthly_summary_vap": Path(
+    #         base_path,
+    #         output_dirs["monthly_summary_vap"].replace(
+    #             "<location>", output_location_name
+    #         ),
+    #     ),
+    #     "yearly_summary_vap": Path(
+    #         base_path,
+    #         output_dirs["yearly_summary_vap"].replace(
+    #             "<location>", output_location_name
+    #         ),
+    #     ),
+    #     "yearly_summary_vap_by_face": Path(
+    #         base_path,
+    #         output_dirs["yearly_summary_vap"].replace(
+    #             "<location>", output_location_name
+    #         ),
+    #         "by_face",
+    #     ),
+    #     "vap_partition": Path(
+    #         base_path,
+    #         output_dirs["vap_partition"].replace("<location>", output_location_name),
+    #     ),
+    #     "vap_summary_parquet": Path(
+    #         base_path,
+    #         output_dirs["vap_summary_parquet"].replace(
+    #             "<location>", output_location_name
+    #         ),
+    #     ),
+    #     "vap_atlas_summary_parquet": Path(
+    #         base_path,
+    #         output_dirs["vap_atlas_summary_parquet"].replace(
+    #             "<location>", output_location_name
+    #         ),
+    #     ),
+    #     "combined_vap_atlas": Path(base_path, output_dirs["combined_vap_atlas"]),
+    #     "hsds": Path(
+    #         base_path,
+    #         output_dirs["hsds"].replace("<location>", output_location_name),
+    #     ),
+    #     "hsds_temp": Path(
+    #         base_path,
+    #         output_dirs["hsds_temp"].replace("<location>", output_location_name),
+    #     ),
+    # }
+
     for path in paths.values():
         path.mkdir(parents=True, exist_ok=True)
 
