@@ -806,13 +806,13 @@ def standardize_dataset_global_attrs(
         # A string used to identify the data being produced. Ideally resembles a shortened
         # lowercase version of the title. Only lowercase alphanumeric characters and '_'
         # are allowed.
-        "dataset_name": location["output_name"].lower(),
+        "dataset_name": f"{config['dataset']['name']}.{location['output_name'].lower()}.{version}",
         # Source: Global
         # Typically used as a label that uniquely identifies this data product from any
         # other data product. For file-based storage systems, the datastream attribute
         # is typically used to generate directory structures.
         # :datastream = cpr.wave_stats.c1 ;
-        "datastream": f"{location['output_name']}.{location['output_name']}.{data_level}",
+        "datastream": f"{config['dataset']['name']}.{location['output_name'].lower()}.{data_level}.{version}",
         # Source: Global, ACDD
         # A user-friendly description of the dataset. It should provide enough context
         # about the data for new users to quickly understand how the data can be used.
