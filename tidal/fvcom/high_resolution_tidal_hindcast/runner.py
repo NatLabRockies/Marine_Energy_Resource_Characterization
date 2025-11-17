@@ -63,26 +63,26 @@ if __name__ == "__main__":
     )
     valid_timestamps_df = pd.read_parquet(tracking_path)
 
-    print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
-    valid_std_files_df = standardize_dataset(
-        config, args.location, valid_timestamps_df, skip_if_verified=False
-    )
+    # print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
+    # valid_std_files_df = standardize_dataset(
+    #     config, args.location, valid_timestamps_df, skip_if_verified=False
+    # )
+    #
+    # print("Step 3: Partitioning Standardized Dataset by Time...")
+    # partition_by_time(config, args.location, valid_std_files_df)
 
-    print("Step 3: Partitioning Standardized Dataset by Time...")
-    partition_by_time(config, args.location, valid_std_files_df)
-
-    print("Step 4: Calculating Derived Value Added Products...")
-    face_precalculations_path = calculate_and_save_face_center_precalculations(
-        config,
-        args.location,
-        skip_if_precalculated=True,
-    )
-
-    derive_vap(
-        config,
-        args.location,
-        skip_if_output_files_exist=False,
-    )
+    # print("Step 4: Calculating Derived Value Added Products...")
+    # face_precalculations_path = calculate_and_save_face_center_precalculations(
+    #     config,
+    #     args.location,
+    #     skip_if_precalculated=True,
+    # )
+    #
+    # derive_vap(
+    #     config,
+    #     args.location,
+    #     skip_if_output_files_exist=False,
+    # )
     #
     # The following doesn't work anymore due to memory issues
     # Summary computations must use dispatch_summarize_jobs.py
