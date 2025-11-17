@@ -135,8 +135,7 @@ def format_references(references, show_warnings=False):
     formatted_references = []
     for ref in references:
         formatted_references.append(format_reference(ref, show_warnings=show_warnings))
-    # return "\n".join(formatted_references)
-    return formatted_references
+    return "\n".join(formatted_references)
 
 
 # Test the functions
