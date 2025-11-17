@@ -34,24 +34,24 @@ from config import config
 # Data level configurations with SLURM time limits (in hours)
 DATA_LEVEL_CONFIG = {
     "00_raw": {"time_hours": 6, "description": "Raw data"},
-    # "a1_std": {"time_hours": 6, "description": "Standardized data"},
-    # "a2_std_partition": {"time_hours": 6, "description": "Standardized partition"},
-    # "b1_vap": {"time_hours": 6, "description": "Value-added products"},
-    # "b2_monthly_mean_vap": {
-    #     "time_hours": 6,
-    #     "description": "Monthly mean VAP",
-    # },
-    # "b3_yearly_mean_vap": {"time_hours": 6, "description": "Yearly mean VAP"},
-    # "b4_vap_partition": {"time_hours": 6, "description": "VAP partition"},
-    # "b5_vap_summary_parquet": {
-    #     "time_hours": 6,
-    #     "description": "VAP summary parquet",
-    # },
-    # "b6_vap_atlas_summary_parquet": {
-    #     "time_hours": 6,
-    #     "description": "VAP atlas summary parquet",
-    # },
-    # "hsds": {"time_hours": 24, "description": "HSDS format"},
+    "a1_std": {"time_hours": 6, "description": "Standardized data"},
+    "a2_std_partition": {"time_hours": 6, "description": "Standardized partition"},
+    "b1_vap": {"time_hours": 6, "description": "Value-added products"},
+    "b2_monthly_mean_vap": {
+        "time_hours": 6,
+        "description": "Monthly mean VAP",
+    },
+    "b3_yearly_mean_vap": {"time_hours": 6, "description": "Yearly mean VAP"},
+    "b4_vap_partition": {"time_hours": 6, "description": "VAP partition"},
+    "b5_vap_summary_parquet": {
+        "time_hours": 6,
+        "description": "VAP summary parquet",
+    },
+    "b6_vap_atlas_summary_parquet": {
+        "time_hours": 6,
+        "description": "VAP atlas summary parquet",
+    },
+    "hsds": {"time_hours": 24, "description": "HSDS format"},
 }
 
 # Location key to output_name mapping from config
