@@ -597,7 +597,7 @@ config = {
             "face_count": 392002,
             "citation": format_references(["ak_cook_deb2025_characterizing"]),
             "original_attrs": """
-            // global attributes:
+// global attributes:
 	:title = cook_inlet_2005 ;
 	:institution = School for Marine Science and Technology ;
 	:source = FVCOM_4.3.1 ;
@@ -632,7 +632,7 @@ config = {
             "face_count": 292927,
             "citation": format_references(["nh_piscataqua_spicer2023_tidal"]),
             "original_attrs": """
-            // global attributes:
+// global attributes:
 	:title = PIR CASE ;
 	:institution = School for Marine Science and Technology ;
 	:source = FVCOM_4.3.1 ;
@@ -697,7 +697,7 @@ Lamprey2 ;
                 ]
             ),
             "original_attrs": """
-            // global attributes:
+// global attributes:
 	:title = psm_TN_refined ;
 	:institution = School for Marine Science and Technology ;
 	:source = FVCOM_4.3.1 ;
@@ -776,7 +776,7 @@ Elhwa2 ;
             "face_count": 231208,
             "citation": format_references(["me_western_deb2023_turbulence"]),
             "original_attrs": """
-            // global attributes:
+// global attributes:
 	:title = WPS CASE ;
 	:institution = School for Marine Science and Technology ;
 	:source = FVCOM_4.3.1 ;
@@ -791,7 +791,8 @@ Elhwa2 ;
 	:Surface_Heat_Forcing = SURFACE HEAT FORCING IS OFF ;
 	:Surface_Wind_Forcing = SURFACE WIND FORCING IS OFF ;
 	:Surface_PrecipEvap_Forcing = SURFACE PRECIPITATION FORCING IS OFF ;
-    """
+            """,
+        },
     },
     "global_attributes": {
         # Global attributes that will be recorded in the output dataset in `attrs` (attributes). These metadata are
