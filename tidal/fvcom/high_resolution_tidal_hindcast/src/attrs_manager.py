@@ -844,20 +844,20 @@ def standardize_dataset_global_attrs(
         "description": textwrap.fill(
             f"""
 High-resolution tidal energy resource hindcast for {location["label"]}, developed under the U.S. Department of Energy Water Power
-Technologies Office Marine Energy Resource Assessment and Characterization project following IEC TC 114 best practices. The hindcast
+Technologies Office Marine Energy Resource Assessment and Characterization project following {format_references(["iec_62600_201"])}. This hindcast
 provides one year ({location["start_date_utc"]} to {location["end_date_utc"]}) of {location["temporal_resolution"]} resolved model output
 including eastward sea water velocity (u) [m/s], northward sea water velocity (v) [m/s], sea surface elevation [m] relative to NAVD88,
 sea water speed [m/s], sea water velocity to direction [degrees clockwise from true north], kinetic power density [W/m²], layer depths
 below surface [m], and total water column depth [m] across 10 vertical sigma layers. Pacific Northwest National Laboratory generated
 hindcast results using {config["model_specification"]["model_version"]}, a finite volume coastal ocean model with an unstructured
 triangular mesh topology. The model employs 10 terrain-following sigma coordinate layers that adjust dynamically with tidal elevation,
-with layer thickness varying proportionally to total water depth. Model outputs are computed at volume centroids with WGS84 (EPSG:4326)
-coordinates. Boundary conditions incorporate 12 tidal constituents from the OSU TPXO global tide model, and atmospheric forcing is
-provided by ERA5/CFSv2 reanalysis wind data. Model validation against available Acoustic Doppler Current Profiler (ADCP) measurements
-is documented in {location["citation"]}. National Renewable Energy Laboratory performed data standardization, quality control, and
-publication using Kestrel HPC resources and software available at {code_metadata["code_url"]}. The hindcast meets IEC 62600-201 Stage 1
-requirements for tidal resource characterization, with spatial resolution predominantly under 500 meters in areas of significant tidal
-energy potential.
+where layer thickness varies proportionally to total water depth. Model outputs are computed at volume centroids that use WGS84 (EPSG:4326)
+to define the X and Y coordinates and Z coordinates are calculated relative to NAVD88. Boundary conditions incorporate 12 tidal constituents from the OSU TPXO global tide model. {forcing_config["description_text"]}
+Model validation against available Acoustic Doppler Current Profiler (ADCP) measurements is documented in {location["citation"]}
+The National Renewable Energy Laboratory performed data standardization, quality control, and publication using Kestrel HPC resources and
+software available at {code_metadata["code_url"]}. This dataset meets Stage 1 requirements defined by IEC TS 62600-201:2015 
+for investigating the scale and attributes of the tidal energy resource to assess the feasibility of constructing tidal energy arrays,
+with spatial resolution predominantly under 500 meters in areas of significant tidal energy potential.
 """,
             width=WORD_WRAP_WIDTH,
         ),
