@@ -733,6 +733,7 @@ def should_include_variable(var_name):
         "x",
         "y",
         "zeta",  # Node-based variable (time, node)
+        "meta_mesh_exterior_boundary_wkt",  # Mesh boundary, not necessary for HSDS datasets
     ]
 
     return var_name not in skip_vars
