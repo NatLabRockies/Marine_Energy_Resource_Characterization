@@ -44,7 +44,7 @@ config = {
         # Configuration for spatial partitioning of parquet files
         # Partition path structure: lat_deg={DD}/lon_deg={DD}/lat_dec={DD}/lon_dec={DD}/
         "decimal_places": 2,  # Number of decimal places used in partition path (lat*100 % 100)
-        "coord_digits_max": 2,  # Maximum decimal precision in filename
+        "coord_digits_max": 7,  # Maximum decimal precision in filename
         "index_max_digits": 8,  # Zero-padding for face ID in filename
     },
     "dependencies": {
