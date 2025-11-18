@@ -188,5 +188,8 @@ def define_numeric_encoding(ds, var_name, config, this_encoding):
     # Set dtype for floating point variables
     if np.issubdtype(var.dtype, np.floating):
         this_encoding["dtype"] = float_type
+    # Explicitly preserve integer dtypes to prevent unwanted type conversion
+    elif np.issubdtype(var.dtype, np.integer):
+        this_encoding["dtype"] = var.dtype
 
     return this_encoding
