@@ -54,16 +54,16 @@ if __name__ == "__main__":
 
     print(f"Standardizing {location} tidal dataset for output type {output_type}....")
 
-    print("Finding nc files...")
-    try:
-        nc_files = get_specified_nc_files(config, location)
-        print(f"Found {len(nc_files)} files!")
-    except PermissionError:
-        print("Permissions error accessing original files")
-        nc_files = []
-
-    print("Step 1: Verifying Dataset Integrity...")
-    valid_timestamps_df = verify_dataset(config, location, nc_files)
+    # print("Finding nc files...")
+    # try:
+    #     nc_files = get_specified_nc_files(config, location)
+    #     print(f"Found {len(nc_files)} files!")
+    # except PermissionError:
+    #     print("Permissions error accessing original files")
+    #     nc_files = []
+    #
+    # print("Step 1: Verifying Dataset Integrity...")
+    # valid_timestamps_df = verify_dataset(config, location, nc_files)
 
     tracking_folder = get_tracking_output_dir(config, location)
     tracking_path = Path(
