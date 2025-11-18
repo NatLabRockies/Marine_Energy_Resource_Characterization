@@ -1962,6 +1962,10 @@ def process_single_file(
     file_start_time = time.time()
     print(f"Calculating vap for {nc_file}")
 
+    # Verify input file has correct nv dtype
+    print(f"\t[{file_index}] Verifying input file nv dtype...")
+    nc_manager.verify_nv_dtype_on_disk(nc_file, config, context="in input file")
+
     # Use context manager to ensure dataset is properly closed
     with xr.open_dataset(
         nc_file, engine=config["dataset"]["xarray_netcdf4_engine"]
@@ -2059,6 +2063,10 @@ def process_single_file(
         print(f"\t[{file_index}] Saving final results to {output_path}...")
 
         nc_manager.nc_write(this_ds, output_path, config)
+
+        # Verify output file has correct nv dtype
+        print(f"\t[{file_index}] Verifying output file nv dtype...")
+        nc_manager.verify_nv_dtype_on_disk(output_path, config, context="in output file")
 
         # Calculate time elapsed for this file
         file_elapsed_time = time.time() - file_start_time

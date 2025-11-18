@@ -10,7 +10,78 @@ def nc_open(path, config, **kwargs):
     )
 
 
+def verify_nv_dtype_in_memory(ds, config, context=""):
+    """
+    Verify that nv variable in dataset has the correct dtype.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset to verify
+    config : dict
+        Configuration with standardized_variable_specification
+    context : str, optional
+        Context string for error message (e.g., "after reading", "before writing")
+
+    Raises
+    ------
+    ValueError
+        If nv dtype does not match expected dtype from config
+    """
+    if "nv" not in ds.data_vars:
+        return
+
+    expected_dtype = config["standardized_variable_specification"]["nv"]["dtype"]
+    actual_dtype = str(ds.nv.dtype)
+
+    context_str = f" {context}" if context else ""
+
+    if actual_dtype != expected_dtype:
+        raise ValueError(
+            f"nv dtype{context_str}: {actual_dtype}, expected: {expected_dtype}"
+        )
+
+
+def verify_nv_dtype_on_disk(file_path, config, context=""):
+    """
+    Verify that nv variable in a NetCDF file has the correct dtype.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to NetCDF file to verify
+    config : dict
+        Configuration with standardized_variable_specification
+    context : str, optional
+        Context string for error message (e.g., "after writing")
+
+    Raises
+    ------
+    ValueError
+        If nv dtype does not match expected dtype from config
+    """
+    ds = nc_open(file_path, config)
+    try:
+        verify_nv_dtype_in_memory(ds, config, context)
+    finally:
+        ds.close()
+
+
 def nc_write(ds, output_path, config, compression_strategy="none"):
+    # Defensive fix: Ensure nv variable has correct dtype (int32) before writing
+    # This prevents a dtype conversion bug that occurs in certain xarray/numpy version
+    # combinations where nv gets converted from int32 to float32 during dataset operations
+    if "nv" in ds.data_vars:
+        expected_nv_dtype = config["standardized_variable_specification"]["nv"]["dtype"]
+        current_nv_dtype = ds.nv.dtype
+
+        if str(current_nv_dtype) != expected_nv_dtype:
+            print(
+                f"WARNING: nv variable has dtype {current_nv_dtype} but config "
+                f"specifies {expected_nv_dtype}. Converting to {expected_nv_dtype}..."
+            )
+            ds["nv"] = ds.nv.astype(expected_nv_dtype)
+
     ds.to_netcdf(
         output_path,
         engine=config["dataset"]["xarray_netcdf4_engine"],
