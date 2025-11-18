@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 """
-Master dispatch script: run_all_locations.py
+Master dispatch script for submitting summarization jobs.
 Location configurations with temporal resolution mapping:
 - 'hourly' temporal resolution -> batch size 10000
 - 'half_hourly' temporal resolution -> batch size 5000
+
+Usage:
+    python dispatch_summarize_jobs.py <location>
+
+Example:
+    python dispatch_summarize_jobs.py cook_inlet
+    python dispatch_summarize_jobs.py puget_sound
 """
 
 import subprocess
 import math
+import argparse
+import sys
 
 # Location configurations: location_name: {'faces': count, 'temporal_resolution': 'hourly'/'half_hourly'}
 LOCATIONS = {
@@ -56,8 +65,34 @@ def submit_sbatch(args):
     return result.stdout.strip()
 
 
-# Submit jobs for each location
-for location, config in LOCATIONS.items():
+def validate_location(location):
+    """Validate location argument."""
+    if location not in LOCATIONS:
+        valid_locations = list(LOCATIONS.keys())
+        raise argparse.ArgumentTypeError(
+            f"Invalid location: {location}. Must be one of: {', '.join(valid_locations)}"
+        )
+    return location
+
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Submit SLURM jobs for summarizing FVCOM data at a specific location."
+    )
+
+    parser.add_argument(
+        "location",
+        type=validate_location,
+        help="Location to process (e.g., aleutian_islands, cook_inlet, piscataqua_river, puget_sound, western_passage)",
+    )
+
+    return parser.parse_args()
+
+
+def submit_location_jobs(location):
+    """Submit processing and concatenation jobs for a specific location."""
+    config = LOCATIONS[location]
     faces = config["faces"]
     temporal_resolution = config["temporal_resolution"]
     batch_size = BATCH_SIZE_MAP[temporal_resolution]
@@ -99,8 +134,11 @@ for location, config in LOCATIONS.items():
     concat_job_id = submit_sbatch(concat_args)
     print(f"Concatenation job submitted with ID: {concat_job_id}")
     print(f"All jobs submitted successfully for {location}!")
-    # print(f"Process jobs: {process_job_id}")
     print(f"Concat job: {concat_job_id}")
     print("---")
 
-print("All location pipelines submitted!")
+
+if __name__ == "__main__":
+    args = parse_args()
+    submit_location_jobs(args.location)
+    print(f"Pipeline submitted for {args.location}!")
