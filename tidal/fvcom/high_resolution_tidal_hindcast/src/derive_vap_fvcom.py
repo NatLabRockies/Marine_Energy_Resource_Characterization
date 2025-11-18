@@ -1136,8 +1136,8 @@ def calculate_zeta_center(ds):
     print("Calculating zeta_center by averaging zeta at cell nodes...")
     print("nv_values shape:", nv_values.shape)
     print("zeta_values shape:", zeta_values.shape)
-    print("len n_times :", len(n_times))
-    print("len n_faces shape:", len(n_faces))
+    print("n_times :", n_times)
+    print("len n_faces shape:", n_faces)
     print("result_array shape:", result_array.shape)
 
     # For each of the 3 nodes of each face
