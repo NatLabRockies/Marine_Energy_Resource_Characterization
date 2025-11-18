@@ -487,13 +487,12 @@ class FVCOMStandardizer:
             Dataset with standardized attributes and dtypes
         """
         for var_name, var_spec in required_vars.items():
-            # # Update attributes
-            # ds[var_name].attrs.clear()
+            # Update attributes
             ds[var_name].attrs.update(var_spec.get("attributes", {}))
 
-            # # Set dtype if specified
-            # if "dtype" in var_spec:
-            #     ds[var_name] = ds[var_name].astype(var_spec["dtype"])
+            # Set dtype if specified - ensures integer types are preserved
+            if "dtype" in var_spec:
+                ds[var_name] = ds[var_name].astype(var_spec["dtype"])
 
         return ds
 
