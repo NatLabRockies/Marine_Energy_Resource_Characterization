@@ -14,8 +14,17 @@ from shapely.geometry import Point
 from .deps_manager import DependencyManager
 
 # Silence NumPy scalar conversion deprecation warnings from coordinate transformations
+# This catches warnings from both pyproj and geopandas coordinate operations
 warnings.filterwarnings(
-    "ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated"
+    "ignore",
+    category=DeprecationWarning,
+    message=".*Conversion of an array with ndim > 0 to a scalar.*",
+)
+# Also catch it from pyproj specifically
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    module="pyproj",
 )
 
 
