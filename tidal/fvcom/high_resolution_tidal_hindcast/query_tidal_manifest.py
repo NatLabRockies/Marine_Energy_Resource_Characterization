@@ -251,11 +251,12 @@ class TidalManifestQuery:
         lat = float(lat_str)
         lon = float(lon_str)
 
-        # Calculate partition components
+        # Calculate partition components using decimal_places from manifest
+        multiplier = 10 ** self.decimal_places
         lat_deg = int(lat)
         lon_deg = int(lon)
-        lat_dec = int(abs(lat * 100) % 100)
-        lon_dec = int(abs(lon * 100) % 100)
+        lat_dec = int(abs(lat * multiplier) % multiplier)
+        lon_dec = int(abs(lon * multiplier) % multiplier)
 
         # Get location-specific metadata
         if location_name not in self.manifest["locations"]:

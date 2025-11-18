@@ -644,9 +644,11 @@ def generate_compact_manifest(config, output_dir):
     grid_lons = [round(g["centroid"][1], spec_decimal_places + 1) for g in grid_index]
 
     # Define path template for reconstructing full file paths
+    # Use config["partition"]["decimal_places"] to format lat_dec/lon_dec width
+    dec_format_spec = f"0{spec_decimal_places}d"
     path_template = (
-        "{location}/lat_deg={lat_deg:02d}/lon_deg={lon_deg:03d}/"
-        "lat_dec={lat_dec:02d}/lon_dec={lon_dec:02d}/"
+        "{location}/lat_deg={lat_deg}/lon_deg={lon_deg}/"
+        f"lat_dec={{lat_dec:{dec_format_spec}}}/lon_dec={{lon_dec:{dec_format_spec}}}/"
         "{location}.wpto_high_res_tidal.face={face_id}.lat={lat}.lon={lon}-{temporal}.b4.{date}.{time}.parquet"
     )
 
