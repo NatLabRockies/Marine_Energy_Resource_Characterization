@@ -1,3 +1,11 @@
+import warnings
+
+# CRITICAL: Suppress pyproj/numpy deprecation warnings BEFORE importing anything else
+# These warnings are emitted thousands of times during coordinate transformations
+# and significantly slow down processing. Must be set before pyproj is imported.
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*scalar.*")
+
 from pathlib import Path
 
 import pandas as pd
