@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     print("Step 2: Modifying Original Dataset to Create a Standardized Dataset...")
     valid_std_files_df = standardize_dataset(
-        config, args.location, valid_timestamps_df, skip_if_verified=True
+        config, args.location, valid_timestamps_df, skip_if_verified=False
     )
 
     print("Step 3: Partitioning Standardized Dataset by Time...")
