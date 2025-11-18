@@ -6,7 +6,10 @@ import xarray as xr
 
 def nc_open(path, config, **kwargs):
     return xr.open_dataset(
-        path, engine=config["dataset"]["xarray_netcdf4_engine"], **kwargs
+        path,
+        decode_timedelta=False,
+        engine=config["dataset"]["xarray_netcdf4_engine"],
+        **kwargs,
     )
 
 
