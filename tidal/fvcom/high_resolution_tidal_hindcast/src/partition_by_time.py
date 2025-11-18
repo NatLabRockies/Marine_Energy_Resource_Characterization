@@ -118,6 +118,9 @@ def process_single_period(period_data, config, location, output_dir, count):
         output_path = Path(output_dir, data_level_file_name)
 
         print(f"[{count}] Saving partition file: {output_path}...")
+        nc_manager.verify_nv_dtype_in_memory(
+            combined_ds, config, context="before writing a2 output file"
+        )
         nc_manager.nc_write(combined_ds, output_path, config)
 
         # Verify the file exists before continuing
@@ -130,7 +133,9 @@ def process_single_period(period_data, config, location, output_dir, count):
             print(f"[{count}] Saved partition file: {output_path}!")
             # Verify output file has correct nv dtype
             print(f"[{count}] Verifying output file nv dtype...")
-            nc_manager.verify_nv_dtype_on_disk(output_path, config, context="in a2 output file")
+            nc_manager.verify_nv_dtype_on_disk(
+                output_path, config, context="in a2 output file"
+            )
         else:
             print(f"[{count}] Warning: Could not verify file was saved: {output_path}")
 
