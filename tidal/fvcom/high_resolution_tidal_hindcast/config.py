@@ -770,7 +770,7 @@ Elhwa2 ;
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 19},
             "title": "Western Passage High Resolution Tidal Hindcast",
-            "partition_frequency": "1",  # Monthly, Roughly 50GB per file
+            "partition_frequency": "1D",  # Daily, Roughly 50GB per file
             # Trying to improve VAP compute time and find a balance between # of files and file size
             # "partition_frequency": "12h",
             "face_count": 231208,
