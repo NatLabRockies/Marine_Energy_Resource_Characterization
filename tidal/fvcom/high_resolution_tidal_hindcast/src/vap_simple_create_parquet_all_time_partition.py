@@ -115,12 +115,15 @@ def get_partition_file_name(
     df,
     config,
     location,
-    index_max_digits=6,
-    coord_digits_max=7,
 ) -> str:
     """
     Generate standardized filename for partition files.
     """
+
+    coord_digits_max = config["partition"]["coord_digits_max"]
+    index_max_digits = config["partition"]["index_max_digits"]
+    version = config["dataset"]["version"]
+
     # Round latitude and longitude to specified decimal places
     lat_rounded = round(df["lat"].iloc[0], coord_digits_max)
     lon_rounded = round(df["lon"].iloc[0], coord_digits_max)
@@ -145,6 +148,7 @@ def get_partition_file_name(
         f"{config['dataset']['name']}.face={index:{index_format}}.lat={lat_rounded:{coord_format}}.lon={lon_rounded:{coord_format}}",
         "b4",
         temporal=temporal_string,
+        version=version,
         ext="parquet",
     )
 
