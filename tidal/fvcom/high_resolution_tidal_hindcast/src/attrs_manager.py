@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from src.citation_manager import format_references
+from src import gis_boundary_manager
 
 WORD_WRAP_WIDTH = 80
 
@@ -202,16 +203,24 @@ def extract_git_repo_versioning(remote_name="public"):
         return None
 
 
-def compute_geospatial_bounds(ds, crs_string=None):
+def compute_geospatial_bounds(ds, config, location, crs_string=None):
     """
     Compute geospatial bounds and related quantities from an xarray dataset
     with an unstructured grid.
+
+    This function delegates to gis_boundary_manager.compute_mesh_boundary()
+    which extracts the actual exterior boundary polygon from the triangular
+    mesh connectivity, rather than just computing a simple bounding box.
 
     Parameters
     ----------
     ds : xarray.Dataset
         Input dataset containing latitude and longitude coordinates.
         Must have units specified for both coordinates.
+    config : dict
+        Configuration dictionary
+    location : str or dict
+        Location key or location configuration dict
     crs_string : str, optional
         The coordinate reference system string. If None, will attempt to
         read from ds.attrs['geospatial_bounds_crs']
@@ -229,60 +238,13 @@ def compute_geospatial_bounds(ds, crs_string=None):
         If required units are missing from coordinates
         If CRS string is not available in either input parameter or dataset attributes
     """
-    # Initialize output dictionary
-    bounds = {
-        "geospatial_bounds": None,
-        "geospatial_bounds_crs": None,
-        "geospatial_lat_max": None,
-        "geospatial_lat_min": None,
-        "geospatial_lat_units": None,
-        "geospatial_lat_resolution": None,  # Will remain None for unstructured grid
-        "geospatial_lon_max": None,
-        "geospatial_lon_min": None,
-        "geospatial_lon_units": None,
-        "geospatial_lon_resolution": None,  # Will remain None for unstructured grid
-    }
-
-    # Get latitude and longitude variables
-    lat = ds.lat_node
-    lon = ds.lon_node
-
-    # Check for required units
-    if not hasattr(lat, "units"):
-        raise ValueError("Latitude coordinate must have units specified")
-    if not hasattr(lon, "units"):
-        raise ValueError("Longitude coordinate must have units specified")
-
-    # Set units
-    bounds["geospatial_lat_units"] = lat.units
-    bounds["geospatial_lon_units"] = lon.units
-
-    # Compute simple min/max bounds
-    bounds["geospatial_lat_max"] = float(lat.max().values)
-    bounds["geospatial_lat_min"] = float(lat.min().values)
-    bounds["geospatial_lon_max"] = float(lon.max().values)
-    bounds["geospatial_lon_min"] = float(lon.min().values)
-
-    # Get CRS from input parameter or dataset attributes
-    if crs_string is not None:
-        bounds["geospatial_bounds_crs"] = crs_string
-    elif "geospatial_bounds_crs" in ds.attrs:
-        bounds["geospatial_bounds_crs"] = ds.attrs["geospatial_bounds_crs"]
-    else:
-        raise ValueError(
-            "CRS string must be provided either as input parameter or in dataset attributes"
-        )
-
-    # Simple bounding box representation
-    bounds["geospatial_bounds"] = (
-        f"POLYGON (({bounds['geospatial_lon_min']} {bounds['geospatial_lat_min']}, "
-        f"{bounds['geospatial_lon_max']} {bounds['geospatial_lat_min']}, "
-        f"{bounds['geospatial_lon_max']} {bounds['geospatial_lat_max']}, "
-        f"{bounds['geospatial_lon_min']} {bounds['geospatial_lat_max']}, "
-        f"{bounds['geospatial_lon_min']} {bounds['geospatial_lat_min']}))"
+    # Delegate to gis_boundary_manager which handles:
+    # - Extracting boundary from triangular mesh
+    # - IDL normalization for Aleutian Islands
+    # - Caching results
+    return gis_boundary_manager.compute_mesh_boundary(
+        ds, config, location, crs_string
     )
-
-    return bounds
 
 
 def convert_fvcom_history_to_iso_datetime(history_string: str) -> str:
@@ -698,7 +660,26 @@ def standardize_dataset_global_attrs(
 
     print("Computing geospatial bounds...")
     geospatial_bounds = compute_geospatial_bounds(
-        ds, coordinate_reference_system_string
+        ds, config, location, coordinate_reference_system_string
+    )
+
+    # Add the WKT boundary as a data variable instead of in global attributes
+    # This keeps the lengthy polygon string out of the attribute noise
+    print("Adding mesh boundary WKT variable...")
+    import xarray as xr
+    ds["meta_mesh_exterior_boundary_wkt"] = xr.DataArray(
+        geospatial_bounds["geospatial_bounds"],
+        attrs={
+            "long_name": "Mesh Exterior Boundary in WKT Format",
+            "description": (
+                "Well-Known Text (WKT) representation of the exterior boundary polygon "
+                "of the unstructured triangular mesh. This polygon defines the outer "
+                "extent of the model domain."
+            ),
+            "format": "OGC Well-Known Text (WKT)",
+            "geometry_type": "POLYGON",
+            "crs": geospatial_bounds["geospatial_bounds_crs"],
+        }
     )
 
     print("Computing modification dates...")
@@ -871,8 +852,9 @@ grid resolution is under 500 meters, predominantly in areas of significant tidal
         "featureType": config_global_attrs["featureType"],
         # Source: ACDD
         # Describes the data's 2D or 3D geospatial extent in OGC's Well-Known Text (WKT)
-        # Geometry format.
-        "geospatial_bounds": geospatial_bounds["geospatial_bounds"],
+        # Geometry format. The actual WKT polygon is stored in the meta_mesh_exterior_boundary_wkt
+        # variable to reduce attribute noise.
+        "geospatial_bounds": "See meta_mesh_exterior_boundary_wkt variable for actual boundary polygon",
         # Source: ACDD
         # The coordinate reference system (CRS) of the point coordinates in the
         # geospatial_bounds attribute.

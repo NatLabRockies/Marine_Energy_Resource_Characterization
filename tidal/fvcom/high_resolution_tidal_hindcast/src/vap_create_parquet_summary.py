@@ -42,37 +42,37 @@ ATLAS_COLUMNS = {
 }
 
 
-def compute_grid_resolution(df):
-    """Compute FVCOM grid resolution as average edge length"""
-
-    # Convert degrees to radians
-    lat1_rad = np.radians(df["element_corner_1_lat"])
-    lon1_rad = np.radians(df["element_corner_1_lon"])
-    lat2_rad = np.radians(df["element_corner_2_lat"])
-    lon2_rad = np.radians(df["element_corner_2_lon"])
-    lat3_rad = np.radians(df["element_corner_3_lat"])
-    lon3_rad = np.radians(df["element_corner_3_lon"])
-
-    # Earth radius in meters (WGS84)
-    R = 6378137.0
-
-    def haversine_vectorized(lat1, lon1, lat2, lon2):
-        """Vectorized haversine distance calculation"""
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
-        c = 2 * np.arcsin(np.sqrt(a))
-        return R * c
-
-    # Calculate three edge lengths
-    edge1 = haversine_vectorized(lat1_rad, lon1_rad, lat2_rad, lon2_rad)
-    edge2 = haversine_vectorized(lat2_rad, lon2_rad, lat3_rad, lon3_rad)
-    edge3 = haversine_vectorized(lat3_rad, lon3_rad, lat1_rad, lon1_rad)
-
-    # Grid resolution as average edge length, units are meters
-    df["vap_grid_resolution"] = (edge1 + edge2 + edge3) / 3
-
-    return df
+# def compute_grid_resolution(df):
+#     """Compute FVCOM grid resolution as average edge length"""
+#
+#     # Convert degrees to radians
+#     lat1_rad = np.radians(df["element_corner_1_lat"])
+#     lon1_rad = np.radians(df["element_corner_1_lon"])
+#     lat2_rad = np.radians(df["element_corner_2_lat"])
+#     lon2_rad = np.radians(df["element_corner_2_lon"])
+#     lat3_rad = np.radians(df["element_corner_3_lat"])
+#     lon3_rad = np.radians(df["element_corner_3_lon"])
+#
+#     # Earth radius in meters (WGS84)
+#     R = 6378137.0
+#
+#     def haversine_vectorized(lat1, lon1, lat2, lon2):
+#         """Vectorized haversine distance calculation"""
+#         dlat = lat2 - lat1
+#         dlon = lon2 - lon1
+#         a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+#         c = 2 * np.arcsin(np.sqrt(a))
+#         return R * c
+#
+#     # Calculate three edge lengths
+#     edge1 = haversine_vectorized(lat1_rad, lon1_rad, lat2_rad, lon2_rad)
+#     edge2 = haversine_vectorized(lat2_rad, lon2_rad, lat3_rad, lon3_rad)
+#     edge3 = haversine_vectorized(lat3_rad, lon3_rad, lat1_rad, lon1_rad)
+#
+#     # Grid resolution as average edge length, units are meters
+#     df["vap_grid_resolution"] = (edge1 + edge2 + edge3) / 3
+#
+#     return df
 
 
 def compute_max_to_mean_ratio(df):
@@ -634,7 +634,8 @@ def convert_tidal_summary_nc_to_dataframe(ds):
     # Add face_id as an 8-digit zero-padded string
     result_df.insert(0, "face_id", result_df.index.map(lambda x: f"{x:08d}"))
 
-    result_df = compute_grid_resolution(result_df)
+    # Grid resolution is now computed during VAP derivation and included in the NC file
+    # as vap_grid_resolution, so it will be picked up automatically as a face variable
     result_df = compute_max_to_mean_ratio(result_df)
 
     print(f"Created dataframe with {result_df.shape[1]} columns")

@@ -15,7 +15,13 @@ from shapely.geometry import Point
 from shapely.ops import nearest_points
 from timezonefinder import TimezoneFinder
 
-from . import attrs_manager, file_manager, file_name_convention_manager, nc_manager
+from . import (
+    attrs_manager,
+    file_manager,
+    file_name_convention_manager,
+    nc_manager,
+    gis_boundary_manager,
+)
 from .distance_to_shore_manager import DistanceToShoreCalculator
 from .jurisdiction_manager import JurisdictionCalculator
 
@@ -94,6 +100,7 @@ def _load_and_validate_existing_precalculations(config, location_key):
             "distance_to_shore",
             "jurisdiction",
             "mean_navd88_offset",
+            "grid_resolution",
         ]
 
         # Check which columns are missing or have null values
@@ -234,6 +241,7 @@ def calculate_and_save_face_center_precalculations(
                 "distance_to_shore",
                 "jurisdiction",
                 "mean_navd88_offset",
+                "grid_resolution",
             ]
 
         # Step 2: Add timezone offset data (if missing)
@@ -271,8 +279,16 @@ def calculate_and_save_face_center_precalculations(
                 df, config, location_key
             )
 
-        # Step 6: Save consolidated parquet file
-        print("Step 6: Saving consolidated precalculations...")
+        # Step 6: Calculate grid resolution (if missing)
+        if "grid_resolution" in missing_columns:
+            print("Step 6: Calculating grid resolution...")
+            df = _add_grid_resolution_to_dataframe(df, config, location_key)
+            parquet_path = _save_face_precalculations_dataframe(
+                df, config, location_key
+            )
+
+        # Step 7: Save consolidated parquet file
+        print("Step 7: Saving consolidated precalculations...")
         parquet_path = _save_face_precalculations_dataframe(df, config, location_key)
 
         print("All face-centered precalculations complete!")
@@ -545,6 +561,70 @@ def _add_navd88_offset_to_dataframe(df, config, location_key):
 
     print(
         f"Added mean_navd88_offset column. Stats: min={df['mean_navd88_offset'].min():.3f}, max={df['mean_navd88_offset'].max():.3f}, mean={df['mean_navd88_offset'].mean():.3f} m"
+    )
+    return df
+
+
+def _add_grid_resolution_to_dataframe(df, config, location_key):
+    """Add grid_resolution column to existing DataFrame using gis_boundary_manager"""
+
+    print(f"Calculating grid resolution for {len(df)} faces...")
+
+    location = config["location_specification"][location_key]
+    input_path = file_manager.get_standardized_partition_output_dir(config, location)
+
+    # Find a NC file to get mesh connectivity
+    nc_files = sorted(list(input_path.rglob("*.nc")))
+    if not nc_files:
+        raise FileNotFoundError(f"No NetCDF files found in {input_path}")
+
+    # Load first file to get mesh data
+    with xr.open_dataset(nc_files[0]) as ds:
+        # Use gis_boundary_manager to compute grid resolution
+        grid_resolution_result = gis_boundary_manager.compute_grid_resolution(
+            ds, config, location
+        )
+
+    # Add grid resolution to DataFrame
+    grid_resolution_per_face = grid_resolution_result["grid_resolution_per_face"]
+    df["grid_resolution"] = pd.Series(
+        grid_resolution_per_face, dtype=np.float32, index=df.index
+    )
+
+    # Save metadata JSON
+    metadata = {
+        "variable_name": "grid_resolution",
+        "standard_name": "grid_resolution",
+        "long_name": "Average Edge Length of Triangular Element",
+        "units": "m",
+        "description": (
+            "Grid resolution calculated as the average of the three edge lengths "
+            "for each triangular element using geodesic distance on the WGS84 ellipsoid. "
+            "Represents the spatial scale at which model results are resolved."
+        ),
+        "computation": "mean(edge1, edge2, edge3) using pyproj.Geod geodesic distance",
+        "ellipsoid": "WGS84",
+        "dtype": "float32",
+        "statistics": {
+            "min": grid_resolution_result["grid_resolution_min"],
+            "max": grid_resolution_result["grid_resolution_max"],
+            "mean": grid_resolution_result["grid_resolution_mean"],
+            "median": grid_resolution_result["grid_resolution_median"],
+            "std": grid_resolution_result["grid_resolution_std"],
+            "percentiles": grid_resolution_result["grid_resolution_percentiles"],
+        },
+        "iec_compliance": {
+            "stage_1_max_resolution_m": 500,
+            "stage_2_max_resolution_m": 50,
+        },
+        "creation_date": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+    }
+
+    _save_metadata_json(metadata, config, location_key, "grid_resolution")
+
+    print(
+        f"Added grid_resolution column. Stats: min={df['grid_resolution'].min():.2f}m, "
+        f"max={df['grid_resolution'].max():.2f}m, mean={df['grid_resolution'].mean():.2f}m"
     )
     return df
 
@@ -950,6 +1030,69 @@ def calculate_jurisdiction(ds, config, face_data_df):
 
     # Use metadata from jurisdiction calculator for CF-compliant attributes
     ds[output_variable_name].attrs = jurisdiction_calculator.get_metadata()
+
+    return ds
+
+
+def calculate_grid_resolution(ds, config, face_df):
+    """
+    Add grid resolution for each face using precomputed values.
+
+    This function reads the grid resolution (average edge length) for each face
+    from precomputed data stored during the face center precalculation phase.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing face coordinate variables (used for validation)
+    config : dict
+        Configuration dictionary containing location information
+    face_df : pandas.DataFrame
+        DataFrame with precomputed face data including grid_resolution
+
+    Returns
+    -------
+    xarray.Dataset
+        Original dataset with added 'vap_grid_resolution' variable and CF-compliant metadata
+
+    Raises
+    ------
+    ValueError
+        If precomputed data file doesn't exist or validation fails
+    KeyError
+        If required coordinate variables are missing
+    """
+
+    # Extract grid resolution values
+    grid_resolution_values = face_df["grid_resolution"].values.astype(np.float32)
+
+    output_variable_name = "vap_grid_resolution"
+
+    # Create DataArray with grid resolution for each face
+    ds[output_variable_name] = xr.DataArray(
+        grid_resolution_values,
+        dims=["face"],
+        coords={
+            "face": ds.face,
+            "lat_center": ds.lat_center,
+            "lon_center": ds.lon_center,
+        },
+    )
+
+    # Add CF-compliant metadata
+    ds[output_variable_name].attrs = {
+        "long_name": "Grid Resolution",
+        "standard_name": "grid_resolution",
+        "units": "m",
+        "description": (
+            "Grid resolution calculated as the average of the three edge lengths "
+            "for each triangular element using geodesic distance on the WGS84 ellipsoid. "
+            "IEC 62600-201 Edition 1.0 specifies < 500m grid resolution for Stage 1 (feasability) and < 50m for Stage 2 (layout design) studies"
+        ),
+        "computation": "mean(edge1, edge2, edge3) using pyproj.Geod geodesic distance",
+        "ellipsoid": "WGS84",
+        "coordinates": "face lat_center lon_center",
+    }
 
     return ds
 
@@ -1998,6 +2141,9 @@ def process_single_file(
         print(f"\t[{file_index}] Calculating jurisdiction...")
         this_ds = calculate_jurisdiction(this_ds, config, precalculated_face_df)
 
+        print(f"\t[{file_index}] Adding grid resolution...")
+        this_ds = calculate_grid_resolution(this_ds, config, precalculated_face_df)
+
         # print(f"\t[{file_index}] Calculating depth...")
         # this_ds = calculate_depth(this_ds)
         #
@@ -2066,7 +2212,9 @@ def process_single_file(
 
         # Verify output file has correct nv dtype
         print(f"\t[{file_index}] Verifying output file nv dtype...")
-        nc_manager.verify_nv_dtype_on_disk(output_path, config, context="in output file")
+        nc_manager.verify_nv_dtype_on_disk(
+            output_path, config, context="in output file"
+        )
 
         # Calculate time elapsed for this file
         file_elapsed_time = time.time() - file_start_time
