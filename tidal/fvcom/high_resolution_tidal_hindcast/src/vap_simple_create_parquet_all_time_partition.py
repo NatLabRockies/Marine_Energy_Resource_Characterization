@@ -96,18 +96,26 @@ def prepare_nc_metadata_for_parquet(attributes):
     }
 
 
-def get_partition_path(df) -> str:
+def get_partition_path(df, config) -> str:
     """
     Generate the partition path based on lat/lon coordinates.
     """
+    coordinate_decimal_places = config["partition"]["decimal_places"]
     lat = df["lat"].iloc[0]
     lon = df["lon"].iloc[0]
+
     lat_deg = int(lat)
     lon_deg = int(lon)
-    lat_dec = int(abs(lat * 100) % 100)
-    lon_dec = int(abs(lon * 100) % 100)
 
-    return f"lat_deg={lat_deg:02d}/lon_deg={lon_deg:02d}/lat_dec={lat_dec:02d}/lon_dec={lon_dec:02d}"
+    # Extract decimal decimal_places based on coordinate_decimal_places
+    multiplier = 10**coordinate_decimal_places
+    lat_dec = int(abs(lat * multiplier) % multiplier)
+    lon_dec = int(abs(lon * multiplier) % multiplier)
+
+    # Use coordinate_decimal_places for formatting width
+    format_spec = f"0{coordinate_decimal_places}d"
+
+    return f"lat_deg={lat_deg}/lon_deg={lon_deg}/lat_dec={lat_dec:{format_spec}}/lon_dec={lon_dec:{format_spec}}"
 
 
 def get_partition_file_name(
