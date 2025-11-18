@@ -388,20 +388,29 @@ class DistanceToShoreCalculator:
 
         return result_df
 
-    def get_metadata(self):
+    @staticmethod
+    def get_metadata_static(config, units="nautical_miles"):
         """
-        Get metadata about the distance to shore calculation.
+        Get metadata about the distance to shore calculation without loading coastline data.
+
+        This static method provides metadata without requiring initialization of the
+        DistanceToShoreCalculator, avoiding the expensive coastline data loading.
+
+        Parameters:
+            config (dict): Configuration dictionary containing dependencies info
+            units (str): Output units - 'nautical_miles' or 'kilometers'
 
         Returns:
             dict: Metadata dictionary
         """
         units_label = (
-            "nautical_miles" if self.units == "nautical_miles" else "kilometers"
+            "nautical_miles" if units == "nautical_miles" else "kilometers"
         )
-        units_symbol = "NM" if self.units == "nautical_miles" else "km"
+        units_symbol = "NM" if units == "nautical_miles" else "km"
 
-        # Get dependency information for URLs
-        gshhg_info = self.deps_manager.get_dependency_info("uh_gshhg")
+        # Get dependency information for URLs without creating DependencyManager instance
+        deps_manager = DependencyManager(config)
+        gshhg_info = deps_manager.get_dependency_info("uh_gshhg")
 
         return {
             "long_name": "Distance to Nearest Shore",
@@ -409,3 +418,13 @@ class DistanceToShoreCalculator:
             "units_symbol": units_symbol,
             "description": f"Geodesic distance from coordinate to nearest coastline in {units_label}. Spatial distance calculation using GSHHG full resolution coastline data with EPSG:4087 (World Equidistant Cylindrical) projection from Global Self-consistent, Hierarchical, High-resolution Geography (GSHHG) Documentation: {gshhg_info['docs_url']}, Data: {gshhg_info['data_url']}",
         }
+
+    def get_metadata(self):
+        """
+        Get metadata about the distance to shore calculation.
+
+        Returns:
+            dict: Metadata dictionary
+        """
+        # Delegate to static method to avoid code duplication
+        return self.get_metadata_static(self.config, self.units)

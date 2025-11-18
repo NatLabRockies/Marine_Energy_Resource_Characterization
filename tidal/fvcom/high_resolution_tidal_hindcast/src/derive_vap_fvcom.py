@@ -891,8 +891,11 @@ def calculate_distance_to_shore(ds, config, face_df):
         },
     )
 
-    distance_calculator = DistanceToShoreCalculator(config, units="nautical_miles")
-    ds[output_variable_name].attrs = distance_calculator.get_metadata()
+    # Use static method to get metadata without loading coastline data
+    # This avoids loading the massive GSHHG coastline dataset 365+ times
+    ds[output_variable_name].attrs = DistanceToShoreCalculator.get_metadata_static(
+        config, units="nautical_miles"
+    )
 
     return ds
 
