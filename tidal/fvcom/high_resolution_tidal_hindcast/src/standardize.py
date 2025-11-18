@@ -819,6 +819,10 @@ def standardize_dataset(
 
         nc_manager.nc_write(output_ds, output_path, config)
 
+        # Verify output file has correct nv dtype
+        print(f"[{count}] Verifying output file nv dtype...")
+        nc_manager.verify_nv_dtype_on_disk(output_path, config, context="in a1 output file")
+
         print(f"Saving standardized dataframe to {output_path}...")
         count += 1
 

@@ -39,6 +39,10 @@ def process_single_period(period_data, config, location, output_dir, count):
 
         ds = nc_manager.nc_open(std_file, config)
 
+        # Verify input file has correct nv dtype
+        print(f"[{count}] Verifying input file nv dtype...")
+        nc_manager.verify_nv_dtype_in_memory(ds, config, context="in a1 input file")
+
         # Track source filenames
         if "source_files" in ds.attrs:
             filenames = [Path(f).name for f in ds.attrs["source_files"]]
@@ -124,6 +128,9 @@ def process_single_period(period_data, config, location, output_dir, count):
 
         if output_path.exists():
             print(f"[{count}] Saved partition file: {output_path}!")
+            # Verify output file has correct nv dtype
+            print(f"[{count}] Verifying output file nv dtype...")
+            nc_manager.verify_nv_dtype_on_disk(output_path, config, context="in a2 output file")
         else:
             print(f"[{count}] Warning: Could not verify file was saved: {output_path}")
 
