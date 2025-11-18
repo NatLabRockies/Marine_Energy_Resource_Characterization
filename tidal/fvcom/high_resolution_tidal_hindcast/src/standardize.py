@@ -302,7 +302,6 @@ class FVCOMStandardizer:
                 "cf_role": "face_node_connectivity",
                 "long_name": "Nodes defining each triangular face",
                 "start_index": start_index,
-                "_FillValue": -1,  # For mixed-element meshes (not used for pure triangular)
             }
         )
 
