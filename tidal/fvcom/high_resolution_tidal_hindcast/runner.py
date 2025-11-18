@@ -77,7 +77,7 @@ if __name__ == "__main__":
     )
 
     print("Step 3: Partitioning Standardized Dataset by Time...")
-    partition_by_time(config, args.location, valid_std_files_df)
+    partition_by_time(config, args.location, valid_std_files_df, force_reprocess=True)
 
     print("Step 4: Calculating Derived Value Added Products...")
     face_precalculations_path = calculate_and_save_face_center_precalculations(

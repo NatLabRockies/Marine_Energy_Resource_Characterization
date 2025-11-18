@@ -148,7 +148,7 @@ def process_single_period(period_data, config, location, output_dir, count):
 
 
 def partition_by_time(
-    config, location_key, time_df, force_reprocess=False, use_multiprocessing=False
+    config, location_key, time_df, force_reprocess=True, use_multiprocessing=False
 ):
     """
     Partitions time-series data into separate files based on configured frequency.
