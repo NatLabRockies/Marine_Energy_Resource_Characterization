@@ -1122,8 +1122,21 @@ def calculate_zeta_center(ds):
     Calculate sea surface elevation at cell centers from node values.
     """
 
-    # Convert to zero-based indexing
-    nv_values = ds.nv.values - 1
+    # Check if nv needs zero-based indexing conversion
+    nv_raw = ds.nv.values
+    nv_min = nv_raw.min()
+    nv_max = nv_raw.max()
+
+    print("Calculating zeta_center by averaging zeta at cell nodes...")
+    print(f"nv array: min={nv_min}, max={nv_max}, dtype={nv_raw.dtype}")
+
+    # Convert to zero-based indexing if needed (FVCOM uses 1-based indexing)
+    if nv_min == 1:
+        print("Converting nv from 1-based to 0-based indexing...")
+        nv_values = (nv_raw - 1).astype(np.int64)
+    else:
+        print("nv already appears to be 0-based, using as-is...")
+        nv_values = nv_raw.astype(np.int64)
 
     # Get raw zeta values (all timesteps)
     zeta_values = ds.zeta.values  # shape (n_times, n_nodes)
@@ -1133,11 +1146,10 @@ def calculate_zeta_center(ds):
     n_faces = nv_values.shape[1]
     result_array = np.zeros((n_times, n_faces), dtype=ds.zeta.dtype)
 
-    print("Calculating zeta_center by averaging zeta at cell nodes...")
     print("nv_values shape:", nv_values.shape)
     print("zeta_values shape:", zeta_values.shape)
-    print("n_times :", n_times)
-    print("len n_faces shape:", n_faces)
+    print("n_times:", n_times)
+    print("n_faces:", n_faces)
     print("result_array shape:", result_array.shape)
 
     # For each of the 3 nodes of each face
