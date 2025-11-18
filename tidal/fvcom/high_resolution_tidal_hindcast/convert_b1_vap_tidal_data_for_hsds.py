@@ -236,9 +236,16 @@ def analyze_file_structure(nc_files, timezone_offset=None, jurisdiction_array=No
         # Get node data for element vertexs
         lat_node = ds.lat_node.values
         lon_node = ds.lon_node.values
-        nv = (
-            ds.nv.values - 1
-        )  # Convert from 1-based (Fortran) to 0-based (Python) indexing
+
+        # Check if nv needs zero-based indexing conversion
+        nv_raw = ds.nv.values
+        nv_min = nv_raw.min()
+
+        # Convert from 1-based (Fortran) to 0-based (Python) indexing if needed
+        if nv_min == 1:
+            nv = (nv_raw - 1).astype(np.int64)
+        else:
+            nv = nv_raw.astype(np.int64)
 
         # Calculate element vertex coordinates using numpy indexing
         element_vertex_1_lat = lat_node[nv[0, :]]  # First vertex for all faces
