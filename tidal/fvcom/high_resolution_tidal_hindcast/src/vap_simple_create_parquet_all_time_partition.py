@@ -801,9 +801,6 @@ def convert_h5_to_parquet_batched(
 
     # Calculate memory usage
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    process = psutil.Process(os.getpid())
-    memory_mb = process.memory_info().rss / 1024 / 1024
-    print(f"{timestamp} - INFO - Current memory usage: {memory_mb:.2f} MB")
 
     elapsed_time = time.time() - start_time
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
