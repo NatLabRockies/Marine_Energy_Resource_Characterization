@@ -4,7 +4,8 @@
 #SBATCH --job-name=part_aleutian
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=24:00:00
+##SBATCH --time=24:00:00
+#SBATCH --time=3:59:59
 ##SBATCH --partition=standard
 # Faces 392002
 # Time Interval: Hourly
@@ -15,8 +16,8 @@
 ##SBATCH --array=0-319  # Create 320 tasks
 #SBATCH --array=0-797  # Create 320 tasks
 ##SBATCH --mem=64G
-#SBATCH --mem=128G
-#SBATCH --partition=shared
+##SBATCH --mem=128G
+#SBATCH --partition=short
 
 source sbatch_env_setup.sh
 
