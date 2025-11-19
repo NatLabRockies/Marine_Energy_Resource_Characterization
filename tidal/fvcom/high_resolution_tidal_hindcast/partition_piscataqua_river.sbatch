@@ -4,8 +4,9 @@
 #SBATCH --job-name=part_pisc
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=24:00:00
-#SBATCH --partition=standard
+#SBATCH --time=8:00:00
+#SBATCH --partition=shared
+#SBATCH --mem=64G
 # Faces 292927
 # Time Interval: Half Hourly
 # Recommended Batch Size: 2500

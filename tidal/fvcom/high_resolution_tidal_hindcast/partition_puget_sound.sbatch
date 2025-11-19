@@ -4,11 +4,12 @@
 #SBATCH --job-name=part_puget
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=24:00:00
-#SBATCH --partition=standard
+#SBATCH --time=8:00:00
+#SBATCH --partition=shared
 # There are 1734765 faces and batch size is 2500
 # 1734765 / 2500 = 693.906
 #SBATCH --array=0-693  # Create 694 tasks
+#SBATCH --mem=64G
 
 source sbatch_env_setup.sh
 

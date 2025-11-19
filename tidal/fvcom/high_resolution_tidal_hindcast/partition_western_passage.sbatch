@@ -4,8 +4,9 @@
 #SBATCH --job-name=part_west
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=24:00:00
-#SBATCH --partition=standard
+#SBATCH --time=8:00:00
+#SBATCH --partition=shared
+#SBATCH --mem=64G
 # There are 231208 faces and batch size is 2500
 #SBATCH --array=0-92  # Create 93 tasks
 
