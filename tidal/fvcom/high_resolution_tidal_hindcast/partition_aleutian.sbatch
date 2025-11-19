@@ -9,12 +9,16 @@
 # Faces 392002
 # Time Interval: Hourly
 # Recommended Batch Size: 2500
+# Recommended Batch Size: 1000
 # Calculated Tasks = 797987 / 2500 = 319.19
-#SBATCH --array=0-319  # Create 320 tasks
-#SBATCH --mem=64G
+# Calculated Tasks = 797987 / 1000 = 798
+##SBATCH --array=0-319  # Create 320 tasks
+#SBATCH --array=0-797  # Create 320 tasks
+##SBATCH --mem=64G
+#SBATCH --mem=128
 #SBATCH --partition=shared
 
 source sbatch_env_setup.sh
 
 # Create a Python script that handles the parallelized processing
-python partition_dataset.py aleutian_islands --batch-size 2500 --batch-num $SLURM_ARRAY_TASK_ID 
+python partition_dataset.py aleutian_islands --batch-size 1000 --batch-num $SLURM_ARRAY_TASK_ID 
