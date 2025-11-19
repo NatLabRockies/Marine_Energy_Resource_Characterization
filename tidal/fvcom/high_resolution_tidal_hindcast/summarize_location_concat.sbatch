@@ -3,10 +3,8 @@
 #SBATCH --output=%x_%j.out
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=1:00:00
-#SBATCH --partition=shared
-#SBATCH --ntasks=1
-#SBATCH --mem=64G
+#SBATCH --time=24:00:00
+#SBATCH --partition=standard
 
 # Get parameters from environment
 LOCATION=${LOCATION:-cook_inlet}
