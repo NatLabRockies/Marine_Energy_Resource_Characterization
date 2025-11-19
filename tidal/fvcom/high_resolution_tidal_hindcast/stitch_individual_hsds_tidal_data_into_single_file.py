@@ -1093,6 +1093,11 @@ def main():
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
+    # Delete existing output file if it exists to start with a clean slate
+    if output_file.exists():
+        print(f"Removing existing output file: {output_file}")
+        output_file.unlink()
+
     print(f"Stitching temporal files from {temp_dir}")
     print(f"Output: {output_file}")
 
