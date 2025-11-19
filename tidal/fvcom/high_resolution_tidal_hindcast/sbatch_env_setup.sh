@@ -1,19 +1,11 @@
 #!/bin/bash
-# Shared environment setup for tidal hindcast processing jobs
-
-# Exit on error and propagate failures in pipelines
-set -e
-set -o pipefail
+# Shared environment setup for Cook Inlet processing jobs
 
 echo "Initializing tidal hindcast sbatch environment..."
 
-# Load necessary modules (don't pin version - use system default)
-module load conda
-
-# Initialize conda for this shell (required for non-interactive SLURM jobs)
-eval "$(conda shell.bash hook)"
-
-# Activate the target environment
+# Load necessary modules
+module load conda/2024.06.1
+conda deactivate
 conda activate tidal_fvcom
 
 # Change to the directory containing the script
