@@ -647,7 +647,7 @@ def convert_h5_to_parquet_batched(
         df = df.sort_index()
 
         # Create partitioned directory structure and filename
-        partition_dir = Path(output_dir, get_partition_path(df))
+        partition_dir = Path(output_dir, get_partition_path(df, config))
         partition_dir.mkdir(parents=True, exist_ok=True)
 
         output_file = Path(
