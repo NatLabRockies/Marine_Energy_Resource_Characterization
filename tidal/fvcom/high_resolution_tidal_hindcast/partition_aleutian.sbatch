@@ -15,7 +15,7 @@
 ##SBATCH --array=0-319  # Create 320 tasks
 #SBATCH --array=0-797  # Create 320 tasks
 ##SBATCH --mem=64G
-#SBATCH --mem=128
+#SBATCH --mem=128G
 #SBATCH --partition=shared
 
 source sbatch_env_setup.sh
