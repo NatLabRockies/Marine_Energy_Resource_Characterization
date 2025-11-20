@@ -4,7 +4,7 @@
 #SBATCH --job-name=part_cook
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=8:00:00
+#SBATCH --time=3:59:59
 ##SBATCH --partition=standard
 # Faces 392002
 # Time Interval: Hourly
@@ -15,12 +15,12 @@
 # Calculated Tasks = 392002 / 2500 = 156.8
 # Calculated Tasks = 392002 / 1000 = 393
 ##SBATCH --array=0-78  # Create 79 tasks
-##SBATCH --array=0-156  # Create 157 tasks
-#SBATCH --array=0-392  # Create 393 tasks
-#SBATCH --mem=128G
-#SBATCH --partition=shared
+#SBATCH --array=0-156  # Create 157 tasks
+##SBATCH --array=0-392  # Create 393 tasks
+##SBATCH --mem=128G
+#SBATCH --partition=short
 
 source sbatch_env_setup.sh
 
 # Create a Python script that handles the parallelized processing
-python partition_dataset.py cook_inlet --batch-size 1000 --batch-num $SLURM_ARRAY_TASK_ID 
+python partition_dataset.py cook_inlet --batch-size 2500 --batch-num $SLURM_ARRAY_TASK_ID 
