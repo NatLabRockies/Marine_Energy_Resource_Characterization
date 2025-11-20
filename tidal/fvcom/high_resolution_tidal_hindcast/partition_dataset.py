@@ -18,5 +18,9 @@ if __name__ == "__main__":
 
     print(f"Create Parquet Partition Dataset for {args.location}...")
     partition_vap_into_parquet_dataset(
-        config, args.location, batch_size=batch_size, batch_number=batch_number
+        config,
+        args.location,
+        batch_size=batch_size,
+        batch_number=batch_number,
+        skip_existing=args.skip_existing,
     )

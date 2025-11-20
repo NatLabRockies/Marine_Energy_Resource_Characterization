@@ -281,7 +281,7 @@ def extract_metadata_from_nc(nc_file_path):
 
 
 def convert_h5_to_parquet_batched(
-    input_dir, output_dir, config, location, batch_size=20000, batch_number=0
+    input_dir, output_dir, config, location, batch_size=20000, batch_number=0, skip_existing=False
 ):
     """
     Convert h5 files to individual parquet files for each face using a sequential approach.
@@ -309,6 +309,8 @@ def convert_h5_to_parquet_batched(
         Number of faces to process in each batch
     batch_number : int
         Batch number to process
+    skip_existing : bool
+        Skip processing faces whose output files already exist
     """
     start_time = time.time()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -519,10 +521,50 @@ def convert_h5_to_parquet_batched(
                     for i, face_id in enumerate(range(start_face, end_face)):
                         all_face_data[face_id]["lon"] = lon_values[i]
 
+                # Early skip check: determine which faces already have output files
+                if skip_existing:
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    print(f"{timestamp} - INFO - Checking for existing output files...")
+                    faces_to_skip = set()
+
+                    for i, face_id in enumerate(range(start_face, end_face)):
+                        # Create minimal DataFrame for path computation
+                        mini_df = pd.DataFrame({
+                            "lat": [lat_values[i]],
+                            "lon": [lon_values[i]]
+                        })
+
+                        # Compute expected output path
+                        partition_dir = Path(output_dir, get_partition_path(mini_df, config))
+                        output_file = Path(
+                            partition_dir, get_partition_file_name(face_id, mini_df, config, location)
+                        )
+
+                        # Check if file exists
+                        if output_file.exists():
+                            faces_to_skip.add(face_id)
+                            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            print(f"{timestamp} - INFO - Skipping face {face_id}: output file already exists ({output_file})")
+
+                    # Update faces to process
+                    if faces_to_skip:
+                        # Remove skipped faces from all_face_data
+                        for face_id in faces_to_skip:
+                            del all_face_data[face_id]
+
+                        faces_to_process = len(all_face_data)
+                        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        print(f"{timestamp} - INFO - Skipped {len(faces_to_skip)} existing files, {faces_to_process} faces remaining to process")
+
+                        if faces_to_process == 0:
+                            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            print(f"{timestamp} - INFO - All files already exist, nothing to process")
+                            return
+
             # Add time values to each face
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             print(f"{timestamp} - INFO - Adding time values to all faces")
-            for face_id in range(start_face, end_face):
+            for face_id in all_face_data.keys():
                 all_face_data[face_id]["time"].extend(time_values)
 
             # Efficiently read 2D datasets in batches
@@ -554,6 +596,9 @@ def convert_h5_to_parquet_batched(
                     distribute_start = time.time()
 
                     for i, face_id in enumerate(range(start_face, end_face)):
+                        # Skip faces that were removed (when skip_existing is enabled)
+                        if face_id not in all_face_data:
+                            continue
                         # Extract this face's data (all time points)
                         face_data = data_batch[:, i]
                         all_face_data[face_id][dataset_name].extend(face_data)
@@ -590,6 +635,9 @@ def convert_h5_to_parquet_batched(
                         distribute_start = time.time()
 
                         for i, face_id in enumerate(range(start_face, end_face)):
+                            # Skip faces that were removed (when skip_existing is enabled)
+                            if face_id not in all_face_data:
+                                continue
                             # Extract this face's data for this layer (all time points)
                             face_data = data_batch[:, i]
                             all_face_data[face_id][col_name].extend(face_data)
@@ -615,7 +663,7 @@ def convert_h5_to_parquet_batched(
     processed_count = 0
 
     # Process and write each face sequentially
-    for face_id in range(start_face, end_face):
+    for face_id in all_face_data.keys():
         # Create a DataFrame for this face
         df_data = {}
 
@@ -814,6 +862,7 @@ def partition_vap_into_parquet_dataset(
     location_key,
     batch_size=20000,
     batch_number=0,  # Batch number must start at zero
+    skip_existing=False,
 ):
     """
     Process VAP data and convert to partitioned Parquet files using an optimized sequential approach.
@@ -828,6 +877,8 @@ def partition_vap_into_parquet_dataset(
         Number of faces to process in each batch (default: 20000)
     batch_number : int, optional
         Batch number to process (default: 0)
+    skip_existing : bool, optional
+        Skip processing faces whose output files already exist (default: False)
     """
     location = config["location_specification"][location_key]
     input_path = file_manager.get_vap_output_dir(config, location)
@@ -842,6 +893,7 @@ def partition_vap_into_parquet_dataset(
         location,
         batch_size=batch_size,
         batch_number=batch_number,
+        skip_existing=skip_existing,
     )
 
 

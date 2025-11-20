@@ -86,5 +86,12 @@ def parse_partition_args(config):
     parser.add_argument(
         "--batch-num", type=int, default=1, help="Batch number to process (default: 1)"
     )
+    # Add skip existing argument
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        default=False,
+        help="Skip processing faces whose output files already exist",
+    )
 
     return parser.parse_args()
