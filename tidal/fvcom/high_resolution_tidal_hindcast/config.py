@@ -557,7 +557,7 @@ config = {
             "temporal_resolution": "hourly",
             "coordinates": {"system": "latitude/longitude"},
             # "partition_frequency": "M",  # Monthly, Roughly 73GB per file, out of memory in partition step
-            "partition_frequency": "1D",  # 7 Day Chunks
+            "partition_frequency": "5D",  # 7 Day Chunks
             "face_count": 797978,
             "citation": format_references(["ak_aleutian_spicer2025_spatially"]),
             "original_attrs": """
@@ -592,7 +592,7 @@ config = {
             "expected_delta_t_seconds": 3600,  # 60 min
             "temporal_resolution": "hourly",
             "coordinates": {"system": "latitude/longitude"},
-            "partition_frequency": "1D",  # Monthly, Roughly 35GB per file
+            "partition_frequency": "1M",  # Monthly, Roughly 35GB per file
             # "partition_frequency": "12h",
             "face_count": 392002,
             "citation": format_references(["ak_cook_deb2025_characterizing"]),
@@ -627,7 +627,7 @@ config = {
             "expected_delta_t_seconds": 1800,  # 30 min
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 19},
-            "partition_frequency": "1D",  # Monthly, Roughly 67GB per file
+            "partition_frequency": "1M",  # Monthly, Roughly 67GB per file
             # "partition_frequency": "12h",
             "face_count": 292927,
             "citation": format_references(["nh_piscataqua_spicer2023_tidal"]),
@@ -687,7 +687,7 @@ Lamprey2 ;
             "coordinates": {"system": "utm", "zone": 10},
             # "partition_frequency": "M", Monthly OOM at Partition Step
             # "partition_frequency": "W", This starts with 5 days
-            "partition_frequency": "1D",
+            "partition_frequency": "5D",
             "face_count": 1734765,
             "citation": format_references(
                 [
@@ -770,7 +770,7 @@ Elhwa2 ;
             "temporal_resolution": "half-hourly",
             "coordinates": {"system": "utm", "zone": 19},
             "title": "Western Passage High Resolution Tidal Hindcast",
-            "partition_frequency": "1D",  # Daily, Roughly 50GB per file
+            "partition_frequency": "1M",  # Daily, Roughly 50GB per file
             # Trying to improve VAP compute time and find a balance between # of files and file size
             # "partition_frequency": "12h",
             "face_count": 231208,
