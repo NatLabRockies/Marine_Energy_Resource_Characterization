@@ -107,7 +107,7 @@ config = {
             "combined_vap_atlas": "all_locations_combined_gis/<version>",
             "hsds": "<location>/<version>/hsds",
             "hsds_temp": "<location>/<version>/hsds/individual_temp_files",
-            "tracking": "<location>/<version>/metadata/time_validation_and_tracking",
+            "tracking": "<location>/<version>/metadata/shared",
             "attributes": "<location>/<version>/metadata/dataset_attributes",
             "sha_256": "<location>/<version>/metadata/sha_256",
         },
