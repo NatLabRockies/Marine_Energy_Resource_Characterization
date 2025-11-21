@@ -1,11 +1,11 @@
 """
-Fix timezone offset dtype and units in existing NetCDF files.
+Fix timezone offset units in existing tidal fvcom nc files using h5py.
 
-This script fixes the vap_utc_timezone_offset variable in NetCDF files by:
-1. Converting dtype from timedelta64[ns] to int16
-2. Changing units from "hours" to "1" (dimensionless) to prevent xarray's
-   automatic timedelta decoding
-3. Adding "offset_units" attribute set to "hours" for human interpretation
+This script fixes the vap_utc_timezone_offset variable attributes by:
+1. Changing units from "hours" to "1" (in-place metadata update)
+2. Adding "offset_units" attribute set to "hours" (in-place metadata update)
+
+This is extremely fast as it only modifies attributes, not data.
 
 Usage:
     python fix_timezone_offset_nc_type.py <directory_path>
@@ -18,18 +18,17 @@ import argparse
 import sys
 from pathlib import Path
 
-import numpy as np
-import xarray as xr
+import h5py
 
 
 def fix_timezone_offset_in_file(file_path: Path, dry_run: bool = False) -> dict:
     """
-    Fix the vap_utc_timezone_offset variable in a NetCDF file.
+    Fix the vap_utc_timezone_offset variable attributes in a NetCDF4/HDF5 file.
 
     Parameters
     ----------
     file_path : Path
-        Path to the NetCDF file to fix
+        Path to the NetCDF4/HDF5 file to fix
     dry_run : bool, optional
         If True, only check what would be changed without modifying files
 
@@ -50,125 +49,91 @@ def fix_timezone_offset_in_file(file_path: Path, dry_run: bool = False) -> dict:
     }
 
     try:
-        # Open dataset in read mode first to check
-        with xr.open_dataset(file_path, decode_timedelta=False) as ds:
+        # Open in read mode first to check
+        with h5py.File(file_path, "r") as f:
             # Check if variable exists
-            if "vap_utc_timezone_offset" not in ds.variables:
+            if "vap_utc_timezone_offset" not in f:
                 result["status"] = "no_variable"
                 result["message"] = "Variable vap_utc_timezone_offset not found"
                 return result
 
+            var = f["vap_utc_timezone_offset"]
+
             # Get current dtype and units
-            current_dtype = str(ds.vap_utc_timezone_offset.dtype)
-            current_units = ds.vap_utc_timezone_offset.attrs.get("units", None)
+            current_dtype = str(var.dtype)
+            current_units = var.attrs.get("units", None)
+            if isinstance(current_units, bytes):
+                current_units = current_units.decode("utf-8")
 
             result["original_dtype"] = current_dtype
             result["original_units"] = current_units
 
-            # Check if already fixed
-            needs_dtype_fix = current_dtype != "int16"
-            needs_units_fix = current_units != "1"
-            needs_offset_units = "offset_units" not in ds.vap_utc_timezone_offset.attrs
+            # Get current offset_units if it exists
+            current_offset_units = var.attrs.get("offset_units", None)
+            if isinstance(current_offset_units, bytes):
+                current_offset_units = current_offset_units.decode("utf-8")
 
-            if not needs_dtype_fix and not needs_units_fix and not needs_offset_units:
+            # Check what needs fixing
+            needs_units_fix = current_units != "1"
+            needs_offset_units = current_offset_units != "hours"
+
+            if not needs_units_fix and not needs_offset_units:
                 result["status"] = "not_needed"
                 result["message"] = (
-                    f"Already correct (dtype={current_dtype}, units={current_units})"
+                    f"Already correct (dtype={current_dtype}, units={current_units}, "
+                    f"offset_units={current_offset_units})"
                 )
                 return result
 
             if dry_run:
                 changes = []
-                if needs_dtype_fix:
-                    changes.append(f"dtype: {current_dtype} -> int16")
                 if needs_units_fix:
-                    changes.append(f"units: {current_units} -> 1")
+                    changes.append(f"units: '{current_units}' -> '1'")
                 if needs_offset_units:
-                    changes.append("add offset_units: hours")
+                    if current_offset_units is None:
+                        changes.append("add offset_units: 'hours'")
+                    else:
+                        changes.append(
+                            f"offset_units: '{current_offset_units}' -> 'hours'"
+                        )
 
                 result["status"] = "would_fix"
                 result["message"] = f"Would fix: {', '.join(changes)}"
                 return result
 
-        # If we get here and not dry_run, we need to modify the file
-        # Load the full dataset
-        ds = xr.open_dataset(file_path, decode_timedelta=False)
+        # If we get here and not dry_run, modify the file in place
+        with h5py.File(file_path, "a") as f:
+            var = f["vap_utc_timezone_offset"]
 
-        # Get the variable values as int16
-        tz_values = ds.vap_utc_timezone_offset.values
+            # Update attributes in place
+            if needs_units_fix:
+                var.attrs["units"] = "1"
 
-        # If dtype is timedelta64, convert to hours (int64) first, then to int16
-        if np.issubdtype(tz_values.dtype, np.timedelta64):
-            # Convert timedelta64[ns] to hours (as integers)
-            tz_values = (tz_values / np.timedelta64(1, "h")).astype(np.int16)
-        else:
-            # Just ensure it's int16
-            tz_values = tz_values.astype(np.int16)
-
-        # Store original attributes
-        original_attrs = ds.vap_utc_timezone_offset.attrs.copy()
-
-        # Create new variable with correct dtype
-        ds["vap_utc_timezone_offset"] = xr.DataArray(
-            tz_values,
-            dims=ds.vap_utc_timezone_offset.dims,
-            coords=ds.vap_utc_timezone_offset.coords,
-        )
-
-        # Update attributes
-        original_attrs["units"] = "1"  # Dimensionless
-        original_attrs["offset_units"] = "hours"  # For human interpretation
-
-        ds["vap_utc_timezone_offset"].attrs = original_attrs
-
-        # Write to temporary file first
-        temp_path = file_path.with_suffix(".nc.tmp")
-
-        # Write the fixed dataset to temp file
-        ds.to_netcdf(temp_path, engine="netcdf4")
-
-        # Close the dataset
-        ds.close()
-
-        # Verify temp file before replacing original
-        try:
-            with xr.open_dataset(temp_path, decode_timedelta=False) as ds_verify_temp:
-                verify_dtype = str(ds_verify_temp.vap_utc_timezone_offset.dtype)
-                verify_units = ds_verify_temp.vap_utc_timezone_offset.attrs.get("units")
-
-                if verify_dtype != "int16" or verify_units != "1":
-                    temp_path.unlink()  # Delete bad temp file
-                    result["status"] = "error"
-                    result["message"] = (
-                        f"Verification failed before replacing original: "
-                        f"dtype={verify_dtype}, units={verify_units}"
-                    )
-                    return result
-        except Exception as e:
-            if temp_path.exists():
-                temp_path.unlink()  # Clean up temp file
-            result["status"] = "error"
-            result["message"] = f"Verification error: {str(e)}"
-            return result
-
-        # Replace original file with fixed version (no backup)
-        temp_path.replace(file_path)
+            if needs_offset_units:
+                var.attrs["offset_units"] = "hours"
 
         result["status"] = "fixed"
-        result["message"] = (
-            f"Fixed: dtype {result['original_dtype']} -> int16, "
-            f"units '{result['original_units']}' -> '1'"
-        )
+        changes_made = []
+        if needs_units_fix:
+            changes_made.append("units='1'")
+        if needs_offset_units:
+            changes_made.append("offset_units='hours'")
+        result["message"] = f"Fixed: {', '.join(changes_made)} (in-place)"
 
         # Verify the fix
-        with xr.open_dataset(file_path, decode_timedelta=False) as ds_verify:
-            new_dtype = str(ds_verify.vap_utc_timezone_offset.dtype)
-            new_units = ds_verify.vap_utc_timezone_offset.attrs.get("units")
+        with h5py.File(file_path, "r") as f_verify:
+            var_verify = f_verify["vap_utc_timezone_offset"]
+            new_units = var_verify.attrs.get("units", None)
+            if isinstance(new_units, bytes):
+                new_units = new_units.decode("utf-8")
+            new_offset_units = var_verify.attrs.get("offset_units", None)
+            if isinstance(new_offset_units, bytes):
+                new_offset_units = new_offset_units.decode("utf-8")
 
-            if new_dtype != "int16" or new_units != "1":
+            if new_units != "1" or new_offset_units != "hours":
                 result["status"] = "error"
                 result["message"] = (
-                    f"Verification failed after fix: dtype={new_dtype}, units={new_units}"
+                    f"Verification failed: units={new_units}, offset_units={new_offset_units}"
                 )
 
     except Exception as e:
@@ -185,7 +150,7 @@ def process_directory(directory: Path, dry_run: bool = False) -> None:
     Parameters
     ----------
     directory : Path
-        Directory containing NetCDF files to process
+        Directory containing NetCDF4/HDF5 files to process
     dry_run : bool, optional
         If True, only report what would be changed without modifying files
     """
@@ -241,12 +206,12 @@ def process_directory(directory: Path, dry_run: bool = False) -> None:
     print()
 
     if not dry_run and stats["fixed"] > 0:
-        print("Note: Files were modified in place (no backups created)")
+        print("Note: Files were modified in place (metadata only, extremely fast)")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Fix timezone offset dtype and units in NetCDF files",
+        description="Fix timezone offset units in NetCDF4/HDF5 files using h5py",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
