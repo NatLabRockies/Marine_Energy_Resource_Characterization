@@ -1781,17 +1781,28 @@ def combine_face_files(file_info_list, output_path, config):
         "meta_mesh_exterior_boundary_wkt",  # Mesh boundary polygon (huge WKT string)
     ]
 
-    # Verify face continuity
-    if not verify_face_continuity(file_info_list):
-        raise (
-            "Value Error: Face batches are not continuous. Verify all faces were processed..."
+    # Parse face batch info from filenames for verification
+    parsed_file_info = []
+    for path in file_info_list:
+        start_face, end_face = parse_face_batch_info(path.name)
+        if start_face is not None and end_face is not None:
+            parsed_file_info.append((path, start_face, end_face))
+        else:
+            # Batch info is mandatory - raise error if not found
+            raise ValueError(
+                f"No face batch info found in filename: {path.name}. "
+                f"Expected pattern like 'batch_N_faces_START_END' in filename."
+            )
+
+    # Verify face continuity - this check is always performed
+    if not verify_face_continuity(parsed_file_info):
+        raise ValueError(
+            "Face batches are not continuous. Verify all faces were processed..."
         )
-        # print("WARNING: Face batches are not continuous. Proceeding anyway...")
 
     datasets = []
 
     # Load all datasets
-    # for path, start_face, end_face in file_info_list:
     for path in file_info_list:
         print(f"  Loading {path.name}")
         ds = xr.open_dataset(path)
