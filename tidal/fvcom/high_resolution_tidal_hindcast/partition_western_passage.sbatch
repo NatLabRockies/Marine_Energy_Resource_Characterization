@@ -4,15 +4,15 @@
 #SBATCH --job-name=part_west
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=4:00:00
-#SBATCH --partition=shared
-#SBATCH --mem=128G
+#SBATCH --time=3:59:00
+#SBATCH --partition=short
+##SBATCH --mem=128G
 # There are 231208 faces
-#1000 faces per batch
-# 232 tasks
-#SBATCH --array=0-231  # Create 232 tasks
+# 2500 faces per batch
+# 213208 / 2500 = 92.48 tasks
+#SBATCH --array=0-92  # Create 93 tasks
 
 source sbatch_env_setup.sh
 
 # Create a Python script that handles the parallelized processing
-python partition_dataset.py western_passage --batch-size 1000 --batch-num $SLURM_ARRAY_TASK_ID --skip-existing
+python partition_dataset.py western_passage --batch-size 2500 --batch-num $SLURM_ARRAY_TASK_ID
