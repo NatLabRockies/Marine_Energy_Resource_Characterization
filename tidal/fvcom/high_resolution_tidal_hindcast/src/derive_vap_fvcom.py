@@ -914,7 +914,8 @@ def calculate_utc_timezone_offset(ds, config, face_df):
     ds[output_variable_name].attrs = {
         "long_name": "UTC Timezone Offset",
         "standard_name": "utc_offset",
-        "units": "hours",
+        "units": "1",  # Dimensionless to prevent xarray timedelta decoding
+        "offset_units": "hours",  # Actual units for human interpretation
         "description": (
             "The offset in hours from Coordinated Universal Time (UTC) for the "
             "timezone at each face's center lat/lon coordinates."
