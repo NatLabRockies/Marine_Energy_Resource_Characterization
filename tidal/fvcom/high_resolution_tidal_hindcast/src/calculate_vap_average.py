@@ -1775,9 +1775,18 @@ def combine_face_files(file_info_list, output_path, config):
     """
     print(f"Combining {len(file_info_list)} face batch files into {output_path.name}")
 
+    # Variables that are constant across all face batches and don't need concatenation
+    # These will be extracted from the first dataset and re-added after concatenation
+    CONSTANT_METADATA_VARS = [
+        "meta_mesh_exterior_boundary_wkt",  # Mesh boundary polygon (huge WKT string)
+    ]
+
     # Verify face continuity
-    # if not verify_face_continuity(file_info_list):
-    #     print("WARNING: Face batches are not continuous. Proceeding anyway...")
+    if not verify_face_continuity(file_info_list):
+        raise (
+            "Value Error: Face batches are not continuous. Verify all faces were processed..."
+        )
+        # print("WARNING: Face batches are not continuous. Proceeding anyway...")
 
     datasets = []
 
@@ -1788,9 +1797,31 @@ def combine_face_files(file_info_list, output_path, config):
         ds = xr.open_dataset(path)
         datasets.append(ds)
 
+    # Extract constant metadata variables from the first dataset
+    constant_metadata = {}
+    if len(datasets) > 0:
+        for var_name in CONSTANT_METADATA_VARS:
+            if var_name in datasets[0]:
+                print(f"  Extracting constant metadata variable: {var_name}")
+                constant_metadata[var_name] = datasets[0][var_name]
+
+    # Remove constant metadata variables from all datasets before concatenation
+    # This prevents xarray from trying to concatenate these large, identical variables
+    for i, ds in enumerate(datasets):
+        for var_name in CONSTANT_METADATA_VARS:
+            if var_name in ds:
+                ds = ds.drop_vars(var_name)
+        # Update the dataset in the list
+        datasets[i] = ds
+
     # Combine along face dimension
     print("  Concatenating datasets along face dimension...")
     combined_ds = xr.concat(datasets, dim="face")
+
+    # Re-add constant metadata variables to the combined dataset
+    for var_name, var_data in constant_metadata.items():
+        print(f"  Re-adding constant metadata variable: {var_name}")
+        combined_ds[var_name] = var_data
 
     # Clean up attributes - remove face batch specific metadata
     attrs_to_remove = ["face_batch_size", "batch_index_start"]
