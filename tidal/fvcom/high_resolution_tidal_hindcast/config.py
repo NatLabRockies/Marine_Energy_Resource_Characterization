@@ -98,6 +98,7 @@ config = {
             "standardized": "<location>/<version>/a1_std",
             "standardized_partition": "<location>/<version>/a2_std_partition",
             "vap": "<location>/<version>/b1_vap",
+            "vap_daily_compressed": "<location>/<version>/b1_vap_daily_compressed",
             "monthly_summary_vap": "<location>/<version>/b2_monthly_mean_vap",
             "yearly_summary_vap": "<location>/<version>/b3_yearly_mean_vap",
             "yearly_summary_vap_by_face": "<location>/<version>/b3_yearly_mean_vap/by_face",
@@ -558,6 +559,7 @@ config = {
             "coordinates": {"system": "latitude/longitude"},
             # "partition_frequency": "M",  # Monthly, Roughly 73GB per file, out of memory in partition step
             "partition_frequency": "5D",  # 7 Day Chunks
+            "b1_archive_vap_partition": "1D",  # 1 Day Chunks for archival compressed b1_vap
             "face_count": 797978,
             "citation": format_references(["ak_aleutian_spicer2025_spatially"]),
             "original_attrs": """
@@ -594,6 +596,7 @@ config = {
             "coordinates": {"system": "latitude/longitude"},
             "partition_frequency": "1M",  # Monthly, Roughly 35GB per file
             # "partition_frequency": "12h",
+            "b1_archive_vap_partition": "1D",  # 1 Day Chunks for archival compressed b1_vap
             "face_count": 392002,
             "citation": format_references(["ak_cook_deb2025_characterizing"]),
             "original_attrs": """
@@ -629,6 +632,7 @@ config = {
             "coordinates": {"system": "utm", "zone": 19},
             "partition_frequency": "1M",  # Monthly, Roughly 67GB per file
             # "partition_frequency": "12h",
+            "b1_archive_vap_partition": "1D",  # 1 Day Chunks for archival compressed b1_vap
             "face_count": 292927,
             "citation": format_references(["nh_piscataqua_spicer2023_tidal"]),
             "original_attrs": """
@@ -688,6 +692,7 @@ Lamprey2 ;
             # "partition_frequency": "M", Monthly OOM at Partition Step
             # "partition_frequency": "W", This starts with 5 days
             "partition_frequency": "5D",
+            "b1_archive_vap_partition": "1D",  # 1 Day Chunks for archival compressed b1_vap
             "face_count": 1734765,
             "citation": format_references(
                 [
@@ -773,6 +778,7 @@ Elhwa2 ;
             "partition_frequency": "1M",  # Daily, Roughly 50GB per file
             # Trying to improve VAP compute time and find a balance between # of files and file size
             # "partition_frequency": "12h",
+            "b1_archive_vap_partition": "1D",  # 1 Day Chunks for archival compressed b1_vap
             "face_count": 231208,
             "citation": format_references(["me_western_deb2023_turbulence"]),
             "original_attrs": """
