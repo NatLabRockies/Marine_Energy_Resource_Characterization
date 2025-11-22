@@ -9,7 +9,7 @@
 # There are 1734765 faces and batch size is 2500
 # 1734765 / 2500 = 693.906
 #SBATCH --array=0-693  # Create 694 tasks
-##SBATCH --mem=64G
+##SBATCH --mem=128G
 
 source sbatch_env_setup.sh
 
