@@ -3,8 +3,8 @@
 #SBATCH --output=%x_%A_%a.out
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=3:59:59
-#SBATCH --partition=short
+#SBATCH --time=24:00:00
+#SBATCH --partition=standard
 
 # SLURM array job for parallel b1_vap compression
 # Environment variables required:
