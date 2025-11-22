@@ -4,9 +4,9 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 #SBATCH --time=12:00:00
-#SBATCH --partition=shared
-#SBATCH --ntasks=1
-#SBATCH --mem=128
+#SBATCH --partition=standard
+##SBATCH --ntasks=1
+##SBATCH --mem=128
 
 # Get parameters from environment
 LOCATION=${LOCATION:-cook_inlet}
