@@ -42,8 +42,9 @@ LOCATIONS = {
         "faces": 1734765,
         "temporal_resolution": "half_hourly",
         # This is 73 half hourly files and is relatively slow
-        "process_runtime_hours": 8,
-        "retry_runtime_hours": 10,
+        # Short partition
+        "process_runtime_hours": 4,
+        "retry_runtime_hours": 12,
     },
     "western_passage": {
         "faces": 231208,
