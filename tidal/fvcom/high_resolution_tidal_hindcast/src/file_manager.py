@@ -143,6 +143,10 @@ def get_vap_output_dir(config, location):
     return get_output_dirs(config, location)["vap"]
 
 
+def get_vap_daily_compressed_output_dir(config, location):
+    return get_output_dirs(config, location)["vap_daily_compressed"]
+
+
 def get_monthly_summary_vap_output_dir(config, location):
     return get_output_dirs(config, location)["monthly_summary_vap"]
 
