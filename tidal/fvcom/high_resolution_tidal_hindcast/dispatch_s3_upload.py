@@ -147,8 +147,9 @@ def discover_files(location_key, data_levels):
     # Get location specification
     location_spec = config["location_specification"][location_key]
 
-    # Get versioned output directories from file_manager
-    output_dirs = get_output_dirs(config, location_spec)
+    # Get versioned output directories from file_manager (both full paths and relative paths)
+    output_dirs_full = get_output_dirs(config, location_spec, omit_base_path=False)
+    output_dirs_relative = get_output_dirs(config, location_spec, omit_base_path=True)
 
     # Map data_level to output_dir key
     data_level_to_dir_key = {
@@ -180,7 +181,7 @@ def discover_files(location_key, data_levels):
                 print(f"Error: No directory mapping for data level '{data_level}'", file=sys.stderr)
                 sys.exit(1)
 
-            local_dir = output_dirs[dir_key]
+            local_dir = output_dirs_full[dir_key]
 
         if not local_dir.exists():
             print(f"Warning: Directory does not exist: {local_dir}", file=sys.stderr)
@@ -230,9 +231,9 @@ def calculate_total_size(files_by_level):
 
 def construct_s3_destination(location_key, data_level, relative_path):
     """
-    Construct S3 destination path.
+    Construct S3 destination path using file_manager for consistent versioning.
 
-    Format: <location>/<version>/<data_level>/<relative_path>
+    Format: <location>/v<version>/<data_level>/<relative_path>
 
     Args:
         location_key: Location key (e.g., 'cook_inlet')
@@ -242,9 +243,31 @@ def construct_s3_destination(location_key, data_level, relative_path):
     Returns:
         S3 destination path
     """
-    output_name = LOCATION_MAP[location_key]
-    version = config["dataset"]["version"]
-    return f"{output_name}/{version}/{data_level}/{relative_path}"
+    location_spec = config["location_specification"][location_key]
+    output_dirs_relative = get_output_dirs(config, location_spec, omit_base_path=True)
+
+    # Map data_level to output_dir key
+    data_level_to_dir_key = {
+        "a1_std": "standardized",
+        "a2_std_partition": "standardized_partition",
+        "b1_vap": "vap",
+        "b1_vap_daily_compressed": "vap_daily_compressed",
+        "b2_monthly_mean_vap": "monthly_summary_vap",
+        "b3_yearly_mean_vap": "yearly_summary_vap",
+        "b4_vap_partition": "vap_partition",
+        "b5_vap_summary_parquet": "vap_summary_parquet",
+        "b6_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
+        "hsds": "hsds",
+    }
+
+    # Handle 00_raw separately
+    if data_level == "00_raw":
+        s3_base_relative_path = Path(location_spec["output_name"]) / f"v{config['dataset']['version']}" / data_level
+    else:
+        dir_key = data_level_to_dir_key.get(data_level)
+        s3_base_relative_path = output_dirs_relative[dir_key]
+
+    return str(s3_base_relative_path / relative_path)
 
 
 def display_summary(location_key, files_by_level):

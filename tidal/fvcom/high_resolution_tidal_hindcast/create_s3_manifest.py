@@ -92,8 +92,9 @@ def discover_files(location_key, data_level):
     # Get location specification
     location_spec = config["location_specification"][location_key]
 
-    # Get versioned output directories from file_manager
-    output_dirs = get_output_dirs(config, location_spec)
+    # Get versioned output directories from file_manager (both full paths and relative paths)
+    output_dirs_full = get_output_dirs(config, location_spec, omit_base_path=False)
+    output_dirs_relative = get_output_dirs(config, location_spec, omit_base_path=True)
 
     # Map data_level to output_dir key
     # Note: 00_raw uses the input directory structure, not output
@@ -118,6 +119,8 @@ def discover_files(location_key, data_level):
             "<location>", location_spec["output_name"]
         )
         local_dir = base_path / input_dir
+        # For 00_raw, relative path for S3 is manually constructed
+        s3_base_relative_path = Path(location_spec["output_name"]) / f"v{config['dataset']['version']}" / data_level
     else:
         dir_key = data_level_to_dir_key.get(data_level)
         if not dir_key:
@@ -127,7 +130,9 @@ def discover_files(location_key, data_level):
             )
             sys.exit(1)
 
-        local_dir = output_dirs[dir_key]
+        local_dir = output_dirs_full[dir_key]
+        # Get the relative path from file_manager for S3 construction (single source of truth)
+        s3_base_relative_path = output_dirs_relative[dir_key]
 
     if not local_dir.exists():
         print(f"Error: Directory does not exist: {local_dir}", file=sys.stderr)
@@ -160,15 +165,12 @@ def discover_files(location_key, data_level):
 
     print(f"Found {len(all_files)} files")
 
-    # Get output name and version for S3 path construction
-    output_name = location_spec["output_name"]
-    version = config["dataset"]["version"]
-
-    # Build file records
+    # Build file records using s3_base_relative_path from file_manager
     file_records = []
     for file_path in all_files:
         relative_path = file_path.relative_to(local_dir)
-        s3_destination = f"{output_name}/{version}/{data_level}/{relative_path}"
+        # Use the relative path from file_manager for consistent S3 destination
+        s3_destination = str(s3_base_relative_path / relative_path)
         file_size = file_path.stat().st_size
         extension = file_path.suffix
 
