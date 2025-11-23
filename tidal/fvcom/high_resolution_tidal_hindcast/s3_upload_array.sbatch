@@ -7,7 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=shared
-#SBATCH --time=12:00::00
+#SBATCH --time=12:00:00
 #SBATCH --mem=32GB
 
 # SLURM array job for S3 uploads
