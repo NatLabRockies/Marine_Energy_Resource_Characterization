@@ -18,7 +18,7 @@ from config import config
 from create_s3_manifest import create_manifest
 
 # Maximum SLURM array jobs (global limit)
-MAX_SLURM_JOBS = 10000
+MAX_SLURM_JOBS = 500
 
 # Data level configurations with SLURM time limits (in hours)
 DATA_LEVEL_CONFIG = {
@@ -26,7 +26,10 @@ DATA_LEVEL_CONFIG = {
     "a1_std": {"time_hours": 6, "description": "Standardized data"},
     "a2_std_partition": {"time_hours": 6, "description": "Standardized partition"},
     "b1_vap": {"time_hours": 6, "description": "Value-added products"},
-    "b1_vap_daily_compressed": {"time_hours": 6, "description": "Compressed VAP (daily)"},
+    "b1_vap_daily_compressed": {
+        "time_hours": 6,
+        "description": "Compressed VAP (daily)",
+    },
     "b2_monthly_mean_vap": {
         "time_hours": 6,
         "description": "Monthly mean VAP",
