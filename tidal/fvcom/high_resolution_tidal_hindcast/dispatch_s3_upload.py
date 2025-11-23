@@ -30,28 +30,76 @@ from pathlib import Path
 
 # Import config
 from config import config
+from src.file_manager import get_output_dirs
 
-# Data level configurations with SLURM time limits (in hours)
+# Data level configurations with SLURM time limits (in hours) and file discovery rules
 DATA_LEVEL_CONFIG = {
-    "00_raw": {"time_hours": 6, "description": "Raw data"},
-    "a1_std": {"time_hours": 6, "description": "Standardized data"},
-    "a2_std_partition": {"time_hours": 6, "description": "Standardized partition"},
-    "b1_vap": {"time_hours": 6, "description": "Value-added products"},
+    "00_raw": {
+        "time_hours": 6,
+        "description": "Raw data",
+        "valid_extensions": [".nc"],
+        "should_recurse": True,
+    },
+    "a1_std": {
+        "time_hours": 6,
+        "description": "Standardized data",
+        "valid_extensions": [".nc"],
+        "should_recurse": False,
+    },
+    "a2_std_partition": {
+        "time_hours": 6,
+        "description": "Standardized partition",
+        "valid_extensions": [".nc"],
+        "should_recurse": False,
+    },
+    "b1_vap": {
+        "time_hours": 6,
+        "description": "Value-added products",
+        "valid_extensions": [".nc"],
+        "should_recurse": False,
+    },
+    "b1_vap_daily_compressed": {
+        "time_hours": 6,
+        "description": "Compressed VAP (daily)",
+        "valid_extensions": [".nc"],
+        "should_recurse": False,
+    },
     "b2_monthly_mean_vap": {
         "time_hours": 6,
         "description": "Monthly mean VAP",
+        "valid_extensions": [".nc"],
+        "should_recurse": False,
     },
-    "b3_yearly_mean_vap": {"time_hours": 6, "description": "Yearly mean VAP"},
-    "b4_vap_partition": {"time_hours": 6, "description": "VAP partition"},
+    "b3_yearly_mean_vap": {
+        "time_hours": 6,
+        "description": "Yearly mean VAP",
+        "valid_extensions": [".nc"],
+        "should_recurse": False,
+    },
+    "b4_vap_partition": {
+        "time_hours": 6,
+        "description": "VAP partition",
+        "valid_extensions": [".parquet"],
+        "should_recurse": True,
+    },
     "b5_vap_summary_parquet": {
         "time_hours": 6,
         "description": "VAP summary parquet",
+        "valid_extensions": None,
+        "should_recurse": True,
     },
     "b6_vap_atlas_summary_parquet": {
         "time_hours": 6,
         "description": "VAP atlas summary parquet",
+        "valid_extensions": None,
+        "should_recurse": True,
     },
-    "hsds": {"time_hours": 24, "description": "HSDS format"},
+    "hsds": {
+        "time_hours": 24,
+        "description": "HSDS format",
+        "valid_extensions": [".h5"],
+        "should_recurse": False,
+    },
 }
 
 # Location key to output_name mapping from config
@@ -71,7 +119,7 @@ def get_file_size_human(size_bytes):
 
 def discover_files(location_key, data_levels):
     """
-    Discover files for given location and data levels.
+    Discover files for given location and data levels using versioned directories.
 
     Args:
         location_key: Location key (e.g., 'cook_inlet')
@@ -96,27 +144,73 @@ def discover_files(location_key, data_levels):
             )
             sys.exit(1)
 
-    output_name = LOCATION_MAP[location_key]
-    base_dir = Path(config["dir"]["base"])
+    # Get location specification
+    location_spec = config["location_specification"][location_key]
+
+    # Get versioned output directories from file_manager
+    output_dirs = get_output_dirs(config, location_spec)
+
+    # Map data_level to output_dir key
+    data_level_to_dir_key = {
+        "a1_std": "standardized",
+        "a2_std_partition": "standardized_partition",
+        "b1_vap": "vap",
+        "b1_vap_daily_compressed": "vap_daily_compressed",
+        "b2_monthly_mean_vap": "monthly_summary_vap",
+        "b3_yearly_mean_vap": "yearly_summary_vap",
+        "b4_vap_partition": "vap_partition",
+        "b5_vap_summary_parquet": "vap_summary_parquet",
+        "b6_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
+        "hsds": "hsds",
+    }
 
     files_by_level = {}
 
     for data_level in data_levels:
-        # Construct local directory path
-        local_dir = base_dir / output_name / data_level
+        # Handle 00_raw separately (uses input directory structure)
+        if data_level == "00_raw":
+            base_path = Path(config["dir"]["base"])
+            input_dir_template = config["dir"]["input"]["original"]
+            input_dir = input_dir_template.replace("<location>", location_spec["output_name"])
+            local_dir = base_path / input_dir
+        else:
+            # Get directory key
+            dir_key = data_level_to_dir_key.get(data_level)
+            if not dir_key:
+                print(f"Error: No directory mapping for data level '{data_level}'", file=sys.stderr)
+                sys.exit(1)
+
+            local_dir = output_dirs[dir_key]
 
         if not local_dir.exists():
             print(f"Warning: Directory does not exist: {local_dir}", file=sys.stderr)
             files_by_level[data_level] = []
             continue
 
-        # Discover all files recursively
+        # Get file discovery configuration
+        file_config = DATA_LEVEL_CONFIG[data_level]
+        valid_extensions = file_config["valid_extensions"]
+        should_recurse = file_config["should_recurse"]
+
+        # Discover files based on recursion and extension configuration
         files = []
-        for file_path in local_dir.rglob("*"):
-            if file_path.is_file():
-                # Calculate relative path from data_level directory
-                relative_path = file_path.relative_to(local_dir)
-                files.append((str(file_path), str(relative_path)))
+
+        if should_recurse:
+            # Recursive search
+            for file_path in local_dir.rglob("*"):
+                if file_path.is_file():
+                    # Filter by extension if specified
+                    if valid_extensions is None or file_path.suffix in valid_extensions:
+                        relative_path = file_path.relative_to(local_dir)
+                        files.append((str(file_path), str(relative_path)))
+        else:
+            # Non-recursive search (only immediate directory)
+            for file_path in local_dir.glob("*"):
+                if file_path.is_file():
+                    # Filter by extension if specified
+                    if valid_extensions is None or file_path.suffix in valid_extensions:
+                        relative_path = file_path.relative_to(local_dir)
+                        files.append((str(file_path), str(relative_path)))
 
         files_by_level[data_level] = sorted(files)
         print(f"Found {len(files)} files in {data_level}/")
@@ -293,6 +387,7 @@ Available Data Levels:
   a1_std                      - Standardized data (6h time limit)
   a2_std_partition            - Standardized partition (6h time limit)
   b1_vap                      - Value-added products (6h time limit)
+  b1_vap_daily_compressed     - Compressed VAP daily (6h time limit)
   b2_monthly_mean_vap         - Monthly mean VAP (6h time limit)
   b3_yearly_mean_vap          - Yearly mean VAP (6h time limit)
   b4_vap_partition            - VAP partition (6h time limit)
