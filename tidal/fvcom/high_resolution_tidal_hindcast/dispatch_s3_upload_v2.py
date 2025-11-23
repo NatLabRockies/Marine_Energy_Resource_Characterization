@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from config import config
+from create_s3_manifest import create_manifest
 
 # Maximum SLURM array jobs (global limit)
 MAX_SLURM_JOBS = 10000
@@ -278,33 +279,18 @@ Examples:
         print(f"Processing: {data_level}")
         print(f"{'=' * 80}")
 
-        # Create manifest
+        # Create manifest (always run to get accurate file counts)
         print("\n1. Creating manifest...")
-        manifest_cmd = [
-            "python3",
-            "create_s3_manifest.py",
-            args.location,
-            data_level,
-        ]
 
-        if not args.dry_run:
-            result = subprocess.run(manifest_cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                print(f"Error creating manifest: {result.stderr}", file=sys.stderr)
-                continue
+        try:
+            manifest_path = create_manifest(args.location, data_level)
+            print(f"   Manifest created: {manifest_path}")
+        except Exception as e:
+            print(f"Error creating manifest: {e}", file=sys.stderr)
+            continue
 
-            # Get manifest path from output (last line)
-            manifest_path = result.stdout.strip().split("\n")[-1]
-            print(result.stdout)
-        else:
-            print(f"[DRY RUN] Would run: {' '.join(manifest_cmd)}")
-            manifest_path = f"cache/s3_upload/manifest_{LOCATION_MAP[args.location]}_1_0_0_{data_level}_<timestamp>.db"
-
-        # Count files
-        if not args.dry_run:
-            total_files = count_manifest_files(manifest_path)
-        else:
-            total_files = 1000  # Dummy for dry run
+        # Count files from manifest
+        total_files = count_manifest_files(manifest_path)
 
         # Calculate batch parameters
         num_jobs, files_per_job = calculate_batch_params(total_files)
