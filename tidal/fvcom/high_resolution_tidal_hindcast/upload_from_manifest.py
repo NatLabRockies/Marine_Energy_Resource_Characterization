@@ -209,9 +209,10 @@ def main():
         print(f"Error initializing S3 client: {e}", file=sys.stderr)
         return 1
 
-    # Upload each file
+    # Upload each file (no real-time DB updates to avoid lock contention)
     success_count = 0
     failure_count = 0
+    failed_files = []  # Track failures for logging
 
     for file_index, local_path, s3_destination, file_size in files:
         print(f"\n{'=' * 80}")
@@ -222,11 +223,15 @@ def main():
         )
 
         if success:
-            update_file_status(args.manifest_path, file_index, "completed", etag)
             success_count += 1
         else:
-            update_file_status(args.manifest_path, file_index, "failed", None)
             failure_count += 1
+            failed_files.append((file_index, local_path, s3_destination))
+            # Log failure to stderr for SLURM to capture
+            print(
+                f"FAILED: index={file_index} path={local_path} dest={s3_destination}",
+                file=sys.stderr,
+            )
 
     # Summary
     print(f"\n{'=' * 80}")
@@ -235,7 +240,10 @@ def main():
     print(f"  Failed:     {failure_count}")
     print(f"  Total:      {len(files)}")
 
-    # Return non-zero if any failures
+    if failed_files:
+        print("\nFailed files logged to stderr for SLURM capture")
+
+    # Return non-zero if any failures (SLURM will track this)
     return 1 if failure_count > 0 else 0
 
 

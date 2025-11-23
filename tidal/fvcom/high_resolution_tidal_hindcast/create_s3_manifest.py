@@ -43,8 +43,12 @@ LOCATION_MAP = {
 
 
 def create_manifest_table(conn):
-    """Create the files table in SQLite database."""
+    """Create the files table in SQLite database with WAL mode for better concurrency."""
     cursor = conn.cursor()
+
+    # Enable WAL mode for better concurrent access
+    cursor.execute("PRAGMA journal_mode=WAL")
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS files (
             file_index INTEGER PRIMARY KEY,
