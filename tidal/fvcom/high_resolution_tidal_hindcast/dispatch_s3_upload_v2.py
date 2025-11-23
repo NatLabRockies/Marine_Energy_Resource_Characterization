@@ -112,7 +112,9 @@ def submit_upload_jobs(
         Job ID if submitted, None if dry run
     """
     time_hours = DATA_LEVEL_CONFIG[data_level]["time_hours"]
-    time_minutes = time_hours * 60
+
+    # Format time as HH:MM:SS for SLURM
+    time_str = f"{time_hours}:00:00"
 
     # Build environment variables
     export_vars = [
@@ -127,7 +129,7 @@ def submit_upload_jobs(
         "--parsable",
         f"--array=0-{num_jobs - 1}",
         f"--export={','.join(export_vars)}",
-        f"--time={time_minutes}",
+        f"--time={time_str}",
         "s3_upload_array.sbatch",
     ]
 
