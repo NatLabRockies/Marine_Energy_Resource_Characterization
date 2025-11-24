@@ -19,7 +19,9 @@ import boto3
 from botocore.exceptions import ClientError
 
 
-def calculate_multipart_etag(file_path: Path, chunk_size_mb: int = 500) -> tuple[str, int]:
+def calculate_multipart_etag(
+    file_path: Path, chunk_size_mb: int = 500
+) -> tuple[str, int]:
     """
     Calculate the ETag for a multipart upload.
 
@@ -37,7 +39,7 @@ def calculate_multipart_etag(file_path: Path, chunk_size_mb: int = 500) -> tuple
 
     print(f"Calculating multipart ETag (chunk size: {chunk_size_mb}MB)...")
 
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         part_num = 0
         while True:
             chunk = f.read(chunk_size)
@@ -50,7 +52,7 @@ def calculate_multipart_etag(file_path: Path, chunk_size_mb: int = 500) -> tuple
                 print(f"  Processed {part_num} parts...")
 
     # Combine all part hashes
-    combined_hash = hashlib.md5(b''.join(md5_hashes)).hexdigest()
+    combined_hash = hashlib.md5(b"".join(md5_hashes)).hexdigest()
     etag = f"{combined_hash}-{len(md5_hashes)}"
 
     print(f"  Total parts: {len(md5_hashes)}")
@@ -70,11 +72,11 @@ def check_s3_file(bucket: str, key: str, local_path: Path = None, profile: str =
         profile: AWS profile name to use
     """
     session = boto3.Session(profile_name=profile) if profile else boto3.Session()
-    s3_client = session.client('s3')
+    s3_client = session.client("s3")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("S3 File Verification")
-    print("="*80)
+    print("=" * 80)
     print(f"Bucket: {bucket}")
     print(f"Key:    {key}")
     print()
@@ -84,34 +86,38 @@ def check_s3_file(bucket: str, key: str, local_path: Path = None, profile: str =
         response = s3_client.head_object(Bucket=bucket, Key=key)
 
         print("✓ File exists in S3")
-        print(f"\nS3 Metadata:")
-        print(f"  Size:          {response['ContentLength']:,} bytes ({response['ContentLength'] / (1024**3):.2f} GB)")
-        etag_value = response['ETag'].strip('"')
+        print("\nS3 Metadata:")
+        print(
+            f"  Size:          {response['ContentLength']:,} bytes ({response['ContentLength'] / (1024**3):.2f} GB)"
+        )
+        etag_value = response["ETag"].strip('"')
         print(f"  ETag:          {etag_value}")
         print(f"  Last Modified: {response['LastModified']}")
         print(f"  Content-Type:  {response.get('ContentType', 'N/A')}")
 
-        if 'Metadata' in response and response['Metadata']:
-            print(f"  Custom Metadata:")
-            for k, v in response['Metadata'].items():
+        if "Metadata" in response and response["Metadata"]:
+            print("  Custom Metadata:")
+            for k, v in response["Metadata"].items():
                 print(f"    {k}: {v}")
 
-        s3_etag = response['ETag'].strip('"')
-        s3_size = response['ContentLength']
+        s3_etag = response["ETag"].strip('"')
+        s3_size = response["ContentLength"]
 
         # Check if it's a multipart upload
-        if '-' in s3_etag:
-            parts = int(s3_etag.split('-')[1])
+        if "-" in s3_etag:
+            parts = int(s3_etag.split("-")[1])
             print(f"\n  Multipart Upload: {parts} parts")
 
         # Compare with local file if provided
         if local_path and local_path.exists():
-            print(f"\n" + "-"*80)
+            print("\n" + "-" * 80)
             print("Local File Comparison")
-            print("-"*80)
+            print("-" * 80)
 
             local_size = local_path.stat().st_size
-            print(f"Local Size:  {local_size:,} bytes ({local_size / (1024**3):.2f} GB)")
+            print(
+                f"Local Size:  {local_size:,} bytes ({local_size / (1024**3):.2f} GB)"
+            )
             print(f"S3 Size:     {s3_size:,} bytes ({s3_size / (1024**3):.2f} GB)")
 
             if local_size == s3_size:
@@ -122,29 +128,39 @@ def check_s3_file(bucket: str, key: str, local_path: Path = None, profile: str =
                 return False
 
             # Calculate local ETag
+            # Start with larger chunks for faster calculation, then try alternatives
             print()
-            local_etag, num_parts = calculate_multipart_etag(local_path, chunk_size_mb=500)
 
-            print(f"\nETag Comparison:")
-            print(f"  Local:  {local_etag}")
-            print(f"  S3:     {s3_etag}")
+            # Infer chunk size from S3 ETag's part count
+            if "-" in s3_etag:
+                s3_parts = int(s3_etag.split("-")[1])
+                inferred_chunk_mb = int((s3_size / s3_parts) / (1024 * 1024))
+                print(f"Inferred chunk size from S3: ~{inferred_chunk_mb}MB")
 
-            if local_etag == s3_etag:
-                print("✓ ETags match - upload is valid!")
-                return True
+                # Try the inferred size first, then common sizes
+                chunk_sizes = [inferred_chunk_mb, 1000, 500, 100]
             else:
-                print("✗ ETag mismatch - file may be corrupted or incomplete")
+                chunk_sizes = [1000, 500, 100]
 
-                # Try different chunk sizes
-                print("\nTrying alternative chunk sizes...")
-                for chunk_mb in [100, 250, 1000]:
-                    alt_etag, alt_parts = calculate_multipart_etag(local_path, chunk_size_mb=chunk_mb)
-                    print(f"  {chunk_mb}MB chunks ({alt_parts} parts): {alt_etag}")
-                    if alt_etag == s3_etag:
-                        print(f"  ✓ Match found with {chunk_mb}MB chunks!")
-                        return True
+            for chunk_mb in chunk_sizes:
+                local_etag, num_parts = calculate_multipart_etag(
+                    local_path, chunk_size_mb=chunk_mb
+                )
 
-                return False
+                print(f"\nETag Comparison ({chunk_mb}MB chunks):")
+                print(f"  Local:  {local_etag}")
+                print(f"  S3:     {s3_etag}")
+
+                if local_etag == s3_etag:
+                    print(f"✓ ETags match with {chunk_mb}MB chunks - upload is valid!")
+                    return True
+                else:
+                    print(f"✗ No match with {chunk_mb}MB chunks, trying next size...")
+
+            print(
+                "\n✗ ETag mismatch with all tested chunk sizes - file may be corrupted"
+            )
+            return False
         else:
             if local_path:
                 print(f"\n✗ Local file not found: {local_path}")
@@ -152,8 +168,8 @@ def check_s3_file(bucket: str, key: str, local_path: Path = None, profile: str =
             return None
 
     except ClientError as e:
-        error_code = e.response['Error']['Code']
-        if error_code == '404':
+        error_code = e.response["Error"]["Code"]
+        if error_code == "404":
             print("✗ File does not exist in S3")
         else:
             print(f"✗ Error accessing S3: {e}")
@@ -172,34 +188,38 @@ Examples:
   # Verify with local file comparison
   python verify_s3_upload.py --bucket nrel-pds-wtpo --key us-tidal/WA_puget_sound/v1.0.0/hsds/WA_puget_sound.wpto_high_res_tidal.hsds.v1.0.0.h5 \\
       --local-path /kfs2/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/WA_puget_sound/v1.0.0/hsds/WA_puget_sound.wpto_high_res_tidal.hsds.v1.0.0.h5
-        """
+        """,
     )
 
-    parser.add_argument('--bucket', required=True, help='S3 bucket name')
-    parser.add_argument('--key', required=True, help='S3 object key')
-    parser.add_argument('--local-path', type=Path, help='Local file path for comparison')
-    parser.add_argument('--profile', default='us-tidal', help='AWS profile name (default: us-tidal)')
+    parser.add_argument("--bucket", required=True, help="S3 bucket name")
+    parser.add_argument("--key", required=True, help="S3 object key")
+    parser.add_argument(
+        "--local-path", type=Path, help="Local file path for comparison"
+    )
+    parser.add_argument(
+        "--profile", default="us-tidal", help="AWS profile name (default: us-tidal)"
+    )
 
     args = parser.parse_args()
 
     result = check_s3_file(args.bucket, args.key, args.local_path, args.profile)
 
     if result is True:
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("✓ VERIFICATION PASSED")
-        print("="*80)
+        print("=" * 80)
         sys.exit(0)
     elif result is False:
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("✗ VERIFICATION FAILED")
-        print("="*80)
+        print("=" * 80)
         sys.exit(1)
     else:
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("⚠ VERIFICATION INCOMPLETE")
-        print("="*80)
+        print("=" * 80)
         sys.exit(2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
