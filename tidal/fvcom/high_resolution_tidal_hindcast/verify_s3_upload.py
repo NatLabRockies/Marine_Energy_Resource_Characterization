@@ -86,7 +86,8 @@ def check_s3_file(bucket: str, key: str, local_path: Path = None, profile: str =
         print("✓ File exists in S3")
         print(f"\nS3 Metadata:")
         print(f"  Size:          {response['ContentLength']:,} bytes ({response['ContentLength'] / (1024**3):.2f} GB)")
-        print(f"  ETag:          {response['ETag'].strip('\"')}")
+        etag_value = response['ETag'].strip('"')
+        print(f"  ETag:          {etag_value}")
         print(f"  Last Modified: {response['LastModified']}")
         print(f"  Content-Type:  {response.get('ContentType', 'N/A')}")
 
