@@ -31,6 +31,9 @@ def get_files_for_batch(manifest_path, batch_index, files_per_job):
     """
     Get files to process for this batch.
 
+    Uses OFFSET/LIMIT on pending files to correctly handle sparse indices
+    when some files have been skipped.
+
     Args:
         manifest_path: Path to SQLite manifest
         batch_index: Batch index (from SLURM_ARRAY_TASK_ID)
@@ -42,20 +45,20 @@ def get_files_for_batch(manifest_path, batch_index, files_per_job):
     conn = sqlite3.connect(manifest_path)
     cursor = conn.cursor()
 
-    # Calculate range
-    start_index = batch_index * files_per_job
-    end_index = start_index + files_per_job
+    # Calculate offset for this batch among pending files only
+    offset = batch_index * files_per_job
 
-    # Get files in this batch that are pending
+    # Get pending files using OFFSET/LIMIT to handle sparse indices
+    # This correctly handles cases where some files are 'skipped'
     cursor.execute(
         """
         SELECT file_index, local_path, s3_destination, file_size_bytes
         FROM files
-        WHERE file_index >= ? AND file_index < ?
-        AND upload_status = 'pending'
+        WHERE upload_status = 'pending'
         ORDER BY file_index
+        LIMIT ? OFFSET ?
         """,
-        (start_index, end_index),
+        (files_per_job, offset),
     )
 
     files = cursor.fetchall()
