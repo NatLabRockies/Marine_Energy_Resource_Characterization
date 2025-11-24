@@ -50,7 +50,7 @@ def extract_first_timestamp_from_file(nc_file):
             print(f"  First time (Unix seconds): {first_time_unix}")
 
             # Convert from Unix seconds to datetime
-            first_time = pd.Timestamp(
+            first_time = pd.to_datetime(
                 first_time_unix, unit="s", origin="unix", utc=True
             )
 
