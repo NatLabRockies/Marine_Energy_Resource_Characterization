@@ -8,14 +8,17 @@ parallel uploads with automatic retry and failure tracking.
 
 import argparse
 import math
-import os
 import sqlite3
 import subprocess
 import sys
 from pathlib import Path
 
+import boto3
+from botocore.exceptions import ClientError
+
 from config import config
 from create_s3_manifest import create_manifest
+from upload_to_s3 import S3_BASE_PATH, S3_BUCKET, S3_PROFILE
 
 # Maximum SLURM array jobs (global limit)
 MAX_SLURM_JOBS = 500
@@ -88,6 +91,132 @@ def calculate_batch_params(total_files):
         files_per_job = math.ceil(total_files / MAX_SLURM_JOBS)
         num_jobs = math.ceil(total_files / files_per_job)
         return num_jobs, files_per_job
+
+
+def list_existing_s3_files(location_key, data_level):
+    """
+    List existing files on S3 for a given location and data level.
+
+    Uses S3 list_objects_v2 with pagination to get all object keys.
+    Only extracts filenames (not full paths) for fast comparison.
+
+    Args:
+        location_key: Location key (e.g., 'cook_inlet')
+        data_level: Data level (e.g., 'b1_vap')
+
+    Returns:
+        Set of filenames that exist on S3
+    """
+    output_name = LOCATION_MAP[location_key]
+    version = config["dataset"]["version"]
+
+    # Build S3 prefix to list
+    # Format: us-tidal/<output_name>/<version>/<data_level>/
+    s3_prefix = f"{S3_BASE_PATH}/{output_name}/{version}/{data_level}/"
+
+    print(f"   Listing S3 objects with prefix: s3://{S3_BUCKET}/{s3_prefix}")
+
+    try:
+        session = boto3.Session(profile_name=S3_PROFILE)
+        s3_client = session.client("s3")
+    except Exception as e:
+        print(f"   Warning: Could not create S3 client: {e}", file=sys.stderr)
+        return set()
+
+    existing_files = set()
+    continuation_token = None
+
+    try:
+        while True:
+            # Build request parameters
+            list_kwargs = {
+                "Bucket": S3_BUCKET,
+                "Prefix": s3_prefix,
+                "MaxKeys": 1000,
+            }
+            if continuation_token:
+                list_kwargs["ContinuationToken"] = continuation_token
+
+            response = s3_client.list_objects_v2(**list_kwargs)
+
+            # Extract filenames from keys
+            if "Contents" in response:
+                for obj in response["Contents"]:
+                    # Extract just the filename from the full key
+                    filename = obj["Key"].split("/")[-1]
+                    if filename:  # Skip empty strings (directory markers)
+                        existing_files.add(filename)
+
+            # Check if there are more results
+            if response.get("IsTruncated"):
+                continuation_token = response.get("NextContinuationToken")
+            else:
+                break
+
+        print(f"   Found {len(existing_files)} existing files on S3")
+        return existing_files
+
+    except ClientError as e:
+        print(f"   Warning: Could not list S3 objects: {e}", file=sys.stderr)
+        return set()
+
+
+def mark_existing_files_as_skipped(manifest_path, existing_s3_files):
+    """
+    Mark files in manifest as 'skipped' if they already exist on S3.
+
+    Compares filenames only (not full paths) for speed.
+
+    Args:
+        manifest_path: Path to SQLite manifest
+        existing_s3_files: Set of filenames that exist on S3
+
+    Returns:
+        Number of files marked as skipped
+    """
+    conn = sqlite3.connect(manifest_path)
+    cursor = conn.cursor()
+
+    # Get all pending files from manifest
+    cursor.execute(
+        """
+        SELECT file_index, s3_destination
+        FROM files
+        WHERE upload_status = 'pending'
+        """
+    )
+
+    files_to_skip = []
+    for file_index, s3_destination in cursor.fetchall():
+        # Extract filename from s3_destination
+        filename = s3_destination.split("/")[-1]
+        if filename in existing_s3_files:
+            files_to_skip.append(file_index)
+
+    # Mark files as skipped
+    if files_to_skip:
+        cursor.executemany(
+            """
+            UPDATE files
+            SET upload_status = 'skipped'
+            WHERE file_index = ?
+            """,
+            [(idx,) for idx in files_to_skip],
+        )
+        conn.commit()
+
+    conn.close()
+    return len(files_to_skip)
+
+
+def count_pending_manifest_files(manifest_path):
+    """Count pending files in manifest (excludes skipped)."""
+    conn = sqlite3.connect(manifest_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM files WHERE upload_status = 'pending'")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
 
 
 def submit_upload_jobs(
@@ -211,6 +340,9 @@ Examples:
 
   # Skip checksum verification (faster)
   python dispatch_s3_upload_v2.py cook_inlet --data-levels b1_vap --no-verify-checksum
+
+  # Skip files that already exist on S3
+  python dispatch_s3_upload_v2.py cook_inlet --data-levels b1_vap --skip-if-uploaded
         """,
     )
 
@@ -247,6 +379,12 @@ Examples:
         help="Print actions without submitting SLURM jobs",
     )
 
+    parser.add_argument(
+        "--skip-if-uploaded",
+        action="store_true",
+        help="Skip files that already exist on S3 (filename check only)",
+    )
+
     args = parser.parse_args()
 
     # Validate location
@@ -274,6 +412,8 @@ Examples:
     print(f"Location:      {args.location} ({LOCATION_MAP[args.location]})")
     print(f"Data levels:   {', '.join(args.data_levels)}")
     print(f"Max jobs:      {MAX_SLURM_JOBS}")
+    if args.skip_if_uploaded:
+        print("Skip existing: Enabled (filename check)")
     print("=" * 80)
 
     # Process each data level
@@ -297,17 +437,40 @@ Examples:
         # Count files from manifest
         total_files = count_manifest_files(manifest_path)
 
-        # Calculate batch parameters
-        num_jobs, files_per_job = calculate_batch_params(total_files)
+        # Skip files that already exist on S3 if requested
+        skipped_files = 0
+        if args.skip_if_uploaded:
+            print("\n2. Checking for existing files on S3...")
+            existing_files = list_existing_s3_files(args.location, data_level)
+            if existing_files:
+                skipped_files = mark_existing_files_as_skipped(
+                    manifest_path, existing_files
+                )
+                print(f"   Skipped {skipped_files} files (already on S3)")
 
-        print("\n2. Upload Job Configuration:")
+        # Count pending files (after skipping)
+        pending_files = count_pending_manifest_files(manifest_path)
+
+        # Calculate batch parameters based on pending files
+        if pending_files == 0:
+            print("\n   No files to upload (all skipped or none found)")
+            continue
+
+        num_jobs, files_per_job = calculate_batch_params(pending_files)
+
+        step_num = 3 if args.skip_if_uploaded else 2
+        print(f"\n{step_num}. Upload Job Configuration:")
         print(f"   Total files:     {total_files}")
+        if skipped_files > 0:
+            print(f"   Skipped files:   {skipped_files}")
+            print(f"   Pending files:   {pending_files}")
         print(f"   Files per job:   {files_per_job}")
         print(f"   Number of jobs:  {num_jobs}")
         print(f"   Time limit:      {DATA_LEVEL_CONFIG[data_level]['time_hours']}h")
 
         # Submit upload jobs
-        print("\n3. Submitting upload jobs...")
+        step_num += 1
+        print(f"\n{step_num}. Submitting upload jobs...")
         upload_job_id = submit_upload_jobs(
             manifest_path,
             args.location,
@@ -323,7 +486,8 @@ Examples:
             all_job_ids.append((data_level, upload_job_id))
 
             # Submit failure manifest job
-            print("\n4. Submitting failure manifest job...")
+            step_num += 1
+            print(f"\n{step_num}. Submitting failure manifest job...")
             failure_job_id = submit_failure_manifest_job(
                 manifest_path, upload_job_id, args.dry_run
             )
