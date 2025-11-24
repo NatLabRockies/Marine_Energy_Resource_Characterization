@@ -30,12 +30,45 @@ import h5py
 import pandas as pd
 
 
+def parse_time_units(units_str):
+    """
+    Parse CF-compliant time units string.
+
+    Expected format: "<unit> since <reference_datetime>"
+    Examples:
+        "hours since 2005-07-01 00:00:00"
+        "seconds since 1970-01-01"
+        "days since 1858-11-17 00:00:00"
+
+    Args:
+        units_str: CF time units string
+
+    Returns:
+        tuple: (unit, reference_datetime)
+    """
+    import re
+
+    # Parse "unit since datetime" format
+    match = re.match(r"(\w+)\s+since\s+(.+)", units_str)
+    if not match:
+        raise ValueError(f"Invalid time units format: {units_str}")
+
+    unit = match.group(1)
+    reference_str = match.group(2).strip()
+
+    # Parse reference datetime
+    reference_dt = pd.to_datetime(reference_str)
+
+    return unit, reference_dt
+
+
 def extract_first_timestamp_from_file(nc_file):
     """
     Open netCDF file and extract the first timestamp using h5py.
 
     Uses h5py for fast, memory-efficient reading of just the first time value.
-    Time is stored as Unix seconds (seconds since 1970-01-01).
+    Reads the time units attribute to properly convert from file's time encoding
+    to actual datetime.
 
     Args:
         nc_file: Path to netCDF file
@@ -45,23 +78,36 @@ def extract_first_timestamp_from_file(nc_file):
     """
     try:
         with h5py.File(nc_file, "r") as f:
-            # Read only the first time value (Unix seconds)
-            first_time_unix = f["time"][0]
-            print(f"  First time (Unix seconds): {first_time_unix}")
+            # Read only the first time value
+            first_time_value = f["time"][0]
 
-            # Convert from Unix seconds to datetime
-            first_time = pd.to_datetime(
-                first_time_unix, unit="s", origin="unix", utc=True
-            )
+            # Read the units attribute to understand time encoding
+            units_str = f["time"].attrs["units"]
+            if isinstance(units_str, bytes):
+                units_str = units_str.decode("utf-8")
+
+            print(f"  First time value: {first_time_value}")
+            print(f"  Time units: {units_str}")
+
+            # Parse units to get reference time
+            unit, reference_dt = parse_time_units(units_str)
+
+            # Convert from file's time encoding to datetime
+            # pd.to_timedelta will convert the numeric value based on the unit
+            time_offset = pd.to_timedelta(first_time_value, unit=unit)
+            first_time = reference_dt + time_offset
 
             date_str = first_time.strftime("%Y%m%d")
             time_str = first_time.strftime("%H%M%S")
 
-            print(f"Converted first timestamp: {date_str} {time_str}")
+            print(f"  Converted timestamp: {date_str} {time_str}")
 
             return date_str, time_str
     except Exception as e:
         print(f"Error reading {nc_file.name}: {e}")
+        import traceback
+
+        traceback.print_exc()
         return None, None
 
 
