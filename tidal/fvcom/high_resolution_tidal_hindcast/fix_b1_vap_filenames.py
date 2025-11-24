@@ -23,15 +23,19 @@ Example:
 
 import argparse
 import re
+from datetime import datetime
 from pathlib import Path
 
+import h5py
 import pandas as pd
-import xarray as xr
 
 
 def extract_first_timestamp_from_file(nc_file):
     """
-    Open netCDF file and extract the first timestamp.
+    Open netCDF file and extract the first timestamp using h5py.
+
+    Uses h5py for fast, memory-efficient reading of just the first time value.
+    Time is stored as Unix seconds (seconds since 1970-01-01).
 
     Args:
         nc_file: Path to netCDF file
@@ -40,14 +44,17 @@ def extract_first_timestamp_from_file(nc_file):
         tuple: (date_str, time_str) in format (YYYYMMDD, HHMMSS)
     """
     try:
-        ds = xr.open_dataset(nc_file)
-        first_time = pd.Timestamp(ds.time.values[0])
-        ds.close()
+        with h5py.File(nc_file, "r") as f:
+            # Read only the first time value (Unix seconds)
+            first_time_unix = f["time"][0]
 
-        date_str = first_time.strftime("%Y%m%d")
-        time_str = first_time.strftime("%H%M%S")
+            # Convert from Unix seconds to datetime
+            first_time = pd.Timestamp(first_time_unix, unit="s")
 
-        return date_str, time_str
+            date_str = first_time.strftime("%Y%m%d")
+            time_str = first_time.strftime("%H%M%S")
+
+            return date_str, time_str
     except Exception as e:
         print(f"Error reading {nc_file.name}: {e}")
         return None, None
@@ -161,6 +168,7 @@ def process_directory(directory, dry_run=True):
             files_skipped.append((filename, "Already correct format"))
             continue
 
+        print("Extracting timestamp from file:", filename)
         # Extract actual first timestamp from file
         date_str, time_str = extract_first_timestamp_from_file(nc_file)
 
