@@ -111,8 +111,9 @@ def list_existing_s3_files(location_key, data_level):
     version = config["dataset"]["version"]
 
     # Build S3 prefix to list
-    # Format: us-tidal/<output_name>/<version>/<data_level>/
-    s3_prefix = f"{S3_BASE_PATH}/{output_name}/{version}/{data_level}/"
+    # Format: us-tidal/<output_name>/v<version>/<data_level>/
+    # Note: version has 'v' prefix to match file_manager convention
+    s3_prefix = f"{S3_BASE_PATH}/{output_name}/v{version}/{data_level}/"
 
     print(f"   Listing S3 objects with prefix: s3://{S3_BUCKET}/{s3_prefix}")
 
