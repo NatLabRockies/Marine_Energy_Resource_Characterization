@@ -112,6 +112,12 @@ def define_ds_encoding(ds, config, compression_strategy):
         result = base_encoding.copy()
 
     for var_name in ds.variables:
+        # If user has explicitly configured this variable, skip dynamic encoding
+        # User preferences in config should take precedence over automatic settings
+        if base_encoding and var_name in base_encoding:
+            continue
+
+        # Apply dynamic encoding only for variables not in config
         this_encoding = {}
 
         this_encoding = define_compression_encoding(this_encoding, compression_strategy)
