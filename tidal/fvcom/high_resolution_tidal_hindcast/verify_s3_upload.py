@@ -59,7 +59,7 @@ def calculate_multipart_etag(file_path: Path, chunk_size_mb: int = 500) -> tuple
     return etag, len(md5_hashes)
 
 
-def check_s3_file(bucket: str, key: str, local_path: Path = None):
+def check_s3_file(bucket: str, key: str, local_path: Path = None, profile: str = None):
     """
     Check if file exists in S3 and get its metadata.
 
@@ -67,8 +67,10 @@ def check_s3_file(bucket: str, key: str, local_path: Path = None):
         bucket: S3 bucket name
         key: S3 object key
         local_path: Optional local file path for comparison
+        profile: AWS profile name to use
     """
-    s3_client = boto3.client('s3')
+    session = boto3.Session(profile_name=profile) if profile else boto3.Session()
+    s3_client = session.client('s3')
 
     print("\n" + "="*80)
     print("S3 File Verification")
@@ -175,10 +177,11 @@ Examples:
     parser.add_argument('--bucket', required=True, help='S3 bucket name')
     parser.add_argument('--key', required=True, help='S3 object key')
     parser.add_argument('--local-path', type=Path, help='Local file path for comparison')
+    parser.add_argument('--profile', default='us-tidal', help='AWS profile name (default: us-tidal)')
 
     args = parser.parse_args()
 
-    result = check_s3_file(args.bucket, args.key, args.local_path)
+    result = check_s3_file(args.bucket, args.key, args.local_path, args.profile)
 
     if result is True:
         print("\n" + "="*80)
