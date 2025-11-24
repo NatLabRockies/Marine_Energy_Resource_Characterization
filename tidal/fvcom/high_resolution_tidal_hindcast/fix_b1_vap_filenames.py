@@ -47,12 +47,17 @@ def extract_first_timestamp_from_file(nc_file):
         with h5py.File(nc_file, "r") as f:
             # Read only the first time value (Unix seconds)
             first_time_unix = f["time"][0]
+            print(f"  First time (Unix seconds): {first_time_unix}")
 
             # Convert from Unix seconds to datetime
-            first_time = pd.Timestamp(first_time_unix, unit="s")
+            first_time = pd.Timestamp(
+                first_time_unix, unit="s", origin="unix", utc=True
+            )
 
             date_str = first_time.strftime("%Y%m%d")
             time_str = first_time.strftime("%H%M%S")
+
+            print(f"Converted first timestamp: {date_str} {time_str}")
 
             return date_str, time_str
     except Exception as e:
