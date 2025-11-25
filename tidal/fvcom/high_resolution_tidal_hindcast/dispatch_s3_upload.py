@@ -147,7 +147,9 @@ def discover_manifest_files():
     # Validate manifest version consistency
     try:
         _, config_version, fs_version, manifest_dir = validate_manifest_version(config)
-        print(f"Manifest version validated: {config_version} (config) = {fs_version} (filesystem)")
+        print(
+            f"Manifest version validated: {config_version} (config) = {fs_version} (filesystem)"
+        )
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -179,14 +181,21 @@ def discover_files(location_key, data_levels):
         Dictionary mapping data_level to list of (local_path, relative_path) tuples
     """
     # Separate global data levels from location-specific ones
-    global_levels = [level for level in data_levels if DATA_LEVEL_CONFIG.get(level, {}).get("is_global", False)]
+    global_levels = [
+        level
+        for level in data_levels
+        if DATA_LEVEL_CONFIG.get(level, {}).get("is_global", False)
+    ]
     location_levels = [level for level in data_levels if level not in global_levels]
 
     # Validate location only if there are location-specific levels
     if location_levels:
         if location_key not in LOCATION_MAP:
             print(f"Error: Unknown location '{location_key}'", file=sys.stderr)
-            print(f"Available locations: {', '.join(LOCATION_MAP.keys())}", file=sys.stderr)
+            print(
+                f"Available locations: {', '.join(LOCATION_MAP.keys())}",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     # Validate all data levels
@@ -252,7 +261,9 @@ def discover_files(location_key, data_levels):
                 local_dir = output_dirs_full[dir_key]
 
             if not local_dir.exists():
-                print(f"Warning: Directory does not exist: {local_dir}", file=sys.stderr)
+                print(
+                    f"Warning: Directory does not exist: {local_dir}", file=sys.stderr
+                )
                 files_by_level[data_level] = []
                 continue
 
@@ -269,7 +280,10 @@ def discover_files(location_key, data_levels):
                 for file_path in local_dir.rglob("*"):
                     if file_path.is_file():
                         # Filter by extension if specified
-                        if valid_extensions is None or file_path.suffix in valid_extensions:
+                        if (
+                            valid_extensions is None
+                            or file_path.suffix in valid_extensions
+                        ):
                             relative_path = file_path.relative_to(local_dir)
                             files.append((str(file_path), str(relative_path)))
             else:
@@ -277,7 +291,10 @@ def discover_files(location_key, data_levels):
                 for file_path in local_dir.glob("*"):
                     if file_path.is_file():
                         # Filter by extension if specified
-                        if valid_extensions is None or file_path.suffix in valid_extensions:
+                        if (
+                            valid_extensions is None
+                            or file_path.suffix in valid_extensions
+                        ):
                             relative_path = file_path.relative_to(local_dir)
                             files.append((str(file_path), str(relative_path)))
 
@@ -339,7 +356,9 @@ def get_data_level_paths(location_key, data_level):
     if data_level == "00_raw":
         base_path = Path(config["dir"]["base"])
         input_dir_template = config["dir"]["input"]["original"]
-        input_dir = input_dir_template.replace("<location>", location_spec["output_name"])
+        input_dir = input_dir_template.replace(
+            "<location>", location_spec["output_name"]
+        )
         local_dir = base_path / input_dir
         s3_base_path = str(
             Path(location_spec["output_name"])
@@ -425,23 +444,26 @@ def display_summary(location_key, files_by_level):
     total_files = sum(len(files) for files in files_by_level.values())
     total_size = calculate_total_size(files_by_level)
 
-    print("\n" + "=" * 80)
+    # Use compact mode for large file counts
+    compact_mode = total_files > 500
+
+    print("\n" + "=" * 60)
     print("S3 UPLOAD SUMMARY")
-    print("=" * 80)
+    print("=" * 60)
 
     if has_location_levels:
         output_name = LOCATION_MAP.get(location_key, location_key)
-        print(f"Location:      {location_key} ({output_name})")
-        print(f"Data Version:  {version}")
+        print(f"Location:     {location_key} ({output_name})")
+        print(f"Version:      {version}")
 
     if has_global_levels:
-        print(f"Manifest Ver:  {manifest_version}")
+        print(f"Manifest:     v{manifest_version}")
 
-    print(f"Total files:   {total_files}")
-    print(f"Total size:    {get_file_size_human(total_size)}")
-    print("S3 bucket:     oedi-data-drop/us-tidal")
+    print(f"Total files:  {total_files:,}")
+    print(f"Total size:   {get_file_size_human(total_size)}")
+    print("Bucket:       s3://oedi-data-drop/us-tidal")
+
     print("\nData Levels:")
-
     for data_level, files in files_by_level.items():
         level_size = sum(
             os.path.getsize(local_path)
@@ -451,29 +473,38 @@ def display_summary(location_key, files_by_level):
         config_info = DATA_LEVEL_CONFIG[data_level]
         is_global = config_info.get("is_global", False)
         global_marker = " [GLOBAL]" if is_global else ""
-        print(
-            f"  {data_level:30s} {len(files):6d} files  "
-            f"{get_file_size_human(level_size):>12s}  "
-            f"(time limit: {config_info['time_hours']}h){global_marker}"
-        )
 
-    # Show sample file paths (up to 10)
-    print("\nSample S3 destinations (up to 10):")
+        # Calculate percentage of total
+        pct = (len(files) / total_files * 100) if total_files > 0 else 0
+
+        if compact_mode:
+            print(
+                f"  {data_level}: {len(files):,} files ({pct:.1f}%) - {get_file_size_human(level_size)}{global_marker}"
+            )
+        else:
+            print(
+                f"  {data_level:30s} {len(files):6d} files  "
+                f"{get_file_size_human(level_size):>12s}{global_marker}"
+            )
+
+    # Show sample file paths (fewer for compact mode)
+    sample_limit = 3 if compact_mode else 10
+    print("\nSample destinations:")
     sample_count = 0
     for data_level, files in files_by_level.items():
-        for local_path, relative_path in files[:10]:
-            if sample_count >= 10:
+        for local_path, relative_path in files[:sample_limit]:
+            if sample_count >= sample_limit:
                 break
             s3_dest = construct_s3_destination(location_key, data_level, relative_path)
-            print(f"  s3://oedi-data-drop/us-tidal/{s3_dest}")
+            print(f"  .../{'/'.join(s3_dest.split('/')[-2:])}")
             sample_count += 1
-        if sample_count >= 10:
+        if sample_count >= sample_limit:
             break
 
-    if total_files > 10:
-        print(f"  ... and {total_files - 10} more files")
+    if total_files > sample_limit:
+        print(f"  ... and {total_files - sample_limit:,} more")
 
-    print("=" * 80)
+    print("=" * 60)
 
 
 def confirm_upload():
@@ -509,8 +540,11 @@ def upload_file_direct(
     full_s3_path = f"s3://{s3_bucket}/{s3_prefix}/{s3_destination}"
 
     aws_args = [
-        "aws", "s3", "cp",
-        "--profile", AWS_PROFILE,
+        "aws",
+        "s3",
+        "cp",
+        "--profile",
+        AWS_PROFILE,
         local_file,
         full_s3_path,
     ]
@@ -532,6 +566,7 @@ def upload_file_direct(
 def upload_directory_direct(
     local_dir,
     s3_destination,
+    file_count=0,
     dry_run=False,
 ):
     """
@@ -540,6 +575,7 @@ def upload_directory_direct(
     Args:
         local_dir: Full path to local directory
         s3_destination: S3 destination path (relative, without bucket)
+        file_count: Number of files being uploaded (for display)
         dry_run: Print command without executing
 
     Returns:
@@ -550,9 +586,13 @@ def upload_directory_direct(
     full_s3_path = f"s3://{s3_bucket}/{s3_prefix}/{s3_destination}"
 
     aws_args = [
-        "aws", "s3", "cp",
-        "--profile", AWS_PROFILE,
+        "aws",
+        "s3",
+        "cp",
+        "--profile",
+        AWS_PROFILE,
         "--recursive",
+        "--only-show-errors",
         str(local_dir),
         full_s3_path,
     ]
@@ -561,15 +601,20 @@ def upload_directory_direct(
         print(f"[DRY RUN] {' '.join(aws_args)}")
         return True
 
-    print(f"Uploading directory: {local_dir}")
-    print(f"  -> {full_s3_path}")
+    # Compact output
+    print(f"  {local_dir} -> {full_s3_path}")
+    if file_count > 0:
+        print(f"  Uploading {file_count:,} files...", end=" ", flush=True)
+    else:
+        print("  Uploading...", end=" ", flush=True)
 
     try:
-        # Don't capture output so user sees progress
         subprocess.run(aws_args, check=True)
+        print("Done.")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Error uploading directory {local_dir}: {e}", file=sys.stderr)
+        print("FAILED!")
+        print(f"  Error: {e}", file=sys.stderr)
         return False
 
 
@@ -796,11 +841,12 @@ Examples:
             # Get the local directory and S3 base path for this data level
             local_dir, s3_base_path = get_data_level_paths(args.location, data_level)
 
-            print(f"\n{data_level} ({len(files)} files):")
+            print(f"\n{data_level}:")
 
             success = upload_directory_direct(
                 local_dir=local_dir,
                 s3_destination=s3_base_path,
+                file_count=len(files),
                 dry_run=args.dry_run,
             )
 
@@ -812,9 +858,13 @@ Examples:
         # Summary for direct mode
         print("\n" + "=" * 80)
         if args.dry_run:
-            print(f"DRY RUN COMPLETE - Would have uploaded {len(files_by_level)} directories ({total_files} files)")
+            print(
+                f"DRY RUN COMPLETE - Would have uploaded {len(files_by_level)} directories ({total_files} files)"
+            )
         else:
-            print(f"Upload complete: {successful_levels} directories succeeded, {failed_levels} failed")
+            print(
+                f"Upload complete: {successful_levels} directories succeeded, {failed_levels} failed"
+            )
         print("=" * 80)
 
     else:
