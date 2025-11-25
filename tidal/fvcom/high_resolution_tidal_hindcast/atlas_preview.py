@@ -437,7 +437,13 @@ def get_parquet_path(region):
             f"Directory contains {len(existing_files)} items: {[f.name for f in existing_files[:10]]}"
         )
 
-    # Return the first parquet file (there should be only one per region based on the structure)
+    # For combined atlas, prefer all_columns files over atlas_subset
+    if region == "all_locations_combined_gis":
+        all_columns_files = [f for f in parquet_files if "all_columns" in f.name]
+        if all_columns_files:
+            return all_columns_files[0]
+
+    # Return the most recent parquet file
     return parquet_files[0]
 
 
