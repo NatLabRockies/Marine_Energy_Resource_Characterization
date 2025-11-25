@@ -135,3 +135,104 @@ def get_hsds_final_file_path(config, location):
 
     filename = f"{output_name}.{dataset_name}.hsds.v{version}.h5"
     return hsds_dir / filename
+
+
+def get_manifest_output_dir(config, manifest_version=None):
+    """
+    Get manifest output directory for the given or latest manifest version.
+
+    The manifest directory is global (not location-specific) and follows the pattern:
+    {base_path}/manifest/v{manifest_version}/
+
+    Args:
+        config: Configuration dictionary
+        manifest_version: Optional specific manifest version. If None, uses config version.
+
+    Returns:
+        Path to the manifest output directory
+    """
+    base_path = Path(config["dir"]["base"]).resolve()
+
+    if manifest_version is None:
+        manifest_version = config["manifest"]["version"]
+
+    manifest_path_template = config["dir"]["output"]["manifest"]
+    manifest_path = manifest_path_template.replace(
+        "<manifest_version>", manifest_version
+    )
+
+    return base_path / manifest_path
+
+
+def find_latest_manifest_version(config):
+    """
+    Scan filesystem to find the latest manifest version by semver.
+
+    Looks for directories matching pattern: {base_path}/manifest/v*
+
+    Args:
+        config: Configuration dictionary
+
+    Returns:
+        Tuple of (latest_version_string, latest_version_path) or (None, None) if none found
+    """
+    base_path = Path(config["dir"]["base"]).resolve()
+    manifest_base = base_path / "manifest"
+
+    if not manifest_base.exists():
+        return None, None
+
+    # Find all version directories
+    version_dirs = sorted(manifest_base.glob("v*"))
+
+    if not version_dirs:
+        return None, None
+
+    # Parse versions and find highest
+    def parse_semver(version_str):
+        """Parse 'v1.2.3' or '1.2.3' into tuple (1, 2, 3) for comparison"""
+        clean = version_str.lstrip("v")
+        try:
+            parts = clean.split(".")
+            return tuple(int(p) for p in parts)
+        except (ValueError, AttributeError):
+            return (0, 0, 0)
+
+    latest_dir = max(version_dirs, key=lambda d: parse_semver(d.name))
+    latest_version = latest_dir.name.lstrip("v")
+
+    return latest_version, latest_dir
+
+
+def validate_manifest_version(config):
+    """
+    Validate that config manifest version matches the latest on filesystem.
+
+    Args:
+        config: Configuration dictionary
+
+    Returns:
+        Tuple of (is_valid, config_version, filesystem_version, manifest_dir)
+
+    Raises:
+        ValueError: If versions don't match
+    """
+    config_version = config["manifest"]["version"]
+    fs_version, fs_path = find_latest_manifest_version(config)
+
+    if fs_version is None:
+        raise ValueError(
+            f"No manifest directories found on filesystem. "
+            f"Config specifies version {config_version}. "
+            f"Expected directory at: {get_manifest_output_dir(config)}"
+        )
+
+    if config_version != fs_version:
+        raise ValueError(
+            f"Manifest version mismatch! "
+            f"Config specifies version '{config_version}' but filesystem has "
+            f"latest version '{fs_version}' at {fs_path}. "
+            f"Please update config['manifest']['version'] to match."
+        )
+
+    return True, config_version, fs_version, fs_path
