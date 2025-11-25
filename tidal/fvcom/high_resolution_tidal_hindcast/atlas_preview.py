@@ -414,16 +414,28 @@ def get_parquet_path(region):
     version = f"v{config['dataset']['version']}"
 
     if region == "all_locations_combined_gis":
-        # Combined atlas has parquet files directly in the version directory
-        parquet_dir = BASE_DIR / region / version
+        # Combined atlas has parquet files in version/parquet subdirectory
+        parquet_dir = BASE_DIR / region / version / "parquet"
     else:
         # Regular regions have parquet files in b5_vap_summary_parquet subdirectory
         parquet_dir = BASE_DIR / region / version / "b5_vap_summary_parquet"
 
-    parquet_files = sorted(list(parquet_dir.glob("*.parquet")))
+    if not parquet_dir.exists():
+        raise FileNotFoundError(
+            f"Parquet directory does not exist for region '{region}': {parquet_dir}"
+        )
+
+    # Sort by modification time (newest first)
+    parquet_files = sorted(
+        parquet_dir.glob("*.parquet"), key=lambda f: f.stat().st_mtime, reverse=True
+    )
 
     if not parquet_files:
-        raise FileNotFoundError(f"No parquet files found for region: {region}")
+        existing_files = list(parquet_dir.iterdir()) if parquet_dir.exists() else []
+        raise FileNotFoundError(
+            f"No parquet files found for region '{region}' in {parquet_dir}. "
+            f"Directory contains {len(existing_files)} items: {[f.name for f in existing_files[:10]]}"
+        )
 
     # Return the first parquet file (there should be only one per region based on the structure)
     return parquet_files[0]
