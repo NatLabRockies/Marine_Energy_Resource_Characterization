@@ -131,6 +131,8 @@ config = {
             "tracking": "<location>/<version>/metadata/shared",
             "attributes": "<location>/<version>/metadata/dataset_attributes",
             "sha_256": "<location>/<version>/metadata/sha_256",
+            # Global manifest directory (not location-specific)
+            "manifest": "manifest/v<manifest_version>",
         },
     },
     "model_specification": {
