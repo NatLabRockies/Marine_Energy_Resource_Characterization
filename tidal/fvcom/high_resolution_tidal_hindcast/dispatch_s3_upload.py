@@ -32,6 +32,7 @@ from pathlib import Path
 from config import config
 from src.file_manager import (
     get_output_dirs,
+    get_manifest_output_dir,
     validate_manifest_version,
 )
 
@@ -116,6 +117,9 @@ DATA_LEVEL_CONFIG = {
 LOCATION_MAP = {
     key: spec["output_name"] for key, spec in config["location_specification"].items()
 }
+
+# AWS profile for S3 uploads
+AWS_PROFILE = "us-tidal"
 
 
 def get_file_size_human(size_bytes):
@@ -293,6 +297,63 @@ def calculate_total_size(files_by_level):
     return total_bytes
 
 
+def get_data_level_paths(location_key, data_level):
+    """
+    Get local directory and S3 base path for a data level.
+
+    Args:
+        location_key: Location key (e.g., 'cook_inlet') - ignored for global data levels
+        data_level: Data level directory name (e.g., 'b1_vap', 'manifest')
+
+    Returns:
+        Tuple of (local_dir, s3_base_path)
+    """
+    # Handle global data levels (like manifest)
+    if DATA_LEVEL_CONFIG.get(data_level, {}).get("is_global", False):
+        if data_level == "manifest":
+            manifest_version = config["manifest"]["version"]
+            local_dir = get_manifest_output_dir(config, manifest_version)
+            s3_base_path = f"manifest/v{manifest_version}"
+            return local_dir, s3_base_path
+
+    # Handle location-specific data levels
+    location_spec = config["location_specification"][location_key]
+    output_dirs_full = get_output_dirs(config, location_spec, omit_base_path=False)
+    output_dirs_relative = get_output_dirs(config, location_spec, omit_base_path=True)
+
+    # Map data_level to output_dir key
+    data_level_to_dir_key = {
+        "a1_std": "standardized",
+        "a2_std_partition": "standardized_partition",
+        "b1_vap": "vap",
+        "b1_vap_daily_compressed": "vap_daily_compressed",
+        "b2_monthly_mean_vap": "monthly_summary_vap",
+        "b3_yearly_mean_vap": "yearly_summary_vap",
+        "b4_vap_partition": "vap_partition",
+        "b5_vap_summary_parquet": "vap_summary_parquet",
+        "b6_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
+        "hsds": "hsds",
+    }
+
+    # Handle 00_raw separately
+    if data_level == "00_raw":
+        base_path = Path(config["dir"]["base"])
+        input_dir_template = config["dir"]["input"]["original"]
+        input_dir = input_dir_template.replace("<location>", location_spec["output_name"])
+        local_dir = base_path / input_dir
+        s3_base_path = str(
+            Path(location_spec["output_name"])
+            / f"v{config['dataset']['version']}"
+            / data_level
+        )
+    else:
+        dir_key = data_level_to_dir_key.get(data_level)
+        local_dir = output_dirs_full[dir_key]
+        s3_base_path = str(output_dirs_relative[dir_key])
+
+    return local_dir, s3_base_path
+
+
 def construct_s3_destination(location_key, data_level, relative_path):
     """
     Construct S3 destination path using file_manager for consistent versioning.
@@ -449,6 +510,7 @@ def upload_file_direct(
 
     aws_args = [
         "aws", "s3", "cp",
+        "--profile", AWS_PROFILE,
         local_file,
         full_s3_path,
     ]
@@ -458,12 +520,56 @@ def upload_file_direct(
         return True
 
     try:
-        result = subprocess.run(aws_args, capture_output=True, text=True, check=True)
+        subprocess.run(aws_args, capture_output=True, text=True, check=True)
         return True
     except subprocess.CalledProcessError as e:
         print(f"Error uploading {local_file}: {e}", file=sys.stderr)
         if e.stderr:
             print(f"stderr: {e.stderr}", file=sys.stderr)
+        return False
+
+
+def upload_directory_direct(
+    local_dir,
+    s3_destination,
+    dry_run=False,
+):
+    """
+    Upload an entire directory recursively using aws s3 cp --recursive.
+
+    Args:
+        local_dir: Full path to local directory
+        s3_destination: S3 destination path (relative, without bucket)
+        dry_run: Print command without executing
+
+    Returns:
+        True if successful, False otherwise
+    """
+    s3_bucket = "oedi-data-drop"
+    s3_prefix = "us-tidal"
+    full_s3_path = f"s3://{s3_bucket}/{s3_prefix}/{s3_destination}"
+
+    aws_args = [
+        "aws", "s3", "cp",
+        "--profile", AWS_PROFILE,
+        "--recursive",
+        str(local_dir),
+        full_s3_path,
+    ]
+
+    if dry_run:
+        print(f"[DRY RUN] {' '.join(aws_args)}")
+        return True
+
+    print(f"Uploading directory: {local_dir}")
+    print(f"  -> {full_s3_path}")
+
+    try:
+        # Don't capture output so user sees progress
+        subprocess.run(aws_args, check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error uploading directory {local_dir}: {e}", file=sys.stderr)
         return False
 
 
@@ -678,39 +784,37 @@ Examples:
             sys.exit(0)
 
     if args.direct:
-        # Direct upload mode using aws s3 cp
-        print("\nUploading files directly...")
-        successful_uploads = 0
-        failed_uploads = 0
+        # Direct upload mode using aws s3 cp --recursive (directory-based)
+        print("\nUploading directories directly...")
+        successful_levels = 0
+        failed_levels = 0
 
         for data_level, files in files_by_level.items():
-            print(f"\nUploading {data_level} ({len(files)} files)...")
+            if not files:
+                continue
 
-            for i, (local_path, relative_path) in enumerate(files, 1):
-                s3_destination = construct_s3_destination(
-                    args.location, data_level, relative_path
-                )
+            # Get the local directory and S3 base path for this data level
+            local_dir, s3_base_path = get_data_level_paths(args.location, data_level)
 
-                success = upload_file_direct(
-                    local_file=local_path,
-                    s3_destination=s3_destination,
-                    dry_run=args.dry_run,
-                )
+            print(f"\n{data_level} ({len(files)} files):")
 
-                if success:
-                    successful_uploads += 1
-                    if not args.dry_run:
-                        print(f"  [{i}/{len(files)}] Uploaded: {Path(local_path).name}")
-                else:
-                    failed_uploads += 1
-                    print(f"  [{i}/{len(files)}] FAILED: {Path(local_path).name}")
+            success = upload_directory_direct(
+                local_dir=local_dir,
+                s3_destination=s3_base_path,
+                dry_run=args.dry_run,
+            )
+
+            if success:
+                successful_levels += 1
+            else:
+                failed_levels += 1
 
         # Summary for direct mode
         print("\n" + "=" * 80)
         if args.dry_run:
-            print(f"DRY RUN COMPLETE - Would have uploaded {total_files} files")
+            print(f"DRY RUN COMPLETE - Would have uploaded {len(files_by_level)} directories ({total_files} files)")
         else:
-            print(f"Upload complete: {successful_uploads} succeeded, {failed_uploads} failed")
+            print(f"Upload complete: {successful_levels} directories succeeded, {failed_levels} failed")
         print("=" * 80)
 
     else:
