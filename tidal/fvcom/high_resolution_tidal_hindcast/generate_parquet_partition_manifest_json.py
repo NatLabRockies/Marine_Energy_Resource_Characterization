@@ -402,7 +402,9 @@ def build_compact_grid_index(file_metadata, config):
 
         # Store as string array: [lat_str, lon_str, face_id_str]
         # face_id from metadata is already an int, format as zero-padded string
-        face_id_str = f"{metadata['face_id']:06d}"
+        # Use index_max_digits from config (default 8) for padding
+        index_max_digits = config["partition"]["index_max_digits"]
+        face_id_str = f"{metadata['face_id']:0{index_max_digits}d}"
         lat_str = f"{metadata['lat']:.7f}"  # Match coord_digits_max from config
         lon_str = f"{metadata['lon']:.7f}"
 
@@ -646,7 +648,7 @@ def build_manifest_schema():
             "template": "The path template string with {placeholder} variables",
             "placeholders": {
                 "location": "Location output_name (e.g., 'AK_cook_inlet')",
-                "data_version": "Data version for the location (e.g., '1.0.0')",
+                "data_version": "Data version for the location (e.g., '1.0.0'). Path uses 'v' prefix (v1.0.0)",
                 "data_level": "Data processing level (e.g., 'b4_vap_partition')",
                 "lat_deg": "Integer latitude degrees (signed, e.g., 59 or -70)",
                 "lon_deg": "Integer longitude degrees (signed, e.g., -152)",
@@ -813,13 +815,16 @@ def generate_compact_manifest(config, output_dir, existing_manifest=None):
     grid_lons = [round(g["centroid"][1], spec_decimal_places + 1) for g in grid_index]
 
     # Build path template with all configurable components
+    # Note: version uses 'v' prefix (e.g., v1.0.0) to match directory structure
+    # Note: face_id is passed as pre-padded string (e.g., "00126388")
+    # Note: filename ends with .v{data_version}.parquet
     dec_format_spec = f"0{spec_decimal_places}d"
     dataset_name = config["dataset"]["name"]
     path_template = (
-        "{location}/{data_version}/{data_level}/"
+        "{location}/v{data_version}/{data_level}/"
         f"lat_deg={{lat_deg}}/lon_deg={{lon_deg}}/"
         f"lat_dec={{lat_dec:{dec_format_spec}}}/lon_dec={{lon_dec:{dec_format_spec}}}/"
-        f"{{location}}.{dataset_name}.face={{face_id}}.lat={{lat}}.lon={{lon}}-{{temporal}}.b4.{{date}}.{{time}}.parquet"
+        f"{{location}}.{dataset_name}.face={{face_id}}.lat={{lat}}.lon={{lon}}-{{temporal}}.b4.{{date}}.{{time}}.v{{data_version}}.parquet"
     )
 
     # Build storage configuration
@@ -859,21 +864,7 @@ def generate_compact_manifest(config, output_dir, existing_manifest=None):
         # Path template for file reconstruction
         "path_template": {
             "template": path_template,
-            "example": path_template.format(
-                location="AK_cook_inlet",
-                data_version="1.0.0",
-                data_level="b4_vap_partition",
-                lat_deg=59,
-                lon_deg=-152,
-                lat_dec=12,
-                lon_dec=78,
-                face_id="00012345",
-                lat="59.1234567",
-                lon="-152.7890123",
-                temporal="1h",
-                date="20050101",
-                time="000000",
-            ),
+            "example": "AK_cook_inlet/v1.0.0/b4_vap_partition/lat_deg=59/lon_deg=-152/lat_dec=12/lon_dec=78/AK_cook_inlet.wpto_high_res_tidal.face=00012345.lat=59.1234567.lon=-152.7890123-1h.b4.20050101.000000.v1.0.0.parquet",
         },
         # Summary statistics
         "total_grids": len(grid_index),
