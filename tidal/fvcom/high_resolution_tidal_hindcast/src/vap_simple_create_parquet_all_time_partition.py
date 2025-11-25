@@ -3,6 +3,7 @@ import os
 import time
 from datetime import datetime
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import h5py
 import numpy as np
@@ -12,6 +13,10 @@ import pyarrow.parquet as pq
 import xarray as xr
 
 from . import file_manager, file_name_convention_manager
+
+# Number of threads for parallel parquet file writes
+# Adjust based on HPC filesystem capabilities (Lustre can handle higher values)
+PARQUET_WRITE_THREADS = 16
 
 
 def prepare_nc_metadata_for_parquet(attributes):
@@ -278,6 +283,155 @@ def extract_metadata_from_nc(nc_file_path):
     #         print(f"  {attr_key}: {attr_value}")
 
     return prepare_nc_metadata_for_parquet(attrs)
+
+
+def build_parquet_schema_with_metadata(
+    column_names,
+    column_dtypes,
+    nc_metadata_for_parquet,
+    parquet_col_to_nc_var_map,
+):
+    """
+    Build a PyArrow schema with metadata pre-computed.
+
+    This function creates the schema ONCE before the write loop, avoiding
+    redundant schema reconstruction for every file.
+
+    Parameters:
+    -----------
+    column_names : list
+        List of column names in order
+    column_dtypes : dict
+        Mapping of column name to PyArrow data type
+    nc_metadata_for_parquet : dict
+        Metadata dict with 'global' and 'var' keys
+    parquet_col_to_nc_var_map : dict
+        Mapping from parquet column names to NC variable names
+
+    Returns:
+    --------
+    pa.Schema
+        PyArrow schema with all field and file metadata attached
+    """
+    fields = []
+
+    for col_name in column_names:
+        # Get the PyArrow type for this column
+        pa_type = column_dtypes.get(col_name, pa.float32())
+
+        # Build field metadata from NC variable attributes
+        field_metadata = {}
+        nc_var_name = parquet_col_to_nc_var_map.get(col_name, col_name)
+        if nc_var_name in nc_metadata_for_parquet["var"]:
+            field_metadata = nc_metadata_for_parquet["var"][nc_var_name].copy()
+
+        # Create the field with metadata
+        field = pa.field(col_name, pa_type, metadata=field_metadata if field_metadata else None)
+        fields.append(field)
+
+    # Create schema and attach global metadata
+    schema = pa.schema(fields)
+    schema = schema.with_metadata(nc_metadata_for_parquet.get("global", {}))
+
+    return schema
+
+
+def write_parquet_file_safe(args):
+    """
+    Write a single parquet file with error handling.
+
+    Parameters:
+    -----------
+    args : tuple
+        (face_id, table, output_path)
+
+    Returns:
+    --------
+    tuple
+        (face_id, output_path, error_or_None)
+    """
+    face_id, table, output_path = args
+    try:
+        # Ensure parent directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        pq.write_table(table, output_path)
+        return (face_id, str(output_path), None)
+    except Exception as e:
+        return (face_id, str(output_path), str(e))
+
+
+def get_partition_path_from_coords(lat, lon, config):
+    """
+    Generate the partition path based on lat/lon coordinates.
+
+    This version takes scalar values directly instead of a DataFrame,
+    avoiding pandas overhead.
+    """
+    coordinate_decimal_places = config["partition"]["decimal_places"]
+
+    lat_deg = int(lat)
+    lon_deg = int(lon)
+
+    # Extract decimal places based on coordinate_decimal_places
+    multiplier = 10**coordinate_decimal_places
+    lat_dec = int(abs(lat * multiplier) % multiplier)
+    lon_dec = int(abs(lon * multiplier) % multiplier)
+
+    # Use coordinate_decimal_places for formatting width
+    format_spec = f"0{coordinate_decimal_places}d"
+
+    return f"lat_deg={lat_deg}/lon_deg={lon_deg}/lat_dec={lat_dec:{format_spec}}/lon_dec={lon_dec:{format_spec}}"
+
+
+def get_partition_file_name_from_coords(
+    index: int,
+    lat: float,
+    lon: float,
+    time_values,
+    config,
+    location,
+) -> str:
+    """
+    Generate standardized filename for partition files.
+
+    This version takes scalar values directly instead of a DataFrame,
+    avoiding pandas overhead.
+    """
+    coord_digits_max = config["partition"]["coord_digits_max"]
+    index_max_digits = config["partition"]["index_max_digits"]
+    version = config["dataset"]["version"]
+
+    # Round latitude and longitude to specified decimal places
+    lat_rounded = round(lat, coord_digits_max)
+    lon_rounded = round(lon, coord_digits_max)
+
+    # Determine temporal string based on expected_delta_t_seconds
+    expected_delta_t_seconds = location["expected_delta_t_seconds"]
+    temporal_mapping = {3600: "1h", 1800: "30m"}
+    if expected_delta_t_seconds not in temporal_mapping:
+        raise ValueError(
+            f"Unexpected expected_delta_t_seconds configuration {expected_delta_t_seconds}"
+        )
+    temporal_string = temporal_mapping[expected_delta_t_seconds]
+
+    # Format strings for padding and precision
+    index_format = f"0{index_max_digits}d"
+    coord_format = f".{coord_digits_max}f"
+
+    # Get time range for filename (first timestamp)
+    first_time = pd.Timestamp(time_values[0])
+
+    # Build the filename directly without using file_name_convention_manager
+    # to avoid DataFrame overhead
+    date_str = first_time.strftime("%Y%m%d")
+    time_str = first_time.strftime("%H%M%S")
+
+    return (
+        f"{location['output_name']}.{config['dataset']['name']}."
+        f"face={index:{index_format}}.lat={lat_rounded:{coord_format}}."
+        f"lon={lon_rounded:{coord_format}}-{temporal_string}.b4.{version}."
+        f"{date_str}.{time_str}.parquet"
+    )
 
 
 def convert_h5_to_parquet_batched(
@@ -653,202 +807,196 @@ def convert_h5_to_parquet_batched(
             f"{timestamp} - INFO - Completed reading file {file_idx + 1}/{len(h5_files)} in {file_time:.2f} seconds"
         )
 
-    # Now write one parquet file per face with the complete time series sequentially
+    # =========================================================================
+    # OPTIMIZED PARQUET WRITING WITH PRE-COMPUTED SCHEMA AND THREADED I/O
+    # =========================================================================
+
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(
-        f"{timestamp} - INFO - Writing {faces_to_process} parquet files with full time series sequentially"
+        f"{timestamp} - INFO - Writing {faces_to_process} parquet files using {PARQUET_WRITE_THREADS} threads"
     )
     writing_start = time.time()
 
-    processed_count = 0
+    # -------------------------------------------------------------------------
+    # Step 1: Build the column list and determine PyArrow types
+    # -------------------------------------------------------------------------
+    # Get a sample face to determine column structure
+    sample_face_id = next(iter(all_face_data.keys()))
+    sample_face_data = all_face_data[sample_face_id]
+    time_length = len(sample_face_data["time"])
 
-    # Process and write each face sequentially
-    for face_id in all_face_data.keys():
-        # Create a DataFrame for this face
-        df_data = {}
+    # Define column order (time first, then coordinates, then data)
+    coordinate_cols = [
+        "lat", "lon",
+        "element_corner_1_lat", "element_corner_1_lon",
+        "element_corner_2_lat", "element_corner_2_lon",
+        "element_corner_3_lat", "element_corner_3_lon",
+    ]
 
-        # Convert all lists to numpy arrays and handle constant values
-        for key, value in all_face_data[face_id].items():
-            if "nv" in key:
-                continue
-            if key in [
-                "lat",
-                "lon",
-                "element_corner_1_lat",
-                "element_corner_1_lon",
-                "element_corner_2_lat",
-                "element_corner_2_lon",
-                "element_corner_3_lat",
-                "element_corner_3_lon",
-            ]:
-                # Repeat scalar values to match time length
-                time_length = len(all_face_data[face_id]["time"])
-                df_data[key] = np.repeat(value, time_length)
-            else:
-                df_data[key] = np.array(value)
+    # Get data columns (everything except time and coordinates)
+    data_cols = [
+        k for k in sample_face_data.keys()
+        if k not in ["time", "lat", "lon"] + [c for c in coordinate_cols if "corner" in c]
+        and "nv" not in k
+    ]
 
-        # Create DataFrame and write to parquet
-        df = pd.DataFrame(df_data)
+    # Full column order: time index (will be added), coordinates, data
+    column_names = ["time"] + coordinate_cols + data_cols
 
-        df["time"] = pd.to_datetime(df["time"])
-        df = df.set_index("time")
-        df = df.sort_index()
+    # Define PyArrow types for each column
+    column_dtypes = {"time": pa.timestamp("ns")}
+    for col in coordinate_cols:
+        column_dtypes[col] = pa.float32()
+    for col in data_cols:
+        column_dtypes[col] = pa.float32()
 
-        # Create partitioned directory structure and filename
-        partition_dir = Path(output_dir, get_partition_path(df, config))
-        partition_dir.mkdir(parents=True, exist_ok=True)
-
-        output_file = Path(
-            partition_dir, get_partition_file_name(face_id, df, config, location)
-        )
-
-        # Convert DataFrame to PyArrow table
-        table = pa.Table.from_pandas(df, preserve_index=True)
-
-        # 1. Handle SCHEMA metadata (variable attributes)
-        # Create new fields with metadata for each column
-        # new_fields = []
-        # for field in table.schema:
-        #     # Start with existing field metadata
-        #     field_metadata = field.metadata.copy() if field.metadata else {}
-        #
-        #     # Add variable-specific metadata if it exists
-        #     var_name = field.name.encode("utf-8")
-        #     if var_name in nc_metadata_for_parquet["var"]:
-        #         # Append new metadata to existing
-        #         field_metadata.update(nc_metadata_for_parquet["var"][var_name])
-        #
-        #     # Create new field with combined metadata
-        #     new_field = pa.field(field.name, field.type, metadata=field_metadata)
-        #     new_fields.append(new_field)
-
-        # Metadata tracking and reconciliation
-        matched_fields = []
-        missed_fields = []
-        fields_with_existing_meta = []
-        fields_with_new_meta = []
-
-        new_fields = []
-        for field in table.schema:
-            # Start with existing field metadata
-            field_metadata = field.metadata.copy() if field.metadata else {}
-
-            # Track existing metadata
-            if field.metadata:
-                fields_with_existing_meta.append(field.name)
-
-            # Add variable-specific metadata if it exists
-            var_name = field.name
-            nc_var_name = parquet_col_to_nc_var_map[var_name]
-            if nc_var_name in nc_metadata_for_parquet["var"]:
-                # Append new metadata to existing
-                field_metadata.update(nc_metadata_for_parquet["var"][nc_var_name])
-                matched_fields.append(field.name)
-                fields_with_new_meta.append(field.name)
-            else:
-                missed_fields.append(field.name)
-
-            # Create new field with combined metadata
-            new_field = pa.field(field.name, field.type, metadata=field_metadata)
-            new_fields.append(new_field)
-
-        # # Reconciliation and warnings
-        # print("=== METADATA RECONCILIATION REPORT ===")
-        # print(f"Total fields: {len(table.schema)}")
-        # print(
-        #     f"Fields with existing metadata: {len(fields_with_existing_meta)} -> {fields_with_existing_meta}"
-        # )
-        # print(
-        #     f"Fields matched with new metadata: {len(matched_fields)} -> {matched_fields}"
-        # )
-        # print(
-        #     f"Fields MISSED (no new metadata): {len(missed_fields)} -> {missed_fields}"
-        # )
-        # print(
-        #     f"Fields that will have metadata after processing: {len(fields_with_new_meta)} -> {fields_with_new_meta}"
-        # )
-        #
-        # # Critical checks
-        # if len(missed_fields) > 0:
-        #     print(f"\nWARNING: {len(missed_fields)} fields have no metadata!")
-        #     print(f"   Missed fields: {missed_fields}")
-        #
-        #     # Check if it's a key type mismatch
-        #     print("\nDEBUGGING KEY MISMATCH:")
-        #     print(
-        #         f"   Available metadata keys: {list(nc_metadata_for_parquet['var'].keys())[:5]}..."
-        #     )
-        #     print(
-        #         f"   Key types: {[type(k) for k in list(nc_metadata_for_parquet['var'].keys())[:3]]}"
-        #     )
-        #
-        #     # Try string keys instead
-        #     string_matches = []
-        #     for field_name in missed_fields:
-        #         if field_name in nc_metadata_for_parquet["var"]:
-        #             string_matches.append(field_name)
-        #
-        #     if string_matches:
-        #         print(f"   Found matches using STRING keys: {string_matches}")
-        #         print(
-        #             "   SOLUTION: Use 'field.name' instead of 'field.name.encode(\"utf-8\")'"
-        #         )
-        #
-        # if len(fields_with_new_meta) == 0:
-        #     print("\nCRITICAL ERROR: NO FIELDS HAVE METADATA!!!")
-        #     print("   This means the parquet file will have no variable metadata.")
-        #     print("   Check metadata key types and field name encoding.")
-        #     raise ValueError("No fields matched for metadata - check key types!")
-        #
-        # print(
-        #     f"\nMetadata assignment complete: {len(fields_with_new_meta)}/{len(table.schema)} fields have metadata"
-        # )
-
-        # Create new schema with field metadata
-        new_schema = pa.schema(new_fields)
-        table = table.cast(new_schema)
-
-        # 2. Handle FILE metadata (global attributes)
-        # Start with existing file metadata from the schema
-        existing_file_metadata = (
-            table.schema.metadata.copy() if table.schema.metadata else {}
-        )
-
-        # Append global metadata to existing file metadata
-        combined_file_metadata = existing_file_metadata.copy()
-        combined_file_metadata.update(nc_metadata_for_parquet["global"])
-
-        final_schema = new_schema.with_metadata(combined_file_metadata)
-        table = table.cast(final_schema)
-
-        pq.write_table(table, output_file)
-
-        # print(f"File written: {output_file}")
-        #
-        # exit()
-
-        # Update counter and provide progress reporting
-        processed_count += 1
-        # if processed_count % 10 == 0:
-        if processed_count % 1 == 0:
-            current_time = time.time()
-            elapsed = current_time - writing_start
-            remaining = (elapsed / processed_count) * (
-                faces_to_process - processed_count
-            )
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(
-                f"{timestamp} - INFO - Written {processed_count}/{faces_to_process} parquet files. Estimated time remaining: {remaining:.2f} seconds"
-            )
-
-    writing_time = time.time() - writing_start
+    # -------------------------------------------------------------------------
+    # Step 2: Build pre-computed schema with all metadata (ONCE)
+    # -------------------------------------------------------------------------
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(
-        f"{timestamp} - INFO - Wrote {faces_to_process} parquet files in {writing_time:.2f} seconds"
+    print(f"{timestamp} - INFO - Building pre-computed schema with metadata")
+
+    template_schema = build_parquet_schema_with_metadata(
+        column_names,
+        column_dtypes,
+        nc_metadata_for_parquet,
+        parquet_col_to_nc_var_map,
     )
 
-    # Calculate memory usage
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{timestamp} - INFO - Schema built with {len(template_schema)} fields")
+
+    # -------------------------------------------------------------------------
+    # Step 3: Prepare all PyArrow tables and output paths
+    # -------------------------------------------------------------------------
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{timestamp} - INFO - Preparing PyArrow tables for all faces")
+
+    work_items = []
+    prep_start = time.time()
+
+    for face_idx, face_id in enumerate(all_face_data.keys()):
+        face_data = all_face_data[face_id]
+
+        # Get time values as numpy array
+        time_values = np.array(face_data["time"], dtype="datetime64[ns]")
+
+        # Build the data dict for PyArrow (no pandas!)
+        pyarrow_data = {"time": time_values}
+
+        # Add coordinate columns (repeat scalar values)
+        for col in coordinate_cols:
+            scalar_key = col
+            if col == "lat":
+                scalar_key = "lat"
+            elif col == "lon":
+                scalar_key = "lon"
+
+            scalar_value = face_data.get(scalar_key)
+            if scalar_value is not None:
+                pyarrow_data[col] = np.repeat(
+                    np.float32(scalar_value), time_length
+                )
+            else:
+                pyarrow_data[col] = np.repeat(np.float32(np.nan), time_length)
+
+        # Add data columns
+        for col in data_cols:
+            if col in face_data:
+                pyarrow_data[col] = np.array(face_data[col], dtype=np.float32)
+
+        # Create PyArrow table with pre-computed schema
+        table = pa.Table.from_pydict(pyarrow_data, schema=template_schema)
+
+        # Compute output path (using scalar values, no DataFrame)
+        lat = face_data["lat"]
+        lon = face_data["lon"]
+
+        partition_path = get_partition_path_from_coords(lat, lon, config)
+        file_name = get_partition_file_name_from_coords(
+            face_id, lat, lon, time_values, config, location
+        )
+        output_file = Path(output_dir) / partition_path / file_name
+
+        work_items.append((face_id, table, output_file))
+
+        # Progress for preparation phase
+        if (face_idx + 1) % 1000 == 0:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"{timestamp} - INFO - Prepared {face_idx + 1}/{faces_to_process} tables")
+
+    prep_time = time.time() - prep_start
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{timestamp} - INFO - Table preparation completed in {prep_time:.2f} seconds")
+
+    # -------------------------------------------------------------------------
+    # Step 4: Write files using ThreadPoolExecutor with robust error handling
+    # -------------------------------------------------------------------------
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{timestamp} - INFO - Starting threaded file writes ({PARQUET_WRITE_THREADS} workers)")
+
+    successful_writes = []
+    failed_writes = []
+    write_start = time.time()
+
+    with ThreadPoolExecutor(max_workers=PARQUET_WRITE_THREADS) as executor:
+        # Submit all write jobs
+        future_to_face = {
+            executor.submit(write_parquet_file_safe, item): item[0]
+            for item in work_items
+        }
+
+        # Process results as they complete
+        completed_count = 0
+        for future in as_completed(future_to_face):
+            face_id, output_path, error = future.result()
+
+            if error is None:
+                successful_writes.append(face_id)
+            else:
+                failed_writes.append((face_id, output_path, error))
+
+            completed_count += 1
+
+            # Progress reporting every 100 files or at key milestones
+            if completed_count % 100 == 0 or completed_count == faces_to_process:
+                current_time = time.time()
+                elapsed = current_time - write_start
+                if completed_count > 0:
+                    rate = completed_count / elapsed
+                    remaining = (faces_to_process - completed_count) / rate if rate > 0 else 0
+                else:
+                    remaining = 0
+
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(
+                    f"{timestamp} - INFO - Written {completed_count}/{faces_to_process} files "
+                    f"({rate:.1f} files/sec). Estimated remaining: {remaining:.1f}s"
+                )
+
+    write_time = time.time() - write_start
+    total_writing_time = time.time() - writing_start
+
+    # -------------------------------------------------------------------------
+    # Step 5: Report results and handle any failures
+    # -------------------------------------------------------------------------
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{timestamp} - INFO - File writing completed in {write_time:.2f} seconds")
+    print(f"{timestamp} - INFO - Total write phase time: {total_writing_time:.2f} seconds")
+    print(f"{timestamp} - INFO - Successful writes: {len(successful_writes)}/{faces_to_process}")
+
+    if failed_writes:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"{timestamp} - ERROR - {len(failed_writes)} files FAILED to write:")
+        for face_id, output_path, error in failed_writes[:10]:  # Show first 10
+            print(f"  Face {face_id}: {error}")
+        if len(failed_writes) > 10:
+            print(f"  ... and {len(failed_writes) - 10} more failures")
+
+        raise RuntimeError(
+            f"{len(failed_writes)} parquet files failed to write. "
+            f"First error: {failed_writes[0][2]}"
+        )
 
     elapsed_time = time.time() - start_time
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

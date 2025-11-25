@@ -46,6 +46,26 @@ config = {
         "decimal_places": 2,  # Number of decimal places used in partition path (lat*100 % 100)
         "coord_digits_max": 7,  # Maximum decimal precision in filename
         "index_max_digits": 8,  # Zero-padding for face ID in filename
+        "data_level": "b4_vap_partition",  # Data level identifier for partition output
+    },
+    "manifest": {
+        # Manifest specification version (format of the manifest structure)
+        "spec_version": "2.0.0",
+        # Manifest version (auto-increments patch on regeneration)
+        "version": "1.0.0",
+    },
+    "storage": {
+        # S3 storage configuration for public data access
+        "s3_bucket": "marine-energy-data",
+        "s3_prefix": "us-tidal",
+        # Manifest path structure: {bucket}/{prefix}/manifest/{manifest_version}/manifest_{version}.json
+        # Example: s3://marine-energy-data/us-tidal/manifest/1.0.0/manifest_1.0.0.json
+        # Derived URIs (computed at runtime)
+        "s3_base_uri": None,  # s3://{bucket}/{prefix}
+        "s3_manifest_uri": None,  # s3://{bucket}/{prefix}/manifest/{version}/manifest_{version}.json
+        # HPC base path for local file access on NREL Kestrel
+        # This is derived from config["dir"]["base"] at runtime
+        "hpc_base_path": None,
     },
     "dependencies": {
         "gis": {
@@ -1024,8 +1044,30 @@ def initialize_hdf5_cache():
     )
 
 
+def initialize_storage_uris():
+    """Initialize derived S3 URIs and HPC base path from storage configuration"""
+    storage_config = config["storage"]
+    manifest_config = config["manifest"]
+
+    bucket = storage_config["s3_bucket"]
+    prefix = storage_config["s3_prefix"]
+    manifest_version = manifest_config["version"]
+
+    # Base URI for data files: s3://{bucket}/{prefix}
+    storage_config["s3_base_uri"] = f"s3://{bucket}/{prefix}"
+
+    # Manifest URI: s3://{bucket}/{prefix}/manifest/{version}/manifest_{version}.json
+    storage_config["s3_manifest_uri"] = (
+        f"s3://{bucket}/{prefix}/manifest/{manifest_version}/manifest_{manifest_version}.json"
+    )
+
+    # HPC base path from config["dir"]["base"]
+    storage_config["hpc_base_path"] = config["dir"]["base"]
+
+
 # Initialize cache values on import
 initialize_hdf5_cache()
+initialize_storage_uris()
 
 if __name__ == "__main__":
     import json
