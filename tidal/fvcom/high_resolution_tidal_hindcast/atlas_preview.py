@@ -2652,6 +2652,7 @@ def organize_stats_by_variable(all_stats):
 if __name__ == "__main__":
     # Configuration - set this to skip visualization generation
     BYPASS_VISUALIZATIONS = False  # Set to True to skip all plotting
+    BYPASS_COMBINED_VISUALIZATIONS = True  # Set to True to skip combined region plots (slow)
 
     # Display available regions
     regions = get_available_regions()
@@ -2663,6 +2664,8 @@ if __name__ == "__main__":
 
     if BYPASS_VISUALIZATIONS:
         print("Visualization generation is DISABLED - only performing analysis")
+    if BYPASS_COMBINED_VISUALIZATIONS:
+        print("Combined region visualization is DISABLED - skipping slow combined plots")
 
     # Initialize data structures
     color_level_data = {}
@@ -2699,6 +2702,10 @@ if __name__ == "__main__":
         all_stats[this_region] = {}
 
         # Process all variables for this region
+        # Determine if visualizations should be bypassed for this region
+        is_combined_region = "combined" in this_region.lower()
+        should_bypass_viz = BYPASS_VISUALIZATIONS or (BYPASS_COMBINED_VISUALIZATIONS and is_combined_region)
+
         for var_key, var_config in VIZ_SPECS.items():
             stats, color_data = process_variable(
                 df,
@@ -2706,7 +2713,7 @@ if __name__ == "__main__":
                 this_output_path,
                 var_key,
                 var_config,
-                bypass_visualizations=BYPASS_VISUALIZATIONS,
+                bypass_visualizations=should_bypass_viz,
             )
 
             # Store stats for this region and variable
