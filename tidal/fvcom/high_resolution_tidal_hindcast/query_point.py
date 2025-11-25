@@ -5,12 +5,18 @@ This script provides a simple CLI for querying tidal parquet data by lat/lon coo
 It auto-discovers the latest manifest from S3 or HPC, finds the nearest data point,
 and displays the parquet data.
 
+Uses a local cache (./us_tidal_cache/) with ETag-based validation to avoid
+redundant downloads from S3.
+
 Usage:
     # Query from S3 (default)
     python query_point.py --lat 60.73 --lon -151.43
 
     # Query from S3 with specific AWS profile
     python query_point.py --lat 60.73 --lon -151.43 --aws-profile my-profile
+
+    # Query from S3 staging bucket
+    python query_point.py --lat 60.73 --lon -151.43 --s3-bucket oedi-data-drop --aws-profile us-tidal
 
     # Query from HPC local filesystem
     python query_point.py --lat 60.73 --lon -151.43 --use-hpc
@@ -23,11 +29,7 @@ Usage:
 """
 
 import argparse
-import hashlib
-import json
-import os
 import re
-import tempfile
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -100,48 +102,30 @@ def find_latest_manifest_hpc(base_path: str) -> Optional[Path]:
     return None
 
 
-def find_latest_manifest_s3(
-    bucket: str,
-    prefix: str,
-    aws_profile: Optional[str] = None,
-    staging_path: Optional[str] = None,
-) -> Optional[Path]:
+def find_latest_manifest_s3(s3_cache) -> Optional[Tuple[Path, str]]:
     """
     Find the latest manifest on S3 using semver traversal.
 
     Parameters
     ----------
-    bucket : str
-        S3 bucket name
-    prefix : str
-        S3 prefix (e.g., 'us-tidal')
-    aws_profile : str, optional
-        AWS profile name to use
-    staging_path : str, optional
-        Local path to stage downloaded files
+    s3_cache : S3CacheManager
+        S3 cache manager instance
 
     Returns
     -------
-    Path or None
-        Path to downloaded manifest file, or None if not found
+    tuple of (Path, str) or None
+        (Path to cached manifest file, version string), or None if not found
     """
     import boto3
 
-    # Create S3 client with optional profile
-    if aws_profile:
-        session = boto3.Session(profile_name=aws_profile)
-        s3 = session.client("s3")
-    else:
-        s3 = boto3.client("s3")
-
-    manifest_prefix = f"{prefix}/manifest/"
+    manifest_prefix = f"{s3_cache.prefix}/manifest/"
 
     try:
         # List all objects under manifest prefix
-        paginator = s3.get_paginator("list_objects_v2")
+        paginator = s3_cache.s3.get_paginator("list_objects_v2")
         manifest_files = []
 
-        for page in paginator.paginate(Bucket=bucket, Prefix=manifest_prefix):
+        for page in paginator.paginate(Bucket=s3_cache.bucket, Prefix=manifest_prefix):
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 # Match manifest files: manifest/v{version}/manifest_{version}.json
@@ -152,7 +136,7 @@ def find_latest_manifest_s3(
                     manifest_files.append((key, parse_semver(match.group(2))))
 
         if not manifest_files:
-            print(f"  No manifests found in s3://{bucket}/{manifest_prefix}")
+            print(f"  No manifests found in s3://{s3_cache.bucket}/{manifest_prefix}")
             return None
 
         # Sort by version (descending) and get latest
@@ -160,85 +144,20 @@ def find_latest_manifest_s3(
         latest_key = manifest_files[0][0]
         latest_version = ".".join(map(str, manifest_files[0][1]))
 
-        print(f"  Found latest manifest: s3://{bucket}/{latest_key}")
+        print(f"  Found latest manifest: s3://{s3_cache.bucket}/{latest_key}")
 
-        # Download to staging path
-        if staging_path:
-            local_dir = Path(staging_path)
-        else:
-            local_dir = Path(tempfile.gettempdir()) / "tidal_manifest_cache"
+        # Get relative path (strip prefix)
+        relative_path = latest_key[len(s3_cache.prefix) + 1 :]  # +1 for the '/'
 
-        local_dir.mkdir(parents=True, exist_ok=True)
-        local_file = local_dir / f"manifest_{latest_version}.json"
+        # Download/cache the manifest
+        local_path = s3_cache.get(relative_path)
+        print(f"  Cached at: {local_path}")
 
-        # Check if already cached
-        if local_file.exists():
-            print(f"  Using cached manifest: {local_file}")
-        else:
-            print(f"  Downloading manifest to: {local_file}")
-            s3.download_file(bucket, latest_key, str(local_file))
-
-        return local_file
+        return local_path, latest_version
 
     except Exception as e:
         print(f"  Error accessing S3: {e}")
         return None
-
-
-def download_parquet_from_s3(
-    bucket: str,
-    key: str,
-    aws_profile: Optional[str] = None,
-    staging_path: Optional[str] = None,
-) -> Optional[Path]:
-    """
-    Download a parquet file from S3.
-
-    Parameters
-    ----------
-    bucket : str
-        S3 bucket name
-    key : str
-        S3 object key
-    aws_profile : str, optional
-        AWS profile name
-    staging_path : str, optional
-        Local staging directory
-
-    Returns
-    -------
-    Path or None
-        Path to downloaded file
-    """
-    import boto3
-
-    if aws_profile:
-        session = boto3.Session(profile_name=aws_profile)
-        s3 = session.client("s3")
-    else:
-        s3 = boto3.client("s3")
-
-    # Create local path
-    if staging_path:
-        local_dir = Path(staging_path) / "parquet_cache"
-    else:
-        local_dir = Path(tempfile.gettempdir()) / "tidal_parquet_cache"
-
-    # Use hash of key for local filename to avoid deep directory structures
-    key_hash = hashlib.md5(key.encode()).hexdigest()[:12]
-    filename = Path(key).name
-    local_file = local_dir / f"{key_hash}_{filename}"
-
-    local_dir.mkdir(parents=True, exist_ok=True)
-
-    if local_file.exists():
-        print(f"  Using cached parquet: {local_file}")
-    else:
-        print(f"  Downloading: s3://{bucket}/{key}")
-        s3.download_file(bucket, key, str(local_file))
-        print(f"  Saved to: {local_file}")
-
-    return local_file
 
 
 def main():
@@ -253,8 +172,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Query from S3 (default)
+    # Query from S3 (default - production bucket)
     python query_point.py --lat 60.73 --lon -151.43
+
+    # Query from S3 staging bucket
+    python query_point.py --lat 60.73 --lon -151.43 --s3-bucket oedi-data-drop --aws-profile us-tidal
 
     # Query from HPC local filesystem
     python query_point.py --lat 60.73 --lon -151.43 --use-hpc
@@ -300,10 +222,10 @@ Test coordinates:
         help="AWS profile name for S3 access",
     )
     parser.add_argument(
-        "--staging-path",
+        "--cache-dir",
         type=str,
-        default=None,
-        help="Local path for staging downloaded files",
+        default="./us_tidal_cache",
+        help="Local cache directory (default: ./us_tidal_cache)",
     )
 
     # S3 configuration
@@ -352,6 +274,11 @@ Test coordinates:
         action="store_true",
         help="Only show point info, don't load parquet data",
     )
+    parser.add_argument(
+        "--clear-cache",
+        action="store_true",
+        help="Clear local cache before running",
+    )
 
     args = parser.parse_args()
 
@@ -360,29 +287,52 @@ Test coordinates:
     print("=" * 70)
     print(f"\nQuery coordinates: ({args.lat}, {args.lon})")
 
+    # Initialize S3 cache if not using HPC
+    s3_cache = None
+    if not args.use_hpc:
+        from s3_cache_manager import S3CacheManager
+
+        # Include bucket name in cache directory to separate different buckets
+        cache_dir = Path(args.cache_dir) / args.s3_bucket
+        s3_cache = S3CacheManager(
+            bucket=args.s3_bucket,
+            prefix=args.s3_prefix,
+            cache_dir=cache_dir,
+            aws_profile=args.aws_profile,
+        )
+
+        if args.clear_cache:
+            print(f"\nClearing cache: {cache_dir}")
+            s3_cache.clear_cache()
+
+        # Show cache stats
+        stats = s3_cache.cache_stats()
+        print(
+            f"\nCache: {stats['cache_dir']} ({stats['total_files']} files, {stats['total_size_mb']:.2f} MB)"
+        )
+
     # Find manifest
     print("\nLocating manifest...")
     if args.use_hpc:
         print(f"  Source: HPC filesystem ({args.hpc_base_path})")
         manifest_path = find_latest_manifest_hpc(args.hpc_base_path)
+        if manifest_path is None:
+            print("\nERROR: Could not find manifest")
+            return 1
     else:
         print(f"  Source: S3 (s3://{args.s3_bucket}/{args.s3_prefix})")
-        manifest_path = find_latest_manifest_s3(
-            args.s3_bucket,
-            args.s3_prefix,
-            aws_profile=args.aws_profile,
-            staging_path=args.staging_path,
-        )
-
-    if manifest_path is None:
-        print("\nERROR: Could not find manifest")
-        return 1
+        result = find_latest_manifest_s3(s3_cache)
+        if result is None:
+            print("\nERROR: Could not find manifest")
+            return 1
+        manifest_path, manifest_version = result
 
     # Load manifest and create query interface
     print("\nLoading manifest...")
     from query_tidal_manifest import TidalManifestQuery
 
-    query = TidalManifestQuery(manifest_path)
+    # Pass s3_cache to TidalManifestQuery for on-demand grid file fetching
+    query = TidalManifestQuery(manifest_path, s3_cache=s3_cache)
 
     # Query for nearest point
     print("\nSearching for nearest point...")
@@ -447,15 +397,11 @@ Test coordinates:
                 print(f"\nERROR: File not found: {parquet_path}")
                 return 1
         else:
-            # Download from S3
-            parquet_path = download_parquet_from_s3(
-                args.s3_bucket,
-                f"{args.s3_prefix}/{relative_path}",
-                aws_profile=args.aws_profile,
-                staging_path=args.staging_path,
-            )
+            # Download from S3 using cache
+            print("\n  Fetching parquet file...")
+            parquet_path = s3_cache.get(relative_path, validate=False)
 
-        print(f"\nLoading: {parquet_path}")
+        print(f"  Loading: {parquet_path}")
         df = pd.read_parquet(parquet_path)
 
         print(f"\nShape: {df.shape[0]} rows x {df.shape[1]} columns")
@@ -471,11 +417,19 @@ Test coordinates:
 
     except Exception as e:
         print(f"\nERROR loading parquet: {e}")
+        import traceback
+
+        traceback.print_exc()
         return 1
 
     print("\n" + "=" * 70)
     print("Query complete!")
     print("=" * 70)
+
+    # Show final cache stats
+    if s3_cache:
+        stats = s3_cache.cache_stats()
+        print(f"Cache: {stats['total_files']} files, {stats['total_size_mb']:.2f} MB")
 
     return 0
 

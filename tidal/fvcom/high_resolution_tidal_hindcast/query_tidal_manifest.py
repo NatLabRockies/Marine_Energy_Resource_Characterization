@@ -9,6 +9,7 @@ Features:
 - Support for manifest spec with versioning and self-documenting schema
 - Path reconstruction for direct parquet file access
 - Version resolution (latest version per location, or specific version)
+- S3 cache integration for on-demand grid file loading
 
 Uses scipy.spatial.cKDTree for fast nearest-neighbor spatial indexing.
 """
@@ -113,7 +114,7 @@ class TidalManifestQuery:
 
         return coords
 
-    def __init__(self, manifest_path: Path):
+    def __init__(self, manifest_path: Path, s3_cache=None):
         """
         Initialize query interface by loading manifest and building KDTree.
 
@@ -121,10 +122,15 @@ class TidalManifestQuery:
         ----------
         manifest_path : Path
             Path to manifest_{version}.json file (spec v2.0.0 format)
+        s3_cache : S3CacheManager, optional
+            S3 cache manager for fetching grid files on-demand from S3.
+            If provided, grid files will be fetched from S3 when not available locally.
+            Required when manifest is downloaded from S3.
         """
         self.manifest_path = Path(manifest_path)
         self.manifest_dir = self.manifest_path.parent
         self.grids_dir = self.manifest_dir / "grids"
+        self.s3_cache = s3_cache
 
         # Load manifest
         with open(self.manifest_path, "r") as f:
@@ -233,6 +239,9 @@ class TidalManifestQuery:
         Grid files are organized in nested directories:
         grids/lat_{lat_deg}/lon_{lon_deg}/{grid_id}.json
 
+        If an S3 cache manager is configured, grid files will be fetched
+        from S3 on-demand when not available locally.
+
         New compact format:
         {
             "grid_id": "61_-149_46_63",
@@ -256,16 +265,23 @@ class TidalManifestQuery:
         lat_deg = parts[0]
         lon_deg = parts[1]
 
-        # Construct path to nested grid file
+        # Construct relative path to nested grid file
+        relative_grid_path = f"manifest/v{self.manifest_version}/grids/lat_{lat_deg}/lon_{lon_deg}/{grid_id}.json"
+
+        # Try local grids_dir first
         grid_file = (
             self.grids_dir / f"lat_{lat_deg}" / f"lon_{lon_deg}" / f"{grid_id}.json"
         )
 
-        if not grid_file.exists():
-            raise FileNotFoundError(f"Grid detail file not found: {grid_file}")
+        if grid_file.exists():
+            with open(grid_file, "r") as f:
+                return json.load(f)
 
-        with open(grid_file, "r") as f:
-            return json.load(f)
+        # If not found locally and we have S3 cache, fetch from S3
+        if self.s3_cache is not None:
+            return self.s3_cache.get_json(relative_grid_path, validate=False)
+
+        raise FileNotFoundError(f"Grid detail file not found: {grid_file}")
 
     def reconstruct_path(
         self,
