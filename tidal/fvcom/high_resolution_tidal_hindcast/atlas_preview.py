@@ -398,13 +398,13 @@ VIZ_SPECS = {
 # Define available regions (derived from folder structure)
 def get_available_regions():
     """Get list of available regions based on directory structure"""
+    # Directories to exclude (not actual regions)
+    exclude_dirs = {"all_locations_combined_gis", "hsds", "manifests"}
     return sorted(
         [
             d.name
             for d in BASE_DIR.iterdir()
-            # if d.is_dir() and "me_atlas" not in d.name and "puget_sound" not in d.name
-            if d.is_dir() and "me_atlas" not in d.name and "aleutian" not in d.name
-            # if d.is_dir() and "me_atlas" not in d.name
+            if d.is_dir() and d.name not in exclude_dirs
         ]
     )
 
