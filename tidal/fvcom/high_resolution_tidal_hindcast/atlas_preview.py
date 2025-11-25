@@ -411,8 +411,15 @@ def get_available_regions():
 # Function to get parquet file path for a given region
 def get_parquet_path(region):
     """Get the path to the parquet file for the specified region"""
-    # parquet_dir = BASE_DIR / region / "b6_vap_atlas_summary_parquet"
-    parquet_dir = BASE_DIR / region / "b5_vap_summary_parquet"
+    version = f"v{config['dataset']['version']}"
+
+    if region == "all_locations_combined_gis":
+        # Combined atlas has parquet files directly in the version directory
+        parquet_dir = BASE_DIR / region / version
+    else:
+        # Regular regions have parquet files in b5_vap_summary_parquet subdirectory
+        parquet_dir = BASE_DIR / region / version / "b5_vap_summary_parquet"
+
     parquet_files = sorted(list(parquet_dir.glob("*.parquet")))
 
     if not parquet_files:
