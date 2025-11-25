@@ -427,6 +427,46 @@ def confirm_upload():
             print("Please enter 'y' or 'n'")
 
 
+def upload_file_direct(
+    local_file,
+    s3_destination,
+    dry_run=False,
+):
+    """
+    Upload a single file directly using aws s3 cp.
+
+    Args:
+        local_file: Full path to local file
+        s3_destination: S3 destination path (relative, without bucket)
+        dry_run: Print command without executing
+
+    Returns:
+        True if successful, False otherwise
+    """
+    s3_bucket = "oedi-data-drop"
+    s3_prefix = "us-tidal"
+    full_s3_path = f"s3://{s3_bucket}/{s3_prefix}/{s3_destination}"
+
+    aws_args = [
+        "aws", "s3", "cp",
+        local_file,
+        full_s3_path,
+    ]
+
+    if dry_run:
+        print(f"[DRY RUN] {' '.join(aws_args)}")
+        return True
+
+    try:
+        result = subprocess.run(aws_args, capture_output=True, text=True, check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error uploading {local_file}: {e}", file=sys.stderr)
+        if e.stderr:
+            print(f"stderr: {e.stderr}", file=sys.stderr)
+        return False
+
+
 def submit_slurm_job(
     local_file,
     s3_destination,
@@ -539,6 +579,12 @@ Examples:
 
   # Force upload (overwrite existing files)
   python dispatch_s3_upload.py cook_inlet --data-levels b1_vap --no-skip-if-exists
+
+  # Direct upload (bypass SLURM, use aws s3 cp directly)
+  python dispatch_s3_upload.py _ --data-levels manifest --direct
+
+  # Direct upload with auto-confirm
+  python dispatch_s3_upload.py _ --data-levels manifest --direct -y
         """,
     )
 
@@ -587,7 +633,13 @@ Examples:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print actions without submitting SLURM jobs",
+        help="Print actions without executing uploads",
+    )
+
+    parser.add_argument(
+        "--direct",
+        action="store_true",
+        help="Upload directly using 'aws s3 cp' instead of SLURM jobs (useful when SLURM is down)",
     )
 
     parser.add_argument(
@@ -615,62 +667,103 @@ Examples:
     # Display summary
     display_summary(args.location, files_by_level)
 
+    # Show upload mode
+    upload_mode = "DIRECT (aws s3 cp)" if args.direct else "SLURM jobs"
+    print(f"\nUpload mode: {upload_mode}")
+
     # Confirm upload (unless --yes or --dry-run)
     if not args.yes and not args.dry_run:
         if not confirm_upload():
             print("Upload cancelled.")
             sys.exit(0)
 
-    # Submit jobs
-    print("\nSubmitting SLURM jobs...")
-    submitted_jobs = []
-    job_names = set()
+    if args.direct:
+        # Direct upload mode using aws s3 cp
+        print("\nUploading files directly...")
+        successful_uploads = 0
+        failed_uploads = 0
 
-    for data_level, files in files_by_level.items():
-        print(f"\nSubmitting jobs for {data_level}...")
-        job_name = f"s3_upload_{args.location}_{data_level}"
-        job_names.add(job_name)
+        for data_level, files in files_by_level.items():
+            print(f"\nUploading {data_level} ({len(files)} files)...")
 
-        for local_path, relative_path in files:
-            s3_destination = construct_s3_destination(
-                args.location, data_level, relative_path
-            )
+            for i, (local_path, relative_path) in enumerate(files, 1):
+                s3_destination = construct_s3_destination(
+                    args.location, data_level, relative_path
+                )
 
-            job_id = submit_slurm_job(
-                local_file=local_path,
-                s3_destination=s3_destination,
-                data_level=data_level,
-                location_key=args.location,
-                skip_if_exists=args.skip_if_exists,
-                verify_checksum=args.verify_checksum,
-                dry_run=args.dry_run,
-            )
+                success = upload_file_direct(
+                    local_file=local_path,
+                    s3_destination=s3_destination,
+                    dry_run=args.dry_run,
+                )
 
-            if job_id:
-                submitted_jobs.append(job_id)
-                print(f"  Submitted job {job_id}: {Path(local_path).name}")
+                if success:
+                    successful_uploads += 1
+                    if not args.dry_run:
+                        print(f"  [{i}/{len(files)}] Uploaded: {Path(local_path).name}")
+                else:
+                    failed_uploads += 1
+                    print(f"  [{i}/{len(files)}] FAILED: {Path(local_path).name}")
 
-    # Summary
-    print("\n" + "=" * 80)
-    if args.dry_run:
-        print(f"DRY RUN COMPLETE - Would have submitted {total_files} jobs")
+        # Summary for direct mode
+        print("\n" + "=" * 80)
+        if args.dry_run:
+            print(f"DRY RUN COMPLETE - Would have uploaded {total_files} files")
+        else:
+            print(f"Upload complete: {successful_uploads} succeeded, {failed_uploads} failed")
+        print("=" * 80)
+
     else:
-        print(f"Successfully submitted {len(submitted_jobs)} SLURM jobs")
-        print("\nJob Management Commands:")
-        print("  Monitor all jobs:       squeue -u $USER")
-        print(
-            f"  Monitor by location:    squeue -u $USER -n s3_upload_{args.location}_*"
-        )
-        for job_name in sorted(job_names):
+        # SLURM job submission mode
+        print("\nSubmitting SLURM jobs...")
+        submitted_jobs = []
+        job_names = set()
+
+        for data_level, files in files_by_level.items():
+            print(f"\nSubmitting jobs for {data_level}...")
+            job_name = f"s3_upload_{args.location}_{data_level}"
+            job_names.add(job_name)
+
+            for local_path, relative_path in files:
+                s3_destination = construct_s3_destination(
+                    args.location, data_level, relative_path
+                )
+
+                job_id = submit_slurm_job(
+                    local_file=local_path,
+                    s3_destination=s3_destination,
+                    data_level=data_level,
+                    location_key=args.location,
+                    skip_if_exists=args.skip_if_exists,
+                    verify_checksum=args.verify_checksum,
+                    dry_run=args.dry_run,
+                )
+
+                if job_id:
+                    submitted_jobs.append(job_id)
+                    print(f"  Submitted job {job_id}: {Path(local_path).name}")
+
+        # Summary for SLURM mode
+        print("\n" + "=" * 80)
+        if args.dry_run:
+            print(f"DRY RUN COMPLETE - Would have submitted {total_files} jobs")
+        else:
+            print(f"Successfully submitted {len(submitted_jobs)} SLURM jobs")
+            print("\nJob Management Commands:")
+            print("  Monitor all jobs:       squeue -u $USER")
             print(
-                f"  Monitor {job_name.split('_')[-1]:6s} jobs:    squeue -u $USER -n {job_name}"
+                f"  Monitor by location:    squeue -u $USER -n s3_upload_{args.location}_*"
             )
-        print("\n  Cancel all upload jobs: scancel -u $USER -n 's3_upload_*'")
-        for job_name in sorted(job_names):
-            print(
-                f"  Cancel {job_name.split('_')[-1]:6s} jobs:     scancel -u $USER -n {job_name}"
-            )
-    print("=" * 80)
+            for job_name in sorted(job_names):
+                print(
+                    f"  Monitor {job_name.split('_')[-1]:6s} jobs:    squeue -u $USER -n {job_name}"
+                )
+            print("\n  Cancel all upload jobs: scancel -u $USER -n 's3_upload_*'")
+            for job_name in sorted(job_names):
+                print(
+                    f"  Cancel {job_name.split('_')[-1]:6s} jobs:     scancel -u $USER -n {job_name}"
+                )
+        print("=" * 80)
 
 
 if __name__ == "__main__":
