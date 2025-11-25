@@ -144,9 +144,9 @@ def find_latest_manifest_s3(
         for page in paginator.paginate(Bucket=bucket, Prefix=manifest_prefix):
             for obj in page.get("Contents", []):
                 key = obj["Key"]
-                # Match manifest files: manifest/{version}/manifest_{version}.json
+                # Match manifest files: manifest/v{version}/manifest_{version}.json
                 match = re.search(
-                    r"manifest/(\d+\.\d+\.\d+)/manifest_(\d+\.\d+\.\d+)\.json", key
+                    r"manifest/v(\d+\.\d+\.\d+)/manifest_(\d+\.\d+\.\d+)\.json", key
                 )
                 if match:
                     manifest_files.append((key, parse_semver(match.group(2))))
