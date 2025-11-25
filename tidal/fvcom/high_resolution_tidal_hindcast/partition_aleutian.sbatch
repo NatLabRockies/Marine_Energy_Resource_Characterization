@@ -25,4 +25,4 @@
 source sbatch_env_setup.sh
 
 # Create a Python script that handles the parallelized processing
-python partition_dataset.py aleutian_islands --batch-size 2500 --batch-num $SLURM_ARRAY_TASK_ID --skip-existing
+python partition_dataset.py aleutian_islands --batch-size 2500 --batch-num $SLURM_ARRAY_TASK_ID
