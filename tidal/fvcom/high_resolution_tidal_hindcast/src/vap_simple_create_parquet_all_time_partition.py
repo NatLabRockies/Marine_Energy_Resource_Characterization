@@ -682,16 +682,15 @@ def convert_h5_to_parquet_batched(
                     faces_to_skip = set()
 
                     for i, face_id in enumerate(range(start_face, end_face)):
-                        # Create minimal DataFrame for path computation
-                        mini_df = pd.DataFrame({
-                            "lat": [lat_values[i]],
-                            "lon": [lon_values[i]]
-                        })
+                        lat = lat_values[i]
+                        lon = lon_values[i]
 
-                        # Compute expected output path
-                        partition_dir = Path(output_dir, get_partition_path(mini_df, config))
+                        # Compute expected output path using scalar-based functions
+                        partition_dir = Path(output_dir, get_partition_path_from_coords(lat, lon, config))
                         output_file = Path(
-                            partition_dir, get_partition_file_name(face_id, mini_df, config, location)
+                            partition_dir, get_partition_file_name_from_coords(
+                                face_id, lat, lon, time_values, config, location
+                            )
                         )
 
                         # Check if file exists
