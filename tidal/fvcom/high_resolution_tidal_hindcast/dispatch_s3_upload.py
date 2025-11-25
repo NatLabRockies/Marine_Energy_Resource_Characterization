@@ -30,7 +30,10 @@ from pathlib import Path
 
 # Import config
 from config import config
-from src.file_manager import get_output_dirs
+from src.file_manager import (
+    get_output_dirs,
+    validate_manifest_version,
+)
 
 # Data level configurations with SLURM time limits (in hours) and file discovery rules
 DATA_LEVEL_CONFIG = {
@@ -100,6 +103,13 @@ DATA_LEVEL_CONFIG = {
         "valid_extensions": [".h5"],
         "should_recurse": False,
     },
+    "manifest": {
+        "time_hours": 1,
+        "description": "Global manifest (JSON)",
+        "valid_extensions": [".json"],
+        "should_recurse": True,
+        "is_global": True,  # Not location-specific
+    },
 }
 
 # Location key to output_name mapping from config
@@ -117,24 +127,65 @@ def get_file_size_human(size_bytes):
     return f"{size_bytes:.2f} PB"
 
 
+def discover_manifest_files():
+    """
+    Discover manifest JSON files for upload.
+
+    Validates that config manifest version matches filesystem latest version,
+    then discovers all JSON files recursively.
+
+    Returns:
+        List of (local_path, relative_path) tuples
+
+    Raises:
+        ValueError: If manifest version mismatch between config and filesystem
+    """
+    # Validate manifest version consistency
+    try:
+        _, config_version, fs_version, manifest_dir = validate_manifest_version(config)
+        print(f"Manifest version validated: {config_version} (config) = {fs_version} (filesystem)")
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Get file discovery configuration
+    file_config = DATA_LEVEL_CONFIG["manifest"]
+    valid_extensions = file_config["valid_extensions"]
+
+    # Discover files recursively
+    files = []
+    for file_path in manifest_dir.rglob("*"):
+        if file_path.is_file():
+            if valid_extensions is None or file_path.suffix in valid_extensions:
+                relative_path = file_path.relative_to(manifest_dir)
+                files.append((str(file_path), str(relative_path)))
+
+    return sorted(files)
+
+
 def discover_files(location_key, data_levels):
     """
     Discover files for given location and data levels using versioned directories.
 
     Args:
-        location_key: Location key (e.g., 'cook_inlet')
+        location_key: Location key (e.g., 'cook_inlet') - ignored for global data levels like 'manifest'
         data_levels: List of data level directory names (e.g., ['b1_vap', 'hsds'])
 
     Returns:
         Dictionary mapping data_level to list of (local_path, relative_path) tuples
     """
-    # Validate location
-    if location_key not in LOCATION_MAP:
-        print(f"Error: Unknown location '{location_key}'", file=sys.stderr)
-        print(f"Available locations: {', '.join(LOCATION_MAP.keys())}", file=sys.stderr)
-        sys.exit(1)
+    # Separate global data levels from location-specific ones
+    global_levels = [level for level in data_levels if DATA_LEVEL_CONFIG.get(level, {}).get("is_global", False)]
+    location_levels = [level for level in data_levels if level not in global_levels]
 
-    # Validate data levels
+    # Validate location only if there are location-specific levels
+    if location_levels:
+        if location_key not in LOCATION_MAP:
+            print(f"Error: Unknown location '{location_key}'", file=sys.stderr)
+            print(f"Available locations: {', '.join(LOCATION_MAP.keys())}", file=sys.stderr)
+            sys.exit(1)
+
+    # Validate all data levels
     for level in data_levels:
         if level not in DATA_LEVEL_CONFIG:
             print(f"Error: Unknown data level '{level}'", file=sys.stderr)
@@ -144,77 +195,90 @@ def discover_files(location_key, data_levels):
             )
             sys.exit(1)
 
-    # Get location specification
-    location_spec = config["location_specification"][location_key]
-
-    # Get versioned output directories from file_manager (both full paths and relative paths)
-    output_dirs_full = get_output_dirs(config, location_spec, omit_base_path=False)
-    output_dirs_relative = get_output_dirs(config, location_spec, omit_base_path=True)
-
-    # Map data_level to output_dir key
-    data_level_to_dir_key = {
-        "a1_std": "standardized",
-        "a2_std_partition": "standardized_partition",
-        "b1_vap": "vap",
-        "b1_vap_daily_compressed": "vap_daily_compressed",
-        "b2_monthly_mean_vap": "monthly_summary_vap",
-        "b3_yearly_mean_vap": "yearly_summary_vap",
-        "b4_vap_partition": "vap_partition",
-        "b5_vap_summary_parquet": "vap_summary_parquet",
-        "b6_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
-        "hsds": "hsds",
-    }
-
     files_by_level = {}
 
-    for data_level in data_levels:
-        # Handle 00_raw separately (uses input directory structure)
-        if data_level == "00_raw":
-            base_path = Path(config["dir"]["base"])
-            input_dir_template = config["dir"]["input"]["original"]
-            input_dir = input_dir_template.replace("<location>", location_spec["output_name"])
-            local_dir = base_path / input_dir
-        else:
-            # Get directory key
-            dir_key = data_level_to_dir_key.get(data_level)
-            if not dir_key:
-                print(f"Error: No directory mapping for data level '{data_level}'", file=sys.stderr)
-                sys.exit(1)
+    # Handle global data levels (like manifest)
+    for data_level in global_levels:
+        if data_level == "manifest":
+            files = discover_manifest_files()
+            files_by_level[data_level] = files
+            print(f"Found {len(files)} files in {data_level}/")
 
-            local_dir = output_dirs_full[dir_key]
+    # Handle location-specific data levels
+    if location_levels:
+        # Get location specification
+        location_spec = config["location_specification"][location_key]
 
-        if not local_dir.exists():
-            print(f"Warning: Directory does not exist: {local_dir}", file=sys.stderr)
-            files_by_level[data_level] = []
-            continue
+        # Get versioned output directories from file_manager (both full paths and relative paths)
+        output_dirs_full = get_output_dirs(config, location_spec, omit_base_path=False)
 
-        # Get file discovery configuration
-        file_config = DATA_LEVEL_CONFIG[data_level]
-        valid_extensions = file_config["valid_extensions"]
-        should_recurse = file_config["should_recurse"]
+        # Map data_level to output_dir key
+        data_level_to_dir_key = {
+            "a1_std": "standardized",
+            "a2_std_partition": "standardized_partition",
+            "b1_vap": "vap",
+            "b1_vap_daily_compressed": "vap_daily_compressed",
+            "b2_monthly_mean_vap": "monthly_summary_vap",
+            "b3_yearly_mean_vap": "yearly_summary_vap",
+            "b4_vap_partition": "vap_partition",
+            "b5_vap_summary_parquet": "vap_summary_parquet",
+            "b6_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
+            "hsds": "hsds",
+        }
 
-        # Discover files based on recursion and extension configuration
-        files = []
+        for data_level in location_levels:
+            # Handle 00_raw separately (uses input directory structure)
+            if data_level == "00_raw":
+                base_path = Path(config["dir"]["base"])
+                input_dir_template = config["dir"]["input"]["original"]
+                input_dir = input_dir_template.replace(
+                    "<location>", location_spec["output_name"]
+                )
+                local_dir = base_path / input_dir
+            else:
+                # Get directory key
+                dir_key = data_level_to_dir_key.get(data_level)
+                if not dir_key:
+                    print(
+                        f"Error: No directory mapping for data level '{data_level}'",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
 
-        if should_recurse:
-            # Recursive search
-            for file_path in local_dir.rglob("*"):
-                if file_path.is_file():
-                    # Filter by extension if specified
-                    if valid_extensions is None or file_path.suffix in valid_extensions:
-                        relative_path = file_path.relative_to(local_dir)
-                        files.append((str(file_path), str(relative_path)))
-        else:
-            # Non-recursive search (only immediate directory)
-            for file_path in local_dir.glob("*"):
-                if file_path.is_file():
-                    # Filter by extension if specified
-                    if valid_extensions is None or file_path.suffix in valid_extensions:
-                        relative_path = file_path.relative_to(local_dir)
-                        files.append((str(file_path), str(relative_path)))
+                local_dir = output_dirs_full[dir_key]
 
-        files_by_level[data_level] = sorted(files)
-        print(f"Found {len(files)} files in {data_level}/")
+            if not local_dir.exists():
+                print(f"Warning: Directory does not exist: {local_dir}", file=sys.stderr)
+                files_by_level[data_level] = []
+                continue
+
+            # Get file discovery configuration
+            file_config = DATA_LEVEL_CONFIG[data_level]
+            valid_extensions = file_config["valid_extensions"]
+            should_recurse = file_config["should_recurse"]
+
+            # Discover files based on recursion and extension configuration
+            files = []
+
+            if should_recurse:
+                # Recursive search
+                for file_path in local_dir.rglob("*"):
+                    if file_path.is_file():
+                        # Filter by extension if specified
+                        if valid_extensions is None or file_path.suffix in valid_extensions:
+                            relative_path = file_path.relative_to(local_dir)
+                            files.append((str(file_path), str(relative_path)))
+            else:
+                # Non-recursive search (only immediate directory)
+                for file_path in local_dir.glob("*"):
+                    if file_path.is_file():
+                        # Filter by extension if specified
+                        if valid_extensions is None or file_path.suffix in valid_extensions:
+                            relative_path = file_path.relative_to(local_dir)
+                            files.append((str(file_path), str(relative_path)))
+
+            files_by_level[data_level] = sorted(files)
+            print(f"Found {len(files)} files in {data_level}/")
 
     return files_by_level
 
@@ -233,16 +297,25 @@ def construct_s3_destination(location_key, data_level, relative_path):
     """
     Construct S3 destination path using file_manager for consistent versioning.
 
-    Format: <location>/v<version>/<data_level>/<relative_path>
+    Format for location-specific levels: <location>/v<version>/<data_level>/<relative_path>
+    Format for global levels (manifest): manifest/v<manifest_version>/<relative_path>
 
     Args:
-        location_key: Location key (e.g., 'cook_inlet')
-        data_level: Data level directory name (e.g., 'b1_vap')
+        location_key: Location key (e.g., 'cook_inlet') - ignored for global data levels
+        data_level: Data level directory name (e.g., 'b1_vap', 'manifest')
         relative_path: Relative path within data level (e.g., '2005/file.nc')
 
     Returns:
         S3 destination path
     """
+    # Handle global data levels (like manifest)
+    if DATA_LEVEL_CONFIG.get(data_level, {}).get("is_global", False):
+        if data_level == "manifest":
+            manifest_version = config["manifest"]["version"]
+            s3_base_relative_path = Path("manifest") / f"v{manifest_version}"
+            return str(s3_base_relative_path / relative_path)
+
+    # Handle location-specific data levels
     location_spec = config["location_specification"][location_key]
     output_dirs_relative = get_output_dirs(config, location_spec, omit_base_path=True)
 
@@ -262,7 +335,11 @@ def construct_s3_destination(location_key, data_level, relative_path):
 
     # Handle 00_raw separately
     if data_level == "00_raw":
-        s3_base_relative_path = Path(location_spec["output_name"]) / f"v{config['dataset']['version']}" / data_level
+        s3_base_relative_path = (
+            Path(location_spec["output_name"])
+            / f"v{config['dataset']['version']}"
+            / data_level
+        )
     else:
         dir_key = data_level_to_dir_key.get(data_level)
         s3_base_relative_path = output_dirs_relative[dir_key]
@@ -272,16 +349,33 @@ def construct_s3_destination(location_key, data_level, relative_path):
 
 def display_summary(location_key, files_by_level):
     """Display summary of files to be uploaded."""
-    output_name = LOCATION_MAP[location_key]
+    # Check if we have any location-specific levels
+    has_location_levels = any(
+        not DATA_LEVEL_CONFIG.get(level, {}).get("is_global", False)
+        for level in files_by_level.keys()
+    )
+    has_global_levels = any(
+        DATA_LEVEL_CONFIG.get(level, {}).get("is_global", False)
+        for level in files_by_level.keys()
+    )
+
     version = config["dataset"]["version"]
+    manifest_version = config["manifest"]["version"]
     total_files = sum(len(files) for files in files_by_level.values())
     total_size = calculate_total_size(files_by_level)
 
     print("\n" + "=" * 80)
     print("S3 UPLOAD SUMMARY")
     print("=" * 80)
-    print(f"Location:      {location_key} ({output_name})")
-    print(f"Version:       {version}")
+
+    if has_location_levels:
+        output_name = LOCATION_MAP.get(location_key, location_key)
+        print(f"Location:      {location_key} ({output_name})")
+        print(f"Data Version:  {version}")
+
+    if has_global_levels:
+        print(f"Manifest Ver:  {manifest_version}")
+
     print(f"Total files:   {total_files}")
     print(f"Total size:    {get_file_size_human(total_size)}")
     print("S3 bucket:     oedi-data-drop/us-tidal")
@@ -294,10 +388,12 @@ def display_summary(location_key, files_by_level):
             if os.path.exists(local_path)
         )
         config_info = DATA_LEVEL_CONFIG[data_level]
+        is_global = config_info.get("is_global", False)
+        global_marker = " [GLOBAL]" if is_global else ""
         print(
             f"  {data_level:30s} {len(files):6d} files  "
             f"{get_file_size_human(level_size):>12s}  "
-            f"(time limit: {config_info['time_hours']}h)"
+            f"(time limit: {config_info['time_hours']}h){global_marker}"
         )
 
     # Show sample file paths (up to 10)
@@ -406,17 +502,21 @@ Available Locations:
   aleutian_islands, cook_inlet, piscataqua_river, puget_sound, western_passage
 
 Available Data Levels:
-  00_raw                      - Raw data (6h time limit)
-  a1_std                      - Standardized data (6h time limit)
-  a2_std_partition            - Standardized partition (6h time limit)
-  b1_vap                      - Value-added products (6h time limit)
-  b1_vap_daily_compressed     - Compressed VAP daily (6h time limit)
-  b2_monthly_mean_vap         - Monthly mean VAP (6h time limit)
-  b3_yearly_mean_vap          - Yearly mean VAP (6h time limit)
-  b4_vap_partition            - VAP partition (6h time limit)
-  b5_vap_summary_parquet      - VAP summary parquet (6h time limit)
-  b6_vap_atlas_summary_parquet - VAP atlas summary parquet (6h time limit)
-  hsds                        - HSDS format (24h time limit)
+  Location-specific:
+    00_raw                      - Raw data (6h time limit)
+    a1_std                      - Standardized data (6h time limit)
+    a2_std_partition            - Standardized partition (6h time limit)
+    b1_vap                      - Value-added products (6h time limit)
+    b1_vap_daily_compressed     - Compressed VAP daily (6h time limit)
+    b2_monthly_mean_vap         - Monthly mean VAP (6h time limit)
+    b3_yearly_mean_vap          - Yearly mean VAP (6h time limit)
+    b4_vap_partition            - VAP partition (6h time limit)
+    b5_vap_summary_parquet      - VAP summary parquet (6h time limit)
+    b6_vap_atlas_summary_parquet - VAP atlas summary parquet (6h time limit)
+    hsds                        - HSDS format (24h time limit)
+
+  Global (not location-specific):
+    manifest                    - Global manifest JSON files (1h time limit)
 
 Examples:
   # Upload all b1_vap files for Cook Inlet
@@ -424,6 +524,12 @@ Examples:
 
   # Upload multiple data levels
   python dispatch_s3_upload.py puget_sound --data-levels b1_vap hsds
+
+  # Upload global manifest (location is ignored for global data levels)
+  python dispatch_s3_upload.py _ --data-levels manifest
+
+  # Upload manifest along with location-specific data
+  python dispatch_s3_upload.py cook_inlet --data-levels b1_vap manifest
 
   # Dry run (don't actually submit jobs)
   python dispatch_s3_upload.py cook_inlet --data-levels b1_vap --dry-run
@@ -438,7 +544,7 @@ Examples:
 
     parser.add_argument(
         "location",
-        help="Location key (e.g., cook_inlet, puget_sound)",
+        help="Location key (e.g., cook_inlet, puget_sound). Use '_' for global-only data levels like 'manifest'.",
     )
 
     parser.add_argument(
