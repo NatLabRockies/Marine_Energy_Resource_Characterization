@@ -321,6 +321,9 @@ class TidalManifestQuery:
         if version is None:
             version = loc_meta.get("latest_version", "1.0.0")
 
+        # Pad face_id to index_max_digits (e.g., "125685" -> "00125685")
+        face_id_padded = face_id_str.zfill(self.index_max_digits)
+
         # Substitute into path template
         path = self.path_template.format(
             location=location_name,
@@ -330,7 +333,7 @@ class TidalManifestQuery:
             lon_deg=lon_deg,
             lat_dec=lat_dec,
             lon_dec=lon_dec,
-            face_id=face_id_str,  # Use string directly (already formatted)
+            face_id=face_id_padded,  # Zero-padded to index_max_digits
             lat=lat_str,  # Use string directly (preserves precision)
             lon=lon_str,  # Use string directly (preserves precision)
             temporal=loc_meta["temporal"],
