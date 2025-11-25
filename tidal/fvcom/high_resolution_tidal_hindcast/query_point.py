@@ -58,10 +58,10 @@ def find_latest_manifest_hpc(base_path: str) -> Optional[Path]:
     Path or None
         Path to latest manifest file, or None if not found
     """
-    manifests_dir = Path(base_path) / "manifests"
+    manifests_dir = Path(base_path) / "manifest"
 
     if not manifests_dir.exists():
-        print(f"  Manifests directory not found: {manifests_dir}")
+        print(f"  Manifest directory not found: {manifests_dir}")
         return None
 
     # Find all version directories (v1.0.0, v1.0.1, etc.)
