@@ -6,6 +6,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import cmocean
 import contextily as ctx
+import geopandas as gpd
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
@@ -700,6 +701,29 @@ def plot_tidal_variable(
 
 
 def _check_mesh_data_availability(df):
+    """Check if mesh data is available via element corner columns or GeoDataFrame geometry."""
+    required_columns = [
+        "element_corner_1_lat",
+        "element_corner_1_lon",
+        "element_corner_2_lat",
+        "element_corner_2_lon",
+        "element_corner_3_lat",
+        "element_corner_3_lon",
+    ]
+    has_corner_columns = all(col in df.columns for col in required_columns)
+
+    # Also check for GeoDataFrame with polygon geometry
+    has_geometry = (
+        isinstance(df, gpd.GeoDataFrame)
+        and "geometry" in df.columns
+        and not df.geometry.isna().all()
+    )
+
+    return has_corner_columns or has_geometry
+
+
+def _has_element_corner_columns(df):
+    """Check if element corner columns are present."""
     required_columns = [
         "element_corner_1_lat",
         "element_corner_1_lon",
@@ -834,21 +858,43 @@ def _setup_standard_plot_appearance(ax, x, y, zoom_level):
 
 
 def _create_triangulation_from_element_corners(df, transformer):
-    corners_lon = np.column_stack(
-        [
-            df["element_corner_1_lon"].values,
-            df["element_corner_2_lon"].values,
-            df["element_corner_3_lon"].values,
-        ]
-    ).flatten()
+    """Create triangulation from element corner columns or GeoDataFrame geometry."""
+    if _has_element_corner_columns(df):
+        # Use element corner columns
+        corners_lon = np.column_stack(
+            [
+                df["element_corner_1_lon"].values,
+                df["element_corner_2_lon"].values,
+                df["element_corner_3_lon"].values,
+            ]
+        ).flatten()
 
-    corners_lat = np.column_stack(
-        [
-            df["element_corner_1_lat"].values,
-            df["element_corner_2_lat"].values,
-            df["element_corner_3_lat"].values,
-        ]
-    ).flatten()
+        corners_lat = np.column_stack(
+            [
+                df["element_corner_1_lat"].values,
+                df["element_corner_2_lat"].values,
+                df["element_corner_3_lat"].values,
+            ]
+        ).flatten()
+    elif isinstance(df, gpd.GeoDataFrame) and "geometry" in df.columns:
+        # Extract corners from polygon geometry
+        corners_lon = []
+        corners_lat = []
+        for geom in df.geometry:
+            if geom is not None and hasattr(geom, "exterior"):
+                # Get first 3 coordinates (triangles have 4 coords, last = first)
+                coords = list(geom.exterior.coords)[:3]
+                for lon, lat in coords:
+                    corners_lon.append(lon)
+                    corners_lat.append(lat)
+            else:
+                # Fallback for missing geometry
+                corners_lon.extend([np.nan, np.nan, np.nan])
+                corners_lat.extend([np.nan, np.nan, np.nan])
+        corners_lon = np.array(corners_lon)
+        corners_lat = np.array(corners_lat)
+    else:
+        raise ValueError("No element corner data or geometry found in DataFrame")
 
     corners_x, corners_y = transformer.transform(corners_lon, corners_lat)
 
@@ -2630,8 +2676,11 @@ if __name__ == "__main__":
         print(f"Reading file: {parquet_file}")
         parquet_paths[this_region] = str(parquet_file)
 
-        # Read the parquet file
-        df = pd.read_parquet(parquet_file)
+        # Read the parquet file (use geopandas for geo parquet files)
+        if "_geo.parquet" in str(parquet_file):
+            df = gpd.read_parquet(parquet_file)
+        else:
+            df = pd.read_parquet(parquet_file)
 
         df["vap_min_tidal_period"] = (
             df["vap_min_tidal_period"] / 60 / 60
