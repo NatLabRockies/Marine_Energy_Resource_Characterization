@@ -105,4 +105,6 @@ if __name__ == "__main__":
     # partition_vap_into_parquet_dataset(config, args.location)
 
     print("Step 8: Create Summary Parquet Dataset...")
-    convert_nc_summary_to_parquet(config, args.location)
+    convert_nc_summary_to_parquet(
+        config, args.location, create_combined_atlas_output=True
+    )
