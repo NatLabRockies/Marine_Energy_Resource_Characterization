@@ -5,8 +5,8 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
 ##SBATCH --time=12:00:00
-##SBATCH --time=6:00:00
-#SBATCH --time=3:59:59
+#SBATCH --time=6:00:00
+##SBATCH --time=3:59:59
 ##SBATCH --partition=standard
 # Faces 797987
 # Time Interval: Hourly
@@ -19,8 +19,8 @@
 #SBATCH --array=0-319  # Create 320 tasks
 ##SBATCH --array=0-797
 ##SBATCH --mem=64G
-##SBATCH --mem=128G
-#SBATCH --partition=short
+#SBATCH --mem=128G
+#SBATCH --partition=shared
 
 source sbatch_env_setup.sh
 
