@@ -1,19 +1,30 @@
 """
 Generate manifest files for parquet partition datasets to enable efficient spatial queries.
 
-This script scans parquet partition directories and creates JSON manifests for:
-1. Spatial lookups (by lat/lon coordinates)
-2. Face ID lookups (by face identifier)
+This script scans parquet partition directories and creates a self-documenting JSON manifest
+with the following features:
 
-The manifests enable efficient point, line, and polygon queries without scanning the entire dataset.
+1. **Versioning**: Manifest version auto-increments on regeneration; data versions tracked per location
+2. **Self-documenting schema**: Embedded schema section describes all fields for non-Python clients
+3. **Spatial indexing**: Grid centroids enable KDTree-based spatial queries
+4. **Path reconstruction**: Template-based file path generation from point data
+5. **S3 integration**: Storage URIs for cloud-based data access
+
+Output Structure:
+    manifests/v{version}/
+    ├── manifest_{version}.json     # Main index with schema, grid centroids, location metadata
+    └── grids/                      # Grid detail files organized by lat/lon
+        └── lat_{deg}/
+            └── lon_{deg}/
+                └── {grid_id}.json  # Per-grid point arrays
 
 Usage:
     python generate_parquet_partition_manifest_json.py
 
-The script will generate:
-    - high_res_tidal_point_manifest.json: Combined spatial and face ID manifest
-    - high_res_tidal_spatial_manifest.json: Spatial grid index only
-    - high_res_tidal_faceid_manifest.json: Face ID lookup only
+The manifest is designed to be self-contained so that client libraries in any language can:
+1. Download the manifest
+2. Parse the schema to understand the structure
+3. Query a point and reconstruct the path to the parquet file
 """
 
 import json
@@ -419,8 +430,16 @@ def build_compact_grid_index(file_metadata, config):
 
         # Reconstruct coordinate from degree and decimal parts
         # Sign of deg determines whether to add or subtract the decimal part
-        lat_min = lat_deg + lat_dec / (10**decimal_places) if lat_deg >= 0 else lat_deg - lat_dec / (10**decimal_places)
-        lon_min = lon_deg + lon_dec / (10**decimal_places) if lon_deg >= 0 else lon_deg - lon_dec / (10**decimal_places)
+        lat_min = (
+            lat_deg + lat_dec / (10**decimal_places)
+            if lat_deg >= 0
+            else lat_deg - lat_dec / (10**decimal_places)
+        )
+        lon_min = (
+            lon_deg + lon_dec / (10**decimal_places)
+            if lon_deg >= 0
+            else lon_deg - lon_dec / (10**decimal_places)
+        )
         lat_max = lat_min + grid_resolution
         lon_max = lon_min + grid_resolution
 
@@ -486,8 +505,6 @@ def build_faceid_index(file_metadata):
     return faceid_index
 
 
-
-
 def extract_geospatial_bounds_from_nc(config, location):
     """
     Extract geospatial bounds from a b1_vap NetCDF file.
@@ -533,9 +550,7 @@ def extract_geospatial_bounds_from_nc(config, location):
                     geospatial_attrs[key] = value
 
             if not geospatial_attrs:
-                print(
-                    f"  Warning: No geospatial_* attributes found in {nc_file.name}"
-                )
+                print(f"  Warning: No geospatial_* attributes found in {nc_file.name}")
                 return None
 
             return geospatial_attrs
@@ -545,10 +560,141 @@ def extract_geospatial_bounds_from_nc(config, location):
         return None
 
 
-def generate_compact_manifest(config, output_dir):
+def increment_manifest_version(current_version):
     """
-    Generate compact two-tier manifest structure:
-    - Main manifest.json with grid metadata and path template
+    Increment the patch version of a semantic version string.
+
+    Parameters
+    ----------
+    current_version : str
+        Current version string (e.g., "1.0.0")
+
+    Returns
+    -------
+    str
+        Incremented version string (e.g., "1.0.1")
+    """
+    parts = current_version.split(".")
+    if len(parts) != 3:
+        raise ValueError(f"Invalid semver format: {current_version}")
+    major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
+    return f"{major}.{minor}.{patch + 1}"
+
+
+def load_existing_manifest(output_dir):
+    """
+    Load existing manifest if it exists to preserve version history.
+
+    Parameters
+    ----------
+    output_dir : Path
+        Directory containing existing manifest
+
+    Returns
+    -------
+    dict or None
+        Existing manifest data, or None if not found
+    """
+    manifest_files = sorted(output_dir.glob("manifest_*.json"))
+    if not manifest_files:
+        return None
+
+    # Load the most recent manifest (sorted alphabetically, so latest version last)
+    latest_manifest = manifest_files[-1]
+    print(f"  Found existing manifest: {latest_manifest.name}")
+
+    with open(latest_manifest, "r") as f:
+        return json.load(f)
+
+
+def build_manifest_schema():
+    """
+    Build the self-documenting schema section for the manifest.
+
+    Returns
+    -------
+    dict
+        Schema documentation dictionary
+    """
+    return {
+        "spec_version": "Semantic version of the manifest format specification. Breaking changes increment major version.",
+        "manifest_version": "Auto-incrementing version of this manifest file. Patch increments on each regeneration.",
+        "manifest_generated": "ISO 8601 timestamp (UTC) when this manifest was generated.",
+        "dataset": {
+            "_description": "Dataset identification metadata",
+            "name": "Internal dataset identifier used in file paths and programmatic access",
+            "label": "Human-readable dataset name for display purposes",
+        },
+        "storage": {
+            "_description": "Storage configuration for data access (S3 and HPC)",
+            "s3_bucket": "AWS S3 bucket name where data is stored",
+            "s3_prefix": "S3 key prefix path within the bucket",
+            "s3_base_uri": "Full S3 URI base path for data files (s3://{bucket}/{prefix})",
+            "s3_manifest_base_uri": "S3 URI directory where manifest versions are stored",
+            "hpc_base_path": "Absolute filesystem path for HPC local access (NREL Kestrel)",
+        },
+        "partition": {
+            "_description": "Spatial partitioning configuration for parquet files",
+            "decimal_places": "Number of decimal places used in partition path encoding. For decimal_places=2: lat_dec = int(abs(lat * 100) % 100)",
+            "coord_digits_max": "Maximum decimal precision for latitude/longitude values in filenames",
+            "index_max_digits": "Zero-padding width for face_id in filenames (e.g., 8 means face=00001234)",
+            "data_level": "Data processing level identifier used in file paths (e.g., 'b4_vap_partition')",
+            "grid_resolution_deg": "Grid cell size in degrees, derived as 1.0 / (10 ** decimal_places)",
+        },
+        "path_template": {
+            "_description": "Template string for reconstructing parquet file paths from point data",
+            "template": "The path template string with {placeholder} variables",
+            "placeholders": {
+                "location": "Location output_name (e.g., 'AK_cook_inlet')",
+                "data_version": "Data version for the location (e.g., '1.0.0')",
+                "data_level": "Data processing level (e.g., 'b4_vap_partition')",
+                "lat_deg": "Integer latitude degrees (signed, e.g., 59 or -70)",
+                "lon_deg": "Integer longitude degrees (signed, e.g., -152)",
+                "lat_dec": "Latitude decimal component, zero-padded (e.g., '05' for 0.05°)",
+                "lon_dec": "Longitude decimal component, zero-padded (e.g., '78' for 0.78°)",
+                "face_id": "Zero-padded face identifier string",
+                "lat": "Full precision latitude string from point data",
+                "lon": "Full precision longitude string from point data",
+                "temporal": "Temporal resolution code ('1h' for hourly, '30m' for half-hourly)",
+                "date": "Start date in YYYYMMDD format",
+                "time": "Start time in HHMMSS format",
+            },
+        },
+        "locations": {
+            "_description": "Per-location metadata keyed by output_name",
+            "_key_format": "Location output_name (e.g., 'AK_cook_inlet')",
+            "label": "Human-readable location name for display",
+            "latest_version": "String indicating the latest/recommended data version for this location",
+            "versions": {
+                "_description": "Object mapping data version strings to version metadata",
+                "_key_format": "Semantic version string (e.g., '1.0.0')",
+                "release_date": "ISO 8601 date when this version was released",
+            },
+            "point_count": "Total number of data points (faces) for this location",
+            "temporal": "Temporal resolution code ('1h' or '30m')",
+            "date": "Dataset start date in YYYYMMDD format",
+            "time": "Dataset start time in HHMMSS format",
+            "geospatial_lat_min": "Minimum latitude of location bounding box (degrees_north)",
+            "geospatial_lat_max": "Maximum latitude of location bounding box (degrees_north)",
+            "geospatial_lon_min": "Minimum longitude of location bounding box (degrees_east)",
+            "geospatial_lon_max": "Maximum longitude of location bounding box (degrees_east)",
+            "geospatial_bounds": "WKT POLYGON string defining the location boundary",
+        },
+        "grid_centroids": {
+            "_description": "Arrays of grid cell centroid coordinates for spatial indexing",
+            "lat": "Array of grid cell centroid latitudes (degrees_north)",
+            "lon": "Array of grid cell centroid longitudes (degrees_east), same length as lat",
+        },
+        "grid_details_path": "Relative path from manifest to grid detail files directory",
+        "total_grids": "Total number of grid cells across all locations",
+        "total_points": "Total number of data points (faces) across all locations",
+    }
+
+
+def generate_compact_manifest(config, output_dir, existing_manifest=None):
+    """
+    Generate compact two-tier manifest structure with spec v2.0.0:
+    - Main manifest_{version}.json with grid metadata, schema, and path template
     - Individual grid detail JSON files in grids/ subdirectory
 
     Parameters
@@ -557,13 +703,31 @@ def generate_compact_manifest(config, output_dir):
         Configuration dictionary
     output_dir : Path
         Output directory for manifest files
+    existing_manifest : dict, optional
+        Existing manifest to merge version history from
+
+    Returns
+    -------
+    dict
+        Generated manifest dictionary
     """
-    print("\n=== Generating Compact Manifest ===")
+    print("\n=== Generating Compact Manifest (Spec v2.0.0) ===")
+
+    # Determine manifest version
+    if existing_manifest and "manifest_version" in existing_manifest:
+        old_version = existing_manifest["manifest_version"]
+        manifest_version = increment_manifest_version(old_version)
+        print(f"  Incrementing manifest version: {old_version} -> {manifest_version}")
+    else:
+        manifest_version = config["manifest"]["version"]
+        print(f"  Starting new manifest version: {manifest_version}")
+
+    # Get dataset version from config
+    dataset_version = config["dataset"]["version"]
+    dataset_issue_date = config["dataset"]["issue_date"]
 
     # Collect file metadata from all locations
     all_file_metadata = []
-    location_stats = {}
-    location_list = []
     location_data = {}  # Per-location data structure
 
     for location_key, location in config["location_specification"].items():
@@ -579,19 +743,17 @@ def generate_compact_manifest(config, output_dir):
             partition_dir, location["output_name"], config, use_cache=True
         )
 
-        # Don't add location prefix to file paths - we'll reconstruct them using the template
         all_file_metadata.extend(file_metadata)
 
         # Extract geospatial bounds from b1_vap NC file
-        print(f"  Extracting geospatial bounds from NC file...")
+        print("  Extracting geospatial bounds from NC file...")
         geospatial_bounds = extract_geospatial_bounds_from_nc(config, location)
 
         # Parse start_date_utc to extract date and time components
-        # Format: "2005-01-01 00:00:00" -> date="20050101", time="000000"
         start_date_str = location["start_date_utc"]
         date_part, time_part = start_date_str.split(" ")
-        date_formatted = date_part.replace("-", "")  # "2005-01-01" -> "20050101"
-        time_formatted = time_part.replace(":", "")  # "00:00:00" -> "000000"
+        date_formatted = date_part.replace("-", "")
+        time_formatted = time_part.replace(":", "")
 
         # Determine temporal string from expected_delta_t_seconds
         expected_delta_t_seconds = location["expected_delta_t_seconds"]
@@ -602,10 +764,31 @@ def generate_compact_manifest(config, output_dir):
             )
         temporal_string = temporal_mapping[expected_delta_t_seconds]
 
-        # Store location data with path reconstruction metadata
-        location_data[location["output_name"]] = {
+        # Build version history for this location
+        # Start with existing versions if available
+        location_name = location["output_name"]
+        existing_versions = {}
+        if (
+            existing_manifest
+            and "locations" in existing_manifest
+            and location_name in existing_manifest["locations"]
+            and "versions" in existing_manifest["locations"][location_name]
+        ):
+            existing_versions = existing_manifest["locations"][location_name][
+                "versions"
+            ]
+
+        # Add/update current version
+        versions = dict(existing_versions)
+        versions[dataset_version] = {
+            "release_date": dataset_issue_date,
+        }
+
+        # Store location data with versioning
+        location_data[location_name] = {
             "label": location["label"],
-            "output_name": location["output_name"],
+            "latest_version": dataset_version,
+            "versions": versions,
             "point_count": len(file_metadata),
             "date": date_formatted,
             "time": time_formatted,
@@ -614,18 +797,7 @@ def generate_compact_manifest(config, output_dir):
 
         # Add geospatial bounds if available
         if geospatial_bounds:
-            location_data[location["output_name"]].update(geospatial_bounds)
-
-        location_stats[location_key] = {
-            "label": location["label"],
-            "output_name": location["output_name"],
-            "file_count": len(file_metadata),
-            "expected_face_count": location["face_count"],
-        }
-
-        # Track unique locations
-        if location["output_name"] not in location_list:
-            location_list.append(location["output_name"])
+            location_data[location_name].update(geospatial_bounds)
 
     print(f"\nTotal files across all locations: {len(all_file_metadata)}")
 
@@ -635,47 +807,91 @@ def generate_compact_manifest(config, output_dir):
     print(f"  Created {len(grid_index)} grid cells")
     print(f"  Created {len(grid_details)} grid detail files")
 
-    # Extract grid centroids for ultra-compact manifest
-    # Round to 1 extra from the spec decimal places to avoid floating point precision bloat
-    # (e.g., -65.95499999999998 -> -65.955)
-    # Spec Grid resolution is 0.01°, centroids are at midpoint, so 3 decimals handles the centroid conversion
+    # Extract grid centroids
     spec_decimal_places = config["partition"]["decimal_places"]
     grid_lats = [round(g["centroid"][0], spec_decimal_places + 1) for g in grid_index]
     grid_lons = [round(g["centroid"][1], spec_decimal_places + 1) for g in grid_index]
 
-    # Define path template for reconstructing full file paths
-    # Use config["partition"]["decimal_places"] to format lat_dec/lon_dec width
+    # Build path template with all configurable components
     dec_format_spec = f"0{spec_decimal_places}d"
+    dataset_name = config["dataset"]["name"]
     path_template = (
-        "{location}/lat_deg={lat_deg}/lon_deg={lon_deg}/"
+        "{location}/{data_version}/{data_level}/"
+        f"lat_deg={{lat_deg}}/lon_deg={{lon_deg}}/"
         f"lat_dec={{lat_dec:{dec_format_spec}}}/lon_dec={{lon_dec:{dec_format_spec}}}/"
-        "{location}.wpto_high_res_tidal.face={face_id}.lat={lat}.lon={lon}-{temporal}.b4.{date}.{time}.parquet"
+        f"{{location}}.{dataset_name}.face={{face_id}}.lat={{lat}}.lon={{lon}}-{{temporal}}.b4.{{date}}.{{time}}.parquet"
     )
 
-    # Create ultra-compact main manifest (grid centroids only, no spatial_bounds)
+    # Build storage configuration
+    storage_config = config["storage"]
+    s3_bucket = storage_config["s3_bucket"]
+    s3_prefix = storage_config["s3_prefix"]
+
+    # Create the manifest with new spec v2.0.0 structure
     manifest = {
-        "version": config["dataset"]["version"],
-        "decimal_places": spec_decimal_places,
-        "grid_resolution_deg": 1.0 / (10 ** config["partition"]["decimal_places"]),
+        # Top-level versioning
+        "spec_version": config["manifest"]["spec_version"],
+        "manifest_version": manifest_version,
+        "manifest_generated": datetime.utcnow().isoformat() + "Z",
+        # Self-documenting schema
+        "schema": build_manifest_schema(),
+        # Dataset identification
+        "dataset": {
+            "name": config["dataset"]["name"],
+            "label": config["dataset"]["label"],
+        },
+        # Storage configuration
+        "storage": {
+            "s3_bucket": s3_bucket,
+            "s3_prefix": s3_prefix,
+            "s3_base_uri": f"s3://{s3_bucket}/{s3_prefix}",
+            "s3_manifest_base_uri": f"s3://{s3_bucket}/{s3_prefix}/manifest",
+            "hpc_base_path": storage_config["hpc_base_path"],
+        },
+        # Partition configuration
+        "partition": {
+            "decimal_places": spec_decimal_places,
+            "coord_digits_max": config["partition"]["coord_digits_max"],
+            "index_max_digits": config["partition"]["index_max_digits"],
+            "data_level": config["partition"]["data_level"],
+            "grid_resolution_deg": 1.0 / (10**spec_decimal_places),
+        },
+        # Path template for file reconstruction
+        "path_template": {
+            "template": path_template,
+            "example": path_template.format(
+                location="AK_cook_inlet",
+                data_version="1.0.0",
+                data_level="b4_vap_partition",
+                lat_deg=59,
+                lon_deg=-152,
+                lat_dec=12,
+                lon_dec=78,
+                face_id="00012345",
+                lat="59.1234567",
+                lon="-152.7890123",
+                temporal="1h",
+                date="20050101",
+                time="000000",
+            ),
+        },
+        # Summary statistics
         "total_grids": len(grid_index),
         "total_points": len(all_file_metadata),
-        "path_template": path_template,
-        "metadata": {
-            "dataset_name": config["dataset"]["name"],
-            "dataset_label": config["dataset"]["label"],
-            "manifest_generated": datetime.now().isoformat(),
-            "location_stats": location_stats,
-        },
+        # Location data with versioning
+        "locations": location_data,
+        # Grid centroids for spatial indexing
         "grid_centroids": {
             "lat": grid_lats,
             "lon": grid_lons,
         },
-        "locations": location_data,  # Per-location data with path reconstruction metadata
+        # Path to grid details (relative to manifest)
+        "grid_details_path": "grids",
     }
 
-    # Write main manifest
-    # Use compact JSON encoding (no indent) to keep file size small
-    manifest_file = output_dir / "manifest.json"
+    # Write main manifest with version in filename
+    manifest_filename = f"manifest_{manifest_version}.json"
+    manifest_file = output_dir / manifest_filename
     print(f"\nWriting main manifest to: {manifest_file}")
     with open(manifest_file, "w") as f:
         json.dump(manifest, f)
@@ -687,8 +903,7 @@ def generate_compact_manifest(config, output_dir):
     grids_dir = output_dir / "grids"
     grids_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write individual grid detail files with nested directory structure
-    # Organize by lat_deg/lon_deg to keep subdirectories manageable
+    # Write individual grid detail files
     print(f"\nWriting {len(grid_details)} grid detail files to: {grids_dir}")
     print("  Organizing into lat_deg/lon_deg subdirectories...")
 
@@ -696,13 +911,15 @@ def generate_compact_manifest(config, output_dir):
         if idx % 10000 == 0 and idx > 0:
             print(f"  Written {idx}/{len(grid_details)} grid files...")
 
+        # Add dataset version to grid details
+        details["data_version"] = dataset_version
+
         # Parse grid_id to extract lat_deg and lon_deg
-        # Format: "lat_deg_lon_deg_lat_dec_lon_dec"
         parts = grid_id.split("_")
         lat_deg = parts[0]
         lon_deg = parts[1]
 
-        # Create nested directory structure: grids/lat_deg/lon_deg/
+        # Create nested directory structure
         lat_dir = grids_dir / f"lat_{lat_deg}"
         lon_dir = lat_dir / f"lon_{lon_deg}"
         lon_dir.mkdir(parents=True, exist_ok=True)
@@ -714,7 +931,7 @@ def generate_compact_manifest(config, output_dir):
 
     print("  Completed writing all grid detail files")
 
-    # Calculate total size (need to use rglob for nested structure)
+    # Calculate total size
     total_size_mb = sum(f.stat().st_size for f in grids_dir.rglob("*.json")) / (
         1024 * 1024
     )
@@ -728,36 +945,67 @@ def generate_compact_manifest(config, output_dir):
 
 def main():
     """
-    Main function to generate compact two-tier manifest.
+    Main function to generate compact two-tier manifest with spec v2.0.0.
+
+    Features:
+    - Auto-increments manifest version if existing manifest found
+    - Preserves version history for each location
+    - Self-documenting schema embedded in manifest
+    - Versioned grid detail files
     """
     print("=" * 80)
-    print("Compact Parquet Partition Manifest Generation")
+    print("Compact Parquet Partition Manifest Generation (Spec v2.0.0)")
     print("=" * 80)
 
-    # Define output directory
+    # Define output directory based on manifest version
     base_path = Path(config["dir"]["base"])
-    version = config["dataset"]["version"]
-    output_dir = base_path / "manifests" / f"v{version}"
+    manifest_version = config["manifest"]["version"]
+    output_dir = base_path / "manifests" / f"v{manifest_version}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\nOutput directory: {output_dir}")
 
+    # Check for existing manifest to preserve version history
+    print("\nChecking for existing manifest...")
+    existing_manifest = load_existing_manifest(output_dir)
+    if existing_manifest:
+        print("  Will merge version history from existing manifest")
+    else:
+        print("  No existing manifest found, starting fresh")
+
     # Generate compact manifest
-    manifest = generate_compact_manifest(config, output_dir)
+    manifest = generate_compact_manifest(config, output_dir, existing_manifest)
 
     print("\n" + "=" * 80)
     print("Manifest generation complete!")
     print("=" * 80)
+    print(f"\nSpec version: {manifest['spec_version']}")
+    print(f"Manifest version: {manifest['manifest_version']}")
     print("\nGenerated structure:")
     print(f"  {output_dir}/")
-    print("    ├── manifest.json          (main index)")
+    print(f"    ├── manifest_{manifest['manifest_version']}.json  (main index)")
     print(
-        f"    └── grids/                 ({manifest['total_grids']} grid detail files)"
+        f"    └── grids/                        ({manifest['total_grids']} grid detail files)"
     )
+    print("\nLocations with version info:")
+    for loc_name, loc_data in manifest["locations"].items():
+        versions = list(loc_data["versions"].keys())
+        latest = loc_data["latest_version"]
+        print(f"  {loc_name}: latest={latest}, all_versions={versions}")
+
+    print("\nS3 URIs:")
+    print(f"  Base: {manifest['storage']['s3_base_uri']}")
+    print(
+        f"  Manifest: {manifest['storage']['s3_manifest_base_uri']}/{manifest['manifest_version']}/manifest_{manifest['manifest_version']}.json"
+    )
+
     print("\nUsage:")
-    print("  - Load manifest.json for fast grid-level queries")
+    print("  - Load manifest_{version}.json for fast grid-level queries")
     print("  - Lazy-load individual grid files as needed")
     print("  - Use TidalManifestQuery class for spatial queries")
+    print(
+        "  - Use path_template with location's latest_version to construct file paths"
+    )
 
 
 if __name__ == "__main__":
