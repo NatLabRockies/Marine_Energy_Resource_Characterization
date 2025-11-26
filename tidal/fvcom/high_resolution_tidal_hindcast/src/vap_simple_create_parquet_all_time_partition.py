@@ -594,6 +594,16 @@ def convert_h5_to_parquet_batched(
     end_face = min(start_face + batch_size, total_faces)
     faces_to_process = end_face - start_face
 
+    # Early exit if batch number is out of bounds (start_face >= total_faces)
+    if faces_to_process <= 0:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(
+            f"{timestamp} - INFO - Batch {batch_number} is out of bounds "
+            f"(start_face={start_face} >= total_faces={total_faces}). "
+            f"Nothing to process."
+        )
+        return
+
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Data structure to store all time series for each face
@@ -874,6 +884,19 @@ def convert_h5_to_parquet_batched(
     # =========================================================================
     # OPTIMIZED PARQUET WRITING WITH PRE-COMPUTED SCHEMA AND THREADED I/O
     # =========================================================================
+
+    # Defensive check: ensure we have data to write
+    # This can happen if all faces were skipped or if there was an issue during processing
+    if not all_face_data:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(
+            f"{timestamp} - INFO - No face data to write (all_face_data is empty). "
+            f"This may indicate all files already exist or batch is out of bounds."
+        )
+        return
+
+    # Update faces_to_process to reflect actual number of faces in all_face_data
+    faces_to_process = len(all_face_data)
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(
