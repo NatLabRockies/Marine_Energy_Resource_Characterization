@@ -19,6 +19,10 @@ from . import file_manager, file_name_convention_manager
 # Adjust based on HPC filesystem capabilities (Lustre can handle higher values)
 PARQUET_WRITE_THREADS = 16
 
+# Number of threads for parallel HDF5 variable reads within a single file
+# HDF5 supports concurrent reads from different datasets
+HDF5_READ_THREADS = 8
+
 # Stagger job start times to reduce Lustre I/O contention (seconds)
 # When many jobs start simultaneously, they compete for the same files
 JOB_STAGGER_MAX_SECONDS = 120
@@ -642,6 +646,22 @@ def convert_h5_to_parquet_batched(
                 col_name = f"{dataset_name}_layer_{layer_idx}"
                 all_face_data[face_id][col_name] = []
 
+    # Get HDF5 read cache size from config (default to 2GB if not configured)
+    hdf5_read_cache_bytes = config.get("hdf5_cache", {}).get("read_cache_bytes")
+    if hdf5_read_cache_bytes is None:
+        hdf5_read_cache_bytes = 2 * 1024**3  # 2GB default
+    # Use prime number for cache slots to reduce hash collisions
+    # From https://docs.h5py.org/en/stable/high/file.html#chunk-cache:
+    # rdcc_nslots: Number of chunk slots in the raw data chunk cache for files opened with this property list.
+    # Default is 521. Increasing this value reduces the number of cache collisions, but slightly increases the
+    # memory used. A prime number is recommended.
+    hdf5_cache_slots = 10007
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(
+        f"{timestamp} - INFO - Using HDF5 read cache: {hdf5_read_cache_bytes / 1024**3:.1f} GB"
+    )
+
     # Process each file sequentially
     for file_idx, h5_file in enumerate(h5_files):
         file_start_time = time.time()
@@ -650,7 +670,13 @@ def convert_h5_to_parquet_batched(
             f"{timestamp} - INFO - File {file_idx + 1}/{len(h5_files)}: Reading {h5_file}"
         )
 
-        with h5py.File(h5_file, "r") as f:
+        # Open with configured HDF5 chunk cache for better read performance
+        with h5py.File(
+            h5_file,
+            "r",
+            rdcc_nbytes=hdf5_read_cache_bytes,
+            rdcc_nslots=hdf5_cache_slots,
+        ) as f:
             # Get time values once
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             print(f"{timestamp} - INFO - Reading time values")
