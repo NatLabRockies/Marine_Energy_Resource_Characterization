@@ -407,7 +407,7 @@ def get_partition_file_name_from_coords(
     Generate standardized filename for partition files.
 
     This version takes scalar values directly instead of a DataFrame,
-    avoiding pandas overhead.
+    using file_name_convention_manager with static_time parameter.
     """
     coord_digits_max = config["partition"]["coord_digits_max"]
     index_max_digits = config["partition"]["index_max_digits"]
@@ -432,17 +432,20 @@ def get_partition_file_name_from_coords(
 
     # Get time range for filename (first timestamp)
     first_time = pd.Timestamp(time_values[0])
-
-    # Build the filename matching file_name_convention_manager format
-    # Format: location.dataset[-qualifier][-temporal].data_level.date.time.v{version}.ext
     date_str = first_time.strftime("%Y%m%d")
     time_str = first_time.strftime("%H%M%S")
 
-    return (
-        f"{location['output_name']}.{config['dataset']['name']}."
-        f"face={index:{index_format}}.lat={lat_rounded:{coord_format}}."
-        f"lon={lon_rounded:{coord_format}}-{temporal_string}.b4."
-        f"{date_str}.{time_str}.v{version}.parquet"
+    # Use file_name_convention_manager as single source of truth
+    # Pass static_time to avoid needing a DataFrame
+    return file_name_convention_manager.generate_filename_for_data_level(
+        ds=None,  # Not needed when static_time is provided
+        location_id=location["output_name"],
+        dataset_name=f"{config['dataset']['name']}.face={index:{index_format}}.lat={lat_rounded:{coord_format}}.lon={lon_rounded:{coord_format}}",
+        data_level="b4",
+        temporal=temporal_string,
+        version=version,
+        ext="parquet",
+        static_time=(date_str, time_str),
     )
 
 
