@@ -169,7 +169,7 @@ def get_partition_file_name(
         df,
         location["output_name"],
         f"{config['dataset']['name']}.face={index:{index_format}}.lat={lat_rounded:{coord_format}}.lon={lon_rounded:{coord_format}}",
-        "b4",
+        "b1",
         temporal=temporal_string,
         version=version,
         ext="parquet",
@@ -441,7 +441,7 @@ def get_partition_file_name_from_coords(
         ds=None,  # Not needed when static_time is provided
         location_id=location["output_name"],
         dataset_name=f"{config['dataset']['name']}.face={index:{index_format}}.lat={lat_rounded:{coord_format}}.lon={lon_rounded:{coord_format}}",
-        data_level="b4",
+        data_level="b1",
         temporal=temporal_string,
         version=version,
         ext="parquet",

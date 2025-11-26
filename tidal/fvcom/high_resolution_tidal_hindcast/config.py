@@ -46,7 +46,7 @@ config = {
         "decimal_places": 2,  # Number of decimal places used in partition path (lat*100 % 100)
         "coord_digits_max": 7,  # Maximum decimal precision in filename
         "index_max_digits": 8,  # Zero-padding for face ID in filename
-        "data_level": "b4_vap_partition",  # Data level identifier for partition output
+        "data_level": "b1_vap_by_point_partition",  # Data level identifier for partition output
     },
     "manifest": {
         # Manifest specification version (format of the manifest structure)
@@ -122,9 +122,9 @@ config = {
             "monthly_summary_vap": "<location>/<version>/b2_monthly_mean_vap",
             "yearly_summary_vap": "<location>/<version>/b3_yearly_mean_vap",
             "yearly_summary_vap_by_face": "<location>/<version>/b3_yearly_mean_vap/by_face",
-            "vap_partition": "<location>/<version>/b4_vap_partition",
-            "vap_summary_parquet": "<location>/<version>/b5_vap_summary_parquet",
-            "vap_atlas_summary_parquet": "<location>/<version>/b6_vap_atlas_summary_parquet",
+            "vap_partition": "<location>/<version>/b1_vap_by_point_partition",
+            "vap_summary_parquet": "<location>/<version>/b4_vap_summary_parquet",
+            "vap_atlas_summary_parquet": "<location>/<version>/b5_vap_atlas_summary_parquet",
             "combined_vap_atlas": "all_locations_combined_gis/<version>",
             "hsds": "<location>/<version>/hsds",
             "hsds_temp": "<location>/<version>/hsds/individual_temp_files",
