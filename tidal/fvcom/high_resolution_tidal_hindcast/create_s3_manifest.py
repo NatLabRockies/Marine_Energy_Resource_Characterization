@@ -7,6 +7,7 @@ and creates a SQLite database for tracking upload progress.
 """
 
 import argparse
+import subprocess
 import sqlite3
 import sys
 from datetime import datetime
@@ -124,7 +125,11 @@ def discover_files(location_key, data_level):
         )
         local_dir = base_path / input_dir
         # For 00_raw, relative path for S3 is manually constructed
-        s3_base_relative_path = Path(location_spec["output_name"]) / f"v{config['dataset']['version']}" / data_level
+        s3_base_relative_path = (
+            Path(location_spec["output_name"])
+            / f"v{config['dataset']['version']}"
+            / data_level
+        )
     else:
         dir_key = data_level_to_dir_key.get(data_level)
         if not dir_key:
@@ -142,45 +147,75 @@ def discover_files(location_key, data_level):
         print(f"Error: Directory does not exist: {local_dir}", file=sys.stderr)
         return []
 
-    # Discover files based on recursion and extension configuration
+    # Discover files using find command (much faster than Python glob on Lustre)
     print(f"Discovering files in: {local_dir}")
     print(f"  Extensions: {valid_extensions if valid_extensions else 'all'}")
     print(f"  Recursion: {'enabled' if should_recurse else 'disabled'}")
+    print("  Using 'find' command for fast discovery on Lustre...")
 
-    all_files = []
+    # Build find command
+    # Use -printf to get file size and path in one pass (avoids separate stat calls)
+    # Format: "size<TAB>path<NEWLINE>"
+    cmd = ["find", str(local_dir)]
 
-    if should_recurse:
-        # Recursive search
-        for file_path in local_dir.rglob("*"):
-            if file_path.is_file():
-                # Filter by extension if specified
-                if valid_extensions is None or file_path.suffix in valid_extensions:
-                    all_files.append(file_path)
-    else:
-        # Non-recursive search (only immediate directory)
-        for file_path in local_dir.glob("*"):
-            if file_path.is_file():
-                # Filter by extension if specified
-                if valid_extensions is None or file_path.suffix in valid_extensions:
-                    all_files.append(file_path)
+    if not should_recurse:
+        cmd.extend(["-maxdepth", "1"])
 
-    # Sort for deterministic ordering
-    all_files = sorted(all_files)
+    cmd.extend(["-type", "f"])
 
-    print(f"Found {len(all_files)} files")
+    # Add extension filter using -name patterns
+    if valid_extensions:
+        if len(valid_extensions) == 1:
+            cmd.extend(["-name", f"*{valid_extensions[0]}"])
+        else:
+            # Multiple extensions: ( -name "*.ext1" -o -name "*.ext2" )
+            cmd.append("(")
+            for i, ext in enumerate(valid_extensions):
+                if i > 0:
+                    cmd.append("-o")
+                cmd.extend(["-name", f"*{ext}"])
+            cmd.append(")")
 
-    # Build file records using s3_base_relative_path from file_manager
+    # Use -printf to get size and path in single pass (GNU find feature, available on Linux)
+    cmd.extend(["-printf", "%s\\t%p\\n"])
+
+    # Execute find command
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print(f"Warning: find command returned non-zero exit code: {result.returncode}")
+        if result.stderr:
+            print(f"  stderr: {result.stderr[:500]}")
+
+    # Parse find output and build file records
     file_records = []
-    for file_path in all_files:
+    lines = result.stdout.strip().split("\n") if result.stdout.strip() else []
+
+    for line in lines:
+        if not line or "\t" not in line:
+            continue
+
+        size_str, file_path_str = line.split("\t", 1)
+        file_path = Path(file_path_str)
+
+        try:
+            file_size = int(size_str)
+        except ValueError:
+            # Fallback to stat if size parsing fails
+            file_size = file_path.stat().st_size
+
         relative_path = file_path.relative_to(local_dir)
-        # Use the relative path from file_manager for consistent S3 destination
         s3_destination = str(s3_base_relative_path / relative_path)
-        file_size = file_path.stat().st_size
         extension = file_path.suffix
 
         file_records.append(
             (str(file_path), str(relative_path), s3_destination, file_size, extension)
         )
+
+    # Sort for deterministic ordering
+    file_records.sort(key=lambda x: x[0])
+
+    print(f"Found {len(file_records)} files")
 
     return file_records
 
