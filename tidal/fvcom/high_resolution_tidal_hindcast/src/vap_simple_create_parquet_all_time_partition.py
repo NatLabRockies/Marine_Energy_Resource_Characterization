@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import time
 import random
+import gc
 from datetime import datetime
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -659,10 +660,12 @@ def convert_h5_to_parquet_batched(
     if hdf5_read_cache_bytes is None:
         hdf5_read_cache_bytes = 2 * 1024**3  # 2GB default
     # Use prime number for cache slots to reduce hash collisions
-    # From https://docs.h5py.org/en/stable/high/file.html#chunk-cache:
+    # From the https://docs.h5py.org/en/stable/high/file.html#chunk-cache:
+    #
     # rdcc_nslots: Number of chunk slots in the raw data chunk cache for files opened with this property list.
     # Default is 521. Increasing this value reduces the number of cache collisions, but slightly increases the
     # memory used. A prime number is recommended.
+
     hdf5_cache_slots = 10007
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -939,8 +942,13 @@ def convert_h5_to_parquet_batched(
     work_items = []
     prep_start = time.time()
 
-    for face_idx, face_id in enumerate(all_face_data.keys()):
-        face_data = all_face_data[face_id]
+    # Use list() to get keys upfront since we'll be modifying the dict
+    face_ids_to_process = list(all_face_data.keys())
+
+    for face_idx, face_id in enumerate(face_ids_to_process):
+        # Pop face data from dict to free memory as we go
+        # This prevents holding both source data AND tables in memory
+        face_data = all_face_data.pop(face_id)
 
         # Get time values as numpy array
         time_values = np.array(face_data["time"], dtype="datetime64[ns]")
@@ -982,12 +990,17 @@ def convert_h5_to_parquet_batched(
 
         work_items.append((face_id, table, output_file))
 
-        # Progress for preparation phase
+        # Progress and garbage collection every 1000 faces
         if (face_idx + 1) % 1000 == 0:
+            # Force garbage collection to actually free the popped face data
+            gc.collect()
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             print(
-                f"{timestamp} - INFO - Prepared {face_idx + 1}/{faces_to_process} tables"
+                f"{timestamp} - INFO - Prepared {face_idx + 1}/{faces_to_process} tables (memory freed via GC)"
             )
+
+    # Final GC after all tables prepared
+    gc.collect()
 
     prep_time = time.time() - prep_start
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
