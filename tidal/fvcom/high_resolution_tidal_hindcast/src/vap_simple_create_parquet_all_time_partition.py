@@ -335,7 +335,9 @@ def build_parquet_schema_with_metadata(
             field_metadata = nc_metadata_for_parquet["var"][nc_var_name].copy()
 
         # Create the field with metadata
-        field = pa.field(col_name, pa_type, metadata=field_metadata if field_metadata else None)
+        field = pa.field(
+            col_name, pa_type, metadata=field_metadata if field_metadata else None
+        )
         fields.append(field)
 
     # Create schema and attach global metadata
@@ -444,7 +446,13 @@ def get_partition_file_name_from_coords(
 
 
 def convert_h5_to_parquet_batched(
-    input_dir, output_dir, config, location, batch_size=20000, batch_number=0, skip_existing=False
+    input_dir,
+    output_dir,
+    config,
+    location,
+    batch_size=20000,
+    batch_number=0,
+    skip_existing=False,
 ):
     """
     Convert h5 files to individual parquet files for each face using a sequential approach.
@@ -726,18 +734,23 @@ def convert_h5_to_parquet_batched(
                         lon = lon_values[i]
 
                         # Compute expected output path using scalar-based functions
-                        partition_dir = Path(output_dir, get_partition_path_from_coords(lat, lon, config))
+                        partition_dir = Path(
+                            output_dir, get_partition_path_from_coords(lat, lon, config)
+                        )
                         output_file = Path(
-                            partition_dir, get_partition_file_name_from_coords(
+                            partition_dir,
+                            get_partition_file_name_from_coords(
                                 face_id, lat, lon, time_values, config, location
-                            )
+                            ),
                         )
 
                         # Check if file exists
                         if output_file.exists():
                             faces_to_skip.add(face_id)
                             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            print(f"{timestamp} - INFO - Skipping face {face_id}: output file already exists ({output_file})")
+                            print(
+                                f"{timestamp} - INFO - Skipping face {face_id}: output file already exists ({output_file})"
+                            )
 
                     # Update faces to process
                     if faces_to_skip:
@@ -747,11 +760,15 @@ def convert_h5_to_parquet_batched(
 
                         faces_to_process = len(all_face_data)
                         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        print(f"{timestamp} - INFO - Skipped {len(faces_to_skip)} existing files, {faces_to_process} faces remaining to process")
+                        print(
+                            f"{timestamp} - INFO - Skipped {len(faces_to_skip)} existing files, {faces_to_process} faces remaining to process"
+                        )
 
                         if faces_to_process == 0:
                             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            print(f"{timestamp} - INFO - All files already exist, nothing to process")
+                            print(
+                                f"{timestamp} - INFO - All files already exist, nothing to process"
+                            )
                             return
 
             # Add time values to each face
@@ -866,16 +883,22 @@ def convert_h5_to_parquet_batched(
 
     # Define column order (time first, then coordinates, then data)
     coordinate_cols = [
-        "lat", "lon",
-        "element_corner_1_lat", "element_corner_1_lon",
-        "element_corner_2_lat", "element_corner_2_lon",
-        "element_corner_3_lat", "element_corner_3_lon",
+        "lat",
+        "lon",
+        "element_corner_1_lat",
+        "element_corner_1_lon",
+        "element_corner_2_lat",
+        "element_corner_2_lon",
+        "element_corner_3_lat",
+        "element_corner_3_lon",
     ]
 
     # Get data columns (everything except time and coordinates)
     data_cols = [
-        k for k in sample_face_data.keys()
-        if k not in ["time", "lat", "lon"] + [c for c in coordinate_cols if "corner" in c]
+        k
+        for k in sample_face_data.keys()
+        if k
+        not in ["time", "lat", "lon"] + [c for c in coordinate_cols if "corner" in c]
         and "nv" not in k
     ]
 
@@ -933,9 +956,7 @@ def convert_h5_to_parquet_batched(
 
             scalar_value = face_data.get(scalar_key)
             if scalar_value is not None:
-                pyarrow_data[col] = np.repeat(
-                    np.float32(scalar_value), time_length
-                )
+                pyarrow_data[col] = np.repeat(np.float32(scalar_value), time_length)
             else:
                 pyarrow_data[col] = np.repeat(np.float32(np.nan), time_length)
 
@@ -962,17 +983,23 @@ def convert_h5_to_parquet_batched(
         # Progress for preparation phase
         if (face_idx + 1) % 1000 == 0:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"{timestamp} - INFO - Prepared {face_idx + 1}/{faces_to_process} tables")
+            print(
+                f"{timestamp} - INFO - Prepared {face_idx + 1}/{faces_to_process} tables"
+            )
 
     prep_time = time.time() - prep_start
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"{timestamp} - INFO - Table preparation completed in {prep_time:.2f} seconds")
+    print(
+        f"{timestamp} - INFO - Table preparation completed in {prep_time:.2f} seconds"
+    )
 
     # -------------------------------------------------------------------------
     # Step 4: Write files using ThreadPoolExecutor with robust error handling
     # -------------------------------------------------------------------------
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"{timestamp} - INFO - Starting threaded file writes ({PARQUET_WRITE_THREADS} workers)")
+    print(
+        f"{timestamp} - INFO - Starting threaded file writes ({PARQUET_WRITE_THREADS} workers)"
+    )
 
     successful_writes = []
     failed_writes = []
@@ -1003,7 +1030,9 @@ def convert_h5_to_parquet_batched(
                 elapsed = current_time - write_start
                 if completed_count > 0:
                     rate = completed_count / elapsed
-                    remaining = (faces_to_process - completed_count) / rate if rate > 0 else 0
+                    remaining = (
+                        (faces_to_process - completed_count) / rate if rate > 0 else 0
+                    )
                 else:
                     remaining = 0
 
@@ -1021,8 +1050,12 @@ def convert_h5_to_parquet_batched(
     # -------------------------------------------------------------------------
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"{timestamp} - INFO - File writing completed in {write_time:.2f} seconds")
-    print(f"{timestamp} - INFO - Total write phase time: {total_writing_time:.2f} seconds")
-    print(f"{timestamp} - INFO - Successful writes: {len(successful_writes)}/{faces_to_process}")
+    print(
+        f"{timestamp} - INFO - Total write phase time: {total_writing_time:.2f} seconds"
+    )
+    print(
+        f"{timestamp} - INFO - Successful writes: {len(successful_writes)}/{faces_to_process}"
+    )
 
     if failed_writes:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
