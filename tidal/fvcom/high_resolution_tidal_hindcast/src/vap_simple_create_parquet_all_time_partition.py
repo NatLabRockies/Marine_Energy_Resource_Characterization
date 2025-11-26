@@ -433,16 +433,16 @@ def get_partition_file_name_from_coords(
     # Get time range for filename (first timestamp)
     first_time = pd.Timestamp(time_values[0])
 
-    # Build the filename directly without using file_name_convention_manager
-    # to avoid DataFrame overhead
+    # Build the filename matching file_name_convention_manager format
+    # Format: location.dataset[-qualifier][-temporal].data_level.date.time.v{version}.ext
     date_str = first_time.strftime("%Y%m%d")
     time_str = first_time.strftime("%H%M%S")
 
     return (
         f"{location['output_name']}.{config['dataset']['name']}."
         f"face={index:{index_format}}.lat={lat_rounded:{coord_format}}."
-        f"lon={lon_rounded:{coord_format}}-{temporal_string}.b4.{version}."
-        f"{date_str}.{time_str}.parquet"
+        f"lon={lon_rounded:{coord_format}}-{temporal_string}.b4."
+        f"{date_str}.{time_str}.v{version}.parquet"
     )
 
 
