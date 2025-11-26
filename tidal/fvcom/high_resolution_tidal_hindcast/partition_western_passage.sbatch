@@ -9,10 +9,10 @@
 ##SBATCH --mem=128G
 # There are 231208 faces
 # 2500 faces per batch
-# 213208 / 5000 = 42.64  tasks
-# 213208 / 2500 = 92.48 tasks # This is wrong
+# 231208 / 5000 = 46.24  tasks
+# 231208 / 2500 = 92.48 tasks # This is wrong
 ##SBATCH --array=0-92  # Create 93 tasks
-#SBATCH --array=0-42  # Create 93 tasks
+#SBATCH --array=0-47  # Create 47 tasks
 
 source sbatch_env_setup.sh
 
