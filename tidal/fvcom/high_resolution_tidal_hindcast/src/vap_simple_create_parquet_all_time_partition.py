@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import time
+import random
 from datetime import datetime
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -17,6 +18,10 @@ from . import file_manager, file_name_convention_manager
 # Number of threads for parallel parquet file writes
 # Adjust based on HPC filesystem capabilities (Lustre can handle higher values)
 PARQUET_WRITE_THREADS = 16
+
+# Stagger job start times to reduce Lustre I/O contention (seconds)
+# When many jobs start simultaneously, they compete for the same files
+JOB_STAGGER_MAX_SECONDS = 120
 
 
 def prepare_nc_metadata_for_parquet(attributes):
@@ -471,6 +476,15 @@ def convert_h5_to_parquet_batched(
     print(
         f"{timestamp} - INFO - Starting h5 to parquet conversion with optimized sequential approach"
     )
+
+    # Stagger job start to reduce Lustre I/O contention
+    # When many jobs start simultaneously, they all compete for the same files
+    stagger_delay = random.uniform(0, JOB_STAGGER_MAX_SECONDS)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(
+        f"{timestamp} - INFO - Staggering job start by {stagger_delay:.1f} seconds to reduce I/O contention"
+    )
+    time.sleep(stagger_delay)
 
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
