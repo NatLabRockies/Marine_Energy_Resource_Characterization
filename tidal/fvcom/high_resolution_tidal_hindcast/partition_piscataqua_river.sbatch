@@ -11,11 +11,11 @@
 # Time Interval: Half Hourly
 # Recommended Batch Size: 2500
 # Recommended Batch Size: 1000
-# Calculated Tasks = 292927 / 5000 = 58.58
-# Calculated Tasks = 292927 / 2500 = 117.17
-# Calculated Tasks = 292927 / 1000 = 293
+# Calculated Tasks = 292927 / 5000 = 58.59 -> ceil = 59 tasks (0-58)
+# Calculated Tasks = 292927 / 2500 = 117.17 -> ceil = 118 tasks (0-117)
+# Calculated Tasks = 292927 / 1000 = 293 -> ceil = 293 tasks (0-292)
 ##SBATCH --array=0-117  # Create 118 tasks
-#SBATCH --array=0-59  # Create 59 tasks
+#SBATCH --array=0-58  # Create 59 tasks (faces 0-292926)
 
 source sbatch_env_setup.sh
 

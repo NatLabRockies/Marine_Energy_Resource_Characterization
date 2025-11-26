@@ -8,11 +8,10 @@
 #SBATCH --partition=standard
 ##SBATCH --mem=128G
 # There are 231208 faces
-# 2500 faces per batch
-# 231208 / 5000 = 46.24  tasks
-# 231208 / 2500 = 92.48 tasks # This is wrong
+# 231208 / 5000 = 46.24 -> ceil = 47 tasks (0-46)
+# 231208 / 2500 = 92.48 -> ceil = 93 tasks (0-92)
 ##SBATCH --array=0-92  # Create 93 tasks
-#SBATCH --array=0-47  # Create 47 tasks
+#SBATCH --array=0-46  # Create 47 tasks (faces 0-231207)
 
 source sbatch_env_setup.sh
 

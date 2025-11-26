@@ -6,14 +6,12 @@
 #SBATCH --mail-user=andrew.simms@nrel.gov
 #SBATCH --time=6:00:00
 #SBATCH --partition=standard
-# Faces 797987
+# Faces 797978 (from config.py)
 # Time Interval: Hourly
-# Recommended Batch Size: 2500
-# Recommended Batch Size: 1000
-# Calculated Tasks = 797987 / 10000 = 79.7987
-# Calculated Tasks = 797987 / 5000 = 159.5974
-# Calculated Tasks = 797987 / 2500 = 319.19
-# Calculated Tasks = 797987 / 1000 = 798
+# 797978 / 10000 = 79.80 -> ceil = 80 tasks (0-79)
+# 797978 / 5000 = 159.60 -> ceil = 160 tasks (0-159)
+# 797978 / 2500 = 319.19 -> ceil = 320 tasks (0-319)
+# 797978 / 1000 = 797.98 -> ceil = 798 tasks (0-797)
 #SBATCH --array=0-79  # Create 80 tasks
 ##SBATCH --array=0-159  # Create 160 tasks
 ##SBATCH --array=0-319  # Create 320 tasks
