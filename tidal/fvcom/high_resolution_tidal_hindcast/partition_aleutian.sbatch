@@ -18,7 +18,7 @@
 # Calculated Tasks = 797987 / 1000 = 798
 #SBATCH --array=0-79  # Create 80 tasks
 ##SBATCH --array=0-159  # Create 160 tasks
-#SBATCH --array=0-319  # Create 320 tasks
+##SBATCH --array=0-319  # Create 320 tasks
 ##SBATCH --array=0-797
 ##SBATCH --mem=64G
 ##SBATCH --mem=128G
