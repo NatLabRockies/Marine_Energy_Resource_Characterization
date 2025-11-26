@@ -14,7 +14,7 @@
 # Calculated Tasks = 392002 / 5000 = 78.4004
 # Calculated Tasks = 392002 / 2500 = 156.8
 # Calculated Tasks = 392002 / 1000 = 393
-#SBATCH --array=0-38  # Create 39 tasks
+#SBATCH --array=0-39  # Create 40 tasks
 ##SBATCH --array=0-78  # Create 79 tasks
 ##SBATCH --array=0-156  # Create 157 tasks
 ##SBATCH --array=0-392  # Create 393 tasks
