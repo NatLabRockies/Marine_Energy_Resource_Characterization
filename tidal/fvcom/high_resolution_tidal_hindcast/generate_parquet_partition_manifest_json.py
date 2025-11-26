@@ -55,11 +55,11 @@ def parse_parquet_filename(filename):
     and temporal is appended with '-' (hyphen), not '.'
 
     Full format:
-    {location}.{dataset}.face={faceid}.lat={lat}.lon={lon}-{temporal}.b4.{date}.{time}.parquet
+    {location}.{dataset}.face={faceid}.lat={lat}.lon={lon}-{temporal}.b1.{date}.{time}.v{version}.parquet
 
     Examples:
-    AK_cook_inlet.wpto_high_res_tidal.face=000123.lat=59.1234567.lon=-152.7890123-1h.b4.20050101.000000.parquet
-    AK_aleutian_islands.wpto_high_res_tidal.face=000299.lat=49.9379654.lon=-174.9613647-1h.b4.20100603.000000.parquet
+    AK_cook_inlet.wpto_high_res_tidal.face=000123.lat=59.1234567.lon=-152.7890123-1h.b1.20050101.000000.v1.0.0.parquet
+    AK_aleutian_islands.wpto_high_res_tidal.face=000299.lat=49.9379654.lon=-174.9613647-1h.b1.20100603.000000.v1.0.0.parquet
 
     Parameters
     ----------
@@ -640,7 +640,7 @@ def build_manifest_schema():
             "decimal_places": "Number of decimal places used in partition path encoding. For decimal_places=2: lat_dec = int(abs(lat * 100) % 100)",
             "coord_digits_max": "Maximum decimal precision for latitude/longitude values in filenames",
             "index_max_digits": "Zero-padding width for face_id in filenames (e.g., 8 means face=00001234)",
-            "data_level": "Data processing level identifier used in file paths (e.g., 'b4_vap_partition')",
+            "data_level": "Data processing level identifier used in file paths (e.g., 'b1_vap_by_point_partition')",
             "grid_resolution_deg": "Grid cell size in degrees, derived as 1.0 / (10 ** decimal_places)",
         },
         "path_template": {
@@ -649,7 +649,7 @@ def build_manifest_schema():
             "placeholders": {
                 "location": "Location output_name (e.g., 'AK_cook_inlet')",
                 "data_version": "Data version for the location (e.g., '1.0.0'). Path uses 'v' prefix (v1.0.0)",
-                "data_level": "Data processing level (e.g., 'b4_vap_partition')",
+                "data_level": "Data processing level (e.g., 'b1_vap_by_point_partition')",
                 "lat_deg": "Integer latitude degrees (signed, e.g., 59 or -70)",
                 "lon_deg": "Integer longitude degrees (signed, e.g., -152)",
                 "lat_dec": "Latitude decimal component, zero-padded (e.g., '05' for 0.05°)",
@@ -824,7 +824,7 @@ def generate_compact_manifest(config, output_dir, existing_manifest=None):
         "{location}/v{data_version}/{data_level}/"
         f"lat_deg={{lat_deg}}/lon_deg={{lon_deg}}/"
         f"lat_dec={{lat_dec:{dec_format_spec}}}/lon_dec={{lon_dec:{dec_format_spec}}}/"
-        f"{{location}}.{dataset_name}.face={{face_id}}.lat={{lat}}.lon={{lon}}-{{temporal}}.b4.{{date}}.{{time}}.v{{data_version}}.parquet"
+        f"{{location}}.{dataset_name}.face={{face_id}}.lat={{lat}}.lon={{lon}}-{{temporal}}.b1.{{date}}.{{time}}.v{{data_version}}.parquet"
     )
 
     # Build storage configuration
@@ -864,7 +864,7 @@ def generate_compact_manifest(config, output_dir, existing_manifest=None):
         # Path template for file reconstruction
         "path_template": {
             "template": path_template,
-            "example": "AK_cook_inlet/v1.0.0/b4_vap_partition/lat_deg=59/lon_deg=-152/lat_dec=12/lon_dec=78/AK_cook_inlet.wpto_high_res_tidal.face=00012345.lat=59.1234567.lon=-152.7890123-1h.b4.20050101.000000.v1.0.0.parquet",
+            "example": "AK_cook_inlet/v1.0.0/b1_vap_by_point_partition/lat_deg=59/lon_deg=-152/lat_dec=12/lon_dec=78/AK_cook_inlet.wpto_high_res_tidal.face=00012345.lat=59.1234567.lon=-152.7890123-1h.b1.20050101.000000.v1.0.0.parquet",
         },
         # Summary statistics
         "total_grids": len(grid_index),
@@ -948,10 +948,9 @@ def main():
     print("Compact Parquet Partition Manifest Generation (Spec v2.0.0)")
     print("=" * 80)
 
-    # Define output directory based on manifest version
-    base_path = Path(config["dir"]["base"])
+    # Get output directory from file_manager (uses config["dir"]["output"]["manifest"])
     manifest_version = config["manifest"]["version"]
-    output_dir = base_path / "manifests" / f"v{manifest_version}"
+    output_dir = file_manager.get_manifest_output_dir(config, manifest_version)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\nOutput directory: {output_dir}")

@@ -38,12 +38,12 @@ DATA_LEVEL_CONFIG = {
         "description": "Monthly mean VAP",
     },
     "b3_yearly_mean_vap": {"time_hours": 6, "description": "Yearly mean VAP"},
-    "b4_vap_partition": {"time_hours": 6, "description": "VAP partition"},
-    "b5_vap_summary_parquet": {
+    "b1_vap_by_point_partition": {"time_hours": 6, "description": "VAP partition"},
+    "b4_vap_summary_parquet": {
         "time_hours": 6,
         "description": "VAP summary parquet",
     },
-    "b6_vap_atlas_summary_parquet": {
+    "b5_vap_atlas_summary_parquet": {
         "time_hours": 6,
         "description": "VAP atlas summary parquet",
     },
@@ -326,8 +326,8 @@ Available Locations:
 
 Available Data Levels:
   00_raw, a1_std, a2_std_partition, b1_vap, b1_vap_daily_compressed,
-  b2_monthly_mean_vap, b3_yearly_mean_vap, b4_vap_partition,
-  b5_vap_summary_parquet, b6_vap_atlas_summary_parquet, hsds
+  b2_monthly_mean_vap, b3_yearly_mean_vap, b1_vap_by_point_partition,
+  b4_vap_summary_parquet, b5_vap_atlas_summary_parquet, hsds
 
 Examples:
   # Upload all b1_vap files for Cook Inlet

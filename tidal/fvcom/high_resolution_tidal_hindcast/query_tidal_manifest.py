@@ -314,7 +314,7 @@ class TidalManifestQuery:
         >>> point = ["61.4657288", "-149.6356201", "002499"]
         >>> path = query.reconstruct_path(point, "AK_cook_inlet")
         >>> print(path)
-        AK_cook_inlet/1.0.0/b4_vap_partition/lat_deg=61/lon_deg=-149/lat_dec=46/lon_dec=63/AK_cook_inlet.wpto_high_res_tidal.face=002499.lat=61.4657288.lon=-149.6356201-1h.b4.20050101.000000.parquet
+        AK_cook_inlet/1.0.0/b1_vap_by_point_partition/lat_deg=61/lon_deg=-149/lat_dec=46/lon_dec=63/AK_cook_inlet.wpto_high_res_tidal.face=002499.lat=61.4657288.lon=-149.6356201-1h.b4.20050101.000000.parquet
         """
         lat_str, lon_str, face_id_str = point
         lat = float(lat_str)

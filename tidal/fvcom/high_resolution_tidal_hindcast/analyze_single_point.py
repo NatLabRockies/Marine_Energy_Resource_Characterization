@@ -100,9 +100,9 @@ def analyze_point(lat: float, lon: float):
     print(f"  Relative file path: {closest_point['file_path']}")
 
     # Construct full path to parquet file
-    # Path structure: BASE_DATA_DIR/<location>/b4_vap_partition/<relative_path>
+    # Path structure: BASE_DATA_DIR/<location>/b1_vap_by_point_partition/<relative_path>
     # The file_path in manifest has format: <location>/<partition_path>/<filename>
-    # So we need to strip the location prefix and reconstruct with b4_vap_partition
+    # So we need to strip the location prefix and reconstruct with b1_vap_by_point_partition
     location = details["location"]
     file_path_str = closest_point["file_path"]
 
@@ -112,8 +112,8 @@ def analyze_point(lat: float, lon: float):
     else:
         relative_path = file_path_str
 
-    # Construct full path: BASE_DATA_DIR/<location>/b4_vap_partition/<relative_path>
-    parquet_file = BASE_DATA_DIR / location / "b4_vap_partition" / relative_path
+    # Construct full path: BASE_DATA_DIR/<location>/b1_vap_by_point_partition/<relative_path>
+    parquet_file = BASE_DATA_DIR / location / "b1_vap_by_point_partition" / relative_path
     print(f"\nReading parquet file: {parquet_file}")
 
     if not parquet_file.exists():

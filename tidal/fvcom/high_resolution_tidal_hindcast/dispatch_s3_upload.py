@@ -80,19 +80,19 @@ DATA_LEVEL_CONFIG = {
         "valid_extensions": [".nc"],
         "should_recurse": False,
     },
-    "b4_vap_partition": {
+    "b1_vap_by_point_partition": {
         "time_hours": 6,
         "description": "VAP partition",
         "valid_extensions": [".parquet"],
         "should_recurse": True,
     },
-    "b5_vap_summary_parquet": {
+    "b4_vap_summary_parquet": {
         "time_hours": 6,
         "description": "VAP summary parquet",
         "valid_extensions": None,
         "should_recurse": True,
     },
-    "b6_vap_atlas_summary_parquet": {
+    "b5_vap_atlas_summary_parquet": {
         "time_hours": 6,
         "description": "VAP atlas summary parquet",
         "valid_extensions": None,
@@ -233,9 +233,9 @@ def discover_files(location_key, data_levels):
             "b1_vap_daily_compressed": "vap_daily_compressed",
             "b2_monthly_mean_vap": "monthly_summary_vap",
             "b3_yearly_mean_vap": "yearly_summary_vap",
-            "b4_vap_partition": "vap_partition",
-            "b5_vap_summary_parquet": "vap_summary_parquet",
-            "b6_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
+            "b1_vap_by_point_partition": "vap_partition",
+            "b4_vap_summary_parquet": "vap_summary_parquet",
+            "b5_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
             "hsds": "hsds",
         }
 
@@ -346,9 +346,9 @@ def get_data_level_paths(location_key, data_level):
         "b1_vap_daily_compressed": "vap_daily_compressed",
         "b2_monthly_mean_vap": "monthly_summary_vap",
         "b3_yearly_mean_vap": "yearly_summary_vap",
-        "b4_vap_partition": "vap_partition",
-        "b5_vap_summary_parquet": "vap_summary_parquet",
-        "b6_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
+        "b1_vap_by_point_partition": "vap_partition",
+        "b4_vap_summary_parquet": "vap_summary_parquet",
+        "b5_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
         "hsds": "hsds",
     }
 
@@ -407,9 +407,9 @@ def construct_s3_destination(location_key, data_level, relative_path):
         "b1_vap_daily_compressed": "vap_daily_compressed",
         "b2_monthly_mean_vap": "monthly_summary_vap",
         "b3_yearly_mean_vap": "yearly_summary_vap",
-        "b4_vap_partition": "vap_partition",
-        "b5_vap_summary_parquet": "vap_summary_parquet",
-        "b6_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
+        "b1_vap_by_point_partition": "vap_partition",
+        "b4_vap_summary_parquet": "vap_summary_parquet",
+        "b5_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
         "hsds": "hsds",
     }
 
@@ -701,9 +701,9 @@ Available Data Levels:
     b1_vap_daily_compressed     - Compressed VAP daily (6h time limit)
     b2_monthly_mean_vap         - Monthly mean VAP (6h time limit)
     b3_yearly_mean_vap          - Yearly mean VAP (6h time limit)
-    b4_vap_partition            - VAP partition (6h time limit)
-    b5_vap_summary_parquet      - VAP summary parquet (6h time limit)
-    b6_vap_atlas_summary_parquet - VAP atlas summary parquet (6h time limit)
+    b1_vap_by_point_partition            - VAP partition (6h time limit)
+    b4_vap_summary_parquet      - VAP summary parquet (6h time limit)
+    b5_vap_atlas_summary_parquet - VAP atlas summary parquet (6h time limit)
     hsds                        - HSDS format (24h time limit)
 
   Global (not location-specific):

@@ -25,12 +25,12 @@ DATA_LEVEL_FILE_CONFIG = {
     "b1_vap_daily_compressed": {"valid_extensions": [".nc"], "should_recurse": False},
     "b2_monthly_mean_vap": {"valid_extensions": [".nc"], "should_recurse": False},
     "b3_yearly_mean_vap": {"valid_extensions": [".nc"], "should_recurse": False},
-    "b4_vap_partition": {"valid_extensions": [".parquet"], "should_recurse": True},
-    "b5_vap_summary_parquet": {
+    "b1_vap_by_point_partition": {"valid_extensions": [".parquet"], "should_recurse": True},
+    "b4_vap_summary_parquet": {
         "valid_extensions": None,
         "should_recurse": True,
     },  # All files
-    "b6_vap_atlas_summary_parquet": {
+    "b5_vap_atlas_summary_parquet": {
         "valid_extensions": None,
         "should_recurse": True,
     },  # All files
@@ -110,9 +110,9 @@ def discover_files(location_key, data_level):
         "b1_vap_daily_compressed": "vap_daily_compressed",
         "b2_monthly_mean_vap": "monthly_summary_vap",
         "b3_yearly_mean_vap": "yearly_summary_vap",
-        "b4_vap_partition": "vap_partition",
-        "b5_vap_summary_parquet": "vap_summary_parquet",
-        "b6_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
+        "b1_vap_by_point_partition": "vap_partition",
+        "b4_vap_summary_parquet": "vap_summary_parquet",
+        "b5_vap_atlas_summary_parquet": "vap_atlas_summary_parquet",
         "hsds": "hsds",
     }
 
