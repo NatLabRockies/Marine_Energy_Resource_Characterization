@@ -4,7 +4,7 @@
 #SBATCH --job-name=part_puget
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --time=24:00:00
+#SBATCH --time=1:00:00
 #SBATCH --partition=standard
 # There are 1734765 faces
 # 1734765 / 10000 = 173.48 -> ceil = 174 tasks (0-173)
