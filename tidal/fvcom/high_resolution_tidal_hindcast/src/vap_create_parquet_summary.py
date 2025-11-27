@@ -735,7 +735,7 @@ def convert_nc_summary_to_parquet(
             geo_output_df,
             Path(output_path, "gis"),
             output_filename.replace(".parquet", ""),
-            formats=["parquet"],
+            # formats=["parquet"],
         )
 
         for col in output_df.columns:
