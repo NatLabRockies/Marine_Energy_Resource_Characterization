@@ -106,5 +106,5 @@ if __name__ == "__main__":
 
     print("Step 8: Create Summary Parquet Dataset...")
     convert_nc_summary_to_parquet(
-        config, args.location, create_combined_atlas_output=True
+        config, args.location, create_combined_atlas_output=False
     )
