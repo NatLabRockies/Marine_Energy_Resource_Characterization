@@ -7,8 +7,8 @@
 #SBATCH --mail-user=andrew.simms@nrel.gov
 ##SBATCH --time=12:00:00
 ##SBATCH --partition=standard
-#SBATCH --time=59
-#SBATCH --partition=debug
+#SBATCH --time=2:00:00
+#SBATCH --partition=short
 
 # Prepare for python script execution
 source sbatch_env_setup.sh
