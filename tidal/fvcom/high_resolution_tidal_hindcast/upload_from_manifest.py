@@ -8,8 +8,10 @@ based on SLURM_ARRAY_TASK_ID and files_per_job configuration.
 
 import argparse
 import os
+import random
 import sqlite3
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -25,6 +27,66 @@ from upload_to_s3 import (
     TRANSFER_CONFIG,
     calculate_s3_etag,
 )
+
+RANDOM_START_DELAY_MAX = 60.0
+
+# SQLite retry configuration for network filesystems
+SQLITE_TIMEOUT = 60.0  # seconds
+SQLITE_MAX_RETRIES = 5
+SQLITE_RETRY_BASE_DELAY = 1.0  # seconds
+
+
+def connect_with_retry(manifest_path, max_retries=SQLITE_MAX_RETRIES):
+    """
+    Connect to SQLite database with retry logic for network filesystems.
+
+    On HPC systems with shared filesystems (NFS, Lustre), SQLite can encounter
+    locking protocol errors when many jobs access the database simultaneously.
+    This function implements exponential backoff with jitter to handle these
+    transient failures.
+
+    Args:
+        manifest_path: Path to SQLite manifest database
+        max_retries: Maximum number of connection attempts
+
+    Returns:
+        sqlite3.Connection object
+
+    Raises:
+        sqlite3.OperationalError: If all retries are exhausted
+    """
+    last_error = None
+
+    for attempt in range(max_retries):
+        try:
+            # Use longer timeout and enable WAL mode for better concurrency
+            conn = sqlite3.connect(
+                manifest_path,
+                timeout=SQLITE_TIMEOUT,
+                isolation_level="DEFERRED",
+            )
+            # Enable WAL mode for better concurrent read performance
+            # This is safe to call multiple times - SQLite handles it gracefully
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=60000")  # 60 second busy timeout
+            return conn
+
+        except sqlite3.OperationalError as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                # Exponential backoff with jitter
+                delay = SQLITE_RETRY_BASE_DELAY * (2**attempt) + random.uniform(0, 1)
+                print(
+                    f"  SQLite connection attempt {attempt + 1}/{max_retries} failed: {e}",
+                    file=sys.stderr,
+                )
+                print(f"  Retrying in {delay:.2f}s...", file=sys.stderr)
+                time.sleep(delay)
+
+    # All retries exhausted
+    raise sqlite3.OperationalError(
+        f"Failed to connect after {max_retries} attempts: {last_error}"
+    )
 
 
 def get_files_for_batch(manifest_path, batch_index, files_per_job):
@@ -42,27 +104,29 @@ def get_files_for_batch(manifest_path, batch_index, files_per_job):
     Returns:
         List of file records (tuples)
     """
-    conn = sqlite3.connect(manifest_path)
+    conn = connect_with_retry(manifest_path)
     cursor = conn.cursor()
 
     # Calculate offset for this batch among pending files only
     offset = batch_index * files_per_job
 
-    # Get pending files using OFFSET/LIMIT to handle sparse indices
-    # This correctly handles cases where some files are 'skipped'
-    cursor.execute(
-        """
-        SELECT file_index, local_path, s3_destination, file_size_bytes
-        FROM files
-        WHERE upload_status = 'pending'
-        ORDER BY file_index
-        LIMIT ? OFFSET ?
-        """,
-        (files_per_job, offset),
-    )
+    try:
+        # Get pending files using OFFSET/LIMIT to handle sparse indices
+        # This correctly handles cases where some files are 'skipped'
+        cursor.execute(
+            """
+            SELECT file_index, local_path, s3_destination, file_size_bytes
+            FROM files
+            WHERE upload_status = 'pending'
+            ORDER BY file_index
+            LIMIT ? OFFSET ?
+            """,
+            (files_per_job, offset),
+        )
 
-    files = cursor.fetchall()
-    conn.close()
+        files = cursor.fetchall()
+    finally:
+        conn.close()
 
     return files
 
@@ -77,24 +141,26 @@ def update_file_status(manifest_path, file_index, status, etag=None):
         status: Upload status ('completed', 'failed')
         etag: S3 ETag (optional)
     """
-    conn = sqlite3.connect(manifest_path, timeout=30.0)
+    conn = connect_with_retry(manifest_path)
     cursor = conn.cursor()
 
     timestamp = datetime.now().isoformat()
 
-    cursor.execute(
-        """
-        UPDATE files
-        SET upload_status = ?,
-            etag = ?,
-            upload_timestamp = ?
-        WHERE file_index = ?
-        """,
-        (status, etag, timestamp, file_index),
-    )
+    try:
+        cursor.execute(
+            """
+            UPDATE files
+            SET upload_status = ?,
+                etag = ?,
+                upload_timestamp = ?
+            WHERE file_index = ?
+            """,
+            (status, etag, timestamp, file_index),
+        )
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def upload_single_file(s3_client, local_path, s3_destination, verify_checksum=True):
@@ -192,6 +258,12 @@ def main():
 
     args = parser.parse_args()
 
+    # Add random startup delay to stagger database access across SLURM jobs
+    # This helps prevent "thundering herd" when many jobs start simultaneously
+    startup_delay = random.uniform(0, RANDOM_START_DELAY_MAX)  # 0-5 second random delay
+    print(f"Startup delay: {startup_delay:.2f}s (staggering database access)")
+    time.sleep(startup_delay)
+
     # Get files for this batch
     print(f"Batch {args.batch_index}: Processing up to {args.files_per_job} files")
     files = get_files_for_batch(
@@ -216,10 +288,15 @@ def main():
     success_count = 0
     failure_count = 0
     failed_files = []  # Track failures for logging
+    total_files = len(files)
 
-    for file_index, local_path, s3_destination, file_size in files:
+    for batch_idx, (file_index, local_path, s3_destination, file_size) in enumerate(
+        files
+    ):
         print(f"\n{'=' * 80}")
-        print(f"File {file_index + 1} / {len(files)} in batch")
+        print(
+            f"File {batch_idx + 1} / {total_files} in batch (global index: {file_index})"
+        )
 
         success, etag = upload_single_file(
             s3_client, local_path, s3_destination, args.verify_checksum
