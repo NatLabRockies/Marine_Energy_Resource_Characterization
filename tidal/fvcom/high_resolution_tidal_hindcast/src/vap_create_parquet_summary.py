@@ -10,7 +10,7 @@ import xarray as xr
 
 from shapely.geometry import Point, Polygon, MultiPolygon
 
-from . import file_manager, file_name_convention_manager
+from . import file_manager, file_name_convention_manager, s3_uri_manager
 
 # Default optimized for Aleutian Islands (~52-55°N latitude)
 # At 53°N, 0.0002° ≈ 13 meters (cos(53°) * 111000 * 0.0002 ≈ 13.4m)
@@ -39,6 +39,9 @@ ATLAS_COLUMNS = {
     # "vap_water_column_sea_water_power_density_max_to_mean_ratio": "Power Density Max to Mean Ratio",
     "vap_grid_resolution": "Grid Resolution [m]",
     "vap_sea_floor_depth": "Sea Floor Depth from Mean Surface Elevation [m]",
+    # Full year data URIs - links to b1_vap_by_point_partition parquet files
+    "full_year_data_s3_uri": "S3 URI for Full Year Time Series Data",
+    "full_year_data_https_url": "HTTPS URL for Full Year Time Series Data",
 }
 
 
@@ -650,7 +653,17 @@ def convert_nc_summary_to_parquet(
     input_path = file_manager.get_yearly_summary_vap_output_dir(config, location)
     output_path = file_manager.get_vap_summary_parquet_dir(config, location)
 
-    input_nc_files = sorted(list(input_path.rglob("*.nc")))
+    # Use glob (not rglob) to avoid recursing into subdirectories
+    input_nc_files = sorted(list(input_path.glob("*.nc")))
+
+    # Check for batch files that should have been consolidated
+    batch_files = [f for f in input_nc_files if "batch_" in f.name]
+    if batch_files:
+        raise RuntimeError(
+            f"Found {len(batch_files)} unconsolidated batch files in {input_path}. "
+            f"Run the consolidation step before converting to parquet. "
+            f"Batch files: {[f.name for f in batch_files[:5]]}..."
+        )
 
     dfs = []
     atlas_dfs = []
@@ -663,6 +676,14 @@ def convert_nc_summary_to_parquet(
         print(f"\nProcessing NetCDF file: {nc_file.name}")
         ds = xr.open_dataset(nc_file)
         output_df = convert_tidal_summary_nc_to_dataframe(ds)
+
+        # Add S3 and HTTPS URIs for full year time series data (b1_vap_by_point_partition)
+        print("Adding full year data URI columns...")
+        output_df = s3_uri_manager.add_full_year_uri_columns_vectorized(
+            output_df, location, config
+        )
+        print("  Added columns: full_year_data_s3_uri, full_year_data_https_url")
+        print(f"  Example S3 URI: {output_df['full_year_data_s3_uri'].iloc[0][:80]}...")
 
         if split_polygons_that_cross_dateline is True:
             print("  Detecting dateline crossings...")
