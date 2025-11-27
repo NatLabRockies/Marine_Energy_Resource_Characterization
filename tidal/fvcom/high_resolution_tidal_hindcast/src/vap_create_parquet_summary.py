@@ -487,7 +487,7 @@ def save_geo_dataframe(
     output_path,
     filename_base,
     # formats=["geojson", "gpkg", "parquet"],
-    formats=["gpkg", "parquet"],
+    formats=["geojson", "gpkg", "parquet"],
     # formats=["parquet"],
 ):
     """
@@ -770,7 +770,7 @@ def convert_nc_summary_to_parquet(
             Path(atlas_output_path, "gis"),
             atlas_output_filename.replace(".parquet", ""),
             # formats=["geojson", "gpkg", "parquet", "arrow"],
-            formats=["parquet"],
+            # formats=["parquet"],
         )
 
         # Append to lists for combined output
@@ -879,7 +879,7 @@ def convert_nc_summary_to_parquet(
             complete_file_name,
             # formats=["geojson", "gpkg", "parquet"],
             # formats=["gpkg", "parquet"],
-            formats=["parquet"],
+            # formats=["parquet"],
         )
 
         # Archive existing files in atlas_subset directory before creating new ones
@@ -914,7 +914,7 @@ def convert_nc_summary_to_parquet(
             this_atlas_output_path,
             atlas_file_name,
             # formats=["geojson", "gpkg", "parquet"],
-            formats=["parquet"],
+            # formats=["parquet"],
         )
 
         print("\n=== PROCESSING SUMMARY ===")
