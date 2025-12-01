@@ -48,6 +48,7 @@ DATA_LEVEL_CONFIG = {
         "description": "VAP atlas summary parquet",
     },
     "hsds": {"time_hours": 24, "description": "HSDS format"},
+    "manifest": {"time_hours": 1, "description": "Global manifest (JSON)"},
 }
 
 # Location key to output_name mapping from config
@@ -149,6 +150,61 @@ def list_existing_s3_files(location_key, data_level):
                         existing_files.add(filename)
 
             # Check if there are more results
+            if response.get("IsTruncated"):
+                continuation_token = response.get("NextContinuationToken")
+            else:
+                break
+
+        print(f"   Found {len(existing_files)} existing files on S3")
+        return existing_files
+
+    except ClientError as e:
+        print(f"   Warning: Could not list S3 objects: {e}", file=sys.stderr)
+        return set()
+
+
+def list_existing_s3_manifest_files():
+    """
+    List existing manifest files on S3.
+
+    Returns:
+        Set of filenames that exist on S3
+    """
+    manifest_version = config["manifest"]["version"]
+
+    # Build S3 prefix for manifest: us-tidal/manifest/v{manifest_version}/
+    s3_prefix = f"{S3_BASE_PATH}/manifest/v{manifest_version}/"
+
+    print(f"   Listing S3 objects with prefix: s3://{S3_BUCKET}/{s3_prefix}")
+
+    try:
+        session = boto3.Session(profile_name=S3_PROFILE)
+        s3_client = session.client("s3")
+    except Exception as e:
+        print(f"   Warning: Could not create S3 client: {e}", file=sys.stderr)
+        return set()
+
+    existing_files = set()
+    continuation_token = None
+
+    try:
+        while True:
+            list_kwargs = {
+                "Bucket": S3_BUCKET,
+                "Prefix": s3_prefix,
+                "MaxKeys": 1000,
+            }
+            if continuation_token:
+                list_kwargs["ContinuationToken"] = continuation_token
+
+            response = s3_client.list_objects_v2(**list_kwargs)
+
+            if "Contents" in response:
+                for obj in response["Contents"]:
+                    filename = obj["Key"].split("/")[-1]
+                    if filename:
+                        existing_files.add(filename)
+
             if response.get("IsTruncated"):
                 continuation_token = response.get("NextContinuationToken")
             else:
@@ -322,7 +378,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 Available Locations:
-  {", ".join(LOCATION_MAP.keys())}
+  {", ".join(LOCATION_MAP.keys())}, manifest
 
 Available Data Levels:
   00_raw, a1_std, a2_std_partition, b1_vap, b1_vap_daily_compressed,
@@ -335,6 +391,9 @@ Examples:
 
   # Upload multiple data levels
   python dispatch_s3_upload_v2.py puget_sound --data-levels b1_vap hsds
+
+  # Upload global manifest (no --data-levels needed)
+  python dispatch_s3_upload_v2.py manifest
 
   # Dry run
   python dispatch_s3_upload_v2.py cook_inlet --data-levels b1_vap --dry-run
@@ -349,14 +408,13 @@ Examples:
 
     parser.add_argument(
         "location",
-        help="Location key (e.g., cook_inlet, puget_sound)",
+        help="Location key (e.g., cook_inlet, puget_sound) or 'manifest' for global manifest upload",
     )
 
     parser.add_argument(
         "--data-levels",
         nargs="+",
-        required=True,
-        help="Data level directory names (e.g., b1_vap hsds)",
+        help="Data level directory names (e.g., b1_vap hsds). Not required for 'manifest' location.",
     )
 
     parser.add_argument(
@@ -388,21 +446,46 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate location
-    if args.location not in LOCATION_MAP:
-        print(f"Error: Unknown location '{args.location}'", file=sys.stderr)
-        print(f"Available locations: {', '.join(LOCATION_MAP.keys())}", file=sys.stderr)
-        sys.exit(1)
+    # Check if this is a manifest upload (special case)
+    is_manifest_upload = args.location == "manifest"
 
-    # Validate data levels
-    for level in args.data_levels:
-        if level not in DATA_LEVEL_CONFIG:
-            print(f"Error: Unknown data level '{level}'", file=sys.stderr)
+    # Validate location and data-levels
+    if is_manifest_upload:
+        # Manifest upload: data-levels is ignored
+        if args.data_levels:
             print(
-                f"Available data levels: {', '.join(DATA_LEVEL_CONFIG.keys())}",
+                "Note: --data-levels is ignored for manifest uploads",
+                file=sys.stderr,
+            )
+        data_levels = ["manifest"]
+    else:
+        # Location-specific upload: validate location and require data-levels
+        if args.location not in LOCATION_MAP:
+            print(f"Error: Unknown location '{args.location}'", file=sys.stderr)
+            print(
+                f"Available locations: {', '.join(LOCATION_MAP.keys())}, manifest",
                 file=sys.stderr,
             )
             sys.exit(1)
+
+        if not args.data_levels:
+            print(
+                "Error: --data-levels is required for location-specific uploads",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        # Validate data levels
+        for level in args.data_levels:
+            if level not in DATA_LEVEL_CONFIG:
+                print(f"Error: Unknown data level '{level}'", file=sys.stderr)
+                print(
+                    f"Available data levels: {', '.join(DATA_LEVEL_CONFIG.keys())}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+        data_levels = args.data_levels
 
     # Create log directory
     create_log_directory()
@@ -410,8 +493,13 @@ Examples:
     print("=" * 80)
     print("S3 UPLOAD DISPATCHER v2 - Manifest-Based Upload")
     print("=" * 80)
-    print(f"Location:      {args.location} ({LOCATION_MAP[args.location]})")
-    print(f"Data levels:   {', '.join(args.data_levels)}")
+    if is_manifest_upload:
+        manifest_version = config["manifest"]["version"]
+        print("Mode:          Global manifest upload")
+        print(f"Manifest ver:  {manifest_version}")
+    else:
+        print(f"Location:      {args.location} ({LOCATION_MAP[args.location]})")
+        print(f"Data levels:   {', '.join(data_levels)}")
     print(f"Max jobs:      {MAX_SLURM_JOBS}")
     if args.skip_if_uploaded:
         print("Skip existing: Enabled (filename check)")
@@ -420,7 +508,7 @@ Examples:
     # Process each data level
     all_job_ids = []
 
-    for data_level in args.data_levels:
+    for data_level in data_levels:
         print(f"\n{'=' * 80}")
         print(f"Processing: {data_level}")
         print(f"{'=' * 80}")
@@ -442,7 +530,10 @@ Examples:
         skipped_files = 0
         if args.skip_if_uploaded:
             print("\n2. Checking for existing files on S3...")
-            existing_files = list_existing_s3_files(args.location, data_level)
+            if is_manifest_upload:
+                existing_files = list_existing_s3_manifest_files()
+            else:
+                existing_files = list_existing_s3_files(args.location, data_level)
             if existing_files:
                 skipped_files = mark_existing_files_as_skipped(
                     manifest_path, existing_files

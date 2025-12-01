@@ -14,7 +14,11 @@ from datetime import datetime
 from pathlib import Path
 
 from config import config
-from src.file_manager import get_output_dirs
+from src.file_manager import (
+    get_manifest_output_dir,
+    get_output_dirs,
+    validate_manifest_version,
+)
 
 # Data level file type and recursion configuration
 DATA_LEVEL_FILE_CONFIG = {
@@ -25,7 +29,10 @@ DATA_LEVEL_FILE_CONFIG = {
     "b1_vap_daily_compressed": {"valid_extensions": [".nc"], "should_recurse": False},
     "b2_monthly_mean_vap": {"valid_extensions": [".nc"], "should_recurse": False},
     "b3_yearly_mean_vap": {"valid_extensions": [".nc"], "should_recurse": False},
-    "b1_vap_by_point_partition": {"valid_extensions": [".parquet"], "should_recurse": True},
+    "b1_vap_by_point_partition": {
+        "valid_extensions": [".parquet"],
+        "should_recurse": True,
+    },
     "b4_vap_summary_parquet": {
         "valid_extensions": None,
         "should_recurse": True,
@@ -35,6 +42,11 @@ DATA_LEVEL_FILE_CONFIG = {
         "should_recurse": True,
     },  # All files
     "hsds": {"valid_extensions": [".h5"], "should_recurse": False},
+    "manifest": {
+        "valid_extensions": [".json"],
+        "should_recurse": True,
+        "is_global": True,  # Not location-specific
+    },
 }
 
 # Location mapping from config
@@ -69,13 +81,75 @@ def create_manifest_table(conn):
     conn.commit()
 
 
+def discover_manifest_files():
+    """
+    Discover manifest JSON files for upload.
+
+    Validates that config manifest version matches filesystem latest version,
+    then discovers all JSON files recursively.
+
+    Returns:
+        List of (local_path, relative_path, s3_destination, file_size, extension) tuples
+
+    Raises:
+        SystemExit: If manifest version mismatch between config and filesystem
+    """
+    # Validate manifest version consistency
+    try:
+        _, config_version, fs_version, manifest_dir = validate_manifest_version(config)
+        print(
+            f"Manifest version validated: {config_version} (config) = {fs_version} (filesystem)"
+        )
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Get file discovery configuration
+    file_config = DATA_LEVEL_FILE_CONFIG["manifest"]
+    valid_extensions = file_config["valid_extensions"]
+
+    # S3 destination base path: manifest/v{manifest_version}/
+    s3_base_relative_path = Path("manifest") / f"v{config_version}"
+
+    # Discover files recursively
+    print(f"Discovering files in: {manifest_dir}")
+    print(f"  Extensions: {valid_extensions if valid_extensions else 'all'}")
+    print("  Recursion: enabled")
+
+    file_records = []
+    for file_path in manifest_dir.rglob("*"):
+        if file_path.is_file():
+            if valid_extensions is None or file_path.suffix in valid_extensions:
+                relative_path = file_path.relative_to(manifest_dir)
+                s3_destination = str(s3_base_relative_path / relative_path)
+                file_size = file_path.stat().st_size
+                extension = file_path.suffix
+
+                file_records.append(
+                    (
+                        str(file_path),
+                        str(relative_path),
+                        s3_destination,
+                        file_size,
+                        extension,
+                    )
+                )
+
+    # Sort for deterministic ordering
+    file_records.sort(key=lambda x: x[0])
+
+    print(f"Found {len(file_records)} files")
+
+    return file_records
+
+
 def discover_files(location_key, data_level):
     """
     Discover all valid files for upload using versioned directories from file_manager.
 
     Args:
-        location_key: Location key (e.g., 'cook_inlet')
-        data_level: Data level directory name (e.g., 'b1_vap')
+        location_key: Location key (e.g., 'cook_inlet') - ignored for global data levels
+        data_level: Data level directory name (e.g., 'b1_vap', 'manifest')
 
     Returns:
         List of (local_path, relative_path, s3_destination, file_size, extension) tuples
@@ -89,8 +163,16 @@ def discover_files(location_key, data_level):
         )
         sys.exit(1)
 
-    # Get file discovery configuration
+    # Handle global data levels (like manifest)
     file_config = DATA_LEVEL_FILE_CONFIG[data_level]
+    if file_config.get("is_global", False):
+        if data_level == "manifest":
+            return discover_manifest_files()
+        else:
+            print(f"Error: Unknown global data level '{data_level}'", file=sys.stderr)
+            sys.exit(1)
+
+    # Get file discovery configuration for location-specific levels
     valid_extensions = file_config["valid_extensions"]
     should_recurse = file_config["should_recurse"]
 
@@ -220,35 +302,53 @@ def discover_files(location_key, data_level):
     return file_records
 
 
-def create_manifest(location_key, data_level, output_dir="cache/s3_upload"):
+def create_manifest(location_key, data_level=None, output_dir="cache/s3_upload"):
     """
     Create SQLite manifest for S3 uploads.
 
     Args:
-        location_key: Location key
-        data_level: Data level
+        location_key: Location key (e.g., 'cook_inlet') or 'manifest' for global manifest
+        data_level: Data level (ignored when location_key is 'manifest')
         output_dir: Directory to store manifest
 
     Returns:
         Path to created manifest file
     """
-    # Validate location
-    if location_key not in LOCATION_MAP:
-        print(f"Error: Unknown location '{location_key}'", file=sys.stderr)
-        print(f"Available locations: {', '.join(LOCATION_MAP.keys())}", file=sys.stderr)
-        sys.exit(1)
+    # Handle special case: location_key == "manifest"
+    is_manifest_upload = location_key == "manifest"
+
+    if is_manifest_upload:
+        # For manifest uploads, data_level is implicitly "manifest"
+        data_level = "manifest"
+    else:
+        # Validate location for non-manifest uploads
+        if location_key not in LOCATION_MAP:
+            print(f"Error: Unknown location '{location_key}'", file=sys.stderr)
+            print(
+                f"Available locations: {', '.join(LOCATION_MAP.keys())}, manifest",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     # Create output directory
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
     # Generate manifest filename
-    output_name = LOCATION_MAP[location_key]
-    version = config["dataset"]["version"].replace(".", "_")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    manifest_file = (
-        output_path / f"manifest_{output_name}_{version}_{data_level}_{timestamp}.db"
-    )
+    if is_manifest_upload:
+        manifest_version = config["manifest"]["version"].replace(".", "_")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        manifest_file = (
+            output_path / f"manifest_global_v{manifest_version}_{timestamp}.db"
+        )
+    else:
+        output_name = LOCATION_MAP[location_key]
+        version = config["dataset"]["version"].replace(".", "_")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        manifest_file = (
+            output_path
+            / f"manifest_{output_name}_{version}_{data_level}_{timestamp}.db"
+        )
 
     print(f"\nCreating manifest: {manifest_file}")
 
