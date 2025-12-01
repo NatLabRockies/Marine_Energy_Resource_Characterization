@@ -2,7 +2,7 @@
 #SBATCH --account=hindcastra
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=andrew.simms@nrel.gov
-#SBATCH --output=cache/s3_delete/logs/s3_delete_%A_%a.out
+#SBATCH --output=s3_delete_%A_%a.out
 #SBATCH --job-name=s3_delete
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
