@@ -20,6 +20,7 @@ Output Structure:
 
 Usage:
     python generate_parquet_partition_manifest_json.py
+    python generate_parquet_partition_manifest_json.py --rebuild  # Clear existing manifest and start fresh
 
 The manifest is designed to be self-contained so that client libraries in any language can:
 1. Download the manifest
@@ -27,8 +28,10 @@ The manifest is designed to be self-contained so that client libraries in any la
 3. Query a point and reconstruct the path to the parquet file
 """
 
+import argparse
 import json
 import re
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -943,7 +946,18 @@ def main():
     - Preserves version history for each location
     - Self-documenting schema embedded in manifest
     - Versioned grid detail files
+    - Use --rebuild to clear existing manifest and start fresh
     """
+    parser = argparse.ArgumentParser(
+        description="Generate parquet partition manifest for spatial queries"
+    )
+    parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="Clear existing manifest files and grids directory, then rebuild from scratch",
+    )
+    args = parser.parse_args()
+
     print("=" * 80)
     print("Compact Parquet Partition Manifest Generation (Spec v2.0.0)")
     print("=" * 80)
@@ -955,13 +969,28 @@ def main():
 
     print(f"\nOutput directory: {output_dir}")
 
-    # Check for existing manifest to preserve version history
-    print("\nChecking for existing manifest...")
-    existing_manifest = load_existing_manifest(output_dir)
-    if existing_manifest:
-        print("  Will merge version history from existing manifest")
+    # Handle --rebuild flag
+    if args.rebuild:
+        print("\n--rebuild flag set: Clearing existing manifest files...")
+        # Remove existing manifest JSON files
+        for old_manifest in output_dir.glob("manifest_*.json"):
+            print(f"  Removing: {old_manifest.name}")
+            old_manifest.unlink()
+        # Remove grids directory
+        grids_dir = output_dir / "grids"
+        if grids_dir.exists():
+            print(f"  Removing grids directory: {grids_dir}")
+            shutil.rmtree(grids_dir)
+        print("  Existing manifest cleared, rebuilding from scratch")
+        existing_manifest = None
     else:
-        print("  No existing manifest found, starting fresh")
+        # Check for existing manifest to preserve version history
+        print("\nChecking for existing manifest...")
+        existing_manifest = load_existing_manifest(output_dir)
+        if existing_manifest:
+            print("  Will merge version history from existing manifest")
+        else:
+            print("  No existing manifest found, starting fresh")
 
     # Generate compact manifest
     manifest = generate_compact_manifest(config, output_dir, existing_manifest)
