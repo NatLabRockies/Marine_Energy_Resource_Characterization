@@ -34,17 +34,17 @@ DATA_LEVEL_CONFIG = {
         "description": "Compressed VAP (daily)",
     },
     "b2_monthly_mean_vap": {
-        "time_hours": 6,
+        "time_hours": 1,
         "description": "Monthly mean VAP",
     },
-    "b3_yearly_mean_vap": {"time_hours": 6, "description": "Yearly mean VAP"},
+    "b3_yearly_mean_vap": {"time_hours": 1, "description": "Yearly mean VAP"},
     "b1_vap_by_point_partition": {"time_hours": 6, "description": "VAP partition"},
     "b4_vap_summary_parquet": {
-        "time_hours": 6,
+        "time_hours": 1,
         "description": "VAP summary parquet",
     },
     "b5_vap_atlas_summary_parquet": {
-        "time_hours": 6,
+        "time_hours": 1,
         "description": "VAP atlas summary parquet",
     },
     "hsds": {"time_hours": 24, "description": "HSDS format"},
