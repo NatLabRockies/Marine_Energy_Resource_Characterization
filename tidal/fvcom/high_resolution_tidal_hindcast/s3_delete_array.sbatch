@@ -7,7 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=shared
-#SBATCH --time=1:00:00
+#SBATCH --time=2:00:00
 #SBATCH --mem=4GB
 
 # SLURM array job for S3 deletions

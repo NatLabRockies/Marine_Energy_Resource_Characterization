@@ -40,8 +40,8 @@ from upload_to_s3 import S3_BASE_PATH, S3_BUCKET, S3_PROFILE
 # Default configuration
 DEFAULT_WORKERS = 16
 SLURM_THRESHOLD = 10_000  # Use SLURM for >10k files
-MAX_SLURM_JOBS = 500
-FILES_PER_SLURM_JOB = 1000  # Delete 1000 files per SLURM task
+MAX_SLURM_JOBS = 100  # Fewer concurrent jobs to avoid S3 rate limiting
+FILES_PER_SLURM_JOB = 5000  # More files per job for reliability
 
 # Rate limiting configuration
 MAX_RETRIES = 8  # Max retry attempts per batch
@@ -330,7 +330,7 @@ def submit_slurm_delete_job(
         "--parsable",
         f"--array=0-{num_jobs - 1}",
         f"--export={','.join(export_vars)}",
-        "--time=1:00:00",
+        "--time=2:00:00",
         "s3_delete_array.sbatch",
     ]
 
