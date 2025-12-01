@@ -707,6 +707,7 @@ def convert_nc_summary_to_parquet(
             temporal="year_average",
             ext="parquet",
             static_time=date_time_parts,
+            version=config["dataset"]["version"],
         )
 
         print(f"Saving individual parquet: {output_filename}")
@@ -756,6 +757,7 @@ def convert_nc_summary_to_parquet(
                 temporal="year_average",
                 ext="parquet",
                 static_time=date_time_parts,
+                version=config["dataset"]["version"],
             )
         )
 
