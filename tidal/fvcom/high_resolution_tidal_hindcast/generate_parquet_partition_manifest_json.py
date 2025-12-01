@@ -971,7 +971,7 @@ def main():
 
     # Handle --rebuild flag
     if args.rebuild:
-        print("\n--rebuild flag set: Clearing existing manifest files...")
+        print("\n--rebuild flag set: Clearing existing manifest and cache files...")
         # Remove existing manifest JSON files
         for old_manifest in output_dir.glob("manifest_*.json"):
             print(f"  Removing: {old_manifest.name}")
@@ -981,7 +981,16 @@ def main():
         if grids_dir.exists():
             print(f"  Removing grids directory: {grids_dir}")
             shutil.rmtree(grids_dir)
-        print("  Existing manifest cleared, rebuilding from scratch")
+        # Remove cache files (they may contain stale paths from old directory structure)
+        cache_dir = Path.cwd() / "cache"
+        if cache_dir.exists():
+            cache_files = list(cache_dir.glob("*_file_list.*.parquet"))
+            if cache_files:
+                print(f"  Removing {len(cache_files)} cache files from: {cache_dir}")
+                for cache_file in cache_files:
+                    print(f"    Removing: {cache_file.name}")
+                    cache_file.unlink()
+        print("  Existing manifest and cache cleared, rebuilding from scratch")
         existing_manifest = None
     else:
         # Check for existing manifest to preserve version history
