@@ -65,7 +65,7 @@ def calculate_md5(file_path, chunk_size=8192 * 1024):
     return md5_hash.hexdigest()
 
 
-def calculate_s3_etag(file_path, part_size):
+def calculate_s3_etag(file_path, part_size, multipart_threshold=None):
     """
     Calculate S3 ETag for multipart uploads.
 
@@ -74,10 +74,17 @@ def calculate_s3_etag(file_path, part_size):
     Args:
         file_path: Path to the file
         part_size: Size of each part in bytes (must match upload config)
+        multipart_threshold: Size threshold that triggers multipart upload.
+            If file size > threshold, multipart ETag format is used even for 1 part.
+            If None, uses part_size as the threshold (legacy behavior).
 
     Returns:
         Expected S3 ETag string (e.g., "abc123-5" for 5 parts)
     """
+    if multipart_threshold is None:
+        multipart_threshold = part_size
+
+    file_size = os.path.getsize(file_path)
     md5_digests = []
 
     with open(file_path, "rb") as f:
@@ -87,14 +94,19 @@ def calculate_s3_etag(file_path, part_size):
                 break
             md5_digests.append(hashlib.md5(chunk).digest())
 
-    if len(md5_digests) == 1:
-        # Single part upload - just return the MD5
-        return md5_digests[0].hex()
-    else:
+    # Use multipart format if:
+    # 1. Multiple parts, OR
+    # 2. File size exceeds multipart threshold (boto3 uses multipart protocol)
+    use_multipart_format = len(md5_digests) > 1 or file_size > multipart_threshold
+
+    if use_multipart_format:
         # Multipart upload - combine all part MD5s
         combined = b"".join(md5_digests)
         multipart_md5 = hashlib.md5(combined).hexdigest()
         return f"{multipart_md5}-{len(md5_digests)}"
+    else:
+        # True single-part upload - just return the MD5
+        return md5_digests[0].hex()
 
 
 def s3_file_exists(s3_client, bucket, key):
@@ -212,8 +224,12 @@ def upload_file(
 
     if verify_checksum:
         print("\nCalculating expected S3 ETag...")
-        # Use multipart chunk size to match what S3 will compute
-        expected_etag = calculate_s3_etag(local_file, TRANSFER_CONFIG.multipart_chunksize)
+        # Use multipart chunk size and threshold to match what S3 will compute
+        expected_etag = calculate_s3_etag(
+            local_file,
+            TRANSFER_CONFIG.multipart_chunksize,
+            TRANSFER_CONFIG.multipart_threshold,
+        )
 
         if "-" in expected_etag:
             print(f"Expected ETag: {expected_etag} (multipart)")
@@ -224,7 +240,9 @@ def upload_file(
     print("\nUploading file to S3...")
     if file_size_bytes > TRANSFER_CONFIG.multipart_threshold:
         num_parts = file_size_bytes // TRANSFER_CONFIG.multipart_chunksize + 1
-        print(f"Using multipart upload (~{num_parts} parts, {TRANSFER_CONFIG.max_concurrency} concurrent)")
+        print(
+            f"Using multipart upload (~{num_parts} parts, {TRANSFER_CONFIG.max_concurrency} concurrent)"
+        )
     try:
         s3_client.upload_file(local_file, S3_BUCKET, s3_key, Config=TRANSFER_CONFIG)
         print("Upload successful!")

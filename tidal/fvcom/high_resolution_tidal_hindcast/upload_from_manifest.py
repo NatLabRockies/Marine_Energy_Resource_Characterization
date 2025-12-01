@@ -193,7 +193,9 @@ def upload_single_file(s3_client, local_path, s3_destination, verify_checksum=Tr
     if verify_checksum:
         print("  Calculating ETag...")
         expected_etag = calculate_s3_etag(
-            local_path, TRANSFER_CONFIG.multipart_chunksize
+            local_path,
+            TRANSFER_CONFIG.multipart_chunksize,
+            TRANSFER_CONFIG.multipart_threshold,
         )
 
     # Upload file
