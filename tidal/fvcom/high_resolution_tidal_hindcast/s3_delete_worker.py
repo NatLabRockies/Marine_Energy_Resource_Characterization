@@ -32,7 +32,7 @@ MAX_RETRIES = 8  # Max retry attempts per batch
 BASE_DELAY = 1.0  # Base delay in seconds for exponential backoff
 MAX_DELAY = 120.0  # Maximum delay between retries (2 minutes)
 BATCH_DELAY = 0.5  # Delay between successful batches (seconds)
-STARTUP_JITTER_MAX = 60  # Max random startup delay (seconds) - spreads 100 jobs over 1 min
+STARTUP_JITTER_MAX = 300  # Max random startup delay (5 min) - spreads 100 jobs to avoid S3 rate limits
 
 
 def load_manifest(manifest_path: str) -> dict:
