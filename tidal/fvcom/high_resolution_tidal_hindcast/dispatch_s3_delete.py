@@ -25,8 +25,10 @@ Examples:
 import argparse
 import json
 import math
+import random
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -40,6 +42,12 @@ DEFAULT_WORKERS = 16
 SLURM_THRESHOLD = 10_000  # Use SLURM for >10k files
 MAX_SLURM_JOBS = 500
 FILES_PER_SLURM_JOB = 1000  # Delete 1000 files per SLURM task
+
+# Rate limiting configuration
+MAX_RETRIES = 8  # Max retry attempts per batch
+BASE_DELAY = 1.0  # Base delay in seconds for exponential backoff
+MAX_DELAY = 120.0  # Maximum delay between retries (2 minutes)
+BATCH_DELAY = 0.2  # Delay between successful batches (seconds)
 
 
 def get_s3_client():
@@ -110,9 +118,66 @@ def delete_single_object(s3_client, key: str) -> tuple[str, bool, str]:
         return (key, False, str(e))
 
 
+def is_retryable_error(error: ClientError) -> bool:
+    """Check if an S3 error is retryable (rate limiting or transient)."""
+    error_code = error.response.get("Error", {}).get("Code", "")
+    return error_code in ("SlowDown", "ServiceUnavailable", "InternalError")
+
+
+def delete_single_batch_with_retry(
+    s3_client, batch: list[str]
+) -> tuple[int, int, list[str]]:
+    """
+    Delete a single batch (up to 1000 keys) with exponential backoff retry.
+
+    Args:
+        s3_client: Boto3 S3 client
+        batch: List of S3 object keys to delete (max 1000)
+
+    Returns:
+        Tuple of (success_count, error_count, error_messages)
+    """
+    delete_request = {"Objects": [{"Key": k} for k in batch], "Quiet": True}
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = s3_client.delete_objects(Bucket=S3_BUCKET, Delete=delete_request)
+
+            # Quiet mode only returns errors
+            if "Errors" in response:
+                error_count = len(response["Errors"])
+                success_count = len(batch) - error_count
+                errors = [
+                    f"{err['Key']}: {err['Message']}" for err in response["Errors"]
+                ]
+                return success_count, error_count, errors
+            else:
+                return len(batch), 0, []
+
+        except ClientError as e:
+            if is_retryable_error(e) and attempt < MAX_RETRIES - 1:
+                # Exponential backoff with jitter
+                delay = min(BASE_DELAY * (2**attempt) + random.uniform(0, 1), MAX_DELAY)
+                print(
+                    f"    Rate limited, retrying in {delay:.1f}s "
+                    f"(attempt {attempt + 1}/{MAX_RETRIES})"
+                )
+                time.sleep(delay)
+            else:
+                # Non-retryable error or max retries exceeded
+                return (
+                    0,
+                    len(batch),
+                    [f"Batch delete failed after {attempt + 1} attempts: {e}"],
+                )
+
+    # Should not reach here, but just in case
+    return 0, len(batch), ["Max retries exceeded"]
+
+
 def delete_objects_batch(s3_client, keys: list[str]) -> tuple[int, int, list[str]]:
     """
-    Delete a batch of S3 objects using delete_objects API (up to 1000 at a time).
+    Delete a batch of S3 objects using delete_objects API with retry logic.
 
     Args:
         s3_client: Boto3 S3 client
@@ -128,23 +193,18 @@ def delete_objects_batch(s3_client, keys: list[str]) -> tuple[int, int, list[str
     # S3 delete_objects can handle up to 1000 objects per call
     for i in range(0, len(keys), 1000):
         batch = keys[i : i + 1000]
-        delete_request = {"Objects": [{"Key": k} for k in batch], "Quiet": True}
 
-        try:
-            response = s3_client.delete_objects(Bucket=S3_BUCKET, Delete=delete_request)
+        batch_success, batch_errors, batch_msgs = delete_single_batch_with_retry(
+            s3_client, batch
+        )
 
-            # Count errors (Quiet mode only returns errors)
-            if "Errors" in response:
-                for err in response["Errors"]:
-                    error_count += 1
-                    errors.append(f"{err['Key']}: {err['Message']}")
-                success_count += len(batch) - len(response["Errors"])
-            else:
-                success_count += len(batch)
+        success_count += batch_success
+        error_count += batch_errors
+        errors.extend(batch_msgs)
 
-        except ClientError as e:
-            error_count += len(batch)
-            errors.append(f"Batch delete failed: {e}")
+        # Small delay between batches to avoid overwhelming S3
+        if i + 1000 < len(keys):
+            time.sleep(BATCH_DELAY)
 
     return success_count, error_count, errors
 
