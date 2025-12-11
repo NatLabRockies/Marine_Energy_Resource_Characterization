@@ -62,9 +62,9 @@ locations. The project represents a collaborative effort between the [Pacific No
 Laboratory][pnnl_resource_char] (PNNL) (data generation) and the [National Renewable Energy
 Laboratory][nrel_resource_char] (data processing and visualization), to generate, standardize, and
 summarize original high resolution tidal data into accessible resource data for tidal resource
-characterization. Complete standardized and summarized datasets can downloaded from [Amazon Web
-Services Open Data Registry][aws_tidal_docs], and summary data is visualized on the [Marine Energy
-Atlas][me_atlas].
+characterization. Complete standardized and summarized datasets can downloaded from the
+[AWS S3 Open Energy Data Initiative Marine Energy Data Lake][aws_tidal_data], 
+and summary data is visualized on the [Marine Energy Atlas][me_atlas].
 
 # Versions
 
@@ -1449,7 +1449,7 @@ utilizing this data user agrees to credit DOE/PNNL/NREL/BATTELLE/ALLIANCE in
 any such publication consistent with respective professional practice.
 
 
-[aws_tidal_docs]: https://registry.opendata.aws/wpto-pds-us-tidal/
+[aws_tidal_data]: https://data.openei.org/s3_viewer?bucket=marine-energy-data
 [me_atlas]: https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged
 [wpto_resource_char]: https://www.energy.gov/eere/water/marine-energy-resource-assessment-and-characterization
 [pnnl_resource_char]: https://www.pnnl.gov/marine-energy-resource-characterization
