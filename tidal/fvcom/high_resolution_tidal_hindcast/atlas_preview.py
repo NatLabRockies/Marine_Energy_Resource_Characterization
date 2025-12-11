@@ -399,7 +399,7 @@ VIZ_SPECS = {
 def get_available_regions():
     """Get list of available regions based on directory structure"""
     # Directories to exclude (not actual regions)
-    exclude_dirs = {"all_locations_combined_gis", "hsds", "manifests"}
+    exclude_dirs = {"all_locations_combined_gis", "hsds", "manifest", "manifests"}
     return sorted(
         [
             d.name
