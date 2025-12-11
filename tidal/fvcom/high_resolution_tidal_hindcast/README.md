@@ -1,6 +1,6 @@
 # WPTO High Resolution Tidal Hindcast
 
-2025-06-24
+2025-12-11
 
 - [<span class="toc-section-number">1</span> Overview](#overview)
 - [<span class="toc-section-number">2</span> Versions](#versions)
@@ -51,18 +51,18 @@ Laboratory](https://www.nrel.gov/water/resource-characterization) (data
 processing and visualization), to generate, standardize, and summarize
 original high resolution tidal data into accessible resource data for
 tidal resource characterization. Complete standardized and summarized
-datasets can downloaded from [Amazon Web Services Open Data
-Registry](https://registry.opendata.aws/wpto-pds-us-tidal/), and summary
-data is visualized on the [Marine Energy
+datasets can downloaded from the [AWS S3 Open Energy Data Initiative
+Marine Energy Data
+Lake](https://data.openei.org/s3_viewer?bucket=marine-energy-data), and
+summary data is visualized on the [Marine Energy
 Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged).
 
 # Versions
 
-| Asset                             | Status         | Version |
-|-----------------------------------|----------------|---------|
-| Processing Code (This Repository) | In Development | 0.3.0   |
-| Public Dataset                    | Not Released   | 0.3.0   |
-| Working Dataset                   | In Development | 0.4.0   |
+| Asset                             | Status    | Version |
+|-----------------------------------|-----------|---------|
+| Processing Code (This Repository) | In Review | 1.0.0   |
+| Public Dataset                    | Released  | 1.0.0   |
 
 # Tidal Data Overview
 
@@ -354,17 +354,23 @@ Table 8: High Resolution Tidal Hindcast Time Specification
 | Type | Data Level | Name | Kestrel Path |
 |:---|:---|:---|:---|
 | Input | 00 | Original | `<location>/00_raw` |
-| Output | A1 | Standardized | `<location>/a1_std` |
-| Output | A2 | Standardized Partition | `<location>/a2_std_partition` |
-| Output | B1 | Vap | `<location>/b1_vap` |
-| Output | B2 | Monthly Summary Vap | `<location>/b2_monthly_mean_vap` |
-| Output | B3 | Yearly Summary Vap | `<location>/b3_yearly_mean_vap` |
-| Output | B4 | Vap Partition | `<location>/b4_vap_partition` |
-| Output | B5 | Vap Summary Parquet | `<location>/b5_vap_summary_parquet` |
-| Output | B6 | Vap Atlas Summary Parquet | `<location>/b6_vap_atlas_summary_parquet` |
-| Output | Time | Tracking | `<location>/metadata/time_validation_and_tracking` |
-| Output | Dataset | Attributes | `<location>/metadata/dataset_attributes` |
-| Output | Sha | Sha 256 | `<location>/metadata/sha_256` |
+| Output | A1 | Standardized | `<location>/<version>/a1_std` |
+| Output | A2 | Standardized Partition | `<location>/<version>/a2_std_partition` |
+| Output | B1 | Vap | `<location>/<version>/b1_vap` |
+| Output | B1 | Vap Daily Compressed | `<location>/<version>/b1_vap_daily_compressed` |
+| Output | B1 | Vap Partition | `<location>/<version>/b1_vap_by_point_partition` |
+| Output | B2 | Monthly Summary Vap | `<location>/<version>/b2_monthly_mean_vap` |
+| Output | B3 | Yearly Summary Vap | `<location>/<version>/b3_yearly_mean_vap` |
+| Output | By | Yearly Summary Vap By Face | `<location>/<version>/b3_yearly_mean_vap/by_face` |
+| Output | B4 | Vap Summary Parquet | `<location>/<version>/b4_vap_summary_parquet` |
+| Output | B5 | Vap Atlas Summary Parquet | `<location>/<version>/b5_vap_atlas_summary_parquet` |
+| Output | <Version> | Combined Vap Atlas | `all_locations_combined_gis/<version>` |
+| Output | Hsds | Hsds | `<location>/<version>/hsds` |
+| Output | Individual | Hsds Temp | `<location>/<version>/hsds/individual_temp_files` |
+| Output | Shared | Tracking | `<location>/<version>/metadata/shared` |
+| Output | Dataset | Attributes | `<location>/<version>/metadata/dataset_attributes` |
+| Output | Sha | Sha 256 | `<location>/<version>/metadata/sha_256` |
+| Output | V\<Manifest | Manifest | `manifest/v<manifest_version>` |
 
 </div>
 
@@ -1158,7 +1164,7 @@ sbatch runner_cook_inlet.sbatch
 |:---|:---|:---|
 | Conventions | Conventions | CF-1.10, ACDD-1.3, ME Data Pipeline-1.0 |
 | Acknowledgement | acknowledgement | This work was funded by the U.S. Department of Energy, Office of Energy Efficiency & Renewable Energy, Water Power Technologies Office. The authors gratefully acknowledge project support from Heather Spence and Jim McNally (U.S. Department of Energy Water Power Technologies Office) and Mary Serafin (National Renewable Energy Laboratory). Technical guidance was provided by Levi Kilcher, Caroline Draxl, and Katie Peterson (National Renewable Energy Laboratory). |
-| Citation | citation | \[“Yang, Zhaoqing, Mithun Deb, Taiping Wang, Preston Spicer, Andrew Simms, Ethan Young, and Mike Lawson. 2025. ‘High Resolution Tidal Hindcast’.”\] |
+| Citation | citation | Yang, Zhaoqing, Mithun Deb, Taiping Wang, Preston Spicer, Andrew Simms, Ethan Young, and Mike Lawson. 2025. ‘High Resolution Tidal Hindcast’. |
 | Creator Country | creator_country | USA |
 | Creator Email | creator_email | zhaoqing.yang@pnnl.gov |
 | Creator Institution | creator_institution | Pacific Northwest National Laboratory (PNNL) |
@@ -1167,8 +1173,8 @@ sbatch runner_cook_inlet.sbatch
 | Creator Sector | creator_sector | gov_federal |
 | Creator State | creator_state | Washington |
 | Creator Type | creator_type | institution |
-| Creator Url | creator_url | https://www.pnnl.gov/ |
-| Contributor Name | contributor_name | Mithun Deb, Preston Spicer, Taiping Wang, Levi Kilcher, Kevin Haas, Andrew Simms, Ethan Young, Mike Lawson |
+| Creator Url | creator_url | https://www.pnnl.gov/projects/ocean-dynamics-modeling/tidal-energy |
+| Contributor Name | contributor_name | Mithun Deb, Preston Spicer, Taiping Wang, Levi Kilcher, Kevin Haas, Andrew Simms, Ethan Young, Michael Lawson |
 | Contributor Role | contributor_role | author, author, author, author, author, processor, processor, publisher |
 | Contributor Role Vocabulary | contributor_role_vocabulary | https://vocab.nerc.ac.uk/collection/G04/current/ |
 | Contributor Url | contributor_url | https://www.pnnl.gov, www.nrel.gov |
@@ -1177,12 +1183,11 @@ sbatch runner_cook_inlet.sbatch
 | Keywords | keywords | OCEAN TIDES, TIDAL ENERGY, VELOCITY, SPEED, DIRECTION, POWER DENSITY |
 | License | license | Freely Distributed |
 | Naming Authority | naming_authority | gov.nrel.water_power |
-| Metadata Link | metadata_link | https://www.github.com/nrel/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast |
 | Program | program | U.S. Department of Energy (DOE) Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) Marine Energy Resource Assessment and Characterization |
 | Project | project | High Resolution Tidal Hindcast |
 | Publisher Country | publisher_country | USA |
 | Publisher Email | publisher_email | michael.lawson@nrel.gov |
-| Publisher Institution | publisher_institution | Pacific Northwest National Laboratory (PNNL) |
+| Publisher Institution | publisher_institution | National Renewable Energy Laboratory (NREL) |
 | Publisher Name | publisher_name | Michael Lawson |
 | Publisher State | publisher_state | Colorado |
 | Publisher Type | publisher_type | institution |
