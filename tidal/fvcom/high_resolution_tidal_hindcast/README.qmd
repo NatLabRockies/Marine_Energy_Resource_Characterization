@@ -68,11 +68,10 @@ and summary data is visualized on the [Marine Energy Atlas][me_atlas].
 
 # Versions
 
-| Asset                             | Status         | Version                           |
-| ---                               | ---            | ---                               |
-| Processing Code (This Repository) | In Development | `{python} code['version']`        |
-| Public Dataset                    | Not Released   | `{python} dataset['version']`     |
-| Working Dataset                   | In Development | `{python} dataset['dev_version']` |
+| Asset                             | Status    | Version                       |
+| ---                               | ---       | ---                           |
+| Processing Code (This Repository) | In Review | `{python} code['version']`    |
+| Public Dataset                    | Released  | `{python} dataset['version']` |
 
 # Tidal Data Overview
 
