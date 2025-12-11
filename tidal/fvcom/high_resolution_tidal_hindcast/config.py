@@ -63,7 +63,7 @@ config = {
         # Derived URIs (computed at runtime)
         "s3_base_uri": None,  # s3://{bucket}/{prefix}
         "s3_manifest_uri": None,  # s3://{bucket}/{prefix}/manifest/{version}/manifest_{version}.json
-        # HPC base path for local file access on NREL Kestrel
+        # HPC base path for local file access on NLR Kestrel
         # This is derived from config["dir"]["base"] at runtime
         "hpc_base_path": None,
     },
@@ -838,8 +838,8 @@ Elhwa2 ;
         "Energy Efficiency & Renewable Energy, Water Power Technologies Office. The authors "
         "gratefully acknowledge project support from Heather Spence and Jim McNally (U.S. "
         "Department of Energy Water Power Technologies Office) and Mary Serafin (National "
-        "Renewable Energy Laboratory). Technical guidance was provided by Levi Kilcher, Caroline Draxl, "
-        "and Katie Peterson (National Renewable Energy Laboratory).",
+        "Laboratory of the Rockies). Technical guidance was provided by Levi Kilcher, Caroline Draxl, "
+        "and Katie Peterson (National Laboratory of the Rockies).",
         "citation": format_references(["mhkdr_submission"]),
         # Source: IOOS
         # Country of the person or organization that operates a platform or network,
@@ -989,11 +989,11 @@ Elhwa2 ;
         "comment": None,
         # Source: ACDD
         # A URL that gives the location of more complete metadata.
-        # "metadata_link": "https://www.github.com/nrel/marine_energy_resource_characterization/",
+        # "metadata_link": "https://www.github.com/nlr/marine_energy_resource_characterization/",
         "metadata_link": None,
         # Source: ACDD
         # The overarching program(s) of which the dataset is a part.
-        "program": "U.S. Department of Energy (DOE) Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) Marine Energy Resource Assessment and Characterization",
+        "program": "U.S. Department of Energy (DOE) Water Power Technologies Office (WPTO) Marine Energy Resource Assessment and Characterization",
         # Source: ACDD
         # The name of the project(s) principally responsible for originating
         # this data.
@@ -1011,7 +1011,7 @@ Elhwa2 ;
         "publisher_email": "michael.lawson@nrel.gov",
         # Source: ACDD, IOOS
         # The institution of the publisher.
-        "publisher_institution": "National Renewable Energy Laboratory (NREL)",
+        "publisher_institution": "National Laboratory of the Rockies (NLR)",
         # Source: ACDD
         # The name of the person responsible for publishing the data file or
         # product to users.

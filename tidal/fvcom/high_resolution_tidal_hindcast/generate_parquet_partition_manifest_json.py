@@ -636,7 +636,7 @@ def build_manifest_schema():
             "s3_prefix": "S3 key prefix path within the bucket",
             "s3_base_uri": "Full S3 URI base path for data files (s3://{bucket}/{prefix})",
             "s3_manifest_base_uri": "S3 URI directory where manifest versions are stored",
-            "hpc_base_path": "Absolute filesystem path for HPC local access (NREL Kestrel)",
+            "hpc_base_path": "Absolute filesystem path for HPC local access (NLR Kestrel)",
         },
         "partition": {
             "_description": "Spatial partitioning configuration for parquet files",

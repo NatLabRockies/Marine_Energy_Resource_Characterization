@@ -242,9 +242,7 @@ def compute_geospatial_bounds(ds, config, location, crs_string=None):
     # - Extracting boundary from triangular mesh
     # - IDL normalization for Aleutian Islands
     # - Caching results
-    return gis_boundary_manager.compute_mesh_boundary(
-        ds, config, location, crs_string
-    )
+    return gis_boundary_manager.compute_mesh_boundary(ds, config, location, crs_string)
 
 
 def convert_fvcom_history_to_iso_datetime(history_string: str) -> str:
@@ -667,6 +665,7 @@ def standardize_dataset_global_attrs(
     # This keeps the lengthy polygon string out of the attribute noise
     print("Adding mesh boundary WKT variable...")
     import xarray as xr
+
     ds["meta_mesh_exterior_boundary_wkt"] = xr.DataArray(
         geospatial_bounds["geospatial_bounds"],
         attrs={
@@ -679,7 +678,7 @@ def standardize_dataset_global_attrs(
             "format": "OGC Well-Known Text (WKT)",
             "geometry_type": "POLYGON",
             "crs": geospatial_bounds["geospatial_bounds_crs"],
-        }
+        },
     )
 
     print("Computing modification dates...")
@@ -803,16 +802,16 @@ def standardize_dataset_global_attrs(
         #     f"""
         # High Resolution Tidal Hindcast (US_tidal) dataset for {location["label"]}, a strategically selected U.S. coastal location
         # with significant tidal energy potential, part of the standardized US Tidal hindcast dataset. Funded by the
-        # U.S. Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO)
+        # U.S. Department of Energy, Water Power Technologies Office (WPTO)
         # Marine Energy Resource Assessment and Characterization project and developed by Pacific Northwest National Laboratory (PNNL)
-        # and National Renewable Energy Laboratory (NREL) following IEC TC 114 best practices.
+        # and National Laboratory of the Rockies (NLR) following IEC TC 114 best practices.
         # This dataset contains 1 year ({location["start_date_utc"]} to {location["end_date_utc"]}) of {location["temporal_resolution"]}
         # resolved eastward sea water velocity (u) [m/s], northward sea water velocity (v) [m/s], surface elevation [m] from NAVD88,
         # and calculated values including sea water speed [m/s], sea water velocity to direction [deg clockwise from true north], power density [W/m²],
         # layer depths [m] below surface, and total depth [m] from surface across 10 vertical sigma layers.
         # PNNL used {config["model_specification"]["model_version"]}, a finite volume coastal ocean model, to generate data and
         # validated data against available Acoustic Doppler Current Profiler (ADCP) measurements as described in
-        # {location["citation"]}. NREL performed data standardization, documentation, and publication using its Kestrel
+        # {location["citation"]}. NLR performed data standardization, documentation, and publication using its Kestrel
         # HPC to produce full fidelity and summarized data products using software available at {code_metadata["code_url"]}.
         # The model uses an unstructured triangular 3d layered mesh topology with 10 vertical coordinate (sigma) layers that adjust dynamically with
         # tides. Model results are computed at volume centroids with coordinates in WGS84 (EPSG:4326) format. Boundary
@@ -836,7 +835,7 @@ triangular mesh topology. The model employs 10 terrain-following sigma coordinat
 where layer thickness varies proportionally to total water depth. Model outputs are computed at volume centroids that use WGS84 (EPSG:4326)
 to define the X and Y coordinates and Z coordinates are calculated relative to NAVD88. Boundary conditions incorporate 12 tidal constituents from the OSU TPXO global tide model. {forcing_config["description_text"]}
 Model validation against available Acoustic Doppler Current Profiler (ADCP) measurements is documented in {location["citation"]}
-The National Renewable Energy Laboratory performed data standardization, quality control, and publication using Kestrel HPC resources and
+The National Laboratory of the Rockies performed data standardization, quality control, and publication using Kestrel HPC resources and
 software available at {code_metadata["code_url"]}. This dataset meets Stage 1 requirements* defined by IEC TS 62600-201:2015
 for investigating the scale and attributes of the tidal energy resource to assess the feasibility of constructing tidal energy arrays,
 with spatial resolution predominantly under 500 meters in areas of significant tidal energy potential. *Stage 1 compliance applies where
@@ -1028,9 +1027,9 @@ grid resolution is under 500 meters, predominantly in areas of significant tidal
         # "summary": textwrap.fill(
         #     f"""
         # High Resolution Tidal Hindcast dataset for {location["label"]}, part of the standardized US Tidal hindcast
-        # dataset funded by the U.S. Department of Energy, Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO)
+        # dataset funded by the U.S. Department of Energy, Water Power Technologies Office (WPTO)
         # Marine Energy Resource Assessment and Characterization project and developed by Pacific Northwest National Laboratory (PNNL)
-        # and National Renewable Energy Laboratory (NREL). This dataset
+        # and National Laboratory of the Rockies (NLR). This dataset
         # supports theoretical and technical resource potential assessments, providing foundational data for practical
         # assessments that incorporate engineering, economic, environmental, and regulatory constraints. Designed to meet IEC 62600-201
         # Stage 1 standards, this publicly accessible dataset supports commercial development, policy analysis, environmental
@@ -1046,7 +1045,7 @@ grid resolution is under 500 meters, predominantly in areas of significant tidal
         "summary": textwrap.fill(
             f"""
 High-resolution tidal energy resource hindcast for {location["label"]}, developed by Pacific Northwest National Laboratory (PNNL)
-and National Renewable Energy Laboratory (NREL) under the U.S. Department of Energy Water Power Technologies Office Marine Energy
+and National Laboratory of the Rockies (NLR) under the U.S. Department of Energy Water Power Technologies Office Marine Energy
 Resource Assessment and Characterization project. Provides one year ({location["start_date_utc"]} to {location["end_date_utc"]}) of
 {location["temporal_resolution"]} three-dimensional hindcast model results including velocity components (u, v) [m/s], surface
 elevation [m] from NAVD88, and derived quantities (speed, direction, power density) across 10 depth layers spanning the water column.

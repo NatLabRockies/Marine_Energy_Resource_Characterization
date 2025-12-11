@@ -13,7 +13,7 @@ def create_hsds_tidal_dataset(
     input_path, output_path, timezone_offset, jurisdiction, include_vars=None
 ):
     """
-    Convert monthly tidal fvcom b1 NC files to single H5 file following NREL HDF5 spec
+    Convert monthly tidal fvcom b1 NC files to single H5 file following NLR HDF5 spec
 
     Parameters:
     - input_path: Directory containing monthly NC files
@@ -42,7 +42,7 @@ def create_hsds_tidal_dataset(
         f"Dataset structure: {n_faces} faces, {n_sigma} sigma layers, {total_time_steps} total time steps"
     )
 
-    # Step 2: Create metadata table (required by NREL spec)
+    # Step 2: Create metadata table (required by NLR spec)
     print("Step 2: Creating metadata...")
     metadata = create_metadata_table(
         file_info["lat_center"],
@@ -116,7 +116,7 @@ def should_include_variable(var_name, include_vars):
 
 
 def process_variable(var_name, var, all_data, file_idx, n_sigma, time_steps_per_file):
-    """Process a single variable and add to all_data dict with proper NREL spec compliance"""
+    """Process a single variable and add to all_data dict with proper NLR spec compliance"""
     dims = var.dims
 
     # Skip coordinate and connectivity variables - these are handled separately
@@ -158,7 +158,7 @@ def process_variable(var_name, var, all_data, file_idx, n_sigma, time_steps_per_
             )  # Shape: (time_steps, faces)
 
     elif dims == ("face",):
-        # Static variable: broadcast to time dimension for NREL spec compliance
+        # Static variable: broadcast to time dimension for NLR spec compliance
         if var_name not in all_data:
             all_data[var_name] = {"data": [], "attrs": dict(var.attrs)}
         # Broadcast static data to match time dimension
@@ -441,7 +441,7 @@ def stream_variable_data(var_name, var, datasets, time_slice, n_sigma):
 def write_h5_file(
     output_path, metadata, time_index, all_data, n_faces, global_attrs=None
 ):
-    """Write data to H5 file following NREL spec with attributes"""
+    """Write data to H5 file following NLR spec with attributes"""
     n_times = len(time_index)
 
     with h5py.File(output_path, "w") as h5f:
@@ -457,7 +457,7 @@ def write_h5_file(
                     # Convert other types to string for safety
                     h5f.attrs[attr_name] = str(attr_value)
 
-        # Ensure version attribute exists (required by NREL spec)
+        # Ensure version attribute exists (required by NLR spec)
         if "version" not in h5f.attrs:
             h5f.attrs["version"] = f"v{config['dataset']['version']}"
 

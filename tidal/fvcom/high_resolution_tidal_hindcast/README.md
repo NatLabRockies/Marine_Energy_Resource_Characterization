@@ -46,8 +46,8 @@ Finite Volume Community Ocean Model (FVCOM) at five strategically
 selected U.S. coastal locations. The project represents a collaborative
 effort between the [Pacific Northwest National
 Laboratory](https://www.pnnl.gov/marine-energy-resource-characterization)
-(PNNL) (data generation) and the [National Renewable Energy
-Laboratory](https://www.nrel.gov/water/resource-characterization) (data
+(PNNL) (data generation) and the [National Laboratory of the
+Rockies](https://www.nrel.gov/water/resource-characterization) (data
 processing and visualization), to generate, standardize, and summarize
 original high resolution tidal data into accessible resource data for
 tidal resource characterization. Complete standardized and summarized
@@ -73,7 +73,7 @@ Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers
 | Project Title | High Resolution Tidal Hindcast |
 | Project ID | `wpto_high_res_tidal` |
 | Data Generation | Pacific Northwest National Laboratory (PNNL) |
-| Data Processing and Visualization | National Renewable Energy Laboratory (NREL) |
+| Data Processing and Visualization | National Laboratory of the Rockies (NLR) |
 
 Table 1: High Resolution Tidal Hindcast Overview
 
@@ -227,7 +227,7 @@ Depth Average
 
 | Data Level | Description | Format | Storage Location | Public Access |
 |----|----|----|----|----|
-| `00_raw` | Original NetCDF files from FVCOM model | NetCDF (nc) | HPC Kestrel, OpenEI AWS, NREL Stratus AWS | Yes |
+| `00_raw` | Original NetCDF files from FVCOM model | NetCDF (nc) | HPC Kestrel, OpenEI AWS, NLR Stratus AWS | Yes |
 | `a1_std` | Standardized data with consistent naming and attributes | NetCDF (nc) | HPC Kestrel | No |
 | `a2_std_partition` | Standardized data partitioned by time chunks for processing | NetCDF (nc) | HPC Kestrel | No |
 | `b1_vap` | Value-added products with derived variables, full temporal resolution | NetCDF (nc) | HPC Kestrel / OpenEI AWS | Yes |
@@ -468,13 +468,13 @@ dataset for each location.
 
 | Category | Verification Process | Checked By | Is Compliant |
 |----|----|----|----|
-| Model Specification | Verification of model version, conventions, and required variables | NREL | Yes |
-| Temporal Integrity | Validation of time steps, chronological ordering, and expected frequency | NREL | Yes |
-| Spatial Consistency | Verification of coordinate systems and spatial grid consistency | NREL | Yes |
-| Metadata Consistency | Validation of global attributes across files | NREL | Yes |
-| Dataset Structure | Verification of dimension, variable, and coordinate consistency | NREL | Yes |
+| Model Specification | Verification of model version, conventions, and required variables | NLR | Yes |
+| Temporal Integrity | Validation of time steps, chronological ordering, and expected frequency | NLR | Yes |
+| Spatial Consistency | Verification of coordinate systems and spatial grid consistency | NLR | Yes |
+| Metadata Consistency | Validation of global attributes across files | NLR | Yes |
+| Dataset Structure | Verification of dimension, variable, and coordinate consistency | NLR | Yes |
 | Physical Validity | Range checks for physically meaningful values | PNNL |  |
-| Completeness | Verification of temporal coverage and required variables | NREL | Yes |
+| Completeness | Verification of temporal coverage and required variables | NLR | Yes |
 
 ## Automated Verification System
 
@@ -688,13 +688,13 @@ complete dataset for each location.
 
 | Category | Verification Process | Checked By | Is Compliant |
 |----|----|----|----|
-| Model Specification | Verification of model version, conventions, and required variables | NREL | Yes |
-| Temporal Integrity | Validation of time steps, chronological ordering, and expected frequency | NREL | Yes |
-| Spatial Consistency | Verification of coordinate systems and spatial grid consistency | NREL | Yes |
-| Metadata Consistency | Validation of global attributes across files | NREL | Yes |
-| Dataset Structure | Verification of dimension, variable, and coordinate consistency | NREL | Yes |
+| Model Specification | Verification of model version, conventions, and required variables | NLR | Yes |
+| Temporal Integrity | Validation of time steps, chronological ordering, and expected frequency | NLR | Yes |
+| Spatial Consistency | Verification of coordinate systems and spatial grid consistency | NLR | Yes |
+| Metadata Consistency | Validation of global attributes across files | NLR | Yes |
+| Dataset Structure | Verification of dimension, variable, and coordinate consistency | NLR | Yes |
 | Physical Validity | Range checks for physically meaningful values | PNNL |  |
-| Completeness | Verification of temporal coverage and required variables | NREL | Yes |
+| Completeness | Verification of temporal coverage and required variables | NLR | Yes |
 
 ## Automated Verification System
 
@@ -910,7 +910,7 @@ progresses through the pipeline.
 | Level b2 | `b2_summary_vap` | Statistical summaries across the vertical water column |
 | Level b3 | `b3_vap_partition` | Partitioned VAP data for further processing |
 | Level b5 | `b5_vap_summary_parquet` | Summary statistics in Parquet format optimized for data analytics |
-| Level b6 | `b6_vap_atlas_summary_parquet` | NREL Marine Energy Atlas-ready summary data in Parquet format for visualization |
+| Level b6 | `b6_vap_atlas_summary_parquet` | NLR Marine Energy Atlas-ready summary data in Parquet format for visualization |
 
 ## Detailed Data Level Specifications
 
@@ -1163,7 +1163,7 @@ sbatch runner_cook_inlet.sbatch
 | Label | Key | Value |
 |:---|:---|:---|
 | Conventions | Conventions | CF-1.10, ACDD-1.3, ME Data Pipeline-1.0 |
-| Acknowledgement | acknowledgement | This work was funded by the U.S. Department of Energy, Office of Energy Efficiency & Renewable Energy, Water Power Technologies Office. The authors gratefully acknowledge project support from Heather Spence and Jim McNally (U.S. Department of Energy Water Power Technologies Office) and Mary Serafin (National Renewable Energy Laboratory). Technical guidance was provided by Levi Kilcher, Caroline Draxl, and Katie Peterson (National Renewable Energy Laboratory). |
+| Acknowledgement | acknowledgement | This work was funded by the U.S. Department of Energy, Office of Energy Efficiency & Renewable Energy, Water Power Technologies Office. The authors gratefully acknowledge project support from Heather Spence and Jim McNally (U.S. Department of Energy Water Power Technologies Office) and Mary Serafin (National Laboratory of the Rockies). Technical guidance was provided by Levi Kilcher, Caroline Draxl, and Katie Peterson (National Laboratory of the Rockies). |
 | Citation | citation | Yang, Zhaoqing, Mithun Deb, Taiping Wang, Preston Spicer, Andrew Simms, Ethan Young, and Mike Lawson. 2025. ‘High Resolution Tidal Hindcast’. |
 | Creator Country | creator_country | USA |
 | Creator Email | creator_email | zhaoqing.yang@pnnl.gov |
@@ -1183,11 +1183,11 @@ sbatch runner_cook_inlet.sbatch
 | Keywords | keywords | OCEAN TIDES, TIDAL ENERGY, VELOCITY, SPEED, DIRECTION, POWER DENSITY |
 | License | license | Freely Distributed |
 | Naming Authority | naming_authority | gov.nrel.water_power |
-| Program | program | U.S. Department of Energy (DOE) Office of Energy Efficiency and Renewable Energy (EERE), Water Power Technologies Office (WPTO) Marine Energy Resource Assessment and Characterization |
+| Program | program | U.S. Department of Energy (DOE) Water Power Technologies Office (WPTO) Marine Energy Resource Assessment and Characterization |
 | Project | project | High Resolution Tidal Hindcast |
 | Publisher Country | publisher_country | USA |
 | Publisher Email | publisher_email | michael.lawson@nrel.gov |
-| Publisher Institution | publisher_institution | National Renewable Energy Laboratory (NREL) |
+| Publisher Institution | publisher_institution | National Laboratory of the Rockies (NLR) |
 | Publisher Name | publisher_name | Michael Lawson |
 | Publisher State | publisher_state | Colorado |
 | Publisher Type | publisher_type | institution |
@@ -1228,7 +1228,7 @@ Base Path: `/projects/hindcastra/Tidal/datasets/<location>/`
 # ME Atlas High Resolution Tidal Data QOI Visualization Specification
 
 The following sections provide the specification for visualizing
-selected high resolution tidal hindcast variables on the [NREL Marine
+selected high resolution tidal hindcast variables on the [NLR Marine
 Energy
 Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged)
 
@@ -1241,11 +1241,11 @@ Base directory for all data files:
 
 | Location Name | System | File Path |
 |----|----|----|
-| Puget Sound, Washington | NREL Kestrel HPC | `<base_dir>/WA_puget_sound/b5_vap_summary_parquet/WA_puget_sound.wpto_high_res_tidal-year_average.b4.20150101.000000.parquet` |
-| Piscataqua River, New Hampshire | NREL Kestrel HPC | `<base_dir>/NH_piscataqua_river/b5_vap_summary_parquet/NH_piscataqua_river.wpto_high_res_tidal-year_average.b4.20070101.000000.parquet` |
-| Western Passage, Maine | NREL Kestrel HPC | `<base_dir>/ME_western_passage/b5_vap_summary_parquet/ME_western_passage.wpto_high_res_tidal-year_average.b4.20170101.000000.parquet` |
-| Cook Inlet, Alaska | NREL Kestrel HPC | `<base_dir>/AK_cook_inlet/b5_vap_summary_parquet/AK_cook_inlet.wpto_high_res_tidal-year_average.b4.20050101.000000.parquet` |
-| Aleutian Islands, Alaska | NREL Kestrel HPC | `<base_dir>/AK_aleutian_islands/b5_vap_summary_parquet/AK_aleutian_islands.wpto_high_res_tidal-year_average.b4.20100603.000000.parquet` |
+| Puget Sound, Washington | NLR Kestrel HPC | `<base_dir>/WA_puget_sound/b5_vap_summary_parquet/WA_puget_sound.wpto_high_res_tidal-year_average.b4.20150101.000000.parquet` |
+| Piscataqua River, New Hampshire | NLR Kestrel HPC | `<base_dir>/NH_piscataqua_river/b5_vap_summary_parquet/NH_piscataqua_river.wpto_high_res_tidal-year_average.b4.20070101.000000.parquet` |
+| Western Passage, Maine | NLR Kestrel HPC | `<base_dir>/ME_western_passage/b5_vap_summary_parquet/ME_western_passage.wpto_high_res_tidal-year_average.b4.20170101.000000.parquet` |
+| Cook Inlet, Alaska | NLR Kestrel HPC | `<base_dir>/AK_cook_inlet/b5_vap_summary_parquet/AK_cook_inlet.wpto_high_res_tidal-year_average.b4.20050101.000000.parquet` |
+| Aleutian Islands, Alaska | NLR Kestrel HPC | `<base_dir>/AK_aleutian_islands/b5_vap_summary_parquet/AK_aleutian_islands.wpto_high_res_tidal-year_average.b4.20100603.000000.parquet` |
 
 ## Location Details
 
@@ -1931,9 +1931,9 @@ This work was funded by the U.S. Department of Energy, Office of Energy
 Efficiency & Renewable Energy, Water Power Technologies Office. The
 authors gratefully acknowledge project support from Heather Spence and
 Jim McNally (U.S. Department of Energy Water Power Technologies Office)
-and Mary Serafin (National Renewable Energy Laboratory). Technical
+and Mary Serafin (National Laboratory of the Rockies). Technical
 guidance was provided by Levi Kilcher, Caroline Draxl, and Katie
-Peterson (National Renewable Energy Laboratory).
+Peterson (National Laboratory of the Rockies).
 
 # Citation
 
@@ -1942,7 +1942,7 @@ Peterson (National Renewable Energy Laboratory).
 <!--
 ## Description
 &#10;What is this data in two sentences
-&#10;Original model output is stored in NREL managed long term storage for a period of X years
+&#10;Original model output is stored in NLR managed long term storage for a period of X years
 &#10;Standardized data transforms raw model output data into a common format and includes:
 &#10;* Time validation and conversion to a standard format
 * Coordinate validation and conversion to a standard format
@@ -2038,8 +2038,8 @@ converter design.
 ## Python Examples
 &#10;Example scripts to extract tidal data are.
 &#10;The easiest way to access and extract data from the Resource eXtraction tool
-[`rex`](https://github.com/nrel/rex)
-&#10;To use `rex` with [`HSDS`](https://github.com/NREL/hsds-examples) you will need
+[`rex`](https://github.com/nlr/rex)
+&#10;To use `rex` with [`HSDS`](https://github.com/NLR/hsds-examples) you will need
 to install `h5pyd`:
 &#10;```
 pip install h5pyd
@@ -2060,7 +2060,7 @@ hs_api_key = 3K3JQbjZmWctY0xmIfSYvYgtIcM3CN0cb1Y2w9bf
 &#10;
 ```python
 from rex import ResourceX
-&#10;wave_file = '/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5'
+&#10;wave_file = '/nlr/US_wave/West_Coast/West_Coast_wave_2010.h5'
 with ResourceX(wave_file, hsds=True) as f:
     meta = f.meta
     time_index = f.time_index
@@ -2070,7 +2070,7 @@ with ResourceX(wave_file, hsds=True) as f:
 location:
 &#10;```python
 from rex import ResourceX
-&#10;wave_file = '/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5'
+&#10;wave_file = '/nlr/US_wave/West_Coast/West_Coast_wave_2010.h5'
 lat_lon = (34.399408, -119.841181)
 with ResourceX(wave_file, hsds=True) as f:
     lat_lon_swh = f.get_lat_lon_df('significant_wave_height', lat_lon)
@@ -2078,7 +2078,7 @@ with ResourceX(wave_file, hsds=True) as f:
 &#10;or to extract all sites in a given region:
 &#10;```python
 from rex import ResourceX
-&#10;wave_file = '/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5'
+&#10;wave_file = '/nlr/US_wave/West_Coast/West_Coast_wave_2010.h5'
 jurisdication='California'
 with ResourceX(wave_file, hsds=True) as f:
     ca_swh = f.get_region_df('significant_wave_height', jurisdiction,
@@ -2090,7 +2090,7 @@ with ResourceX(wave_file, hsds=True) as f:
 import h5pyd
 import pandas as pd
 &#10;# Open .h5 file
-with h5pyd.File('/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5', mode='r') as f:
+with h5pyd.File('/nlr/US_wave/West_Coast/West_Coast_wave_2010.h5', mode='r') as f:
     # Extract meta data and convert from records array to DataFrame
     meta = pd.DataFrame(f['meta'][...])
     # Significant Wave Height
@@ -2107,7 +2107,7 @@ meta['Average Wave Height'] = mean_swh
 import h5pyd
 import pandas as pd
 &#10;# Open .h5 file
-with h5pyd.File('/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5', mode='r') as f:
+with h5pyd.File('/nlr/US_wave/West_Coast/West_Coast_wave_2010.h5', mode='r') as f:
     # Extract time_index and convert to datetime
     # NOTE: time_index is saved as byte-strings and must be decoded
     time_index = pd.to_datetime(f['time_index'][...].astype(str))
@@ -2136,11 +2136,11 @@ with h5pyd.File('/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5', mode='r') as
 
 ## Disclaimer and Attribution
 
-The National Renewable Energy Laboratory (“NREL”) is operated for the
-U.S. Department of Energy (“DOE”) by the Alliance for Sustainable
-Energy, LLC (“Alliance”). Pacific Northwest National Laboratory (PNNL)
-is managed and operated by Battelle Memorial Institute (“Battelle”) for
-DOE. As such the following rules apply:
+The National Laboratory of the Rockies (“NLR”) is operated for the U.S.
+Department of Energy (“DOE”) by the Alliance for Energy Innovation, LLC
+(“Alliance”). Pacific Northwest National Laboratory (PNNL) is managed
+and operated by Battelle Memorial Institute (“Battelle”) for DOE. As
+such the following rules apply:
 
 This data arose from worked performed under funding provided by the
 United States Government. Access to or use of this data (“Data”) denotes
@@ -2150,7 +2150,7 @@ INCLUDING BUT NOT LIMITED TO ANY IMPLIED WARRANTIES SUCH AS
 MERCHANTABILITY AND/OR FITNESS FOR ANY PARTICULAR PURPOSE. Furthermore,
 NEITHER THE UNITED STATES GOVERNMENT NOR ANY OF ITS ASSOCITED ENTITES OR
 CONTRACTORS INCLUDING BUT NOT LIMITED TO THE
-DOE/PNNL/NREL/BATTELLE/ALLIANCE ASSUME ANY LEGAL LIABILITY OR
+DOE/PNNL/NLR/BATTELLE/ALLIANCE ASSUME ANY LEGAL LIABILITY OR
 RESPONSIBILITY FOR THE ACCURACY, COMPLETENESS, OR USEFULNESS OF THE
 DATA, OR REPRESENT THAT ITS USE WOULD NOT INFRINGE PRIVATELY OWNED
 RIGHTS. NO ENDORSEMENT OF THE DATA OR ANY REPRESENTATIONS MADE IN
@@ -2158,7 +2158,7 @@ CONNECTION WITH THE DATA IS PROVIDED. IN NO EVENT SHALL ANY PARTY BE
 LIABLE FOR ANY DAMAGES, INCLUDING BUT NOT LIMITED TO SPECIAL, INDIRECT
 OR CONSEQUENTIAL DAMAGES ARISING FROM THE PROVISION OF THIS DATA; TO THE
 EXTENT PERMITTED BY LAW USER AGREES TO INDEMNIFY
-DOE/PNNL/NREL/BATTELLE/ALLIANCE AND ITS SUBSIDIARIES, AFFILIATES,
+DOE/PNNL/NLR/BATTELLE/ALLIANCE AND ITS SUBSIDIARIES, AFFILIATES,
 OFFICERS, AGENTS, AND EMPLOYEES AGAINST ANY CLAIM OR DEMAND RELATED TO
 USER’S USE OF THE DATA, INCLUDING ANY REASONABLE ATTORNEYS FEES
 INCURRED.
@@ -2167,5 +2167,5 @@ The user is granted the right, without any fee or cost, to use or copy
 the Data, provided that this entire notice appears in all copies of the
 Data. In the event that user engages in any scientific or technical
 publication utilizing this data user agrees to credit
-DOE/PNNL/NREL/BATTELLE/ALLIANCE in any such publication consistent with
+DOE/PNNL/NLR/BATTELLE/ALLIANCE in any such publication consistent with
 respective professional practice.

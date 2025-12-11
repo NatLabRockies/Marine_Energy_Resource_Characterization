@@ -464,7 +464,7 @@ def analyze_temporal_file_structure(temporal_files):
         skip_datasets = {"time_index", "sigma_layer", "sigma_level"}
 
         print("\nCollecting variable info from first temporal file:")
-        print("Validating NREL spec compliance (only 1D or 2D variables allowed)...")
+        print("Validating NLR spec compliance (only 1D or 2D variables allowed)...")
 
         invalid_3d_vars = []
 
@@ -482,7 +482,7 @@ def analyze_temporal_file_structure(temporal_files):
 
                 print(f"  {var_name}: shape={shape}, dtype={dtype}")
 
-                # NREL spec validation: only 1D or 2D variables allowed
+                # NLR spec validation: only 1D or 2D variables allowed
                 if len(shape) > 2:
                     invalid_3d_vars.append((var_name, shape))
 
@@ -516,9 +516,9 @@ def analyze_temporal_file_structure(temporal_files):
         if invalid_3d_vars:
             error_msg = (
                 "\n" + "=" * 80 + "\n"
-                "ERROR: NREL spec violation - 3D variables detected in H5 file!\n"
+                "ERROR: NLR spec violation - 3D variables detected in H5 file!\n"
                 "=" * 80 + "\n"
-                "The NREL standardization spec requires all data variables to be 1D or 2D.\n"
+                "The NLR standardization spec requires all data variables to be 1D or 2D.\n"
                 "3D variables (time, sigma, face) must be split into separate 2D variables.\n\n"
                 "Found the following 3D variables:\n"
             )

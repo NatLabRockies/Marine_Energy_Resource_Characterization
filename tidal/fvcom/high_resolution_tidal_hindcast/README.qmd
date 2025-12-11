@@ -4,7 +4,7 @@ subtitle: Marine Energy Resource Characterization
 date: today
 # author:
 #     - name: Andrew Simms
-#       affiliation: National Renewable Energy Laboratory
+#       affiliation: National Laboratory of the Rockies
 #     - name: Taiping Wang
 #       affiliation: Pacific Northwest National Laboratory
 #     - name: Zhaoqing Yang
@@ -12,11 +12,11 @@ date: today
 #     - name: Mithun Deb
 #       affiliation: Pacific Northwest National Laboratory
 #     - name: Michael Lawson
-#       affiliation: National Renewable Energy Laboratory
+#       affiliation: National Laboratory of the Rockies
 #     - name: Mary Serafin
-#       affiliation: National Renewable Energy Laboratory
+#       affiliation: National Laboratory of the Rockies
 #     - name: Ethan Young
-#       affiliation: National Renewable Energy Laboratory
+#       affiliation: National Laboratory of the Rockies
 
 format:
     gfm:
@@ -59,8 +59,7 @@ This repository contains the code and methodology for processing and visualizing
 of Energy (DOE) Water Power Technologies Office (WPTO) high-resolution tidal hindcast data generated
 using the Finite Volume Community Ocean Model (FVCOM) at five strategically selected U.S. coastal
 locations. The project represents a collaborative effort between the [Pacific Northwest National
-Laboratory][pnnl_resource_char] (PNNL) (data generation) and the [National Renewable Energy
-Laboratory][nrel_resource_char] (data processing and visualization), to generate, standardize, and
+Laboratory][pnnl_resource_char] (PNNL) (data generation) and the [National Laboratory of the Rockies][nlr_resource_char] (data processing and visualization), to generate, standardize, and
 summarize original high resolution tidal data into accessible resource data for tidal resource
 characterization. Complete standardized and summarized datasets can downloaded from the
 [AWS S3 Open Energy Data Initiative Marine Energy Data Lake][aws_tidal_data], 
@@ -80,7 +79,7 @@ and summary data is visualized on the [Marine Energy Atlas][me_atlas].
 | Project Title                     | `{python} dataset['label']`                  |
 | Project ID                        | `{python} render_monospace(dataset['name'])` |
 | Data Generation                   | Pacific Northwest National Laboratory (PNNL) |
-| Data Processing and Visualization | National Renewable Energy Laboratory (NREL)  |
+| Data Processing and Visualization | National Laboratory of the Rockies (NLR)  |
 
 : High Resolution Tidal Hindcast Overview {#tbl-hrth-overview}
 
@@ -197,7 +196,7 @@ display(Markdown(tabulate(df, tablefmt="markdown", headers="keys", showindex=Fal
 
 | Data Level                     | Description                                                           | Format       | Storage Location                          | Public Access |
 | ----------                     | ------------------------------------------------------------------    | ------------ | ---------------------------               | ------------- |
-| `00_raw`                       | Original NetCDF files from FVCOM model                                | NetCDF (nc)  | HPC Kestrel, OpenEI AWS, NREL Stratus AWS | Yes           |
+| `00_raw`                       | Original NetCDF files from FVCOM model                                | NetCDF (nc)  | HPC Kestrel, OpenEI AWS, NLR Stratus AWS | Yes           |
 | `a1_std`                       | Standardized data with consistent naming and attributes               | NetCDF (nc)  | HPC Kestrel                               | No            |
 | `a2_std_partition`             | Standardized data partitioned by time chunks for processing           | NetCDF (nc)  | HPC Kestrel                               | No            |
 | `b1_vap`                       | Value-added products with derived variables, full temporal resolution | NetCDF (nc)  | HPC Kestrel / OpenEI AWS                  | Yes           |
@@ -492,13 +491,13 @@ Data quality assurance and quality control (QA/QC) procedures are critical to en
 
 | Category                | Verification Process                                                                     | Checked By | Is Compliant |
 | ----------------------- | ---------------------------------------------------------------------------------------- | ---        | ---          |
-| Model Specification     | Verification of model version, conventions, and required variables                       | NREL       | Yes          |
-| Temporal Integrity      | Validation of time steps, chronological ordering, and expected frequency                 | NREL       | Yes          |
-| Spatial Consistency     | Verification of coordinate systems and spatial grid consistency                          | NREL       | Yes          |
-| Metadata Consistency    | Validation of global attributes across files                                             | NREL       | Yes          |
-| Dataset Structure       | Verification of dimension, variable, and coordinate consistency                          | NREL       | Yes          |
+| Model Specification     | Verification of model version, conventions, and required variables                       | NLR       | Yes          |
+| Temporal Integrity      | Validation of time steps, chronological ordering, and expected frequency                 | NLR       | Yes          |
+| Spatial Consistency     | Verification of coordinate systems and spatial grid consistency                          | NLR       | Yes          |
+| Metadata Consistency    | Validation of global attributes across files                                             | NLR       | Yes          |
+| Dataset Structure       | Verification of dimension, variable, and coordinate consistency                          | NLR       | Yes          |
 | Physical Validity       | Range checks for physically meaningful values                                            | PNNL       |              |
-| Completeness            | Verification of temporal coverage and required variables                                 | NREL       | Yes          |
+| Completeness            | Verification of temporal coverage and required variables                                 | NLR       | Yes          |
 
 ## Automated Verification System
 
@@ -686,13 +685,13 @@ Data quality assurance and quality control (QA/QC) procedures are critical to en
 
 | Category                | Verification Process                                                                     | Checked By | Is Compliant |
 | ----------------------- | ---------------------------------------------------------------------------------------- | ---        | ---          |
-| Model Specification     | Verification of model version, conventions, and required variables                       | NREL       | Yes          |
-| Temporal Integrity      | Validation of time steps, chronological ordering, and expected frequency                 | NREL       | Yes          |
-| Spatial Consistency     | Verification of coordinate systems and spatial grid consistency                          | NREL       | Yes          |
-| Metadata Consistency    | Validation of global attributes across files                                             | NREL       | Yes          |
-| Dataset Structure       | Verification of dimension, variable, and coordinate consistency                          | NREL       | Yes          |
+| Model Specification     | Verification of model version, conventions, and required variables                       | NLR       | Yes          |
+| Temporal Integrity      | Validation of time steps, chronological ordering, and expected frequency                 | NLR       | Yes          |
+| Spatial Consistency     | Verification of coordinate systems and spatial grid consistency                          | NLR       | Yes          |
+| Metadata Consistency    | Validation of global attributes across files                                             | NLR       | Yes          |
+| Dataset Structure       | Verification of dimension, variable, and coordinate consistency                          | NLR       | Yes          |
 | Physical Validity       | Range checks for physically meaningful values                                            | PNNL       |              |
-| Completeness            | Verification of temporal coverage and required variables                                 | NREL       | Yes          |
+| Completeness            | Verification of temporal coverage and required variables                                 | NLR       | Yes          |
 
 ## Automated Verification System
 
@@ -881,7 +880,7 @@ The processing pipeline for the tidal hindcast data follows a structured approac
 | Level b2   | `b2_summary_vap`               | Statistical summaries across the vertical water column                             |
 | Level b3   | `b3_vap_partition`             | Partitioned VAP data for further processing                                        |
 | Level b5   | `b5_vap_summary_parquet`       | Summary statistics in Parquet format optimized for data analytics                  |
-| Level b6   | `b6_vap_atlas_summary_parquet` | NREL Marine Energy Atlas-ready summary data in Parquet format for visualization    |
+| Level b6   | `b6_vap_atlas_summary_parquet` | NLR Marine Energy Atlas-ready summary data in Parquet format for visualization    |
 
 ## Detailed Data Level Specifications
 
@@ -1175,7 +1174,7 @@ display(Markdown(attrs['acknowledgement']))
 
 What is this data in two sentences
 
-Original model output is stored in NREL managed long term storage for a period of X years
+Original model output is stored in NLR managed long term storage for a period of X years
 
 Standardized data transforms raw model output data into a common format and includes:
 
@@ -1295,9 +1294,9 @@ The following variables are included in each dataset:
 Example scripts to extract tidal data are.
 
 The easiest way to access and extract data from the Resource eXtraction tool
-[`rex`](https://github.com/nrel/rex)
+[`rex`](https://github.com/nlr/rex)
 
-To use `rex` with [`HSDS`](https://github.com/NREL/hsds-examples) you will need
+To use `rex` with [`HSDS`](https://github.com/NLR/hsds-examples) you will need
 to install `h5pyd`:
 
 ```
@@ -1327,7 +1326,7 @@ You can also add the above contents to a configuration file at `~/.hscfg`
 ```python
 from rex import ResourceX
 
-wave_file = '/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5'
+wave_file = '/nlr/US_wave/West_Coast/West_Coast_wave_2010.h5'
 with ResourceX(wave_file, hsds=True) as f:
     meta = f.meta
     time_index = f.time_index
@@ -1340,7 +1339,7 @@ location:
 ```python
 from rex import ResourceX
 
-wave_file = '/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5'
+wave_file = '/nlr/US_wave/West_Coast/West_Coast_wave_2010.h5'
 lat_lon = (34.399408, -119.841181)
 with ResourceX(wave_file, hsds=True) as f:
     lat_lon_swh = f.get_lat_lon_df('significant_wave_height', lat_lon)
@@ -1351,7 +1350,7 @@ or to extract all sites in a given region:
 ```python
 from rex import ResourceX
 
-wave_file = '/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5'
+wave_file = '/nlr/US_wave/West_Coast/West_Coast_wave_2010.h5'
 jurisdication='California'
 with ResourceX(wave_file, hsds=True) as f:
     ca_swh = f.get_region_df('significant_wave_height', jurisdiction,
@@ -1366,7 +1365,7 @@ import h5pyd
 import pandas as pd
 
 # Open .h5 file
-with h5pyd.File('/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5', mode='r') as f:
+with h5pyd.File('/nlr/US_wave/West_Coast/West_Coast_wave_2010.h5', mode='r') as f:
     # Extract meta data and convert from records array to DataFrame
     meta = pd.DataFrame(f['meta'][...])
     # Significant Wave Height
@@ -1386,7 +1385,7 @@ import h5pyd
 import pandas as pd
 
 # Open .h5 file
-with h5pyd.File('/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5', mode='r') as f:
+with h5pyd.File('/nlr/US_wave/West_Coast/West_Coast_wave_2010.h5', mode='r') as f:
     # Extract time_index and convert to datetime
     # NOTE: time_index is saved as byte-strings and must be decoded
     time_index = pd.to_datetime(f['time_index'][...].astype(str))
@@ -1417,8 +1416,8 @@ Please cite the most relevant publication below when referencing this dataset:
 
 ## Disclaimer and Attribution
 
-The National Renewable Energy Laboratory (“NREL”) is operated for the U.S.
-Department of Energy (“DOE”) by the Alliance for Sustainable Energy, LLC
+The National Laboratory of the Rockies (“NLR”) is operated for the U.S.
+Department of Energy (“DOE”) by the Alliance for Energy Innovation, LLC
 ("Alliance"). Pacific Northwest National Laboratory (PNNL) is managed and
 operated by Battelle Memorial Institute ("Battelle") for DOE. As such the
 following rules apply:
@@ -1430,21 +1429,21 @@ FROM ANY EXPRESS OR IMPLIED WARRANTY OF ANY KIND, INCLUDING BUT NOT LIMITED TO
 ANY IMPLIED WARRANTIES SUCH AS MERCHANTABILITY AND/OR FITNESS FOR ANY
 PARTICULAR PURPOSE. Furthermore, NEITHER THE UNITED STATES GOVERNMENT NOR ANY
 OF ITS ASSOCITED ENTITES OR CONTRACTORS INCLUDING BUT NOT LIMITED TO THE
-DOE/PNNL/NREL/BATTELLE/ALLIANCE ASSUME ANY LEGAL LIABILITY OR RESPONSIBILITY
+DOE/PNNL/NLR/BATTELLE/ALLIANCE ASSUME ANY LEGAL LIABILITY OR RESPONSIBILITY
 FOR THE ACCURACY, COMPLETENESS, OR USEFULNESS OF THE DATA, OR REPRESENT THAT
 ITS USE WOULD NOT INFRINGE PRIVATELY OWNED RIGHTS. NO ENDORSEMENT OF THE DATA
 OR ANY REPRESENTATIONS MADE IN CONNECTION WITH THE DATA IS PROVIDED. IN NO
 EVENT SHALL ANY PARTY BE LIABLE FOR ANY DAMAGES, INCLUDING BUT NOT LIMITED TO
 SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES ARISING FROM THE PROVISION OF THIS
 DATA; TO THE EXTENT PERMITTED BY LAW USER AGREES TO INDEMNIFY
-DOE/PNNL/NREL/BATTELLE/ALLIANCE AND ITS SUBSIDIARIES, AFFILIATES, OFFICERS,
+DOE/PNNL/NLR/BATTELLE/ALLIANCE AND ITS SUBSIDIARIES, AFFILIATES, OFFICERS,
 AGENTS, AND EMPLOYEES AGAINST ANY CLAIM OR DEMAND RELATED TO USER'S USE OF THE
 DATA, INCLUDING ANY REASONABLE ATTORNEYS FEES INCURRED.
 
 The user is granted the right, without any fee or cost, to use or copy the
 Data, provided that this entire notice appears in all copies of the Data. In
 the event that user engages in any scientific or technical publication
-utilizing this data user agrees to credit DOE/PNNL/NREL/BATTELLE/ALLIANCE in
+utilizing this data user agrees to credit DOE/PNNL/NLR/BATTELLE/ALLIANCE in
 any such publication consistent with respective professional practice.
 
 
@@ -1452,6 +1451,6 @@ any such publication consistent with respective professional practice.
 [me_atlas]: https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged
 [wpto_resource_char]: https://www.energy.gov/eere/water/marine-energy-resource-assessment-and-characterization
 [pnnl_resource_char]: https://www.pnnl.gov/marine-energy-resource-characterization
-[nrel_resource_char]: https://www.nrel.gov/water/resource-characterization
+[nlr_resource_char]: https://www.nrel.gov/water/resource-characterization
 [navd88]: https://en.wikipedia.org/wiki/North_American_Vertical_Datum_of_1988
-[this_repo]: https://github.com/NREL/Marine_Energy_Resource_Characterization
+[this_repo]: https://github.com/NLR/Marine_Energy_Resource_Characterization

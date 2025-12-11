@@ -21,8 +21,7 @@ filters:
 
 The WPTO High Resolution Tidal Hindcast dataset provides standardized tidal energy data for
 five strategically selected U.S. coastal locations with significant tidal energy potential.
-Developed collaboratively by Pacific Northwest National Laboratory (PNNL) and National Renewable
-Energy Laboratory (NREL), this dataset is funded by the U.S. Department of Energy's Water Power
+Developed collaboratively by Pacific Northwest National Laboratory (PNNL) and National Laboratory of the Rockies (NLR), this dataset is funded by the U.S. Department of Energy's Water Power
 Technologies Office Marine Energy Resource Assessment and Characterization project.
 
 Generated using FVCOM 4.3.1 (Finite Volume Community Ocean Model) [@fvcom], the dataset contains one year of

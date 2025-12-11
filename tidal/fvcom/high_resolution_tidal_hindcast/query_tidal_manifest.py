@@ -381,7 +381,7 @@ class TidalManifestQuery:
         """
         Convert a relative path to a full HPC filesystem path.
 
-        Use this when running on NREL's Kestrel HPC system to access
+        Use this when running on NLR's Kestrel HPC system to access
         data files directly from the local filesystem.
 
         Parameters

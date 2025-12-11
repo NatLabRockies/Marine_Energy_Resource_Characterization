@@ -19,7 +19,7 @@
 • Other DOE labs, institutions or companies already using this data.
 • URLs pointing to documentation of the structure and content of the dataset (attaching a readme file is acceptable if no such link exists).
 • Do you have any tutorials or example data usage materials (i.e. Jupyter Notebook) that can be modified to access the data via AWS? If so, please include a URL or attach a file.
-• How NREL intends to promote the existence of this dataset on AWS, including blogs, mailing lists, or other channels.
+• How NLR intends to promote the existence of this dataset on AWS, including blogs, mailing lists, or other channels.
 • Tags (chosen from this list: https://github.com/awslabs/open-data-registry/blob/main/tags.yaml. If you’d like to add tags that aren’t on this list, notate them as “not in list”).
 • URLs to any papers or reports about this dataset.
 &#10;-->
@@ -28,11 +28,11 @@
 
 |  |  |
 |----|----|
-| **Contact Name** | Michael Lawson (NREL PI) |
+| **Contact Name** | Michael Lawson (NLR PI) |
 | **Contact Email** | <michael.lawson@nrel.gov> |
-| **Reporting Issues** | [US Tidal Dataset Issue Reporting](https://github.com/NREL/Marine_Energy_Resource_Characterization/issues) |
-| **Institution Names** | National Renewable Energy Laboratory (NREL), Pacific Northwest National Laboratory (PNNL) , Water Power Technologies Office (WPTO) |
-| **Institution Websites** | [NREL Marine Energy Resource Characterizaion](https://www.nrel.gov/water/resource-characterization), [PNNL Coastal Sciences Division](https://www.pnnl.gov/coastal-sciences-division), [WPTO Marine Energy Resource Assessment and Characterization](https://www.energy.gov/eere/water/marine-energy-resource-assessment-and-characterization) |
+| **Reporting Issues** | [US Tidal Dataset Issue Reporting](https://github.com/NLR/Marine_Energy_Resource_Characterization/issues) |
+| **Institution Names** | National Laboratory of the Rockies (NLR), Pacific Northwest National Laboratory (PNNL) , Water Power Technologies Office (WPTO) |
+| **Institution Websites** | [NLR Marine Energy Resource Characterizaion](https://www.nrel.gov/water/resource-characterization), [PNNL Coastal Sciences Division](https://www.pnnl.gov/coastal-sciences-division), [WPTO Marine Energy Resource Assessment and Characterization](https://www.energy.gov/eere/water/marine-energy-resource-assessment-and-characterization) |
 | **MHKDR Submission** | [High Resolution Tidal Hindcast (US Tidal)](https://mhkdr.openei.org/submissions/632) |
 
 # Dataset Information
@@ -50,8 +50,7 @@ WPTO High Resolution Tidal Hindcast
 The WPTO High Resolution Tidal Hindcast dataset provides standardized
 tidal energy data for five strategically selected U.S. coastal locations
 with significant tidal energy potential. Developed collaboratively by
-Pacific Northwest National Laboratory (PNNL) and National Renewable
-Energy Laboratory (NREL), this dataset is funded by the U.S. Department
+Pacific Northwest National Laboratory (PNNL) and National Laboratory of the Rockies (NLR), this dataset is funded by the U.S. Department
 of Energy’s Water Power Technologies Office Marine Energy Resource
 Assessment and Characterization project.
 
@@ -206,11 +205,11 @@ tidal energy techno-economic analysis.
 ### Documentation
 
 - [Marine Energy Resource Characterization Software
-  Development](https://github.com/NREL/Marine_Energy_Resource_Characterization)
+  Development](https://github.com/NLR/Marine_Energy_Resource_Characterization)
 - [Marine Energy Atlas Dataset
   Visualization](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers)
 - [High Resolution Tidal Hindcast Processing
-  Software](https://github.com/NREL/Marine_Energy_Resource_Characterization/tidal/fvcom/high_resolution_tidal_hindcast)
+  Software](https://github.com/NLR/Marine_Energy_Resource_Characterization/tidal/fvcom/high_resolution_tidal_hindcast)
   (repository includes detailed methodology documentation)
 
 <!--
@@ -472,9 +471,9 @@ Additional examples will be provided including:
 
 ### Promotion Strategy
 
-**How NREL intends to promote this dataset**:
+**How NLR intends to promote this dataset**:
 
-To be determined by NREL Marine Energy communications teams.
+To be determined by NLR Marine Energy communications teams.
 
 ### Tags
 
@@ -508,7 +507,7 @@ Other relevant tags, not in list
 ## Dataset Citation
 
 \[3\] Z. Yang *et al.*, “High resolution tidal hindcast.” Marine and
-Hydrokinetic Data Repository, National Renewable Energy Laboratory,
+Hydrokinetic Data Repository, National Laboratory of the Rockies,
 https://mhkdr.openei.org/submissions/632, 2025. Available:
 <https://mhkdr.openei.org/submissions/632>
 
@@ -519,7 +518,7 @@ https://mhkdr.openei.org/submissions/632, 2025. Available:
     author = {Yang, Zhaoqing and Deb, Mithun and Wang, Taiping and Spicer, Preston and Simms, Andrew and Young, Ethan and Lawson, Mike},
     url = {https://mhkdr.openei.org/submissions/632},
     year = {2025},
-    howpublished = {Marine and Hydrokinetic Data Repository, National Renewable Energy Laboratory, https://mhkdr.openei.org/submissions/632},
+    howpublished = {Marine and Hydrokinetic Data Repository, National Laboratory of the Rockies, https://mhkdr.openei.org/submissions/632},
     }
 
 ## Location Specific References
@@ -617,8 +616,7 @@ Geneva, Switzerland, IEC/TS 62600-201 Ed. 1.0, Apr. 2015. Available:
 
 <span class="csl-left-margin">\[3\]
 </span><span class="csl-right-inline">Z. Yang *et al.*, “High resolution
-tidal hindcast.” Marine and Hydrokinetic Data Repository, National
-Renewable Energy Laboratory, https://mhkdr.openei.org/submissions/632,
+tidal hindcast.” Marine and Hydrokinetic Data Repository, National Laboratory of the Rockies, https://mhkdr.openei.org/submissions/632,
 2025. Available: <https://mhkdr.openei.org/submissions/632></span>
 
 </div>

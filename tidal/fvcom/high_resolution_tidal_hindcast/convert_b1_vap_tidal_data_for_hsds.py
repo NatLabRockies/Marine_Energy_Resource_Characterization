@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Convert single monthly tidal FVCOM b1 NC file to HSDS (HDF5) format following NREL spec.
+Convert single monthly tidal FVCOM b1 NC file to HSDS (HDF5) format following NLR spec.
 This script processes one monthly file at a time for parallel processing.
 """
 
@@ -276,7 +276,7 @@ def analyze_file_structure(nc_files, timezone_offset=None, jurisdiction_array=No
         # Sort times
         all_times = sorted(all_times)
 
-        # Analyze variables - apply NREL spec 3D to 2D splitting
+        # Analyze variables - apply NLR spec 3D to 2D splitting
         variable_info = {}
 
         # First, add the standard renamed variables as separate face-only datasets
@@ -394,7 +394,7 @@ def analyze_file_structure(nc_files, timezone_offset=None, jurisdiction_array=No
                         f"  Note: Converting {var_name} from {var.dtype} to string S25 for HDF5"
                     )
 
-                # Handle different dimension patterns following NREL spec
+                # Handle different dimension patterns following NLR spec
                 if dims == ("time", "face"):
                     # 2D time series: direct use (time, face) -> (time, face)
                     final_shape = (total_time_steps, n_faces)
@@ -412,7 +412,7 @@ def analyze_file_structure(nc_files, timezone_offset=None, jurisdiction_array=No
                     "sigma_layer",
                     "face",
                 ):
-                    # 3D time series: split into sigma layers (1-indexed) - NREL spec
+                    # 3D time series: split into sigma layers (1-indexed) - NLR spec
                     print(
                         f"  Note: Splitting 3D variable {var_name} into {n_sigma} sigma layers"
                     )
@@ -716,12 +716,12 @@ def create_time_index(times):
 def get_renamed_variable_name(var_name):
     """
     Get the renamed variable name for output H5 file.
-    Renames standard NREL variables and removes vap_ prefix from static face variables.
+    Renames standard NLR variables and removes vap_ prefix from static face variables.
 
     Returns:
         tuple: (output_name, is_renamed)
     """
-    # Standard NREL variable renames
+    # Standard NLR variable renames
     rename_map = {
         "lat_center": "latitude",
         "lon_center": "longitude",
