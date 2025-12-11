@@ -418,8 +418,8 @@ def get_parquet_path(region):
         # Combined atlas has parquet files in version/parquet subdirectory
         parquet_dir = BASE_DIR / region / version / "parquet"
     else:
-        # Regular regions have parquet files in b5_vap_summary_parquet subdirectory
-        parquet_dir = BASE_DIR / region / version / "b5_vap_summary_parquet"
+        # Regular regions have parquet files in b4_vap_summary_parquet subdirectory
+        parquet_dir = BASE_DIR / region / version / "b4_vap_summary_parquet"
 
     if not parquet_dir.exists():
         raise FileNotFoundError(
@@ -2652,7 +2652,9 @@ def organize_stats_by_variable(all_stats):
 if __name__ == "__main__":
     # Configuration - set this to skip visualization generation
     BYPASS_VISUALIZATIONS = False  # Set to True to skip all plotting
-    BYPASS_COMBINED_VISUALIZATIONS = True  # Set to True to skip combined region plots (slow)
+    BYPASS_COMBINED_VISUALIZATIONS = (
+        True  # Set to True to skip combined region plots (slow)
+    )
 
     # Display available regions
     regions = get_available_regions()
@@ -2665,7 +2667,9 @@ if __name__ == "__main__":
     if BYPASS_VISUALIZATIONS:
         print("Visualization generation is DISABLED - only performing analysis")
     if BYPASS_COMBINED_VISUALIZATIONS:
-        print("Combined region visualization is DISABLED - skipping slow combined plots")
+        print(
+            "Combined region visualization is DISABLED - skipping slow combined plots"
+        )
 
     # Initialize data structures
     color_level_data = {}
@@ -2704,7 +2708,9 @@ if __name__ == "__main__":
         # Process all variables for this region
         # Determine if visualizations should be bypassed for this region
         is_combined_region = "combined" in this_region.lower()
-        should_bypass_viz = BYPASS_VISUALIZATIONS or (BYPASS_COMBINED_VISUALIZATIONS and is_combined_region)
+        should_bypass_viz = BYPASS_VISUALIZATIONS or (
+            BYPASS_COMBINED_VISUALIZATIONS and is_combined_region
+        )
 
         for var_key, var_config in VIZ_SPECS.items():
             stats, color_data = process_variable(
