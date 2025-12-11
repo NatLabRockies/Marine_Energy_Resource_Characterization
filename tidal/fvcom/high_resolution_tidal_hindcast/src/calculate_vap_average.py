@@ -1431,6 +1431,7 @@ class VAPSummaryCalculator:
                 self.config["dataset"]["name"],
                 data_level,
                 temporal=temporal,
+                version=self.config["dataset"]["version"],
             )
         )
 
