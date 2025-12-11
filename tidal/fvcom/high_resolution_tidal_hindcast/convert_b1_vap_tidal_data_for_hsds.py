@@ -40,7 +40,9 @@ def create_monthly_hsds_file(
 
     # Step 1: Analyze file structure (includes adding timezone and jurisdiction)
     print("Step 1: Analyzing file structure...")
-    file_info = analyze_file_structure([input_path], timezone_offset, jurisdiction_array)
+    file_info = analyze_file_structure(
+        [input_path], timezone_offset, jurisdiction_array
+    )
 
     n_faces = file_info["n_faces"]
     n_sigma = file_info["n_sigma"]
@@ -301,7 +303,8 @@ def analyze_file_structure(nc_files, timezone_offset=None, jurisdiction_array=No
         max_jurisdiction_length = max(len(str(j)) for j in jurisdiction_array)
         jurisdiction_dtype = f"S{max_jurisdiction_length}"
         jurisdiction_bytes = np.array(
-            [str(j).encode("utf-8") for j in jurisdiction_array], dtype=jurisdiction_dtype
+            [str(j).encode("utf-8") for j in jurisdiction_array],
+            dtype=jurisdiction_dtype,
         )
 
         standard_face_vars["timezone"] = {
@@ -318,12 +321,36 @@ def analyze_file_structure(nc_files, timezone_offset=None, jurisdiction_array=No
 
         # Add element vertex coordinates
         element_vertex_vars = {
-            "element_vertex_1_lat": {"data": element_vertex_1_lat, "dtype": "<f4", "attrs": {}},
-            "element_vertex_1_lon": {"data": element_vertex_1_lon, "dtype": "<f4", "attrs": {}},
-            "element_vertex_2_lat": {"data": element_vertex_2_lat, "dtype": "<f4", "attrs": {}},
-            "element_vertex_2_lon": {"data": element_vertex_2_lon, "dtype": "<f4", "attrs": {}},
-            "element_vertex_3_lat": {"data": element_vertex_3_lat, "dtype": "<f4", "attrs": {}},
-            "element_vertex_3_lon": {"data": element_vertex_3_lon, "dtype": "<f4", "attrs": {}},
+            "element_vertex_1_lat": {
+                "data": element_vertex_1_lat,
+                "dtype": "<f4",
+                "attrs": {},
+            },
+            "element_vertex_1_lon": {
+                "data": element_vertex_1_lon,
+                "dtype": "<f4",
+                "attrs": {},
+            },
+            "element_vertex_2_lat": {
+                "data": element_vertex_2_lat,
+                "dtype": "<f4",
+                "attrs": {},
+            },
+            "element_vertex_2_lon": {
+                "data": element_vertex_2_lon,
+                "dtype": "<f4",
+                "attrs": {},
+            },
+            "element_vertex_3_lat": {
+                "data": element_vertex_3_lat,
+                "dtype": "<f4",
+                "attrs": {},
+            },
+            "element_vertex_3_lon": {
+                "data": element_vertex_3_lon,
+                "dtype": "<f4",
+                "attrs": {},
+            },
         }
 
         # Add all standard and element vertex variables to variable_info
