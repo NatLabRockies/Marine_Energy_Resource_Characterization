@@ -685,6 +685,9 @@ class VAPSummaryCalculator:
         self.avg_vars = []  # Regular variables for averaging
         self.max_vars = []  # Max variables
 
+        # Track surface layer velocity statistics (sigma_level_1)
+        self.surface_layer_max_values = None
+
     def _calculate_face_batch_slice(self, total_faces):
         """
         Calculate the face slice for the current batch configuration.
@@ -846,20 +849,209 @@ class VAPSummaryCalculator:
 
         return result_ds
 
+    def _update_water_column_height_minmax(self, result_ds, dataset, count):
+        """
+        Update running min/max for water column height (vap_sea_floor_depth).
+
+        Water column height is h_center + zeta_center, representing the instantaneous
+        distance from the sea surface to the seafloor. This tracks the absolute
+        minimum (shallowest, typically at low tide) and maximum (deepest, typically
+        at high tide) water depth over the analysis period.
+        """
+        if "vap_sea_floor_depth" not in dataset.data_vars:
+            return result_ds
+
+        sea_floor_depth = dataset["vap_sea_floor_depth"]  # [time, face]
+
+        # Calculate min and max for this file
+        file_min = sea_floor_depth.min(dim="time")  # [face]
+        file_max = sea_floor_depth.max(dim="time")  # [face]
+
+        if count == 0:
+            # First file - initialize
+            result_ds["vap_water_column_height_min"] = file_min
+            result_ds["vap_water_column_height_max"] = file_max
+        else:
+            # Update running min (take smaller value)
+            result_ds["vap_water_column_height_min"] = xr.where(
+                file_min < result_ds["vap_water_column_height_min"],
+                file_min,
+                result_ds["vap_water_column_height_min"],
+            )
+            # Update running max (take larger value)
+            result_ds["vap_water_column_height_max"] = xr.where(
+                file_max > result_ds["vap_water_column_height_max"],
+                file_max,
+                result_ds["vap_water_column_height_max"],
+            )
+
+        return result_ds
+
+    def _update_surface_layer_stats(self, result_ds, dataset, count):
+        """
+        Update surface layer (sigma_level_1) velocity statistics.
+
+        Surface layer is sigma_layer index 0, which is the layer closest to
+        the water surface (where sigma ≈ 0).
+        """
+        if "vap_sea_water_speed" not in dataset.data_vars:
+            return result_ds
+
+        if "sigma_layer" not in dataset["vap_sea_water_speed"].dims:
+            return result_ds
+
+        # Surface layer = sigma_layer index 0 (sigma_level_1)
+        surface_speed = dataset["vap_sea_water_speed"].isel(
+            sigma_layer=0
+        )  # [time, face]
+        current_times = len(dataset.time)
+
+        # Track file max for percentile calculation
+        file_surface_max = surface_speed.max(dim="time")
+
+        if count == 0:
+            self.surface_layer_max_values = file_surface_max.expand_dims(
+                dim={"file": [count]}
+            )
+            result_ds["vap_surface_layer_max_sea_water_speed"] = file_surface_max
+            result_ds["vap_surface_layer_mean_sea_water_speed"] = surface_speed.mean(
+                dim="time"
+            )
+        else:
+            new_max = file_surface_max.expand_dims(dim={"file": [count]})
+            self.surface_layer_max_values = xr.concat(
+                [self.surface_layer_max_values, new_max], dim="file"
+            )
+
+            # Update running max
+            result_ds["vap_surface_layer_max_sea_water_speed"] = xr.where(
+                file_surface_max > result_ds["vap_surface_layer_max_sea_water_speed"],
+                file_surface_max,
+                result_ds["vap_surface_layer_max_sea_water_speed"],
+            )
+
+            # Update running mean (Welford's algorithm)
+            file_mean = surface_speed.mean(dim="time")
+            weight = current_times / (count + current_times)
+            result_ds["vap_surface_layer_mean_sea_water_speed"] = (
+                result_ds["vap_surface_layer_mean_sea_water_speed"]
+                + (file_mean - result_ds["vap_surface_layer_mean_sea_water_speed"])
+                * weight
+            )
+
+        return result_ds
+
     def _calculate_percentiles(self, result_ds):
         """
-        Calculate 95th percentiles of the max values after all files have been processed.
+        Calculate 95th and 99th percentiles of the max values after all files have been processed.
         """
-        print("Calculating 95th percentiles of max values...")
+        print("Calculating percentiles of max values...")
 
-        # Calculate 95th percentile for each max variable
+        # Calculate percentiles for each max variable
         for max_var in self.max_vars:
-            p95_name = max_var.replace("_max_", "_95th_percentile_")
             if max_var in self.max_values and self.max_values[max_var] is not None:
                 # Calculate the 95th percentile along the file dimension
+                p95_name = max_var.replace("_max_", "_95th_percentile_")
                 p95_value = self.max_values[max_var].quantile(0.95, dim="file")
                 result_ds[p95_name] = p95_value
                 print(f"Calculated 95th percentile for {p95_name} from {max_var}")
+
+                # Calculate the 99th percentile along the file dimension
+                p99_name = max_var.replace("_max_", "_99th_percentile_")
+                p99_value = self.max_values[max_var].quantile(0.99, dim="file")
+                result_ds[p99_name] = p99_value
+                print(f"Calculated 99th percentile for {p99_name} from {max_var}")
+
+        return result_ds
+
+    def _calculate_surface_layer_percentiles(self, result_ds):
+        """
+        Calculate percentiles for surface layer velocity statistics.
+        """
+        if self.surface_layer_max_values is None:
+            return result_ds
+
+        print("Calculating surface layer percentiles...")
+
+        # 95th percentile
+        result_ds["vap_surface_layer_95th_percentile_sea_water_speed"] = (
+            self.surface_layer_max_values.quantile(0.95, dim="file")
+        )
+        print("Calculated vap_surface_layer_95th_percentile_sea_water_speed")
+
+        # 99th percentile
+        result_ds["vap_surface_layer_99th_percentile_sea_water_speed"] = (
+            self.surface_layer_max_values.quantile(0.99, dim="file")
+        )
+        print("Calculated vap_surface_layer_99th_percentile_sea_water_speed")
+
+        return result_ds
+
+    def _add_new_variable_attrs(self, result_ds):
+        """
+        Add CF-compliant attributes to all newly calculated variables.
+        """
+        # Water column height attributes
+        if "vap_water_column_height_min" in result_ds:
+            result_ds["vap_water_column_height_min"].attrs = {
+                "long_name": "Minimum Water Column Height",
+                "units": "m",
+                "positive": "down",
+                "description": (
+                    "Minimum water depth (h_center + zeta_center) over the analysis "
+                    "period. Represents the shallowest depth during tidal cycles "
+                    "(typically at low tide)."
+                ),
+                "cell_methods": "time: minimum",
+                "coordinates": "face lat_center lon_center",
+            }
+
+        if "vap_water_column_height_max" in result_ds:
+            result_ds["vap_water_column_height_max"].attrs = {
+                "long_name": "Maximum Water Column Height",
+                "units": "m",
+                "positive": "down",
+                "description": (
+                    "Maximum water depth (h_center + zeta_center) over the analysis "
+                    "period. Represents the deepest depth during tidal cycles "
+                    "(typically at high tide)."
+                ),
+                "cell_methods": "time: maximum",
+                "coordinates": "face lat_center lon_center",
+            }
+
+        # Surface layer velocity attributes
+        surface_layer_vars = {
+            "vap_surface_layer_mean_sea_water_speed": {
+                "long_name": "Surface Layer Mean Sea Water Speed",
+                "cell_methods": "time: mean",
+            },
+            "vap_surface_layer_95th_percentile_sea_water_speed": {
+                "long_name": "Surface Layer 95th Percentile Sea Water Speed",
+                "cell_methods": "time: percentile (95)",
+            },
+            "vap_surface_layer_99th_percentile_sea_water_speed": {
+                "long_name": "Surface Layer 99th Percentile Sea Water Speed",
+                "cell_methods": "time: percentile (99)",
+            },
+            "vap_surface_layer_max_sea_water_speed": {
+                "long_name": "Surface Layer Maximum Sea Water Speed",
+                "cell_methods": "time: maximum",
+            },
+        }
+
+        for var_name, specific_attrs in surface_layer_vars.items():
+            if var_name in result_ds:
+                result_ds[var_name].attrs = {
+                    **specific_attrs,
+                    "units": "m s-1",
+                    "description": (
+                        f"{specific_attrs['long_name']} at sigma_level_1 "
+                        "(surface layer, closest to water surface)"
+                    ),
+                    "sigma_layer": "sigma_level_1 (surface, index 0)",
+                    "coordinates": "face lat_center lon_center",
+                }
 
         return result_ds
 
@@ -1308,6 +1500,10 @@ class VAPSummaryCalculator:
             count = self._update_averages(result_ds, ds, count)
             result_ds = self._update_max_values(result_ds, ds, count)
 
+            # Update new statistics (water column height, surface layer velocity)
+            result_ds = self._update_water_column_height_minmax(result_ds, ds, count)
+            result_ds = self._update_surface_layer_stats(result_ds, ds, count)
+
             # Accumulate direction and surface elevation data with timestamps
             to_direction_data.append(ds["vap_sea_water_to_direction"].values)
             speed_data.append(ds["vap_sea_water_speed"].values)
@@ -1323,9 +1519,12 @@ class VAPSummaryCalculator:
 
             ds.close()
 
-        # Calculate 95th percentiles after processing all files
-        # if first_ds is not None:  # Only if we processed at least one file
+        # Calculate percentiles after processing all files
         result_ds = self._calculate_percentiles(result_ds)
+        result_ds = self._calculate_surface_layer_percentiles(result_ds)
+
+        # Add attributes to new variables
+        result_ds = self._add_new_variable_attrs(result_ds)
 
         # Combine accumulated data and calculate QOI
         # Concatenate along time axis (axis 0)
@@ -1505,6 +1704,7 @@ class VAPSummaryCalculator:
         self.avg_vars = []
         self.max_vars = []
         self.max_values = {}
+        self.surface_layer_max_values = None
 
         # Process all files
         print(f"Starting yearly processing of {len(self.vap_nc_files)} vap files...")
@@ -1613,6 +1813,7 @@ class VAPSummaryCalculator:
             self.avg_vars = []
             self.max_vars = []
             self.max_values = {}
+            self.surface_layer_max_values = None
 
             # Process files for this month
             result_ds, first_timestamp, time_attrs, var_attrs, source_files = (
