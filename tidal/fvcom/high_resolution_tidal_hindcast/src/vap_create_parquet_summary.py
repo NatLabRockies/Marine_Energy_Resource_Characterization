@@ -31,14 +31,26 @@ ATLAS_COLUMNS = {
     **POLYGON_COLUMNS,
     "lat_center": "Center Latitude",
     "lon_center": "Center Longitude",
+    # Water column (depth-averaged) velocity statistics
     "vap_water_column_mean_sea_water_speed": "Mean Sea Water Speed [m/s]",
     "vap_water_column_95th_percentile_sea_water_speed": "95th Percentile Sea Water Speed [m/s]",
+    "vap_water_column_99th_percentile_sea_water_speed": "99th Percentile Sea Water Speed [m/s]",
+    "vap_water_column_max_sea_water_speed": "Maximum Sea Water Speed [m/s]",
     "vap_water_column_sea_water_speed_max_to_mean_ratio": "Speed Max to Mean Ratio",
+    # Water column (depth-averaged) power density statistics
     "vap_water_column_mean_sea_water_power_density": "Mean Sea Water Power Density [W/m^2]",
     "vap_water_column_95th_percentile_sea_water_power_density": "95th Percentile Sea Water Power Density [W/m^2]",
-    # "vap_water_column_sea_water_power_density_max_to_mean_ratio": "Power Density Max to Mean Ratio",
+    "vap_water_column_99th_percentile_sea_water_power_density": "99th Percentile Power Density [W/m^2]",
+    # Surface layer (sigma_level_1) velocity statistics
+    "vap_surface_layer_mean_sea_water_speed": "Surface Layer Mean Speed [m/s]",
+    "vap_surface_layer_95th_percentile_sea_water_speed": "Surface Layer 95th Percentile Speed [m/s]",
+    "vap_surface_layer_99th_percentile_sea_water_speed": "Surface Layer 99th Percentile Speed [m/s]",
+    "vap_surface_layer_max_sea_water_speed": "Surface Layer Max Speed [m/s]",
+    # Depth statistics
     "vap_grid_resolution": "Grid Resolution [m]",
     "vap_sea_floor_depth": "Sea Floor Depth from Mean Surface Elevation [m]",
+    "vap_water_column_height_min": "Min Water Column Height [m]",
+    "vap_water_column_height_max": "Max Water Column Height [m]",
     # Full year data URIs - links to b1_vap_by_point_partition parquet files
     "full_year_data_s3_uri": "S3 URI for Full Year Time Series Data",
     "full_year_data_https_url": "HTTPS URL for Full Year Time Series Data",
