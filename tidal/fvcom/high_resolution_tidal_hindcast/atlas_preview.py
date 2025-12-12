@@ -1986,7 +1986,8 @@ def copy_images_for_web(
     """
 
     # Generate regional image files dynamically from VIZ_SPECS
-    regional_image_suffixes = [f"{key}.png" for key in VIZ_SPECS.keys()]
+    # Use column_name to match how process_variable saves files
+    regional_image_suffixes = [f"{spec['column_name']}.png" for spec in VIZ_SPECS.values()]
 
     # Process regional images
     for region in regions_processed:
@@ -2443,7 +2444,9 @@ def generate_markdown_specification(
                 if loc["output_name"] == region:
                     this_loc = loc
             region_title = this_loc["label"]
-            img_filename = f"{region}_{viz_key}.png"
+            # Use column_name to match how process_variable saves files
+            column_name = VIZ_SPECS[viz_key]["column_name"]
+            img_filename = f"{region}_{column_name}.png"
             img_path = f"docs/img/{img_filename}"
 
             # Get units from VIZ_SPECS
@@ -2582,11 +2585,8 @@ def process_variable(
     # Only plot if visualizations are enabled
     color_data = None
     if not bypass_visualizations:
-        # Create visualization filename using title converted to snake_case
-        # filename_suffix = (
-        #     var_config["title"].lower().replace(" ", "_").replace("%", "percentile")
-        # )
-        filename_suffix = var_config["column_name"].lower().replace(" ", "_")
+        # Use column_name for traceable filenames that match data columns
+        filename_suffix = var_config["column_name"]
 
         fig, ax, color_data = plot_tidal_variable(
             df,
