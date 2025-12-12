@@ -110,7 +110,7 @@ VIZ_SPECS = {
         "physical_meaning": "95th percentile of yearly depth maximum current speed",
         "intended_usage": "Generator sizing and power electronics design",
         "intended_usage_detail": "Critical for sizing electrical generation components. Used to determine maximum generator output capacity, size power electronics and converters for peak electrical loads, design control systems for extreme speed conditions, and set cut-out speeds for generator protection. Essential for electrical system certification, grid connection requirements, and ensuring generators can handle maximum rotational speeds without damage.",
-        "equation": r"$U_{95} = \text{percentile}_{95}\left(\left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation": r"$U_{95} = \text{percentile}(95, \left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
             r"$N_{\sigma} = 10$ levels",
@@ -147,7 +147,7 @@ VIZ_SPECS = {
         "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
         "intended_usage": "Structural design loads and extreme loading conditions",
         "intended_usage_detail": "Essential for structural engineering and extreme load analysis. Used to determine maximum design loads for turbine blades, drive trains, support structures, and foundation systems. Critical for fatigue analysis, ultimate load calculations, and ensuring structural integrity during extreme tidal events. Defines design margins for mooring systems, tower structures, and emergency braking systems. Required for structural certification and insurance assessments.",
-        "equation": r"$P_{95} = \text{percentile}_{95}\left(\left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
+        "equation": r"$P_{95} = \text{percentile}(95, \left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$ with $\rho = 1025$ kg/m³",
             r"$U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$",
