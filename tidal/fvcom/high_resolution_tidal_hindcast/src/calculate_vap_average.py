@@ -867,8 +867,7 @@ class VAPSummaryCalculator:
         file_min = sea_floor_depth.min(dim="time")  # [face]
         file_max = sea_floor_depth.max(dim="time")  # [face]
 
-        if count == 0:
-            # First file - initialize
+        if "vap_water_column_height_min" not in result_ds:
             result_ds["vap_water_column_height_min"] = file_min
             result_ds["vap_water_column_height_max"] = file_max
         else:
@@ -909,16 +908,17 @@ class VAPSummaryCalculator:
         # Track file max for percentile calculation
         file_surface_max = surface_speed.max(dim="time")
 
-        if count == 0:
+        if self.surface_layer_max_values is None:
             self.surface_layer_max_values = file_surface_max.expand_dims(
-                dim={"file": [count]}
+                dim={"file": [0]}
             )
             result_ds["vap_surface_layer_max_sea_water_speed"] = file_surface_max
             result_ds["vap_surface_layer_mean_sea_water_speed"] = surface_speed.mean(
                 dim="time"
             )
         else:
-            new_max = file_surface_max.expand_dims(dim={"file": [count]})
+            file_idx = len(self.surface_layer_max_values.file)
+            new_max = file_surface_max.expand_dims(dim={"file": [file_idx]})
             self.surface_layer_max_values = xr.concat(
                 [self.surface_layer_max_values, new_max], dim="file"
             )
