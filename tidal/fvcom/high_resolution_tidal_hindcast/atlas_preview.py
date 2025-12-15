@@ -2127,7 +2127,9 @@ def copy_images_for_web(
 
     # Generate regional image files dynamically from VIZ_SPECS
     # Use column_name to match how process_variable saves files
-    regional_image_suffixes = [f"{spec['column_name']}.png" for spec in VIZ_SPECS.values()]
+    regional_image_suffixes = [
+        f"{spec['column_name']}.png" for spec in VIZ_SPECS.values()
+    ]
 
     # Process regional images
     for region in regions_processed:
