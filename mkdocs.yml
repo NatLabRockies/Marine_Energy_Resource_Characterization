@@ -58,6 +58,7 @@ extra_javascript:
 
 extra:
   social:
+    - icon: material/waves
       link: https://github.com/NatLabRockies/Marine_Energy_Resource_Characterization
   generator: false
 
