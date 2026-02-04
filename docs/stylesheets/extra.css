@@ -1,0 +1,110 @@
+/* NLR Color Palette */
+:root {
+  /* Primary NLR Blue */
+  --md-primary-fg-color: #0079C2;
+  --md-primary-fg-color--light: #00A3E4;
+  --md-primary-fg-color--dark: #005a91;
+
+  /* Accent - Secondary Blue */
+  --md-accent-fg-color: #00A3E4;
+  --md-accent-fg-color--transparent: rgba(0, 163, 228, 0.1);
+
+  /* NLR additional colors for reference */
+  --nlr-yellow: #FFC423;
+  --nlr-green: #7DA544;
+  --nlr-gray: #626D72;
+  --nlr-light-gray: #D1D5D8;
+}
+
+/* Header styling */
+.md-header {
+  background-color: var(--md-primary-fg-color);
+}
+
+/* Navigation tabs */
+.md-tabs {
+  background-color: var(--md-primary-fg-color);
+}
+
+/* Links */
+.md-typeset a {
+  color: var(--md-primary-fg-color);
+}
+
+.md-typeset a:hover {
+  color: var(--md-primary-fg-color--light);
+}
+
+/* Code blocks */
+.md-typeset code {
+  background-color: rgba(0, 121, 194, 0.1);
+}
+
+/* Admonitions - Info */
+.md-typeset .admonition.info,
+.md-typeset details.info {
+  border-color: var(--md-primary-fg-color);
+}
+
+.md-typeset .info > .admonition-title,
+.md-typeset .info > summary {
+  background-color: rgba(0, 121, 194, 0.1);
+}
+
+.md-typeset .info > .admonition-title::before,
+.md-typeset .info > summary::before {
+  background-color: var(--md-primary-fg-color);
+}
+
+/* Admonitions - Warning */
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-color: var(--nlr-yellow);
+}
+
+.md-typeset .warning > .admonition-title,
+.md-typeset .warning > summary {
+  background-color: rgba(255, 196, 35, 0.1);
+}
+
+/* Admonitions - Success */
+.md-typeset .admonition.success,
+.md-typeset details.success {
+  border-color: var(--nlr-green);
+}
+
+.md-typeset .success > .admonition-title,
+.md-typeset .success > summary {
+  background-color: rgba(125, 165, 68, 0.1);
+}
+
+/* Tables */
+.md-typeset table:not([class]) th {
+  background-color: var(--md-primary-fg-color);
+  color: white;
+}
+
+.md-typeset table:not([class]) tr:hover {
+  background-color: var(--md-accent-fg-color--transparent);
+}
+
+/* Footer */
+.md-footer {
+  background-color: var(--nlr-gray);
+}
+
+/* Search highlight */
+.md-search__form {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Content max width */
+.md-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Hide the logo icon */
+.md-header__button.md-logo {
+  display: none !important;
+}

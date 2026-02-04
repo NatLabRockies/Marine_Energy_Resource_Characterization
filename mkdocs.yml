@@ -58,8 +58,7 @@ extra_javascript:
 
 extra:
   social:
-    - icon: fontawesome/brands/github
       link: https://github.com/NatLabRockies/Marine_Energy_Resource_Characterization
   generator: false
 
-copyright: Copyright &copy; 2025 Alliance for Energy Innovation, LLC
+copyright: Copyright &copy; 2026 Alliance for Energy Innovation, LLC
