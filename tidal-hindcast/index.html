@@ -1202,224 +1202,19 @@
 <p><strong>Hindcast</strong></p>
 <p>A historical simulation of ocean conditions using a numerical model driven by observed atmospheric forcing and tidal boundary conditions. Unlike a forecast (which predicts future conditions) or direct measurements, a hindcast reconstructs past conditions by running the model over a historical time period. The results represent modeled estimates of what conditions were, not direct observations.</p>
 <p><strong>Sigma Layer</strong></p>
-<p>A terrain-following and free-surface-conforming vertical coordinate system used in ocean models where the water column is divided into layers that conform to both the fixed seafloor bathymetry (bottom boundary) and the time-varying sea surface (top boundary). Unlike fixed-depth coordinate systems, sigma (σ) expresses vertical position as a proportion of the instantaneous total water depth, ranging from σ = 0 at the free surface to σ = −1 at the seafloor. This approach maintains consistent vertical resolution regardless of local water depth, with layers stretching and compressing dynamically as the water column depth varies with tidal fluctuations.</p>
-<p>Vertical Datum Convention: Sea surface elevation (ζ) is measured relative to NAVD88 and varies with time (tides, storm surge). Bathymetry depth (h) is the fixed depth of the seafloor below NAVD88. The instantaneous total water depth is D = h + ζ, and the physical depth below the surface for any sigma value is: depth = −D × σ.</p>
-<p>Configuration in This Dataset: The FVCOM model uses 11 uniformly spaced sigma levels that define the horizontal boundaries of finite volume prisms. Between these levels are 10 sigma layers, representing the vertical midpoints of each prism. Model variables such as velocity components (u and v) are computed at each layer center (the centroid of the triangular prism at that sigma level). These are point values at the control volume center, not volume-integrated averages. The following tables detail the sigma coordinate values.</p>
-<p><strong>FVCOM Sigma Levels (Boundaries)</strong></p>
-<table>
-<thead>
-<tr>
-<th>Level Index</th>
-<th>σ Value</th>
-<th>Position</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td>0.0</td>
-<td>Sea surface</td>
-</tr>
-<tr>
-<td>1</td>
-<td>−0.1</td>
-<td></td>
-</tr>
-<tr>
-<td>2</td>
-<td>−0.2</td>
-<td></td>
-</tr>
-<tr>
-<td>3</td>
-<td>−0.3</td>
-<td></td>
-</tr>
-<tr>
-<td>4</td>
-<td>−0.4</td>
-<td></td>
-</tr>
-<tr>
-<td>5</td>
-<td>−0.5</td>
-<td>Mid-depth</td>
-</tr>
-<tr>
-<td>6</td>
-<td>−0.6</td>
-<td></td>
-</tr>
-<tr>
-<td>7</td>
-<td>−0.7</td>
-<td></td>
-</tr>
-<tr>
-<td>8</td>
-<td>−0.8</td>
-<td></td>
-</tr>
-<tr>
-<td>9</td>
-<td>−0.9</td>
-<td></td>
-</tr>
-<tr>
-<td>10</td>
-<td>−1.0</td>
-<td>Seafloor</td>
-</tr>
-</tbody>
-</table>
-<p><strong>FVCOM Sigma Layers (Volume Centers)</strong></p>
-<table>
-<thead>
-<tr>
-<th>Layer Index</th>
-<th>σ Center</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>−0.05</td>
-<td>Near-surface layer</td>
-</tr>
-<tr>
-<td>2</td>
-<td>−0.15</td>
-<td></td>
-</tr>
-<tr>
-<td>3</td>
-<td>−0.25</td>
-<td></td>
-</tr>
-<tr>
-<td>4</td>
-<td>−0.35</td>
-<td></td>
-</tr>
-<tr>
-<td>5</td>
-<td>−0.45</td>
-<td></td>
-</tr>
-<tr>
-<td>6</td>
-<td>−0.55</td>
-<td>Mid-depth layer</td>
-</tr>
-<tr>
-<td>7</td>
-<td>−0.65</td>
-<td></td>
-</tr>
-<tr>
-<td>8</td>
-<td>−0.75</td>
-<td></td>
-</tr>
-<tr>
-<td>9</td>
-<td>−0.85</td>
-<td></td>
-</tr>
-<tr>
-<td>10</td>
-<td>−0.95</td>
-<td>Near-bottom layer</td>
-</tr>
-</tbody>
-</table>
-<p>How Layer Depths Vary with Tides: The physical depth of each sigma layer changes as the total water column depth varies with tides. The following table illustrates this using real data from Cook Inlet, Alaska (60.74°N, 151.43°W) where the bathymetry is h = 26.7 m below NAVD88. At low tide (ζ = -4.95 m, total depth D = 21.8 m) and high tide (ζ = 3.82 m, total depth D = 30.6 m), the sigma layer depths shift proportionally while maintaining their relative positions.</p>
-<p><strong>Sigma Layer Depths at Low and High Tide (Cook Inlet Example)</strong></p>
-<table>
-<thead>
-<tr>
-<th>Layer</th>
-<th>σ Center</th>
-<th>Low Tide (m)</th>
-<th>High Tide (m)</th>
-<th>Δ Depth (m)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>−0.05</td>
-<td>1.1</td>
-<td>1.5</td>
-<td>+0.4</td>
-</tr>
-<tr>
-<td>2</td>
-<td>−0.15</td>
-<td>3.3</td>
-<td>4.6</td>
-<td>+1.3</td>
-</tr>
-<tr>
-<td>3</td>
-<td>−0.25</td>
-<td>5.4</td>
-<td>7.6</td>
-<td>+2.2</td>
-</tr>
-<tr>
-<td>4</td>
-<td>−0.35</td>
-<td>7.6</td>
-<td>10.7</td>
-<td>+3.1</td>
-</tr>
-<tr>
-<td>5</td>
-<td>−0.45</td>
-<td>9.8</td>
-<td>13.7</td>
-<td>+3.9</td>
-</tr>
-<tr>
-<td>6</td>
-<td>−0.55</td>
-<td>12.0</td>
-<td>16.8</td>
-<td>+4.8</td>
-</tr>
-<tr>
-<td>7</td>
-<td>−0.65</td>
-<td>14.2</td>
-<td>19.9</td>
-<td>+5.7</td>
-</tr>
-<tr>
-<td>8</td>
-<td>−0.75</td>
-<td>16.3</td>
-<td>22.9</td>
-<td>+6.6</td>
-</tr>
-<tr>
-<td>9</td>
-<td>−0.85</td>
-<td>18.5</td>
-<td>26.0</td>
-<td>+7.5</td>
-</tr>
-<tr>
-<td>10</td>
-<td>−0.95</td>
-<td>20.7</td>
-<td>29.0</td>
-<td>+8.3</td>
-</tr>
-</tbody>
-</table>
-<p>Implications for Data Users: While sigma coordinates provide consistent data structure across varying bathymetry and tidal conditions, they require interpolation to extract data at fixed absolute depths. Queries such as 'average current speed at 8 m depth' require calculating which sigma layers correspond to that depth at each timestep.</p>
+<p>A terrain-following vertical coordinate system where the water column is divided into layers that conform to both the seafloor (bottom) and the time-varying sea surface (top). Sigma (σ) expresses vertical position as a proportion of total water depth, ranging from σ = 0 at the surface to σ = −1 at the seafloor. Layers stretch and compress dynamically as water depth varies with tides.</p>
+<p>Configuration: The FVCOM model uses 10 uniformly spaced sigma layers. Model variables (velocity, etc.) are computed at each layer center. The physical depth of any sigma value is: depth = −D × σ, where D = h + ζ (bathymetry + sea surface elevation).</p>
+<figure>
+  <img alt="Sigma coordinate system over a tidal cycle" src="../assets/sigma_timeseries.png" width="100%" />
+<br />
+<figcaption>Sigma coordinate system over a 4-day tidal cycle at Cook Inlet, Alaska. Top panel shows sigma level boundaries (solid lines) and layer centers (dashed lines) in elevation relative to NAVD88. The seafloor remains fixed while the sea surface oscillates with tides, causing sigma layers to expand during high tide and compress during low tide. Middle and bottom panels show the corresponding total water depth and individual layer height variations.</figcaption>
+</figure>
+<figure>
+  <img alt="Sigma layer comparison at low and high tide" src="../assets/sigma_layer_comparison.png" width="100%" />
+<br />
+<figcaption>Sigma levels and layer centers at low tide (left) and high tide (right) for Cook Inlet, Alaska. The 10 sigma layers maintain their proportional positions within the water column while physical depths change with tidal elevation. Layer centers (dots) indicate where model variables are computed.</figcaption>
+</figure>
+<p>Implications for Data Users: While sigma coordinates provide consistent data structure across varying bathymetry and tidal conditions, they require interpolation to extract data at fixed absolute depths. Queries such as "average current speed at 8 m depth" require calculating which sigma layers correspond to that depth at each timestep.</p>
 <p><strong>Depth-Averaged</strong></p>
 <p>A value computed by averaging a quantity across all vertical layers (sigma layers) at a given horizontal location and time. Depth-averaging produces a single representative value for the entire water column, useful for characterizing overall flow conditions while accounting for vertical velocity profiles.</p>
 <p><strong>Depth-Maximum</strong></p>
@@ -1430,6 +1225,11 @@
 <p>A computational mesh composed of irregularly-shaped elements (triangles in FVCOM) that can vary in size across the domain. This allows higher resolution in areas of interest (narrow channels, complex coastlines) and coarser resolution in open water, providing computational efficiency while maintaining accuracy where needed. For the duration of the model run, the horizontal coordinates (lat/lon) of grid remains fixed in space.</p>
 <p>Grid Structure: The FVCOM model uses an unstructured triangular mesh where each element (cell) is defined by three nodes. Model variables are computed at element centers, while the mesh geometry is defined by node positions. The flexibility of triangular elements allows the mesh to conform to complex coastlines and bathymetric features without requiring uniform grid spacing.</p>
 <p>Spatial Resolution: Grid resolution varies across the domain based on local requirements. In narrow channels and near coastlines where currents are strongest and bathymetry changes rapidly, triangles are smaller (higher resolution). In open water regions where conditions vary more gradually, triangles are larger (coarser resolution), reducing computational cost without sacrificing accuracy in areas of interest. The grid resolution variable in the dataset reports the average edge length of each triangular element.</p>
+<figure>
+  <img alt="FVCOM unstructured triangular mesh" src="../assets/unstructured_grid_overview.png" width="100%" />
+<br />
+<figcaption>Wide angle and detailed view of the underlying FVCOM unstructured triangular mesh used for the High Resolution Tidal Hindcast in Cook Inlet, Alaska. The main panel shows the full model domain with 392,002 triangular elements conforming to the complex coastline geometry. The inset shows a detailed view of the mesh structure, illustrating how element size varies with higher resolution near coastlines and in channels where accurate representation of tidal dynamics requires finer spatial detail.</figcaption>
+</figure>
 <p><strong>Model Limitations</strong></p>
 <p>This dataset is derived from numerical model simulations and has inherent limitations that users should understand when applying the data.</p>
 <p>Physics Not Included: The model does not include wave-current interaction (waves are small in the study domains), atmospheric forcing (wind and pressure effects on tidal currents are negligible), density-driven estuarine flow (temperature and salinity effects are small), or storm surge (only astronomical tidal forcing from 12 constituents via OSU TPXO Tide Models is applied).</p>
