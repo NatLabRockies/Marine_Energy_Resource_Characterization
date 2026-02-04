@@ -1,0 +1,122 @@
+---
+title: "MHKDR Submission: WPTO High Resolution Tidal Hindcast"
+subtitle: "High Resolution Tidal Hindcast Dataset"
+bibliography: references/references.bib
+csl: https://www.zotero.org/styles/ieee
+
+format:
+    html:
+        self-contained: true
+
+# This makes all citations in the # Citations section appear as full citations
+citeproc: false
+filters:
+  - at: post-render
+    path: show_full_citations.lua
+
+---
+
+# Description
+
+
+The WPTO High Resolution Tidal Hindcast dataset provides standardized tidal energy data for
+five strategically selected U.S. coastal locations with significant tidal energy potential.
+Developed collaboratively by Pacific Northwest National Laboratory (PNNL) and National Laboratory of the Rockies (NLR), this dataset is funded by the U.S. Department of Energy's Water Power
+Technologies Office Marine Energy Resource Assessment and Characterization project.
+
+Generated using FVCOM 4.3.1 (Finite Volume Community Ocean Model) [@fvcom], the dataset contains one year of
+high-resolution tidal energy data including eastward and northward sea water velocities, surface
+elevation, calculated speed, flow direction, and power density across 10 uniform sigma layers. The
+data follows [CF-1.10][cf_conventions], [ACDD-1.3][acdd_conventions], and [ME Data Pipeline-1.0][me_data_pipeline] conventions and meets IEC 62600-201 [@iec_62600_201] Stage 1
+tidal resource analysis standards.
+
+The five locations include Aleutian Islands and Cook Inlet (Alaska), Piscataqua River (New
+Hampshire), Puget Sound (Washington), and Western Passage (Maine), with temporal resolutions ranging
+from half-hourly to hourly and spanning complete annual cycles for each dataset. This standardized
+dataset supports theoretical and technical resource potential assessments, commercial development
+planning, policy analysis, environmental planning, and research applications for the marine energy
+community.
+
+- **File formats**: NetCDF4 (*.nc), Apache Parquet (.parquet), HDF5 (.h5)
+
+# Dataset Specifications
+
+## Locations
+
+1. **Aleutian Islands, Alaska** (1 Year, 2010-2011, hourly, 797,978 grid faces)
+2. **Cook Inlet, Alaska** (1 Year, 2005, hourly, 392,002 grid faces)
+3. **Piscataqua River, New Hampshire** (1 Year, 2007, half-hourly, 292,927 grid faces)
+4. **Puget Sound, Washington** (364 Days, 2015, half-hourly, 1,734,765 grid faces)
+5. **Western Passage, Maine** (1 Year, 2017, half-hourly, 231,208 grid faces)
+
+
+
+# Variables
+
+- Latitude and longitude [degrees] for each grid face center and vertices
+- Eastward and Northward sea water velocity (u, v) [meters per second]
+- Depth and Surface Elevation calculated to NAVD88 [meters]
+- Calculated sea water speed [meters per second]
+- Calculated sea water to direction [degrees clockwise from true north]
+- Calculated sea water power density [watts per square meter]
+- Calculated surface elevation relative to Mean Sea Level (MSL) [meters]
+- Calculated total depth and layer depths relative to MSL [meters]
+
+
+# Model Configuration
+
+- FVCOM 4.3.1 [@fvcom] with unstructured triangular mesh
+- 10 uniform sigma (depth) layers from surface to seafloor
+- Sub-500m grid resolution in many tidal energy areas
+- 12 tidal constituents from [OSU TPXO][osu_tpxo] boundary forcing
+- [ERA5][era5]/[CFSv2][cfs_v2] atmospheric forcing for wind effects
+
+# Citations
+
+## Location Specific References
+
+The following publications provide validation studies, resource characterization methodologies, and site-specific analyses for each location in the dataset.
+
+### Alaska, Aleutian Islands 
+
+[@ak_aleutian_spicer2025_spatially]
+
+### Alaska, Cook Inlet
+
+@ak_cook_deb2025_characterizing  
+
+### Maine, Western Passage
+
+@ME_western_Deb2023_turbulence
+
+@ME_western_yang2020_modeling
+
+### New Hampshire, Piscataqua River
+
+@nh_piscataqua_spicer2023_tidal
+
+### Washington, Puget Sound
+
+@wa_puget_deb2024_tidal_iec
+
+@wa_puget_spicer2024_localized
+
+@wa_puget_yang2021_tidal
+
+### Finite Volume Model Citation
+
+@fvcom
+
+# All Citations and References
+
+::: {#refs}
+:::
+
+[osu_tpxo]: https://www.tpxo.net/
+[era5]: https://www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5
+[cfs_v2]: https://www.cpc.ncep.noaa.gov/products/CFSv2/CFSv2_body.html
+[cf_conventions]: https://cfconventions.org/
+[acdd_conventions]: https://wiki.esipfed.org/ACDD
+[me_data_pipeline]: https://github.com/tsdat/data_standards/blob/main/ME_DataStandards.pdf
+[mhkdr_submission]: https://mhkdr.openei.org/submissions/632
+[aws_link]: https://registry.opendata.aws/us-tidal/

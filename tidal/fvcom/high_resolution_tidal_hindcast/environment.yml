@@ -1,0 +1,17 @@
+name: tidal_fvcom
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.11
+  - ipython
+  - matplotlib
+  - pandas=2.2
+  - numpy=2.1
+  - pyproj=3.6
+  - xarray=2024.10
+  - netcdf4=1.7
+  - pyarrow=18.1
+  - dask=2024.8

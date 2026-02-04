@@ -1,5 +1,19 @@
 # Marine Energy Resource Characterization
 
+Software to standardize wave and tidal energy model outputs for public access, supporting marine energy research, design, and deployment.
+
+## Overview
+
+This repository contains software that standardizes marine energy model data for public use. Developed
+collaboratively by [NREL](https://www.nrel.gov), [Sandia National
+Laboratories](https://www.sandia.gov), and [Pacific Northwest National
+Laboratory](https://www.pnnl.gov), our software converts complex ocean simulation outputs into
+standardized datasets that follow industry conventions
+([IEC][IEC-TC114] and [CF
+standards](https://cfconventions.org)).
+
+The project processes both wave energy ([SWAN](https://swanmodel.sourceforge.io)) and tidal energy ([FVCOM](http://fvcom.smast.umassd.edu/fvcom)) model outputs, making this valuable data accessible to researchers, developers, and policymakers.
+
 ## Overview
 
 The Marine Energy Resource Characterization project is a collaboration between the [National
@@ -12,33 +26,42 @@ provides a foundation for device design decisions.
 
 This repository contains tools and workflows that process, standardize, and disseminate model
 outputs to guide marine energy deployments. The software converts model outputs into documented
-datasets that follow industry conventions ([IEC][IEC-TC114] and [CF (Climate Forecast) standards][CF-Conventions]). The processing workflows handle
-wave energy ([SWAN][SWAN], [WaveWatch III][WaveWatch]) and tidal energy ([FVCOM][FVCOM]) model outputs.
+datasets that follow industry conventions, including [IEC][IEC-TC114] and [CF (Climate Forecast)
+standards][CF-Conventions] where practical and possible. The processing workflows handle wave energy
+([SWAN][SWAN]) and tidal energy ([FVCOM][FVCOM]) model outputs.
 
 ## Applications
 
 The standardized datasets support:
 
 - Analysis of operational and extreme conditions at potential deployment sites
-- Model validation and comparison across different conditions
-- Integration of site-specific hydrodynamic forces into device design
-- Public access to marine energy resource data through the [Marine Energy Atlas][Marine Energy Atlas]
+- Integration of modeled site-specific hydrodynamic forces into device design
+- Public access to marine energy resource data through [OpenEI][OpenEI]
+- Visualization of summarized data on the [Marine Energy Atlas][Marine Energy Atlas]
 
-Quality control processes, standardized formatting, and documentation ensure the datasets meet scientific requirements for reproducibility.
+Quality control processes, standardized formatting, and documentation ensure the datasets are
+reliable and reproducible.
+
+# Repository Information
+
+This repository contains the software that runs on the [NREL HPC][Kestrel] (currently Kestrel) that
+processes the original model outputs and generates the standardized datasets. The software is
+organized into two main directories that contain processing code for the original model output. The
+intent of this repository is to provide transparency into the processing workflow and allow users to
+understand the data generation process. The software is not intended to be used as a library, but
+rather provide a open source, transparent view of the processing workflow.
 
 ## Repository Structure
 
 ```
-- wave/
-  - SWAN/
-  - WaveWatchIII/
+- wave/ (Coming Soon)
 - tidal/
-  - fvcom/
+  - fvcom/ (Coming Soon)
 ```
 
-## Data Processing Workflow
+# Typical Resource Characterization Data Processing Workflow
 
-### High Level Overview
+## High Level Overview
 
 ```mermaid
 flowchart LR
@@ -101,7 +124,7 @@ flowchart LR
     Document --> DataPage
 ```
 
-### Detailed Process Flow
+## Detailed Process Flow
 
 ```mermaid
 flowchart LR
@@ -192,29 +215,20 @@ The project manages two primary classes of data:
 
 ### Data Locations
 
-- Original data is stored on the [NREL Kestrel HPC][Kestrel] system at `/projects/hindcastra`
-- Public data is available on the NREL Kestrel HPC system at `/datasets/US_wave`
-- Standardized datasets are accessible through [AWS S3 Open EDI][WPTOHindcast]
-- Visualizations are available through the NREL Marine Energy Atlas
-
-## Contributing
-
-We welcome contributions from the community. Please:
-
-- Open issues for bugs, feature requests, or suggestions
-- Submit pull requests for proposed changes
-- Follow our coding standards (detailed in each subfolder)
-- Ensure all tests pass before submitting changes
-
-## Installation
-
-Specific installation requirements and dependencies are documented within each technology's subfolder (wave/SWAN, wave/WaveWatchIII, tidal/fvcom).
+- [NREL Kestrel HPC][Kestrel]
+  - Original data: `/projects/hindcastra/`
+  - Versioned public data: `/datasets/US_wave`
+- [AWS S3 Open EDI][WPTOHindcast]
+  - Standardized datasets are accessible through [AWS S3 Open EDI][WPTOHindcast]
+- [NREL Marine Energy Atlas][Marine Energy Atlas]
+  - Summarized datasets are visualized as layers in the [Marine Energy Atlas][Marine Energy Atlas]
+  - Select datasets can be downloaded by point using the point query tool
 
 ## License
 
 This software is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
 
-Copyright 2024 Alliance for Sustainable Energy, LLC
+Copyright 2025 Alliance for Sustainable Energy, LLC
 
 NOTICE: This software was developed at least in part by Alliance for Sustainable Energy, LLC
 ("Alliance") under Contract No. DE-AC36-08GO28308 with the U.S. Department of Energy and the U.S.
@@ -224,11 +238,12 @@ public, perform publicly and display publicly, and to permit others to do so.
 
 ## Contact
 
-Please use GitHub issues for bug reports and feature requests. For other inquiries, contact the NREL Marine Energy team.
+Please use GitHub issues for bug reports and feature requests. For other inquiries, contact the [NREL Marine Energy Resource Characterization Team][NREL_RC].
 
 <!-- National Labs -->
 
 [NREL]: https://www.nrel.gov
+[NREL_RC]: mailto:marineresource@nrel.gov
 [SNL]: https://www.sandia.gov
 [PNNL]: https://www.pnnl.gov
 [DOE]: https://www.energy.gov

@@ -1,0 +1,1014 @@
+# ME Atlas High Resolution Tidal Data QOI Visualization Specification
+
+The following sections provide the specification for visualizing selected high resolution tidal hindcast variables on the [NLR Marine Energy Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged)
+
+
+## Available Data File Details
+
+Base directory for all data files:
+
+* <base_dir>: `/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast`
+
+| Location Name | System | File Path |
+| --- | --- | --- |
+| Aleutian Islands, Alaska | NLR Kestrel HPC | `<base_dir>/AK_aleutian_islands/v1.0.0/b4_vap_summary_parquet/AK_aleutian_islands.wpto_high_res_tidal-year_average.b4.20100603.000000.v1.0.0.parquet` |
+| Cook Inlet, Alaska | NLR Kestrel HPC | `<base_dir>/AK_cook_inlet/v1.0.0/b4_vap_summary_parquet/AK_cook_inlet.wpto_high_res_tidal-year_average.b4.20050101.000000.v1.0.0.parquet` |
+| Western Passage, Maine | NLR Kestrel HPC | `<base_dir>/ME_western_passage/v1.0.0/b4_vap_summary_parquet/ME_western_passage.wpto_high_res_tidal-year_average.b4.20170101.000000.v1.0.0.parquet` |
+| Piscataqua River, New Hampshire | NLR Kestrel HPC | `<base_dir>/NH_piscataqua_river/v1.0.0/b4_vap_summary_parquet/NH_piscataqua_river.wpto_high_res_tidal-year_average.b4.20070101.000000.v1.0.0.parquet` |
+| Puget Sound, Washington | NLR Kestrel HPC | `<base_dir>/WA_puget_sound/v1.0.0/b4_vap_summary_parquet/WA_puget_sound.wpto_high_res_tidal-year_average.b4.20150101.000000.v1.0.0.parquet` |
+
+## Location Details
+
+| Location Name | Face Count | Averaging Dates [UTC] | Averaging Temporal Resolution
+| --- | --- | --- | --- |
+| Aleutian Islands, Alaska | 797,978 | 2010-06-03 00:00:00 to 2011-06-02 23:00:00 | hourly |
+| Cook Inlet, Alaska | 392,002 | 2005-01-01 00:00:00 to 2005-12-31 23:00:00 | hourly |
+| Western Passage, Maine | 231,208 | 2017-01-01 00:00:00 to 2017-12-31 23:30:00 | half-hourly |
+| Piscataqua River, New Hampshire | 292,927 | 2007-01-01 00:00:00 to 2007-12-31 23:30:00 | half-hourly |
+| Puget Sound, Washington | 1,734,765 | 2015-01-01 00:00:00 to 2015-12-30 23:30:00 | half-hourly |
+
+## Variable Overview
+
+| Variable | Units | Data Column |
+| -------- | ----- | ----------- |
+| Mean Sea Water Speed | m/s | vap_water_column_mean_sea_water_speed |
+| 95th Percentile Sea Water Speed | m/s | vap_water_column_95th_percentile_sea_water_speed |
+| Mean Sea Water Power Density | W/m² | vap_water_column_mean_sea_water_power_density |
+| 95th Percentile Sea Water Power Density | W/m² | vap_water_column_95th_percentile_sea_water_power_density |
+| Mean Depth | m (below NAVD88) | vap_sea_floor_depth |
+| Grid Resolution | m | vap_grid_resolution |
+| Sea Water Ebb Tide To Direction | m/s | vap_sea_water_ebb_to_direction_sigma_level_3 |
+| Sea Water Flood Tide To Direction | m/s | vap_sea_water_flood_to_direction_sigma_level_1 |
+| Mean Sea Surface Elevation | m | vap_surface_elevation |
+| Range of Sea Surface Elevation | m | vap_tidal_range |
+| Shortest Tidal Period | hours | vap_min_tidal_period |
+| Longest Tidal Period | hours | vap_max_tidal_period |
+
+## Variable Usage
+
+| Variable | Meaning | Intended Usage
+| ---- | ------- | --- |
+| Mean Sea Water Speed | Yearly average of depth averaged current speed | Site screening and turbine selection for power generation |
+| 95th Percentile Sea Water Speed | 95th percentile of yearly depth maximum current speed | Generator sizing and power electronics design |
+| Mean Sea Water Power Density | Yearly average of depth averaged power density (kinetic energy flux) | Resource quantification and economic feasibility analysis |
+| 95th Percentile Sea Water Power Density | 95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux) | Structural design loads and extreme loading conditions |
+| Mean Depth | Yearly average distance from water surface to the sea floor | Installation planning and foundation design |
+| Grid Resolution | Average edge length of triangular finite volume elements | Model accuracy assessment and validation |
+| Sea Water Ebb Tide To Direction | Yearly average of depth averaged current speed | Site screening and turbine selection for power generation |
+| Sea Water Flood Tide To Direction | Yearly average of depth averaged current speed | Site screening and turbine selection for power generation |
+| Mean Sea Surface Elevation | Yearly average of depth averaged current speed | Site screening and turbine selection for power generation |
+| Range of Sea Surface Elevation | Yearly average of depth averaged current speed | Site screening and turbine selection for power generation |
+| Shortest Tidal Period | Yearly average of depth averaged current speed | Site screening and turbine selection for power generation |
+| Longest Tidal Period | Yearly average of depth averaged current speed | Site screening and turbine selection for power generation |
+
+## Variable Equations
+
+### Mean Sea Water Speed
+
+Equation:
+
+$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)
+- $N_{\sigma} = 10$ levels
+- $T = 1$ year
+
+### 95th Percentile Sea Water Speed
+
+Equation:
+
+$U_{95} = \text{percentile}_{95}\left(\left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)
+- $N_{\sigma} = 10$ levels
+- $T = 1$ year
+
+### Mean Sea Water Power Density
+
+Equation:
+
+$\overline{\overline{P}} = P_{\text{average}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$ with $\rho = 1025$ kg/m³
+- $U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$
+- $N_{\sigma} = 10$ levels
+- $T = 1$ year
+
+### 95th Percentile Sea Water Power Density
+
+Equation:
+
+$P_{95} = \text{percentile}_{95}\left(\left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$ with $\rho = 1025$ kg/m³
+- $U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$
+- $N_{\sigma} = 10$ levels
+- $T = 1$ year
+
+### Mean Depth
+
+Equation:
+
+$\overline{d} = d_{\text{average}} = \text{mean}\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $h$ is bathymetry below NAVD88 (m)
+- $\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m)
+- $T = 1$ year
+
+### Grid Resolution
+
+Equation:
+
+$\text{Grid Resolution} = \frac{1}{3}(d_1 + d_2 + d_3)$
+
+Where:
+
+- $d_1 = \text{haversine}(\text{lat}_1, \text{lon}_1, \text{lat}_2, \text{lon}_2)$ is the distance between corners 1 and 2
+- $d_2 = \text{haversine}(\text{lat}_2, \text{lon}_2, \text{lat}_3, \text{lon}_3)$ is the distance between corners 2 and 3
+- $d_3 = \text{haversine}(\text{lat}_3, \text{lon}_3, \text{lat}_1, \text{lon}_1)$ is the distance between corners 3 and 1
+- $\text{haversine}(\text{lat}_a, \text{lon}_a, \text{lat}_b, \text{lon}_b) = R \cdot 2\arcsin\left(\sqrt{\sin^2\left(\frac{\Delta\text{lat}}{2}\right) + \cos(\text{lat}_a)\cos(\text{lat}_b)\sin^2\left(\frac{\Delta\text{lon}}{2}\right)}\right)$
+- $R = 6378137.0$ m is the Earth radius (WGS84)
+
+### Sea Water Ebb Tide To Direction
+
+Equation:
+
+$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)
+- $N_{\sigma} = 10$ levels
+- $T = 1$ year
+
+### Sea Water Flood Tide To Direction
+
+Equation:
+
+$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)
+- $N_{\sigma} = 10$ levels
+- $T = 1$ year
+
+### Mean Sea Surface Elevation
+
+Equation:
+
+$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)
+- $N_{\sigma} = 10$ levels
+- $T = 1$ year
+
+### Range of Sea Surface Elevation
+
+Equation:
+
+$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)
+- $N_{\sigma} = 10$ levels
+- $T = 1$ year
+
+### Shortest Tidal Period
+
+Equation:
+
+$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)
+- $N_{\sigma} = 10$ levels
+- $T = 1$ year
+
+### Longest Tidal Period
+
+Equation:
+
+$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$
+
+Where:
+
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)
+- $N_{\sigma} = 10$ levels
+- $T = 1$ year
+
+
+## Coordinate Details
+
+The high resolution tidal hindcast data is based on an unstructured three dimensional grid of triangular faces with variable resolution.
+To visualize in two dimensions (lat/lon) the data for all depths are combined (averaging, or 95th percentile of maximums) into a single layer.
+This single layer has coordinates defined at the center and corners of each triangular element.
+Within the parquet files the coordinates are stored in the following columns:
+
+Notes:
+
+* All coordinates are in WGS84 (EPSG:4326) format.
+* All centerpoints have been validated to be within the bounding box of the triangular element.
+* All triangular elements coordinates are visualized below and can be assumed to be valid
+* Triangular elements are not guaranteed to be equilateral or isosceles, and may have varying angles and lengths.
+* Triangular elements vertice order has not been validated to be consistent across all regions.
+* The Aleutian Islands, Alaska dataset has elements that cross the from -180 to 180 longitude, which may cause visual artifacts in some mapping software.
+
+| Column Name | Description
+| --- | --- |
+| `lat_center` | Element Center Latitude
+| `lon_center` | Element Center Longitude
+| `element_corner_1_lat` | Element Triangular Vertice 1 Latitude
+| `element_corner_1_lon` | Element Triangular Vertice 1 Longitude
+| `element_corner_2_lat` | Element Triangular Vertice 2 Latitude
+| `element_corner_2_lon` | Element Triangular Vertice 2 Longitude
+| `element_corner_3_lat` | Element Triangular Vertice 3 Latitude
+| `element_corner_3_lon` | Element Triangular Vertice 3 Longitude
+
+## Color Details
+
+| Variable | Column Name | Range | Units | Discrete Levels | Colormap |
+| -------- | ----------- | ----- | ----- | --------------- | -------- |
+| Mean Sea Water Speed | `vap_water_column_mean_sea_water_speed` | 0 - 1.5 | m/s | 10 | thermal |
+| 95th Percentile Sea Water Speed | `vap_water_column_95th_percentile_sea_water_speed` | 0.0 - 4.0 | m/s | 8 | matter |
+| Mean Sea Water Power Density | `vap_water_column_mean_sea_water_power_density` | 0 - 1750 | W/m² | 7 | dense |
+| 95th Percentile Sea Water Power Density | `vap_water_column_95th_percentile_sea_water_power_density` | 0 - 32000 | W/m² | 8 | amp |
+| Mean Depth | `vap_sea_floor_depth` | 0 - 200 | m (below NAVD88) | 10 | deep |
+| Grid Resolution | `vap_grid_resolution` | 0 - 500 | m | 3 | Custom |
+| Sea Water Ebb Tide To Direction | `vap_sea_water_ebb_to_direction_sigma_level_3` | 0 - 360 | m/s | 16 | phase |
+| Sea Water Flood Tide To Direction | `vap_sea_water_flood_to_direction_sigma_level_1` | 0 - 360 | m/s | 16 | phase |
+| Mean Sea Surface Elevation | `vap_surface_elevation` | 0 - 1 | m | 10 | deep |
+| Range of Sea Surface Elevation | `vap_tidal_range` | 0 - 10 | m | 10 | haline |
+| Shortest Tidal Period | `vap_min_tidal_period` | 10 - 12 | hours | 10 | haline |
+| Longest Tidal Period | `vap_max_tidal_period` | 12 - 14 | hours | 10 | haline |
+
+## Color Specifications
+
+The following tables provide exact color specifications for each variable.
+All colors use discrete levels with an overflow level for values exceeding the maximum range.
+
+### Mean Sea Water Speed [m/s], `vap_water_column_mean_sea_water_speed`
+
+* **Colormap:** thermal
+* **Data Range:** 0 to 1.5 m/s
+* **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 0.15 [m/s] | `#032333` | `rgb(3, 35, 51)` | $\color[rgb]{0.012, 0.137, 0.200}\rule{40pt}{15pt}$ |
+| 2 | 0.15 - 0.30 [m/s] | `#0f3169` | `rgb(15, 49, 105)` | $\color[rgb]{0.059, 0.192, 0.412}\rule{40pt}{15pt}$ |
+| 3 | 0.30 - 0.45 [m/s] | `#3f339f` | `rgb(63, 51, 159)` | $\color[rgb]{0.247, 0.200, 0.624}\rule{40pt}{15pt}$ |
+| 4 | 0.45 - 0.60 [m/s] | `#674396` | `rgb(103, 67, 150)` | $\color[rgb]{0.404, 0.263, 0.588}\rule{40pt}{15pt}$ |
+| 5 | 0.60 - 0.75 [m/s] | `#8a528c` | `rgb(138, 82, 140)` | $\color[rgb]{0.541, 0.322, 0.549}\rule{40pt}{15pt}$ |
+| 6 | 0.75 - 0.90 [m/s] | `#b05f81` | `rgb(176, 95, 129)` | $\color[rgb]{0.690, 0.373, 0.506}\rule{40pt}{15pt}$ |
+| 7 | 0.90 - 1.05 [m/s] | `#d56b6c` | `rgb(213, 107, 108)` | $\color[rgb]{0.835, 0.420, 0.424}\rule{40pt}{15pt}$ |
+| 8 | 1.05 - 1.20 [m/s] | `#f2824c` | `rgb(242, 130, 76)` | $\color[rgb]{0.949, 0.510, 0.298}\rule{40pt}{15pt}$ |
+| 9 | 1.20 - 1.35 [m/s] | `#fba53c` | `rgb(251, 165, 60)` | $\color[rgb]{0.984, 0.647, 0.235}\rule{40pt}{15pt}$ |
+| 10 | 1.35 - 1.50 [m/s] | `#f6d045` | `rgb(246, 208, 69)` | $\color[rgb]{0.965, 0.816, 0.271}\rule{40pt}{15pt}$ |
+| 11 | ≥ 1.500 m/s | `#e7fa5a` | `rgb(231, 250, 90)` | $\color[rgb]{0.906, 0.980, 0.353}\rule{40pt}{15pt}$ |
+
+### 95th Percentile Sea Water Speed [m/s], `vap_water_column_95th_percentile_sea_water_speed`
+
+* **Colormap:** matter
+* **Data Range:** 0.0 to 4.0 m/s
+* **Discrete Levels:** 9 (8 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 0.50 [m/s] | `#fdedb0` | `rgb(253, 237, 176)` | $\color[rgb]{0.992, 0.929, 0.690}\rule{40pt}{15pt}$ |
+| 2 | 0.50 - 1.00 [m/s] | `#f9c087` | `rgb(249, 192, 135)` | $\color[rgb]{0.976, 0.753, 0.529}\rule{40pt}{15pt}$ |
+| 3 | 1.00 - 1.50 [m/s] | `#f19466` | `rgb(241, 148, 102)` | $\color[rgb]{0.945, 0.580, 0.400}\rule{40pt}{15pt}$ |
+| 4 | 1.50 - 2.00 [m/s] | `#e56953` | `rgb(229, 105, 83)` | $\color[rgb]{0.898, 0.412, 0.325}\rule{40pt}{15pt}$ |
+| 5 | 2.00 - 2.50 [m/s] | `#ce4356` | `rgb(206, 67, 86)` | $\color[rgb]{0.808, 0.263, 0.337}\rule{40pt}{15pt}$ |
+| 6 | 2.50 - 3.00 [m/s] | `#ab2960` | `rgb(171, 41, 96)` | $\color[rgb]{0.671, 0.161, 0.376}\rule{40pt}{15pt}$ |
+| 7 | 3.00 - 3.50 [m/s] | `#821b62` | `rgb(130, 27, 98)` | $\color[rgb]{0.510, 0.106, 0.384}\rule{40pt}{15pt}$ |
+| 8 | 3.50 - 4.00 [m/s] | `#571656` | `rgb(87, 22, 86)` | $\color[rgb]{0.341, 0.086, 0.337}\rule{40pt}{15pt}$ |
+| 9 | ≥ 4.000 m/s | `#2f0f3d` | `rgb(47, 15, 61)` | $\color[rgb]{0.184, 0.059, 0.239}\rule{40pt}{15pt}$ |
+
+### Mean Sea Water Power Density [W/m²], `vap_water_column_mean_sea_water_power_density`
+
+* **Colormap:** dense
+* **Data Range:** 0 to 1750 W/m²
+* **Discrete Levels:** 8 (7 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0 - 250 [W/m²] | `#e6f0f0` | `rgb(230, 240, 240)` | $\color[rgb]{0.902, 0.941, 0.941}\rule{40pt}{15pt}$ |
+| 2 | 250 - 500 [W/m²] | `#aad2e2` | `rgb(170, 210, 226)` | $\color[rgb]{0.667, 0.824, 0.886}\rule{40pt}{15pt}$ |
+| 3 | 500 - 750 [W/m²] | `#7db0e3` | `rgb(125, 176, 227)` | $\color[rgb]{0.490, 0.690, 0.890}\rule{40pt}{15pt}$ |
+| 4 | 750 - 1000 [W/m²] | `#7487e0` | `rgb(116, 135, 224)` | $\color[rgb]{0.455, 0.529, 0.878}\rule{40pt}{15pt}$ |
+| 5 | 1000 - 1250 [W/m²] | `#795cc3` | `rgb(121, 92, 195)` | $\color[rgb]{0.475, 0.361, 0.765}\rule{40pt}{15pt}$ |
+| 6 | 1250 - 1500 [W/m²] | `#723693` | `rgb(114, 54, 147)` | $\color[rgb]{0.447, 0.212, 0.576}\rule{40pt}{15pt}$ |
+| 7 | 1500 - 1750 [W/m²] | `#5c1957` | `rgb(92, 25, 87)` | $\color[rgb]{0.361, 0.098, 0.341}\rule{40pt}{15pt}$ |
+| 8 | ≥ 1750 W/m² | `#360e24` | `rgb(54, 14, 36)` | $\color[rgb]{0.212, 0.055, 0.141}\rule{40pt}{15pt}$ |
+
+### 95th Percentile Sea Water Power Density [W/m²], `vap_water_column_95th_percentile_sea_water_power_density`
+
+* **Colormap:** amp
+* **Data Range:** 0 to 32000 W/m²
+* **Discrete Levels:** 9 (8 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0 - 4000 [W/m²] | `#f1ecec` | `rgb(241, 236, 236)` | $\color[rgb]{0.945, 0.925, 0.925}\rule{40pt}{15pt}$ |
+| 2 | 4000 - 8000 [W/m²] | `#e2c7be` | `rgb(226, 199, 190)` | $\color[rgb]{0.886, 0.780, 0.745}\rule{40pt}{15pt}$ |
+| 3 | 8000 - 12000 [W/m²] | `#d7a290` | `rgb(215, 162, 144)` | $\color[rgb]{0.843, 0.635, 0.565}\rule{40pt}{15pt}$ |
+| 4 | 12000 - 16000 [W/m²] | `#cc7d63` | `rgb(204, 125, 99)` | $\color[rgb]{0.800, 0.490, 0.388}\rule{40pt}{15pt}$ |
+| 5 | 16000 - 20000 [W/m²] | `#bf583a` | `rgb(191, 88, 58)` | $\color[rgb]{0.749, 0.345, 0.227}\rule{40pt}{15pt}$ |
+| 6 | 20000 - 24000 [W/m²] | `#ae2e24` | `rgb(174, 46, 36)` | $\color[rgb]{0.682, 0.180, 0.141}\rule{40pt}{15pt}$ |
+| 7 | 24000 - 28000 [W/m²] | `#8e1028` | `rgb(142, 16, 40)` | $\color[rgb]{0.557, 0.063, 0.157}\rule{40pt}{15pt}$ |
+| 8 | 28000 - 32000 [W/m²] | `#640e23` | `rgb(100, 14, 35)` | $\color[rgb]{0.392, 0.055, 0.137}\rule{40pt}{15pt}$ |
+| 9 | ≥ 32000 W/m² | `#3c0911` | `rgb(60, 9, 17)` | $\color[rgb]{0.235, 0.035, 0.067}\rule{40pt}{15pt}$ |
+
+### Mean Depth [m (below NAVD88)], `vap_sea_floor_depth`
+
+* **Colormap:** deep
+* **Data Range:** 0 to 200 m (below NAVD88)
+* **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 20.00 [m (below NAVD88)] | `#fdfdcc` | `rgb(253, 253, 204)` | $\color[rgb]{0.992, 0.992, 0.800}\rule{40pt}{15pt}$ |
+| 2 | 20.00 - 40.00 [m (below NAVD88)] | `#c9ebb1` | `rgb(201, 235, 177)` | $\color[rgb]{0.788, 0.922, 0.694}\rule{40pt}{15pt}$ |
+| 3 | 40.00 - 60.00 [m (below NAVD88)] | `#91d8a3` | `rgb(145, 216, 163)` | $\color[rgb]{0.569, 0.847, 0.639}\rule{40pt}{15pt}$ |
+| 4 | 60.00 - 80.00 [m (below NAVD88)] | `#66c2a3` | `rgb(102, 194, 163)` | $\color[rgb]{0.400, 0.761, 0.639}\rule{40pt}{15pt}$ |
+| 5 | 80 - 100 [m (below NAVD88)] | `#51a8a2` | `rgb(81, 168, 162)` | $\color[rgb]{0.318, 0.659, 0.635}\rule{40pt}{15pt}$ |
+| 6 | 100 - 120 [m (below NAVD88)] | `#488d9d` | `rgb(72, 141, 157)` | $\color[rgb]{0.282, 0.553, 0.616}\rule{40pt}{15pt}$ |
+| 7 | 120 - 140 [m (below NAVD88)] | `#407598` | `rgb(64, 117, 152)` | $\color[rgb]{0.251, 0.459, 0.596}\rule{40pt}{15pt}$ |
+| 8 | 140 - 160 [m (below NAVD88)] | `#3d5a92` | `rgb(61, 90, 146)` | $\color[rgb]{0.239, 0.353, 0.573}\rule{40pt}{15pt}$ |
+| 9 | 160 - 180 [m (below NAVD88)] | `#41407b` | `rgb(65, 64, 123)` | $\color[rgb]{0.255, 0.251, 0.482}\rule{40pt}{15pt}$ |
+| 10 | 180 - 200 [m (below NAVD88)] | `#372c50` | `rgb(55, 44, 80)` | $\color[rgb]{0.216, 0.173, 0.314}\rule{40pt}{15pt}$ |
+| 11 | ≥ 200.0 m (below NAVD88) | `#271a2c` | `rgb(39, 26, 44)` | $\color[rgb]{0.153, 0.102, 0.173}\rule{40pt}{15pt}$ |
+
+### Grid Resolution [m], `vap_grid_resolution`
+
+* **Colormap:** Custom
+* **Data Range:** 0 to 500 m
+* **Discrete Levels:** 4 (3 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 50.00 [m] | `#1f77b4` | `rgb(31, 119, 180)` | $\color[rgb]{0.122, 0.467, 0.706}\rule{40pt}{15pt}$ |
+| 2 | 50 - 500 [m] | `#ff7f0e` | `rgb(255, 127, 14)` | $\color[rgb]{1.000, 0.498, 0.055}\rule{40pt}{15pt}$ |
+| 3 | ≥ 500.0 m | `#dc143c` | `rgb(220, 20, 60)` | $\color[rgb]{0.863, 0.078, 0.235}\rule{40pt}{15pt}$ |
+
+### Sea Water Ebb Tide To Direction [m/s], `vap_sea_water_ebb_to_direction_sigma_level_3`
+
+* **Colormap:** phase
+* **Data Range:** 0 to 360 m/s
+* **Discrete Levels:** 17 (16 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 22.50 [m/s] | `#a7770c` | `rgb(167, 119, 12)` | $\color[rgb]{0.655, 0.467, 0.047}\rule{40pt}{15pt}$ |
+| 2 | 22.50 - 45.00 [m/s] | `#bd6727` | `rgb(189, 103, 39)` | $\color[rgb]{0.741, 0.404, 0.153}\rule{40pt}{15pt}$ |
+| 3 | 45.00 - 67.50 [m/s] | `#ce5543` | `rgb(206, 85, 67)` | $\color[rgb]{0.808, 0.333, 0.263}\rule{40pt}{15pt}$ |
+| 4 | 67.50 - 90.00 [m/s] | `#da4065` | `rgb(218, 64, 101)` | $\color[rgb]{0.855, 0.251, 0.396}\rule{40pt}{15pt}$ |
+| 5 | 90 - 112 [m/s] | `#de2a93` | `rgb(222, 42, 147)` | $\color[rgb]{0.871, 0.165, 0.576}\rule{40pt}{15pt}$ |
+| 6 | 112 - 135 [m/s] | `#d529c3` | `rgb(213, 41, 195)` | $\color[rgb]{0.835, 0.161, 0.765}\rule{40pt}{15pt}$ |
+| 7 | 135 - 158 [m/s] | `#c041e5` | `rgb(192, 65, 229)` | $\color[rgb]{0.753, 0.255, 0.898}\rule{40pt}{15pt}$ |
+| 8 | 158 - 180 [m/s] | `#a25bf3` | `rgb(162, 91, 243)` | $\color[rgb]{0.635, 0.357, 0.953}\rule{40pt}{15pt}$ |
+| 9 | 180 - 202 [m/s] | `#7d72f0` | `rgb(125, 114, 240)` | $\color[rgb]{0.490, 0.447, 0.941}\rule{40pt}{15pt}$ |
+| 10 | 202 - 225 [m/s] | `#5284dc` | `rgb(82, 132, 220)` | $\color[rgb]{0.322, 0.518, 0.863}\rule{40pt}{15pt}$ |
+| 11 | 225 - 248 [m/s] | `#2b8fbc` | `rgb(43, 143, 188)` | $\color[rgb]{0.169, 0.561, 0.737}\rule{40pt}{15pt}$ |
+| 12 | 248 - 270 [m/s] | `#18949c` | `rgb(24, 148, 156)` | $\color[rgb]{0.094, 0.580, 0.612}\rule{40pt}{15pt}$ |
+| 13 | 270 - 292 [m/s] | `#0b987b` | `rgb(11, 152, 123)` | $\color[rgb]{0.043, 0.596, 0.482}\rule{40pt}{15pt}$ |
+| 14 | 292 - 315 [m/s] | `#249952` | `rgb(36, 153, 82)` | $\color[rgb]{0.141, 0.600, 0.322}\rule{40pt}{15pt}$ |
+| 15 | 315 - 338 [m/s] | `#5d9320` | `rgb(93, 147, 32)` | $\color[rgb]{0.365, 0.576, 0.125}\rule{40pt}{15pt}$ |
+| 16 | 338 - 360 [m/s] | `#8a860d` | `rgb(138, 134, 13)` | $\color[rgb]{0.541, 0.525, 0.051}\rule{40pt}{15pt}$ |
+| 17 | ≥ 360.0 m/s | `#a7770c` | `rgb(167, 119, 12)` | $\color[rgb]{0.655, 0.467, 0.047}\rule{40pt}{15pt}$ |
+
+### Sea Water Flood Tide To Direction [m/s], `vap_sea_water_flood_to_direction_sigma_level_1`
+
+* **Colormap:** phase
+* **Data Range:** 0 to 360 m/s
+* **Discrete Levels:** 17 (16 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 22.50 [m/s] | `#a7770c` | `rgb(167, 119, 12)` | $\color[rgb]{0.655, 0.467, 0.047}\rule{40pt}{15pt}$ |
+| 2 | 22.50 - 45.00 [m/s] | `#bd6727` | `rgb(189, 103, 39)` | $\color[rgb]{0.741, 0.404, 0.153}\rule{40pt}{15pt}$ |
+| 3 | 45.00 - 67.50 [m/s] | `#ce5543` | `rgb(206, 85, 67)` | $\color[rgb]{0.808, 0.333, 0.263}\rule{40pt}{15pt}$ |
+| 4 | 67.50 - 90.00 [m/s] | `#da4065` | `rgb(218, 64, 101)` | $\color[rgb]{0.855, 0.251, 0.396}\rule{40pt}{15pt}$ |
+| 5 | 90 - 112 [m/s] | `#de2a93` | `rgb(222, 42, 147)` | $\color[rgb]{0.871, 0.165, 0.576}\rule{40pt}{15pt}$ |
+| 6 | 112 - 135 [m/s] | `#d529c3` | `rgb(213, 41, 195)` | $\color[rgb]{0.835, 0.161, 0.765}\rule{40pt}{15pt}$ |
+| 7 | 135 - 158 [m/s] | `#c041e5` | `rgb(192, 65, 229)` | $\color[rgb]{0.753, 0.255, 0.898}\rule{40pt}{15pt}$ |
+| 8 | 158 - 180 [m/s] | `#a25bf3` | `rgb(162, 91, 243)` | $\color[rgb]{0.635, 0.357, 0.953}\rule{40pt}{15pt}$ |
+| 9 | 180 - 202 [m/s] | `#7d72f0` | `rgb(125, 114, 240)` | $\color[rgb]{0.490, 0.447, 0.941}\rule{40pt}{15pt}$ |
+| 10 | 202 - 225 [m/s] | `#5284dc` | `rgb(82, 132, 220)` | $\color[rgb]{0.322, 0.518, 0.863}\rule{40pt}{15pt}$ |
+| 11 | 225 - 248 [m/s] | `#2b8fbc` | `rgb(43, 143, 188)` | $\color[rgb]{0.169, 0.561, 0.737}\rule{40pt}{15pt}$ |
+| 12 | 248 - 270 [m/s] | `#18949c` | `rgb(24, 148, 156)` | $\color[rgb]{0.094, 0.580, 0.612}\rule{40pt}{15pt}$ |
+| 13 | 270 - 292 [m/s] | `#0b987b` | `rgb(11, 152, 123)` | $\color[rgb]{0.043, 0.596, 0.482}\rule{40pt}{15pt}$ |
+| 14 | 292 - 315 [m/s] | `#249952` | `rgb(36, 153, 82)` | $\color[rgb]{0.141, 0.600, 0.322}\rule{40pt}{15pt}$ |
+| 15 | 315 - 338 [m/s] | `#5d9320` | `rgb(93, 147, 32)` | $\color[rgb]{0.365, 0.576, 0.125}\rule{40pt}{15pt}$ |
+| 16 | 338 - 360 [m/s] | `#8a860d` | `rgb(138, 134, 13)` | $\color[rgb]{0.541, 0.525, 0.051}\rule{40pt}{15pt}$ |
+| 17 | ≥ 360.0 m/s | `#a7770c` | `rgb(167, 119, 12)` | $\color[rgb]{0.655, 0.467, 0.047}\rule{40pt}{15pt}$ |
+
+### Mean Sea Surface Elevation [m], `vap_surface_elevation`
+
+* **Colormap:** deep
+* **Data Range:** 0 to 1 m
+* **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 0.10 [m] | `#fdfdcc` | `rgb(253, 253, 204)` | $\color[rgb]{0.992, 0.992, 0.800}\rule{40pt}{15pt}$ |
+| 2 | 0.10 - 0.20 [m] | `#c9ebb1` | `rgb(201, 235, 177)` | $\color[rgb]{0.788, 0.922, 0.694}\rule{40pt}{15pt}$ |
+| 3 | 0.20 - 0.30 [m] | `#91d8a3` | `rgb(145, 216, 163)` | $\color[rgb]{0.569, 0.847, 0.639}\rule{40pt}{15pt}$ |
+| 4 | 0.30 - 0.40 [m] | `#66c2a3` | `rgb(102, 194, 163)` | $\color[rgb]{0.400, 0.761, 0.639}\rule{40pt}{15pt}$ |
+| 5 | 0.40 - 0.50 [m] | `#51a8a2` | `rgb(81, 168, 162)` | $\color[rgb]{0.318, 0.659, 0.635}\rule{40pt}{15pt}$ |
+| 6 | 0.50 - 0.60 [m] | `#488d9d` | `rgb(72, 141, 157)` | $\color[rgb]{0.282, 0.553, 0.616}\rule{40pt}{15pt}$ |
+| 7 | 0.60 - 0.70 [m] | `#407598` | `rgb(64, 117, 152)` | $\color[rgb]{0.251, 0.459, 0.596}\rule{40pt}{15pt}$ |
+| 8 | 0.70 - 0.80 [m] | `#3d5a92` | `rgb(61, 90, 146)` | $\color[rgb]{0.239, 0.353, 0.573}\rule{40pt}{15pt}$ |
+| 9 | 0.80 - 0.90 [m] | `#41407b` | `rgb(65, 64, 123)` | $\color[rgb]{0.255, 0.251, 0.482}\rule{40pt}{15pt}$ |
+| 10 | 0.90 - 1.00 [m] | `#372c50` | `rgb(55, 44, 80)` | $\color[rgb]{0.216, 0.173, 0.314}\rule{40pt}{15pt}$ |
+| 11 | ≥ 1.000 m | `#271a2c` | `rgb(39, 26, 44)` | $\color[rgb]{0.153, 0.102, 0.173}\rule{40pt}{15pt}$ |
+
+### Range of Sea Surface Elevation [m], `vap_tidal_range`
+
+* **Colormap:** haline
+* **Data Range:** 0 to 10 m
+* **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 1.00 [m] | `#29186b` | `rgb(41, 24, 107)` | $\color[rgb]{0.161, 0.094, 0.420}\rule{40pt}{15pt}$ |
+| 2 | 1.00 - 2.00 [m] | `#2827a2` | `rgb(40, 39, 162)` | $\color[rgb]{0.157, 0.153, 0.635}\rule{40pt}{15pt}$ |
+| 3 | 2.00 - 3.00 [m] | `#0c4d96` | `rgb(12, 77, 150)` | $\color[rgb]{0.047, 0.302, 0.588}\rule{40pt}{15pt}$ |
+| 4 | 3.00 - 4.00 [m] | `#18668c` | `rgb(24, 102, 140)` | $\color[rgb]{0.094, 0.400, 0.549}\rule{40pt}{15pt}$ |
+| 5 | 4.00 - 5.00 [m] | `#2c7c88` | `rgb(44, 124, 136)` | $\color[rgb]{0.173, 0.486, 0.533}\rule{40pt}{15pt}$ |
+| 6 | 5.00 - 6.00 [m] | `#3b9387` | `rgb(59, 147, 135)` | $\color[rgb]{0.231, 0.576, 0.529}\rule{40pt}{15pt}$ |
+| 7 | 6.00 - 7.00 [m] | `#4aa980` | `rgb(74, 169, 128)` | $\color[rgb]{0.290, 0.663, 0.502}\rule{40pt}{15pt}$ |
+| 8 | 7.00 - 8.00 [m] | `#64c171` | `rgb(100, 193, 113)` | $\color[rgb]{0.392, 0.757, 0.443}\rule{40pt}{15pt}$ |
+| 9 | 8.00 - 9.00 [m] | `#94d35d` | `rgb(148, 211, 93)` | $\color[rgb]{0.580, 0.827, 0.365}\rule{40pt}{15pt}$ |
+| 10 | 9.00 - 10.00 [m] | `#d0e06d` | `rgb(208, 224, 109)` | $\color[rgb]{0.816, 0.878, 0.427}\rule{40pt}{15pt}$ |
+| 11 | ≥ 10.00 m | `#fdee99` | `rgb(253, 238, 153)` | $\color[rgb]{0.992, 0.933, 0.600}\rule{40pt}{15pt}$ |
+
+### Shortest Tidal Period [hours], `vap_min_tidal_period`
+
+* **Colormap:** haline
+* **Data Range:** 10 to 12 hours
+* **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 10.00 - 10.20 [hours] | `#29186b` | `rgb(41, 24, 107)` | $\color[rgb]{0.161, 0.094, 0.420}\rule{40pt}{15pt}$ |
+| 2 | 10.20 - 10.40 [hours] | `#2827a2` | `rgb(40, 39, 162)` | $\color[rgb]{0.157, 0.153, 0.635}\rule{40pt}{15pt}$ |
+| 3 | 10.40 - 10.60 [hours] | `#0c4d96` | `rgb(12, 77, 150)` | $\color[rgb]{0.047, 0.302, 0.588}\rule{40pt}{15pt}$ |
+| 4 | 10.60 - 10.80 [hours] | `#18668c` | `rgb(24, 102, 140)` | $\color[rgb]{0.094, 0.400, 0.549}\rule{40pt}{15pt}$ |
+| 5 | 10.80 - 11.00 [hours] | `#2c7c88` | `rgb(44, 124, 136)` | $\color[rgb]{0.173, 0.486, 0.533}\rule{40pt}{15pt}$ |
+| 6 | 11.00 - 11.20 [hours] | `#3b9387` | `rgb(59, 147, 135)` | $\color[rgb]{0.231, 0.576, 0.529}\rule{40pt}{15pt}$ |
+| 7 | 11.20 - 11.40 [hours] | `#4aa980` | `rgb(74, 169, 128)` | $\color[rgb]{0.290, 0.663, 0.502}\rule{40pt}{15pt}$ |
+| 8 | 11.40 - 11.60 [hours] | `#64c171` | `rgb(100, 193, 113)` | $\color[rgb]{0.392, 0.757, 0.443}\rule{40pt}{15pt}$ |
+| 9 | 11.60 - 11.80 [hours] | `#94d35d` | `rgb(148, 211, 93)` | $\color[rgb]{0.580, 0.827, 0.365}\rule{40pt}{15pt}$ |
+| 10 | 11.80 - 12.00 [hours] | `#d0e06d` | `rgb(208, 224, 109)` | $\color[rgb]{0.816, 0.878, 0.427}\rule{40pt}{15pt}$ |
+| 11 | ≥ 12.00 hours | `#fdee99` | `rgb(253, 238, 153)` | $\color[rgb]{0.992, 0.933, 0.600}\rule{40pt}{15pt}$ |
+
+### Longest Tidal Period [hours], `vap_max_tidal_period`
+
+* **Colormap:** haline
+* **Data Range:** 12 to 14 hours
+* **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 12.00 - 12.20 [hours] | `#29186b` | `rgb(41, 24, 107)` | $\color[rgb]{0.161, 0.094, 0.420}\rule{40pt}{15pt}$ |
+| 2 | 12.20 - 12.40 [hours] | `#2827a2` | `rgb(40, 39, 162)` | $\color[rgb]{0.157, 0.153, 0.635}\rule{40pt}{15pt}$ |
+| 3 | 12.40 - 12.60 [hours] | `#0c4d96` | `rgb(12, 77, 150)` | $\color[rgb]{0.047, 0.302, 0.588}\rule{40pt}{15pt}$ |
+| 4 | 12.60 - 12.80 [hours] | `#18668c` | `rgb(24, 102, 140)` | $\color[rgb]{0.094, 0.400, 0.549}\rule{40pt}{15pt}$ |
+| 5 | 12.80 - 13.00 [hours] | `#2c7c88` | `rgb(44, 124, 136)` | $\color[rgb]{0.173, 0.486, 0.533}\rule{40pt}{15pt}$ |
+| 6 | 13.00 - 13.20 [hours] | `#3b9387` | `rgb(59, 147, 135)` | $\color[rgb]{0.231, 0.576, 0.529}\rule{40pt}{15pt}$ |
+| 7 | 13.20 - 13.40 [hours] | `#4aa980` | `rgb(74, 169, 128)` | $\color[rgb]{0.290, 0.663, 0.502}\rule{40pt}{15pt}$ |
+| 8 | 13.40 - 13.60 [hours] | `#64c171` | `rgb(100, 193, 113)` | $\color[rgb]{0.392, 0.757, 0.443}\rule{40pt}{15pt}$ |
+| 9 | 13.60 - 13.80 [hours] | `#94d35d` | `rgb(148, 211, 93)` | $\color[rgb]{0.580, 0.827, 0.365}\rule{40pt}{15pt}$ |
+| 10 | 13.80 - 14.00 [hours] | `#d0e06d` | `rgb(208, 224, 109)` | $\color[rgb]{0.816, 0.878, 0.427}\rule{40pt}{15pt}$ |
+| 11 | ≥ 14.00 hours | `#fdee99` | `rgb(253, 238, 153)` | $\color[rgb]{0.992, 0.933, 0.600}\rule{40pt}{15pt}$ |
+
+## Visualizations by Variable
+
+### Mean Sea Water Speed
+
+**Aleutian Islands, Alaska Mean Sea Water Speed**
+
+![Mean Sea Water Speed for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_mean_sea_water_speed.png)
+*Figure: Mean Sea Water Speed spatial distribution for Aleutian Islands, Alaska. Units: m/s*
+
+**Cook Inlet, Alaska Mean Sea Water Speed**
+
+![Mean Sea Water Speed for Cook Inlet, Alaska](docs/img/AK_cook_inlet_mean_sea_water_speed.png)
+*Figure: Mean Sea Water Speed spatial distribution for Cook Inlet, Alaska. Units: m/s*
+
+**Western Passage, Maine Mean Sea Water Speed**
+
+![Mean Sea Water Speed for Western Passage, Maine](docs/img/ME_western_passage_mean_sea_water_speed.png)
+*Figure: Mean Sea Water Speed spatial distribution for Western Passage, Maine. Units: m/s*
+
+**Piscataqua River, New Hampshire Mean Sea Water Speed**
+
+![Mean Sea Water Speed for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_mean_sea_water_speed.png)
+*Figure: Mean Sea Water Speed spatial distribution for Piscataqua River, New Hampshire. Units: m/s*
+
+**Puget Sound, Washington Mean Sea Water Speed**
+
+![Mean Sea Water Speed for Puget Sound, Washington](docs/img/WA_puget_sound_mean_sea_water_speed.png)
+*Figure: Mean Sea Water Speed spatial distribution for Puget Sound, Washington. Units: m/s*
+
+
+---
+
+### 95th Percentile Sea Water Speed
+
+**Aleutian Islands, Alaska 95th Percentile Sea Water Speed**
+
+![95th Percentile Sea Water Speed for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_p95_sea_water_speed.png)
+*Figure: 95th Percentile Sea Water Speed spatial distribution for Aleutian Islands, Alaska. Units: m/s*
+
+**Cook Inlet, Alaska 95th Percentile Sea Water Speed**
+
+![95th Percentile Sea Water Speed for Cook Inlet, Alaska](docs/img/AK_cook_inlet_p95_sea_water_speed.png)
+*Figure: 95th Percentile Sea Water Speed spatial distribution for Cook Inlet, Alaska. Units: m/s*
+
+**Western Passage, Maine 95th Percentile Sea Water Speed**
+
+![95th Percentile Sea Water Speed for Western Passage, Maine](docs/img/ME_western_passage_p95_sea_water_speed.png)
+*Figure: 95th Percentile Sea Water Speed spatial distribution for Western Passage, Maine. Units: m/s*
+
+**Piscataqua River, New Hampshire 95th Percentile Sea Water Speed**
+
+![95th Percentile Sea Water Speed for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_p95_sea_water_speed.png)
+*Figure: 95th Percentile Sea Water Speed spatial distribution for Piscataqua River, New Hampshire. Units: m/s*
+
+**Puget Sound, Washington 95th Percentile Sea Water Speed**
+
+![95th Percentile Sea Water Speed for Puget Sound, Washington](docs/img/WA_puget_sound_p95_sea_water_speed.png)
+*Figure: 95th Percentile Sea Water Speed spatial distribution for Puget Sound, Washington. Units: m/s*
+
+
+---
+
+### Mean Sea Water Power Density
+
+**Aleutian Islands, Alaska Mean Sea Water Power Density**
+
+![Mean Sea Water Power Density for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_mean_sea_water_power_density.png)
+*Figure: Mean Sea Water Power Density spatial distribution for Aleutian Islands, Alaska. Units: W/m²*
+
+**Cook Inlet, Alaska Mean Sea Water Power Density**
+
+![Mean Sea Water Power Density for Cook Inlet, Alaska](docs/img/AK_cook_inlet_mean_sea_water_power_density.png)
+*Figure: Mean Sea Water Power Density spatial distribution for Cook Inlet, Alaska. Units: W/m²*
+
+**Western Passage, Maine Mean Sea Water Power Density**
+
+![Mean Sea Water Power Density for Western Passage, Maine](docs/img/ME_western_passage_mean_sea_water_power_density.png)
+*Figure: Mean Sea Water Power Density spatial distribution for Western Passage, Maine. Units: W/m²*
+
+**Piscataqua River, New Hampshire Mean Sea Water Power Density**
+
+![Mean Sea Water Power Density for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_mean_sea_water_power_density.png)
+*Figure: Mean Sea Water Power Density spatial distribution for Piscataqua River, New Hampshire. Units: W/m²*
+
+**Puget Sound, Washington Mean Sea Water Power Density**
+
+![Mean Sea Water Power Density for Puget Sound, Washington](docs/img/WA_puget_sound_mean_sea_water_power_density.png)
+*Figure: Mean Sea Water Power Density spatial distribution for Puget Sound, Washington. Units: W/m²*
+
+
+---
+
+### 95th Percentile Sea Water Power Density
+
+**Aleutian Islands, Alaska 95th Percentile Sea Water Power Density**
+
+![95th Percentile Sea Water Power Density for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_p95_sea_water_power_density.png)
+*Figure: 95th Percentile Sea Water Power Density spatial distribution for Aleutian Islands, Alaska. Units: W/m²*
+
+**Cook Inlet, Alaska 95th Percentile Sea Water Power Density**
+
+![95th Percentile Sea Water Power Density for Cook Inlet, Alaska](docs/img/AK_cook_inlet_p95_sea_water_power_density.png)
+*Figure: 95th Percentile Sea Water Power Density spatial distribution for Cook Inlet, Alaska. Units: W/m²*
+
+**Western Passage, Maine 95th Percentile Sea Water Power Density**
+
+![95th Percentile Sea Water Power Density for Western Passage, Maine](docs/img/ME_western_passage_p95_sea_water_power_density.png)
+*Figure: 95th Percentile Sea Water Power Density spatial distribution for Western Passage, Maine. Units: W/m²*
+
+**Piscataqua River, New Hampshire 95th Percentile Sea Water Power Density**
+
+![95th Percentile Sea Water Power Density for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_p95_sea_water_power_density.png)
+*Figure: 95th Percentile Sea Water Power Density spatial distribution for Piscataqua River, New Hampshire. Units: W/m²*
+
+**Puget Sound, Washington 95th Percentile Sea Water Power Density**
+
+![95th Percentile Sea Water Power Density for Puget Sound, Washington](docs/img/WA_puget_sound_p95_sea_water_power_density.png)
+*Figure: 95th Percentile Sea Water Power Density spatial distribution for Puget Sound, Washington. Units: W/m²*
+
+
+---
+
+### Mean Depth
+
+**Aleutian Islands, Alaska Mean Depth**
+
+![Mean Depth for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_distance_to_sea_floor.png)
+*Figure: Mean Depth spatial distribution for Aleutian Islands, Alaska. Units: m (below NAVD88)*
+
+**Cook Inlet, Alaska Mean Depth**
+
+![Mean Depth for Cook Inlet, Alaska](docs/img/AK_cook_inlet_distance_to_sea_floor.png)
+*Figure: Mean Depth spatial distribution for Cook Inlet, Alaska. Units: m (below NAVD88)*
+
+**Western Passage, Maine Mean Depth**
+
+![Mean Depth for Western Passage, Maine](docs/img/ME_western_passage_distance_to_sea_floor.png)
+*Figure: Mean Depth spatial distribution for Western Passage, Maine. Units: m (below NAVD88)*
+
+**Piscataqua River, New Hampshire Mean Depth**
+
+![Mean Depth for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_distance_to_sea_floor.png)
+*Figure: Mean Depth spatial distribution for Piscataqua River, New Hampshire. Units: m (below NAVD88)*
+
+**Puget Sound, Washington Mean Depth**
+
+![Mean Depth for Puget Sound, Washington](docs/img/WA_puget_sound_distance_to_sea_floor.png)
+*Figure: Mean Depth spatial distribution for Puget Sound, Washington. Units: m (below NAVD88)*
+
+
+---
+
+### Grid Resolution
+
+**Aleutian Islands, Alaska Grid Resolution**
+
+![Grid Resolution for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_grid_resolution_meters.png)
+*Figure: Grid Resolution spatial distribution for Aleutian Islands, Alaska. Units: m*
+
+**Cook Inlet, Alaska Grid Resolution**
+
+![Grid Resolution for Cook Inlet, Alaska](docs/img/AK_cook_inlet_grid_resolution_meters.png)
+*Figure: Grid Resolution spatial distribution for Cook Inlet, Alaska. Units: m*
+
+**Western Passage, Maine Grid Resolution**
+
+![Grid Resolution for Western Passage, Maine](docs/img/ME_western_passage_grid_resolution_meters.png)
+*Figure: Grid Resolution spatial distribution for Western Passage, Maine. Units: m*
+
+**Piscataqua River, New Hampshire Grid Resolution**
+
+![Grid Resolution for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_grid_resolution_meters.png)
+*Figure: Grid Resolution spatial distribution for Piscataqua River, New Hampshire. Units: m*
+
+**Puget Sound, Washington Grid Resolution**
+
+![Grid Resolution for Puget Sound, Washington](docs/img/WA_puget_sound_grid_resolution_meters.png)
+*Figure: Grid Resolution spatial distribution for Puget Sound, Washington. Units: m*
+
+
+---
+
+### Sea Water Ebb Tide To Direction
+
+**Aleutian Islands, Alaska Sea Water Ebb Tide To Direction**
+
+![Sea Water Ebb Tide To Direction for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_ebb_direction.png)
+*Figure: Sea Water Ebb Tide To Direction spatial distribution for Aleutian Islands, Alaska. Units: m/s*
+
+**Cook Inlet, Alaska Sea Water Ebb Tide To Direction**
+
+![Sea Water Ebb Tide To Direction for Cook Inlet, Alaska](docs/img/AK_cook_inlet_ebb_direction.png)
+*Figure: Sea Water Ebb Tide To Direction spatial distribution for Cook Inlet, Alaska. Units: m/s*
+
+**Western Passage, Maine Sea Water Ebb Tide To Direction**
+
+![Sea Water Ebb Tide To Direction for Western Passage, Maine](docs/img/ME_western_passage_ebb_direction.png)
+*Figure: Sea Water Ebb Tide To Direction spatial distribution for Western Passage, Maine. Units: m/s*
+
+**Piscataqua River, New Hampshire Sea Water Ebb Tide To Direction**
+
+![Sea Water Ebb Tide To Direction for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_ebb_direction.png)
+*Figure: Sea Water Ebb Tide To Direction spatial distribution for Piscataqua River, New Hampshire. Units: m/s*
+
+**Puget Sound, Washington Sea Water Ebb Tide To Direction**
+
+![Sea Water Ebb Tide To Direction for Puget Sound, Washington](docs/img/WA_puget_sound_ebb_direction.png)
+*Figure: Sea Water Ebb Tide To Direction spatial distribution for Puget Sound, Washington. Units: m/s*
+
+
+---
+
+### Sea Water Flood Tide To Direction
+
+**Aleutian Islands, Alaska Sea Water Flood Tide To Direction**
+
+![Sea Water Flood Tide To Direction for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_flood_direction.png)
+*Figure: Sea Water Flood Tide To Direction spatial distribution for Aleutian Islands, Alaska. Units: m/s*
+
+**Cook Inlet, Alaska Sea Water Flood Tide To Direction**
+
+![Sea Water Flood Tide To Direction for Cook Inlet, Alaska](docs/img/AK_cook_inlet_flood_direction.png)
+*Figure: Sea Water Flood Tide To Direction spatial distribution for Cook Inlet, Alaska. Units: m/s*
+
+**Western Passage, Maine Sea Water Flood Tide To Direction**
+
+![Sea Water Flood Tide To Direction for Western Passage, Maine](docs/img/ME_western_passage_flood_direction.png)
+*Figure: Sea Water Flood Tide To Direction spatial distribution for Western Passage, Maine. Units: m/s*
+
+**Piscataqua River, New Hampshire Sea Water Flood Tide To Direction**
+
+![Sea Water Flood Tide To Direction for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_flood_direction.png)
+*Figure: Sea Water Flood Tide To Direction spatial distribution for Piscataqua River, New Hampshire. Units: m/s*
+
+**Puget Sound, Washington Sea Water Flood Tide To Direction**
+
+![Sea Water Flood Tide To Direction for Puget Sound, Washington](docs/img/WA_puget_sound_flood_direction.png)
+*Figure: Sea Water Flood Tide To Direction spatial distribution for Puget Sound, Washington. Units: m/s*
+
+
+---
+
+### Mean Sea Surface Elevation
+
+**Aleutian Islands, Alaska Mean Sea Surface Elevation**
+
+![Mean Sea Surface Elevation for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_surface_elevation_mean.png)
+*Figure: Mean Sea Surface Elevation spatial distribution for Aleutian Islands, Alaska. Units: m*
+
+**Cook Inlet, Alaska Mean Sea Surface Elevation**
+
+![Mean Sea Surface Elevation for Cook Inlet, Alaska](docs/img/AK_cook_inlet_surface_elevation_mean.png)
+*Figure: Mean Sea Surface Elevation spatial distribution for Cook Inlet, Alaska. Units: m*
+
+**Western Passage, Maine Mean Sea Surface Elevation**
+
+![Mean Sea Surface Elevation for Western Passage, Maine](docs/img/ME_western_passage_surface_elevation_mean.png)
+*Figure: Mean Sea Surface Elevation spatial distribution for Western Passage, Maine. Units: m*
+
+**Piscataqua River, New Hampshire Mean Sea Surface Elevation**
+
+![Mean Sea Surface Elevation for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_surface_elevation_mean.png)
+*Figure: Mean Sea Surface Elevation spatial distribution for Piscataqua River, New Hampshire. Units: m*
+
+**Puget Sound, Washington Mean Sea Surface Elevation**
+
+![Mean Sea Surface Elevation for Puget Sound, Washington](docs/img/WA_puget_sound_surface_elevation_mean.png)
+*Figure: Mean Sea Surface Elevation spatial distribution for Puget Sound, Washington. Units: m*
+
+
+---
+
+### Range of Sea Surface Elevation
+
+**Aleutian Islands, Alaska Range of Sea Surface Elevation**
+
+![Range of Sea Surface Elevation for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_surface_elevation_range.png)
+*Figure: Range of Sea Surface Elevation spatial distribution for Aleutian Islands, Alaska. Units: m*
+
+**Cook Inlet, Alaska Range of Sea Surface Elevation**
+
+![Range of Sea Surface Elevation for Cook Inlet, Alaska](docs/img/AK_cook_inlet_surface_elevation_range.png)
+*Figure: Range of Sea Surface Elevation spatial distribution for Cook Inlet, Alaska. Units: m*
+
+**Western Passage, Maine Range of Sea Surface Elevation**
+
+![Range of Sea Surface Elevation for Western Passage, Maine](docs/img/ME_western_passage_surface_elevation_range.png)
+*Figure: Range of Sea Surface Elevation spatial distribution for Western Passage, Maine. Units: m*
+
+**Piscataqua River, New Hampshire Range of Sea Surface Elevation**
+
+![Range of Sea Surface Elevation for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_surface_elevation_range.png)
+*Figure: Range of Sea Surface Elevation spatial distribution for Piscataqua River, New Hampshire. Units: m*
+
+**Puget Sound, Washington Range of Sea Surface Elevation**
+
+![Range of Sea Surface Elevation for Puget Sound, Washington](docs/img/WA_puget_sound_surface_elevation_range.png)
+*Figure: Range of Sea Surface Elevation spatial distribution for Puget Sound, Washington. Units: m*
+
+
+---
+
+### Shortest Tidal Period
+
+**Aleutian Islands, Alaska Shortest Tidal Period**
+
+![Shortest Tidal Period for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_min_tidal_period.png)
+*Figure: Shortest Tidal Period spatial distribution for Aleutian Islands, Alaska. Units: hours*
+
+**Cook Inlet, Alaska Shortest Tidal Period**
+
+![Shortest Tidal Period for Cook Inlet, Alaska](docs/img/AK_cook_inlet_min_tidal_period.png)
+*Figure: Shortest Tidal Period spatial distribution for Cook Inlet, Alaska. Units: hours*
+
+**Western Passage, Maine Shortest Tidal Period**
+
+![Shortest Tidal Period for Western Passage, Maine](docs/img/ME_western_passage_min_tidal_period.png)
+*Figure: Shortest Tidal Period spatial distribution for Western Passage, Maine. Units: hours*
+
+**Piscataqua River, New Hampshire Shortest Tidal Period**
+
+![Shortest Tidal Period for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_min_tidal_period.png)
+*Figure: Shortest Tidal Period spatial distribution for Piscataqua River, New Hampshire. Units: hours*
+
+**Puget Sound, Washington Shortest Tidal Period**
+
+![Shortest Tidal Period for Puget Sound, Washington](docs/img/WA_puget_sound_min_tidal_period.png)
+*Figure: Shortest Tidal Period spatial distribution for Puget Sound, Washington. Units: hours*
+
+
+---
+
+### Longest Tidal Period
+
+**Aleutian Islands, Alaska Longest Tidal Period**
+
+![Longest Tidal Period for Aleutian Islands, Alaska](docs/img/AK_aleutian_islands_max_tidal_period.png)
+*Figure: Longest Tidal Period spatial distribution for Aleutian Islands, Alaska. Units: hours*
+
+**Cook Inlet, Alaska Longest Tidal Period**
+
+![Longest Tidal Period for Cook Inlet, Alaska](docs/img/AK_cook_inlet_max_tidal_period.png)
+*Figure: Longest Tidal Period spatial distribution for Cook Inlet, Alaska. Units: hours*
+
+**Western Passage, Maine Longest Tidal Period**
+
+![Longest Tidal Period for Western Passage, Maine](docs/img/ME_western_passage_max_tidal_period.png)
+*Figure: Longest Tidal Period spatial distribution for Western Passage, Maine. Units: hours*
+
+**Piscataqua River, New Hampshire Longest Tidal Period**
+
+![Longest Tidal Period for Piscataqua River, New Hampshire](docs/img/NH_piscataqua_river_max_tidal_period.png)
+*Figure: Longest Tidal Period spatial distribution for Piscataqua River, New Hampshire. Units: hours*
+
+**Puget Sound, Washington Longest Tidal Period**
+
+![Longest Tidal Period for Puget Sound, Washington](docs/img/WA_puget_sound_max_tidal_period.png)
+*Figure: Longest Tidal Period spatial distribution for Puget Sound, Washington. Units: hours*
+
+
+---
+
+## Cross-Regional Comparative Analysis
+
+Comparative visualizations across all processed regions provide insights into spatial variability, statistical patterns, and visualization parameter validation.
+
+### Visualization Maximum Justification
+
+These comprehensive plots validate the chosen visualization maximum (viz_max) parameters used throughout the analysis. Each visualization demonstrates that the selected cutoff values effectively capture the bulk of the data while filtering extreme outliers, ensuring meaningful and readable visualizations.
+
+### Visualization Methodology Notes
+
+**Visualization Maximum (Viz Max) Approach**: All visualizations use validated maximum values that capture 95-99.9% of the data while filtering extreme outliers. This approach ensures:
+
+- Clear, readable visualizations without distortion from extreme values
+- Consistent scales across regional comparisons
+- Transparent documentation of data filtering decisions
+- Preservation of statistical integrity for the bulk of the dataset
+
+**Data Retention**: The following justification plots show exactly what percentage of data is retained vs. filtered, providing full transparency about the visualization choices and their impact on the analysis.
+
+**Mean Sea Water Speed - Visualization Maximum Validation**
+
+![Mean Sea Water Speed Viz Max Justification](docs/img/vap_water_column_mean_sea_water_speed_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for mean sea water speed. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: m/s. Validates the visualization maximum used for mean sea water speed analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**95th Percentile Sea Water Speed - Visualization Maximum Validation**
+
+![95th Percentile Sea Water Speed Viz Max Justification](docs/img/vap_water_column_95th_percentile_sea_water_speed_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for 95th percentile sea water speed. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: m/s. Validates the visualization maximum used for 95th percentile sea water speed analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**Mean Sea Water Power Density - Visualization Maximum Validation**
+
+![Mean Sea Water Power Density Viz Max Justification](docs/img/vap_water_column_mean_sea_water_power_density_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for mean sea water power density. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: W/m². Validates the visualization maximum used for mean sea water power density analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**95th Percentile Sea Water Power Density - Visualization Maximum Validation**
+
+![95th Percentile Sea Water Power Density Viz Max Justification](docs/img/vap_water_column_95th_percentile_sea_water_power_density_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for 95th percentile sea water power density. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: W/m². Validates the visualization maximum used for 95th percentile sea water power density analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**Mean Depth - Visualization Maximum Validation**
+
+![Mean Depth Viz Max Justification](docs/img/vap_sea_floor_depth_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for mean depth. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: m (below NAVD88). Validates the visualization maximum used for mean depth analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**Grid Resolution - Visualization Maximum Validation**
+
+![Grid Resolution Viz Max Justification](docs/img/vap_grid_resolution_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for grid resolution. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: m. Validates the visualization maximum used for grid resolution analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**Sea Water Ebb Tide To Direction - Visualization Maximum Validation**
+
+![Sea Water Ebb Tide To Direction Viz Max Justification](docs/img/vap_sea_water_ebb_to_direction_sigma_level_3_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for sea water ebb tide to direction. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: m/s. Validates the visualization maximum used for sea water ebb tide to direction analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**Sea Water Flood Tide To Direction - Visualization Maximum Validation**
+
+![Sea Water Flood Tide To Direction Viz Max Justification](docs/img/vap_sea_water_flood_to_direction_sigma_level_1_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for sea water flood tide to direction. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: m/s. Validates the visualization maximum used for sea water flood tide to direction analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**Mean Sea Surface Elevation - Visualization Maximum Validation**
+
+![Mean Sea Surface Elevation Viz Max Justification](docs/img/vap_surface_elevation_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for mean sea surface elevation. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: m. Validates the visualization maximum used for mean sea surface elevation analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**Range of Sea Surface Elevation - Visualization Maximum Validation**
+
+![Range of Sea Surface Elevation Viz Max Justification](docs/img/vap_tidal_range_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for range of sea surface elevation. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: m. Validates the visualization maximum used for range of sea surface elevation analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**Shortest Tidal Period - Visualization Maximum Validation**
+
+![Shortest Tidal Period Viz Max Justification](docs/img/vap_min_tidal_period_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for shortest tidal period. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: hours. Validates the visualization maximum used for shortest tidal period analysis, showing data retention rates and outlier filtering effectiveness.*
+
+**Longest Tidal Period - Visualization Maximum Validation**
+
+![Longest Tidal Period Viz Max Justification](docs/img/vap_max_tidal_period_viz_max_justification.png)
+*Figure: Comprehensive validation of visualization maximum for longest tidal period. Shows full data distribution, regional comparisons within bounds, key statistics, and outlier assessment. Units: hours. Validates the visualization maximum used for longest tidal period analysis, showing data retention rates and outlier filtering effectiveness.*
+
+### Regional Distribution Comparisons
+
+These kernel density estimation (KDE) plots provide clean statistical comparisons of variable distributions across all processed regions, focused within the validated visualization ranges.
+
+**Mean Sea Water Speed Distribution Comparison**
+
+![Mean Sea Water Speed Regional Comparison](docs/img/vap_water_column_mean_sea_water_speed_regional_comparison.png)
+*Figure: Kernel density estimation comparison of mean sea water speed across all processed regions. Units: m/s. Mean Sea Water Speed distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**95th Percentile Sea Water Speed Distribution Comparison**
+
+![95th Percentile Sea Water Speed Regional Comparison](docs/img/vap_water_column_95th_percentile_sea_water_speed_regional_comparison.png)
+*Figure: Kernel density estimation comparison of 95th percentile sea water speed across all processed regions. Units: m/s. 95th Percentile Sea Water Speed distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**Mean Sea Water Power Density Distribution Comparison**
+
+![Mean Sea Water Power Density Regional Comparison](docs/img/vap_water_column_mean_sea_water_power_density_regional_comparison.png)
+*Figure: Kernel density estimation comparison of mean sea water power density across all processed regions. Units: W/m². Mean Sea Water Power Density distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**95th Percentile Sea Water Power Density Distribution Comparison**
+
+![95th Percentile Sea Water Power Density Regional Comparison](docs/img/vap_water_column_95th_percentile_sea_water_power_density_regional_comparison.png)
+*Figure: Kernel density estimation comparison of 95th percentile sea water power density across all processed regions. Units: W/m². 95th Percentile Sea Water Power Density distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**Mean Depth Distribution Comparison**
+
+![Mean Depth Regional Comparison](docs/img/vap_sea_floor_depth_regional_comparison.png)
+*Figure: Kernel density estimation comparison of mean depth across all processed regions. Units: m (below NAVD88). Mean Depth distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**Grid Resolution Distribution Comparison**
+
+![Grid Resolution Regional Comparison](docs/img/vap_grid_resolution_regional_comparison.png)
+*Figure: Kernel density estimation comparison of grid resolution across all processed regions. Units: m. Grid Resolution distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**Sea Water Ebb Tide To Direction Distribution Comparison**
+
+![Sea Water Ebb Tide To Direction Regional Comparison](docs/img/vap_sea_water_ebb_to_direction_sigma_level_3_regional_comparison.png)
+*Figure: Kernel density estimation comparison of sea water ebb tide to direction across all processed regions. Units: m/s. Sea Water Ebb Tide To Direction distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**Sea Water Flood Tide To Direction Distribution Comparison**
+
+![Sea Water Flood Tide To Direction Regional Comparison](docs/img/vap_sea_water_flood_to_direction_sigma_level_1_regional_comparison.png)
+*Figure: Kernel density estimation comparison of sea water flood tide to direction across all processed regions. Units: m/s. Sea Water Flood Tide To Direction distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**Mean Sea Surface Elevation Distribution Comparison**
+
+![Mean Sea Surface Elevation Regional Comparison](docs/img/vap_surface_elevation_regional_comparison.png)
+*Figure: Kernel density estimation comparison of mean sea surface elevation across all processed regions. Units: m. Mean Sea Surface Elevation distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**Range of Sea Surface Elevation Distribution Comparison**
+
+![Range of Sea Surface Elevation Regional Comparison](docs/img/vap_tidal_range_regional_comparison.png)
+*Figure: Kernel density estimation comparison of range of sea surface elevation across all processed regions. Units: m. Range of Sea Surface Elevation distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**Shortest Tidal Period Distribution Comparison**
+
+![Shortest Tidal Period Regional Comparison](docs/img/vap_min_tidal_period_regional_comparison.png)
+*Figure: Kernel density estimation comparison of shortest tidal period across all processed regions. Units: hours. Shortest Tidal Period distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+**Longest Tidal Period Distribution Comparison**
+
+![Longest Tidal Period Regional Comparison](docs/img/vap_max_tidal_period_regional_comparison.png)
+*Figure: Kernel density estimation comparison of longest tidal period across all processed regions. Units: hours. Longest Tidal Period distribution comparison across regions. Distributions are shown within validated visualization bounds for optimal clarity.*
+
+---
+
+## Document Information
+
+- **Generated:** 2025-12-11 16:51:49 UTC
+- **Regions Processed:** AK_aleutian_islands, AK_cook_inlet, ME_western_passage, NH_piscataqua_river, WA_puget_sound
+
+*This specification was auto-generated from the tidal data visualization pipeline.*
+*All color codes, ranges, and technical specifications are programmatically derived.*
