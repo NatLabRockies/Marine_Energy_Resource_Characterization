@@ -58,61 +58,21 @@ A historical simulation of ocean conditions using a numerical model driven by ob
 
 **Sigma Layer**
 
-A terrain-following and free-surface-conforming vertical coordinate system used in ocean models where the water column is divided into layers that conform to both the fixed seafloor bathymetry (bottom boundary) and the time-varying sea surface (top boundary). Unlike fixed-depth coordinate systems, sigma (σ) expresses vertical position as a proportion of the instantaneous total water depth, ranging from σ = 0 at the free surface to σ = −1 at the seafloor. This approach maintains consistent vertical resolution regardless of local water depth, with layers stretching and compressing dynamically as the water column depth varies with tidal fluctuations.
+A terrain-following vertical coordinate system where the water column is divided into layers that conform to both the seafloor (bottom) and the time-varying sea surface (top). Sigma (σ) expresses vertical position as a proportion of total water depth, ranging from σ = 0 at the surface to σ = −1 at the seafloor. Layers stretch and compress dynamically as water depth varies with tides.
 
-Vertical Datum Convention: Sea surface elevation (ζ) is measured relative to NAVD88 and varies with time (tides, storm surge). Bathymetry depth (h) is the fixed depth of the seafloor below NAVD88. The instantaneous total water depth is D = h + ζ, and the physical depth below the surface for any sigma value is: depth = −D × σ.
+Configuration: The FVCOM model uses 10 uniformly spaced sigma layers. Model variables (velocity, etc.) are computed at each layer center. The physical depth of any sigma value is: depth = −D × σ, where D = h + ζ (bathymetry + sea surface elevation).
 
-Configuration in This Dataset: The FVCOM model uses 11 uniformly spaced sigma levels that define the horizontal boundaries of finite volume prisms. Between these levels are 10 sigma layers, representing the vertical midpoints of each prism. Model variables such as velocity components (u and v) are computed at each layer center (the centroid of the triangular prism at that sigma level). These are point values at the control volume center, not volume-integrated averages. The following tables detail the sigma coordinate values.
+<figure markdown="span">
+  ![Sigma coordinate system over a tidal cycle](assets/sigma_timeseries.png){ width="100%" }
+  <figcaption>Sigma coordinate system over a 4-day tidal cycle at Cook Inlet, Alaska. Top panel shows sigma level boundaries (solid lines) and layer centers (dashed lines) in elevation relative to NAVD88. The seafloor remains fixed while the sea surface oscillates with tides, causing sigma layers to expand during high tide and compress during low tide. Middle and bottom panels show the corresponding total water depth and individual layer height variations.</figcaption>
+</figure>
 
-**FVCOM Sigma Levels (Boundaries)**
+<figure markdown="span">
+  ![Sigma layer comparison at low and high tide](assets/sigma_layer_comparison.png){ width="100%" }
+  <figcaption>Sigma levels and layer centers at low tide (left) and high tide (right) for Cook Inlet, Alaska. The 10 sigma layers maintain their proportional positions within the water column while physical depths change with tidal elevation. Layer centers (dots) indicate where model variables are computed.</figcaption>
+</figure>
 
-| Level Index | σ Value | Position    |
-| ----------- | ------- | ----------- |
-| 0           | 0.0     | Sea surface |
-| 1           | −0.1    |             |
-| 2           | −0.2    |             |
-| 3           | −0.3    |             |
-| 4           | −0.4    |             |
-| 5           | −0.5    | Mid-depth   |
-| 6           | −0.6    |             |
-| 7           | −0.7    |             |
-| 8           | −0.8    |             |
-| 9           | −0.9    |             |
-| 10          | −1.0    | Seafloor    |
-
-**FVCOM Sigma Layers (Volume Centers)**
-
-| Layer Index | σ Center | Description        |
-| ----------- | -------- | ------------------ |
-| 1           | −0.05    | Near-surface layer |
-| 2           | −0.15    |                    |
-| 3           | −0.25    |                    |
-| 4           | −0.35    |                    |
-| 5           | −0.45    |                    |
-| 6           | −0.55    | Mid-depth layer    |
-| 7           | −0.65    |                    |
-| 8           | −0.75    |                    |
-| 9           | −0.85    |                    |
-| 10          | −0.95    | Near-bottom layer  |
-
-How Layer Depths Vary with Tides: The physical depth of each sigma layer changes as the total water column depth varies with tides. The following table illustrates this using real data from Cook Inlet, Alaska (60.74°N, 151.43°W) where the bathymetry is h = 26.7 m below NAVD88. At low tide (ζ = -4.95 m, total depth D = 21.8 m) and high tide (ζ = 3.82 m, total depth D = 30.6 m), the sigma layer depths shift proportionally while maintaining their relative positions.
-
-**Sigma Layer Depths at Low and High Tide (Cook Inlet Example)**
-
-| Layer | σ Center | Low Tide (m) | High Tide (m) | Δ Depth (m) |
-| ----- | -------- | ------------ | ------------- | ----------- |
-| 1     | −0.05    | 1.1          | 1.5           | +0.4        |
-| 2     | −0.15    | 3.3          | 4.6           | +1.3        |
-| 3     | −0.25    | 5.4          | 7.6           | +2.2        |
-| 4     | −0.35    | 7.6          | 10.7          | +3.1        |
-| 5     | −0.45    | 9.8          | 13.7          | +3.9        |
-| 6     | −0.55    | 12.0         | 16.8          | +4.8        |
-| 7     | −0.65    | 14.2         | 19.9          | +5.7        |
-| 8     | −0.75    | 16.3         | 22.9          | +6.6        |
-| 9     | −0.85    | 18.5         | 26.0          | +7.5        |
-| 10    | −0.95    | 20.7         | 29.0          | +8.3        |
-
-Implications for Data Users: While sigma coordinates provide consistent data structure across varying bathymetry and tidal conditions, they require interpolation to extract data at fixed absolute depths. Queries such as 'average current speed at 8 m depth' require calculating which sigma layers correspond to that depth at each timestep.
+Implications for Data Users: While sigma coordinates provide consistent data structure across varying bathymetry and tidal conditions, they require interpolation to extract data at fixed absolute depths. Queries such as "average current speed at 8 m depth" require calculating which sigma layers correspond to that depth at each timestep.
 
 **Depth-Averaged**
 
@@ -133,6 +93,11 @@ A computational mesh composed of irregularly-shaped elements (triangles in FVCOM
 Grid Structure: The FVCOM model uses an unstructured triangular mesh where each element (cell) is defined by three nodes. Model variables are computed at element centers, while the mesh geometry is defined by node positions. The flexibility of triangular elements allows the mesh to conform to complex coastlines and bathymetric features without requiring uniform grid spacing.
 
 Spatial Resolution: Grid resolution varies across the domain based on local requirements. In narrow channels and near coastlines where currents are strongest and bathymetry changes rapidly, triangles are smaller (higher resolution). In open water regions where conditions vary more gradually, triangles are larger (coarser resolution), reducing computational cost without sacrificing accuracy in areas of interest. The grid resolution variable in the dataset reports the average edge length of each triangular element.
+
+<figure markdown="span">
+  ![FVCOM unstructured triangular mesh](assets/unstructured_grid_overview.png){ width="100%" }
+  <figcaption>Wide angle and detailed view of the underlying FVCOM unstructured triangular mesh used for the High Resolution Tidal Hindcast in Cook Inlet, Alaska. The main panel shows the full model domain with 392,002 triangular elements conforming to the complex coastline geometry. The inset shows a detailed view of the mesh structure, illustrating how element size varies with higher resolution near coastlines and in channels where accurate representation of tidal dynamics requires finer spatial detail.</figcaption>
+</figure>
 
 **Model Limitations**
 
