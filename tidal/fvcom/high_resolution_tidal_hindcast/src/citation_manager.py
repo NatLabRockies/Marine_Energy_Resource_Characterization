@@ -123,6 +123,63 @@ def format_reference(reference_id, show_warnings=False):
             warnings.resetwarnings()
 
 
+def format_citation(reference_id, show_warnings=False):
+    """
+    Format an in-text citation (short form) using CSL
+    Args:
+        reference_id: the citation key to format
+        show_warnings: if False (default), suppress citeproc warnings
+    Returns:
+        formatted in-text citation string, e.g., "(Spicer et al. 2025)"
+    """
+    # Conditionally silence warnings
+    if not show_warnings:
+        warnings.filterwarnings("ignore", category=UserWarning, module="citeproc")
+
+    try:
+        # For CSL processing, specify UTF-8 encoding
+        bib_source = BibTeX(REFERENCES_FILE, encoding="utf-8")
+
+        # Check if the reference exists
+        if reference_id not in bib_source:
+            raise ValueError(
+                f"Reference '{reference_id}' not found in {REFERENCES_FILE}. "
+                f"Available references: {', '.join(bib_source.keys())}"
+            )
+
+        # Load CSL style
+        style = CitationStylesStyle(CSL_FILE)
+
+        # Create bibliography
+        bibliography = CitationStylesBibliography(style, bib_source)
+
+        # Create proper Citation object with CitationItem
+        citation_item = CitationItem(reference_id)
+        citation = Citation([citation_item])
+
+        # Register the citation
+        bibliography.register(citation)
+
+        # Generate in-text citation using cite() method
+        # The callback is for warning about missing citations
+        in_text = bibliography.cite(citation, lambda item: None)
+        formatted_text = str(in_text)
+        
+        # Clean HTML formatting
+        clean_text = clean_html_formatting(formatted_text)
+        return clean_text
+
+    except ValueError:
+        # Re-raise ValueError so configuration errors are caught
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Error formatting citation '{reference_id}': {str(e)}") from e
+    finally:
+        # Reset warning filters if we changed them
+        if not show_warnings:
+            warnings.resetwarnings()
+
+
 def format_references(references, show_warnings=False):
     """
     Format multiple references using modern bibtexparser and CSL
