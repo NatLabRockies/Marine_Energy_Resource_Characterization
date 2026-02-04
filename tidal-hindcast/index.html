@@ -1,0 +1,2067 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Software to standardize wave and tidal energy model outputs for public access">
+      
+      
+      
+        <link rel="canonical" href="https://NatLabRockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../wave-hindcast/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Tidal Hindcast - Marine Energy Resource Characterization</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#wpto-high-resolution-tidal-hindcast" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Marine Energy Resource Characterization" class="md-header__button md-logo" aria-label="Marine Energy Resource Characterization" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Marine Energy Resource Characterization
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Tidal Hindcast
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/NatLabRockies/Marine_Energy_Resource_Characterization" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    NatLabRockies/Marine_Energy_Resource_Characterization
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Tidal Hindcast
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../wave-hindcast/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Wave Hindcast
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Marine Energy Resource Characterization" class="md-nav__button md-logo" aria-label="Marine Energy Resource Characterization" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Marine Energy Resource Characterization
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/NatLabRockies/Marine_Energy_Resource_Characterization" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    NatLabRockies/Marine_Energy_Resource_Characterization
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tidal Hindcast
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tidal Hindcast
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#location-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Location Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#iec-standards-compliance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IEC Standards Compliance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#definitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Definitions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Definitions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#technical-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Terms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symbols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symbols
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#acronyms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acronyms
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variable-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Variable Documentation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Variable Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#variable-quick-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Variable Quick Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mean-current-speed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mean Current Speed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mean Current Speed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mean-power-density" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mean Power Density
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mean Power Density">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#description_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equation_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#95th-percentile-current-speed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        95th Percentile Current Speed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="95th Percentile Current Speed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#description_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equation_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimum-water-depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum Water Depth
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Minimum Water Depth">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#description_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equation_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maximum-water-depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maximum Water Depth
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Maximum Water Depth">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#description_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equation_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grid-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grid Resolution
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Grid Resolution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#description_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equation_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-formats-and-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Formats and Levels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Access
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Access">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#python-with-rex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python with rex
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hsds-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HSDS Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#direct-h5pyd-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct h5pyd Access
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extract-time-series-at-a-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extract Time Series at a Location
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quality-assurance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quality Assurance
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quality Assurance">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#verification-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification Process
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#known-data-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Data Gaps
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coordinate-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinate Systems
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standards-and-model-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standards and Model Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#location-specific-validation-studies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Location-Specific Validation Studies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#citation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Citation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acknowledgement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acknowledgement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#disclaimer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disclaimer
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wave-hindcast/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wave Hindcast
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="wpto-high-resolution-tidal-hindcast">WPTO High Resolution Tidal Hindcast<a class="headerlink" href="#wpto-high-resolution-tidal-hindcast" title="Permanent link">&para;</a></h1>
+<p>High-resolution 3D tidal current hindcast data for U.S. coastal locations, generated using the Finite Volume Community Ocean Model (FVCOM).</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>This dataset contains high-resolution tidal hindcast data generated using FVCOM at five strategically selected U.S. coastal locations. The project represents a collaborative effort between <a href="https://www.pnnl.gov/marine-energy-resource-characterization">Pacific Northwest National Laboratory</a> (PNNL) for data generation and the <a href="https://www.nlr.gov/water/resource-characterization">National Laboratory of the Rockies</a> for data processing and visualization.</p>
+<div class="admonition info">
+<p class="admonition-title">Data Access</p>
+</div>
+<p>Complete standardized datasets are available from the <a href="https://data.openei.org/s3_viewer?bucket=marine-energy-data">AWS S3 Open Energy Data Initiative Marine Energy Data Lake</a>. Summary data is visualized on the <a href="https://maps.nlr.gov/marine-energy-atlas">Marine Energy Atlas</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Data Limitations</p>
+</div>
+<p>This dataset is derived from numerical model simulations, not direct measurements. Results are based on a single hindcast year, which may not capture interannual variability in tidal energy resources. Model validation has been performed against observations at available measurement stations, but uncertainties exist, particularly in areas with complex bathymetry or limited observational data.</p>
+<h2 id="location-overview">Location Overview<a class="headerlink" href="#location-overview" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Start Time [UTC]</th>
+<th>End Time [UTC]</th>
+<th>Sampling Frequency</th>
+<th>Grid Points</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Aleutian Islands, Alaska</td>
+<td>2010-06-03 00:00:00</td>
+<td>2011-06-02 23:00:00</td>
+<td>Hourly</td>
+<td>797,978</td>
+</tr>
+<tr>
+<td>Cook Inlet, Alaska</td>
+<td>2005-01-01 00:00:00</td>
+<td>2005-12-31 23:00:00</td>
+<td>Hourly</td>
+<td>392,002</td>
+</tr>
+<tr>
+<td>Piscataqua River, New Hampshire</td>
+<td>2007-01-01 00:00:00</td>
+<td>2007-12-31 23:30:00</td>
+<td>Half-Hourly</td>
+<td>292,927</td>
+</tr>
+<tr>
+<td>Puget Sound, Washington</td>
+<td>2015-01-01 00:00:00</td>
+<td>2015-12-30 23:30:00</td>
+<td>Half-Hourly</td>
+<td>1,734,765</td>
+</tr>
+<tr>
+<td>Western Passage, Maine</td>
+<td>2017-01-01 00:00:00</td>
+<td>2017-12-31 23:30:00</td>
+<td>Half-Hourly</td>
+<td>231,208</td>
+</tr>
+</tbody>
+</table>
+<h2 id="model-configuration">Model Configuration<a class="headerlink" href="#model-configuration" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Configuration</th>
+<th>Specification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model</td>
+<td><a href="https://www.fvcom.org">Finite Volume Community Ocean Model (FVCOM) 4.3.1</a></td>
+</tr>
+<tr>
+<td>Dimensions</td>
+<td>time, element, depth</td>
+</tr>
+<tr>
+<td>Horizontal Resolution</td>
+<td>Unstructured triangular grid (50-500m for IEC 62600-201 Stage 1 compliance)</td>
+</tr>
+<tr>
+<td>Vertical Resolution</td>
+<td>10 uniform sigma layers from surface to seafloor</td>
+</tr>
+<tr>
+<td>Horizontal Coordinates</td>
+<td>Latitude, Longitude (EPSG:4326)</td>
+</tr>
+<tr>
+<td>Vertical Datum</td>
+<td>Mean sea level (MSL), NAVD88</td>
+</tr>
+<tr>
+<td>Temporal Resolution</td>
+<td>1 year at half-hourly or hourly intervals</td>
+</tr>
+<tr>
+<td>Wetting &amp; Drying</td>
+<td>Activated</td>
+</tr>
+<tr>
+<td>Boundary Forcing</td>
+<td>12 tidal constituents from OSU TPXO Tide Models</td>
+</tr>
+<tr>
+<td>Wind Forcing</td>
+<td>ERA5 or CFSv2</td>
+</tr>
+</tbody>
+</table>
+<h2 id="iec-standards-compliance">IEC Standards Compliance<a class="headerlink" href="#iec-standards-compliance" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>IEC Standards (IEC TS 62600-201, 2015)</th>
+<th>Compliance Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stage 1 (feasibility) tidal resource assessment</td>
+<td>Compliant with exceptions below</td>
+</tr>
+<tr>
+<td>Wave-current interaction</td>
+<td>Not considered (waves small in study domain)</td>
+</tr>
+<tr>
+<td>Atmospheric forcing</td>
+<td>Not considered (effects negligible)</td>
+</tr>
+<tr>
+<td>Seawater density, salinity and temperature</td>
+<td>Not considered (density-induced flow small)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="definitions">Definitions<a class="headerlink" href="#definitions" title="Permanent link">&para;</a></h2>
+<p>This section defines technical terms, mathematical symbols, and acronyms used throughout this document and in the dataset metadata.</p>
+<h3 id="technical-terms">Technical Terms<a class="headerlink" href="#technical-terms" title="Permanent link">&para;</a></h3>
+<p><strong>Hindcast</strong></p>
+<p>A historical simulation of ocean conditions using a numerical model driven by observed atmospheric forcing and tidal boundary conditions. Unlike a forecast (which predicts future conditions) or direct measurements, a hindcast reconstructs past conditions by running the model over a historical time period. The results represent modeled estimates of what conditions were, not direct observations.</p>
+<p><strong>Sigma Layer</strong></p>
+<p>A terrain-following and free-surface-conforming vertical coordinate system used in ocean models where the water column is divided into layers that conform to both the fixed seafloor bathymetry (bottom boundary) and the time-varying sea surface (top boundary). Unlike fixed-depth coordinate systems, sigma (σ) expresses vertical position as a proportion of the instantaneous total water depth, ranging from σ = 0 at the free surface to σ = −1 at the seafloor. This approach maintains consistent vertical resolution regardless of local water depth, with layers stretching and compressing dynamically as the water column depth varies with tidal fluctuations.</p>
+<p>Vertical Datum Convention: Sea surface elevation (ζ) is measured relative to NAVD88 and varies with time (tides, storm surge). Bathymetry depth (h) is the fixed depth of the seafloor below NAVD88. The instantaneous total water depth is D = h + ζ, and the physical depth below the surface for any sigma value is: depth = −D × σ.</p>
+<p>Configuration in This Dataset: The FVCOM model uses 11 uniformly spaced sigma levels that define the horizontal boundaries of finite volume prisms. Between these levels are 10 sigma layers, representing the vertical midpoints of each prism. Model variables such as velocity components (u and v) are computed at each layer center (the centroid of the triangular prism at that sigma level). These are point values at the control volume center, not volume-integrated averages. The following tables detail the sigma coordinate values.</p>
+<p><strong>FVCOM Sigma Levels (Boundaries)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Level Index</th>
+<th>σ Value</th>
+<th>Position</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>0.0</td>
+<td>Sea surface</td>
+</tr>
+<tr>
+<td>1</td>
+<td>−0.1</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td>−0.2</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>−0.3</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td>−0.4</td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td>−0.5</td>
+<td>Mid-depth</td>
+</tr>
+<tr>
+<td>6</td>
+<td>−0.6</td>
+<td></td>
+</tr>
+<tr>
+<td>7</td>
+<td>−0.7</td>
+<td></td>
+</tr>
+<tr>
+<td>8</td>
+<td>−0.8</td>
+<td></td>
+</tr>
+<tr>
+<td>9</td>
+<td>−0.9</td>
+<td></td>
+</tr>
+<tr>
+<td>10</td>
+<td>−1.0</td>
+<td>Seafloor</td>
+</tr>
+</tbody>
+</table>
+<p><strong>FVCOM Sigma Layers (Volume Centers)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Layer Index</th>
+<th>σ Center</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>−0.05</td>
+<td>Near-surface layer</td>
+</tr>
+<tr>
+<td>2</td>
+<td>−0.15</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>−0.25</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td>−0.35</td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td>−0.45</td>
+<td></td>
+</tr>
+<tr>
+<td>6</td>
+<td>−0.55</td>
+<td>Mid-depth layer</td>
+</tr>
+<tr>
+<td>7</td>
+<td>−0.65</td>
+<td></td>
+</tr>
+<tr>
+<td>8</td>
+<td>−0.75</td>
+<td></td>
+</tr>
+<tr>
+<td>9</td>
+<td>−0.85</td>
+<td></td>
+</tr>
+<tr>
+<td>10</td>
+<td>−0.95</td>
+<td>Near-bottom layer</td>
+</tr>
+</tbody>
+</table>
+<p>How Layer Depths Vary with Tides: The physical depth of each sigma layer changes as the total water column depth varies with tides. The following table illustrates this using real data from Cook Inlet, Alaska (60.74°N, 151.43°W) where the bathymetry is h = 26.7 m below NAVD88. At low tide (ζ = -4.95 m, total depth D = 21.8 m) and high tide (ζ = 3.82 m, total depth D = 30.6 m), the sigma layer depths shift proportionally while maintaining their relative positions.</p>
+<p><strong>Sigma Layer Depths at Low and High Tide (Cook Inlet Example)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>σ Center</th>
+<th>Low Tide (m)</th>
+<th>High Tide (m)</th>
+<th>Δ Depth (m)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>−0.05</td>
+<td>1.1</td>
+<td>1.5</td>
+<td>+0.4</td>
+</tr>
+<tr>
+<td>2</td>
+<td>−0.15</td>
+<td>3.3</td>
+<td>4.6</td>
+<td>+1.3</td>
+</tr>
+<tr>
+<td>3</td>
+<td>−0.25</td>
+<td>5.4</td>
+<td>7.6</td>
+<td>+2.2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>−0.35</td>
+<td>7.6</td>
+<td>10.7</td>
+<td>+3.1</td>
+</tr>
+<tr>
+<td>5</td>
+<td>−0.45</td>
+<td>9.8</td>
+<td>13.7</td>
+<td>+3.9</td>
+</tr>
+<tr>
+<td>6</td>
+<td>−0.55</td>
+<td>12.0</td>
+<td>16.8</td>
+<td>+4.8</td>
+</tr>
+<tr>
+<td>7</td>
+<td>−0.65</td>
+<td>14.2</td>
+<td>19.9</td>
+<td>+5.7</td>
+</tr>
+<tr>
+<td>8</td>
+<td>−0.75</td>
+<td>16.3</td>
+<td>22.9</td>
+<td>+6.6</td>
+</tr>
+<tr>
+<td>9</td>
+<td>−0.85</td>
+<td>18.5</td>
+<td>26.0</td>
+<td>+7.5</td>
+</tr>
+<tr>
+<td>10</td>
+<td>−0.95</td>
+<td>20.7</td>
+<td>29.0</td>
+<td>+8.3</td>
+</tr>
+</tbody>
+</table>
+<p>Implications for Data Users: While sigma coordinates provide consistent data structure across varying bathymetry and tidal conditions, they require interpolation to extract data at fixed absolute depths. Queries such as 'average current speed at 8 m depth' require calculating which sigma layers correspond to that depth at each timestep.</p>
+<p><strong>Depth-Averaged</strong></p>
+<p>A value computed by averaging a quantity across all vertical layers (sigma layers) at a given horizontal location and time. Depth-averaging produces a single representative value for the entire water column, useful for characterizing overall flow conditions while accounting for vertical velocity profiles.</p>
+<p><strong>Depth-Maximum</strong></p>
+<p>The maximum value of a quantity across all vertical layers (sigma layers) at a given horizontal location and time. The depth-maximum captures the peak value occurring anywhere in the water column, which is relevant for structural loading calculations where components must withstand the highest forces at any depth.</p>
+<p><strong>Free-Stream Velocity</strong></p>
+<p>The undisturbed flow velocity that would exist in the absence of any energy extraction device. All velocity and power density values in this dataset represent free-stream (undisturbed) conditions and should not be used directly for turbine array yield estimation. Actual flow through turbine arrays will be modified by: (1) blockage effects that can reduce channel flow by 10-30% depending on the blockage ratio; (2) wake interactions where downstream turbines experience 20-40% velocity deficits in the near-wake region; and (3) device-induced turbulence that affects fatigue loading. Array yield calculations require site-specific wake modeling and cannot be derived directly from free-stream resource data.</p>
+<p><strong>Unstructured Grid</strong></p>
+<p>A computational mesh composed of irregularly-shaped elements (triangles in FVCOM) that can vary in size across the domain. This allows higher resolution in areas of interest (narrow channels, complex coastlines) and coarser resolution in open water, providing computational efficiency while maintaining accuracy where needed. For the duration of the model run, the horizontal coordinates (lat/lon) of grid remains fixed in space.</p>
+<p>Grid Structure: The FVCOM model uses an unstructured triangular mesh where each element (cell) is defined by three nodes. Model variables are computed at element centers, while the mesh geometry is defined by node positions. The flexibility of triangular elements allows the mesh to conform to complex coastlines and bathymetric features without requiring uniform grid spacing.</p>
+<p>Spatial Resolution: Grid resolution varies across the domain based on local requirements. In narrow channels and near coastlines where currents are strongest and bathymetry changes rapidly, triangles are smaller (higher resolution). In open water regions where conditions vary more gradually, triangles are larger (coarser resolution), reducing computational cost without sacrificing accuracy in areas of interest. The grid resolution variable in the dataset reports the average edge length of each triangular element.</p>
+<p><strong>Model Limitations</strong></p>
+<p>This dataset is derived from numerical model simulations and has inherent limitations that users should understand when applying the data.</p>
+<p>Physics Not Included: The model does not include wave-current interaction (waves are small in the study domains), atmospheric forcing (wind and pressure effects on tidal currents are negligible), density-driven estuarine flow (temperature and salinity effects are small), or storm surge (only astronomical tidal forcing from 12 constituents via OSU TPXO Tide Models is applied).</p>
+<p>Temporal Limitations: Results represent a single hindcast year and do not capture interannual variability. Tidal patterns are highly predictable, but extreme values may vary between years due to meteorological effects.</p>
+<p>Spatial Limitations: The model uses wetting/drying algorithms for intertidal zones; results in these areas should be interpreted with care. Model accuracy may be reduced near open ocean boundaries. Features smaller than approximately 2-3 times the local grid spacing cannot be accurately resolved.</p>
+<p>Known Data Gaps: Puget Sound is missing December 31, 2015. Specific files were excluded due to quality issues (see Quality Assurance section for details).</p>
+<h3 id="symbols">Symbols<a class="headerlink" href="#symbols" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>U</td>
+<td>Current speed (velocity magnitude), m/s</td>
+</tr>
+<tr>
+<td>Ū</td>
+<td>Mean (time-averaged) current speed, m/s</td>
+</tr>
+<tr>
+<td>u</td>
+<td>Eastward velocity component, m/s (positive toward true east)</td>
+</tr>
+<tr>
+<td>v</td>
+<td>Northward velocity component, m/s (positive toward true north)</td>
+</tr>
+<tr>
+<td>P</td>
+<td>Power density (kinetic energy flux per unit area), W/m²</td>
+</tr>
+<tr>
+<td>P̄</td>
+<td>Mean (time-averaged) power density, W/m²</td>
+</tr>
+<tr>
+<td>ρ</td>
+<td>Seawater density, kg/m³ (nominal value: 1025 kg/m³)</td>
+</tr>
+<tr>
+<td>h</td>
+<td>Bathymetry depth below NAVD88, m (positive downward)</td>
+</tr>
+<tr>
+<td>ζ</td>
+<td>Sea surface elevation relative to NAVD88, m (positive upward)</td>
+</tr>
+<tr>
+<td>d</td>
+<td>Water depth (total water column height), m</td>
+</tr>
+<tr>
+<td>R</td>
+<td>Grid resolution (average triangle edge length), m</td>
+</tr>
+<tr>
+<td>T</td>
+<td>Time period (hindcast duration = 1 year)</td>
+</tr>
+<tr>
+<td>t</td>
+<td>Time index</td>
+</tr>
+<tr>
+<td>i</td>
+<td>Sigma layer index (1 to Nσ)</td>
+</tr>
+<tr>
+<td>Nσ</td>
+<td>Number of sigma layers (= 10 in this dataset)</td>
+</tr>
+<tr>
+<td>σ</td>
+<td>Sigma coordinate (terrain-following vertical coordinate)</td>
+</tr>
+<tr>
+<td>P₉₅</td>
+<td>95th percentile operator</td>
+</tr>
+</tbody>
+</table>
+<h3 id="acronyms">Acronyms<a class="headerlink" href="#acronyms" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Acronym</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FVCOM</td>
+<td>Finite Volume Community Ocean Model</td>
+</tr>
+<tr>
+<td>NAVD88</td>
+<td>North American Vertical Datum of 1988</td>
+</tr>
+<tr>
+<td>MSL</td>
+<td>Mean Sea Level</td>
+</tr>
+<tr>
+<td>IEC</td>
+<td>International Electrotechnical Commission</td>
+</tr>
+<tr>
+<td>IEC 62600-201</td>
+<td>International standard for tidal energy resource assessment and characterization</td>
+</tr>
+<tr>
+<td>CF Conventions</td>
+<td>Climate and Forecast Conventions</td>
+</tr>
+<tr>
+<td>PNNL</td>
+<td>Pacific Northwest National Laboratory</td>
+</tr>
+<tr>
+<td>WPTO</td>
+<td>Water Power Technologies Office</td>
+</tr>
+<tr>
+<td>VAP</td>
+<td>Value-Added Product</td>
+</tr>
+</tbody>
+</table>
+<h2 id="variable-documentation">Variable Documentation<a class="headerlink" href="#variable-documentation" title="Permanent link">&para;</a></h2>
+<h3 id="variable-quick-reference">Variable Quick Reference<a class="headerlink" href="#variable-quick-reference" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Internal Name</th>
+<th>Units</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#mean-current-speed">Mean Current Speed</a></td>
+<td><code>vap_water_column_mean_sea_water_speed</code></td>
+<td>m/s</td>
+<td>Annual average of depth-averaged current speed</td>
+</tr>
+<tr>
+<td><a href="#mean-power-density">Mean Power Density</a></td>
+<td><code>vap_water_column_mean_sea_water_power_density</code></td>
+<td>W/m²</td>
+<td>Annual average of depth-averaged kinetic energy flux</td>
+</tr>
+<tr>
+<td><a href="#95th-percentile-current-speed">95th Percentile Current Speed</a></td>
+<td><code>vap_water_column_95th_percentile_sea_water_speed</code></td>
+<td>m/s</td>
+<td>95th percentile of yearly maximum current speed (all depths)</td>
+</tr>
+<tr>
+<td><a href="#minimum-water-depth">Minimum Water Depth</a></td>
+<td><code>vap_water_column_height_min</code></td>
+<td>m</td>
+<td>Minimum water depth (during 1 year model run)</td>
+</tr>
+<tr>
+<td><a href="#maximum-water-depth">Maximum Water Depth</a></td>
+<td><code>vap_water_column_height_max</code></td>
+<td>m</td>
+<td>Maximum water depth (during 1 year model run)</td>
+</tr>
+<tr>
+<td><a href="#grid-resolution">Grid Resolution</a></td>
+<td><code>vap_grid_resolution</code></td>
+<td>m</td>
+<td>Average edge length of triangular model grid cells</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="mean-current-speed">Mean Current Speed<a class="headerlink" href="#mean-current-speed" title="Permanent link">&para;</a></h3>
+<p><strong>Internal Name:</strong> <code>vap_water_column_mean_sea_water_speed</code>
+<strong>Units:</strong> m/s</p>
+<blockquote>
+<p>Annual average of depth-averaged current speed</p>
+</blockquote>
+<h4 id="description">Description<a class="headerlink" href="#description" title="Permanent link">&para;</a></h4>
+<p>Mean Current Speed is the annual average of the depth-averaged current velocity magnitude, representing the characteristic flow speed at each grid location under free-stream (undisturbed) conditions. This metric is intended for IEC 62600-201 Stage 1 reconnaissance-level analysis to identify areas with tidal current resources. Calculated as the temporal mean of depth-averaged |U| where U = √(u² + v²).</p>
+<p>Mean Current Speed is computed by first averaging velocity magnitudes across all 10 sigma layers at each timestep, then averaging over the full hindcast year. Current speed is the vector magnitude of eastward (u) and northward (v) velocity components: U = √(u² + v²). Tidal currents flow slower near the seafloor due to friction and faster in the upper water column. Depth-averaging provides a representative value for the entire water column.</p>
+<p>Engineering applications include initial site screening, comparing relative site potential across regions, and Stage 1 IEC 62600-201 tidal energy resource characterization.</p>
+<h4 id="equation">Equation<a class="headerlink" href="#equation" title="Permanent link">&para;</a></h4>
+<div class="arithmatex">\[
+\bar{\bar{U}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, \ldots, U_{N_\sigma,t}) \text{ for } t=1,\ldots,T\right]\right)
+\]</div>
+<p><strong>Where:</strong></p>
+<ul>
+<li><span class="arithmatex">\(U_{i,t} = \sqrt{u^2 + v^2}\)</span> — velocity magnitude at sigma layer <span class="arithmatex">\(i\)</span> at time <span class="arithmatex">\(t\)</span> (m/s)</li>
+<li><span class="arithmatex">\(u\)</span> = eastward velocity component (m/s), positive toward true east</li>
+<li><span class="arithmatex">\(v\)</span> = northward velocity component (m/s), positive toward true north</li>
+<li><span class="arithmatex">\(N_\sigma = 10\)</span> sigma layers (terrain-following vertical layers)</li>
+<li><span class="arithmatex">\(T\)</span> = 1 year of hindcast data</li>
+</ul>
+<hr />
+<h3 id="mean-power-density">Mean Power Density<a class="headerlink" href="#mean-power-density" title="Permanent link">&para;</a></h3>
+<p><strong>Internal Name:</strong> <code>vap_water_column_mean_sea_water_power_density</code>
+<strong>Units:</strong> W/m²</p>
+<blockquote>
+<p>Annual average of depth-averaged kinetic energy flux</p>
+</blockquote>
+<h4 id="description_1">Description<a class="headerlink" href="#description_1" title="Permanent link">&para;</a></h4>
+<p>Mean Power Density is the annual average of the kinetic energy flux per unit area, representing the theoretical power available for extraction from the undisturbed tidal flow. The cubic relationship with velocity (P = ½ρU³) makes this metric highly sensitive to current speed variations. Used for Stage 1 resource characterization and site ranking to indicate theoretical resource magnitude.</p>
+<p>Power density is computed at each sigma layer using the cube of the current speed, then depth-averaged and temporally averaged over the full hindcast year. The cubic relationship with velocity means small increases in current speed yield large increases in available power—doubling the speed increases power density by a factor of eight.</p>
+<p>Engineering applications include comparing relative energy availability between sites and initial economic feasibility screening.</p>
+<h4 id="equation_1">Equation<a class="headerlink" href="#equation_1" title="Permanent link">&para;</a></h4>
+<div class="arithmatex">\[
+\bar{\bar{P}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, \ldots, P_{N_\sigma,t}) \text{ for } t=1,\ldots,T\right]\right)
+\]</div>
+<p><strong>Where:</strong></p>
+<ul>
+<li><span class="arithmatex">\(P_{i,t} = \frac{1}{2}\rho U_{i,t}^3\)</span> — power density at sigma layer <span class="arithmatex">\(i\)</span> at time <span class="arithmatex">\(t\)</span> (W/m²)</li>
+<li><span class="arithmatex">\(\rho = 1025\)</span> kg/m³ (nominal seawater density)</li>
+<li><span class="arithmatex">\(U_{i,t} = \sqrt{u^2 + v^2}\)</span> — velocity magnitude at sigma layer <span class="arithmatex">\(i\)</span> at time <span class="arithmatex">\(t\)</span> (m/s)</li>
+<li><span class="arithmatex">\(N_\sigma = 10\)</span> sigma layers (terrain-following vertical layers)</li>
+<li><span class="arithmatex">\(T\)</span> = 1 year of hindcast data</li>
+</ul>
+<hr />
+<h3 id="95th-percentile-current-speed">95th Percentile Current Speed<a class="headerlink" href="#95th-percentile-current-speed" title="Permanent link">&para;</a></h3>
+<p><strong>Internal Name:</strong> <code>vap_water_column_95th_percentile_sea_water_speed</code>
+<strong>Units:</strong> m/s</p>
+<blockquote>
+<p>95th percentile of yearly maximum current speed (all depths)</p>
+</blockquote>
+<h4 id="description_2">Description<a class="headerlink" href="#description_2" title="Permanent link">&para;</a></h4>
+<p>95th Percentile Current Speed is the current speed exceeded only 5% of the time, computed from the depth-maximum (highest value across sigma layers) at each timestep. This metric characterizes extreme flow conditions relevant to structural loading and device survivability. Used for preliminary assessment of extreme current conditions in support of Stage 2 feasibility studies per IEC 62600-201. Calculated as P₉₅(max_σ(U)) where U = √(u² + v²).</p>
+<p>At each timestep, the maximum speed across all 10 sigma layers is identified (the depth-maximum), then the 95th percentile of this time series is computed. The depth-maximum is used (rather than depth-average) because structural and mechanical systems must withstand peak loads that can occur at any depth in the water column. This metric characterizes expected high-flow conditions for survivability design, while excluding rare extreme events.</p>
+<p>Engineering applications include structural loading calculations, blade and support structure design, and fatigue analysis. This metric helps size components to withstand expected high-flow conditions.</p>
+<h4 id="equation_2">Equation<a class="headerlink" href="#equation_2" title="Permanent link">&para;</a></h4>
+<div class="arithmatex">\[
+U_{95} = P_{95}\left(\left[\max(U_{1,t}, \ldots, U_{N_\sigma,t}) \text{ for } t=1,\ldots,T\right]\right)
+\]</div>
+<p><strong>Where:</strong></p>
+<ul>
+<li><span class="arithmatex">\(U_{i,t} = \sqrt{u^2 + v^2}\)</span> — velocity magnitude at sigma layer <span class="arithmatex">\(i\)</span> at time <span class="arithmatex">\(t\)</span> (m/s)</li>
+<li><span class="arithmatex">\(\max_\sigma\)</span> = maximum value across all sigma layers at each timestep</li>
+<li><span class="arithmatex">\(P_{95}\)</span> = 95th percentile operator over the time series</li>
+<li><span class="arithmatex">\(N_\sigma = 10\)</span> sigma layers (terrain-following vertical layers)</li>
+<li><span class="arithmatex">\(T\)</span> = 1 year of hindcast data</li>
+</ul>
+<hr />
+<h3 id="minimum-water-depth">Minimum Water Depth<a class="headerlink" href="#minimum-water-depth" title="Permanent link">&para;</a></h3>
+<p><strong>Internal Name:</strong> <code>vap_water_column_height_min</code>
+<strong>Units:</strong> m</p>
+<blockquote>
+<p>Minimum water depth (during 1 year model run)</p>
+</blockquote>
+<h4 id="description_3">Description<a class="headerlink" href="#description_3" title="Permanent link">&para;</a></h4>
+<p>Minimum Water Depth is the lowest water depth (surface to seafloor) observed at each grid location over the hindcast year, typically occurring during extreme low tide conditions. This metric defines the minimum vertical clearance available for device deployment and is critical for assessing depth constraints. Used in Stage 2 feasibility studies for turbine placement and collision avoidance.</p>
+<p>Minimum water depth typically occurs during spring tides when tidal range is maximized. Total water depth is calculated as the sum of bathymetry depth (h) and sea surface elevation (ζ). The difference between maximum and minimum water depth approximates the tidal range at each location.</p>
+<p>Engineering applications include assessing turbine clearance requirements and identifying areas where shallow water may limit device deployment.</p>
+<h4 id="equation_3">Equation<a class="headerlink" href="#equation_3" title="Permanent link">&para;</a></h4>
+<div class="arithmatex">\[
+d_{\min} = \min_t(h + \zeta_t)
+\]</div>
+<p><strong>Where:</strong></p>
+<ul>
+<li><span class="arithmatex">\(h\)</span> = bathymetry depth below NAVD88 (m)</li>
+<li><span class="arithmatex">\(\zeta_t\)</span> = sea surface elevation above NAVD88 at time <span class="arithmatex">\(t\)</span> (m)</li>
+<li><span class="arithmatex">\(T\)</span> = 1 year of hindcast data</li>
+</ul>
+<hr />
+<h3 id="maximum-water-depth">Maximum Water Depth<a class="headerlink" href="#maximum-water-depth" title="Permanent link">&para;</a></h3>
+<p><strong>Internal Name:</strong> <code>vap_water_column_height_max</code>
+<strong>Units:</strong> m</p>
+<blockquote>
+<p>Maximum water depth (during 1 year model run)</p>
+</blockquote>
+<h4 id="description_4">Description<a class="headerlink" href="#description_4" title="Permanent link">&para;</a></h4>
+<p>Maximum Water Depth is the greatest water depth (surface to seafloor) observed at each grid location over the hindcast year, typically occurring during extreme high tide conditions. This metric represents the upper bound of water depth variability at each location. Used in Stage 2 feasibility studies for mooring system design, cable routing, and understanding the full operating depth envelope.</p>
+<p>Maximum water depth typically occurs during spring tides when tidal range is maximized. Water depth is calculated as the sum of bathymetry depth (h) and sea surface elevation (ζ). The difference between maximum and minimum water depth approximates the tidal range at each location.</p>
+<p>Engineering applications include mooring system design considerations and understanding the full range of water depths at a site.</p>
+<h4 id="equation_4">Equation<a class="headerlink" href="#equation_4" title="Permanent link">&para;</a></h4>
+<div class="arithmatex">\[
+d_{\max} = \max_t(h + \zeta_t)
+\]</div>
+<p><strong>Where:</strong></p>
+<ul>
+<li><span class="arithmatex">\(h\)</span> = bathymetry depth below NAVD88 (m)</li>
+<li><span class="arithmatex">\(\zeta_t\)</span> = sea surface elevation above NAVD88 at time <span class="arithmatex">\(t\)</span> (m)</li>
+<li><span class="arithmatex">\(T\)</span> = 1 year of hindcast data</li>
+</ul>
+<hr />
+<h3 id="grid-resolution">Grid Resolution<a class="headerlink" href="#grid-resolution" title="Permanent link">&para;</a></h3>
+<p><strong>Internal Name:</strong> <code>vap_grid_resolution</code>
+<strong>Units:</strong> m</p>
+<blockquote>
+<p>Average edge length of triangular model grid cells</p>
+</blockquote>
+<h4 id="description_5">Description<a class="headerlink" href="#description_5" title="Permanent link">&para;</a></h4>
+<p>Grid Resolution is the average edge length of the unstructured triangular model grid cells, indicating the spatial scale at which tidal currents are resolved by the FVCOM hydrodynamic model. Essential model metadata for assessing spatial uncertainty and determining appropriate applications. IEC 62600-201 requires &lt;500 m for Stage 1 reconnaissance and &lt;50 m for Stage 2 feasibility assessments.</p>
+<p>Grid Resolution is calculated as the average of the three edge lengths for each triangular grid cell, based on the original unstructured mesh defined by the model developers at Pacific Northwest National Laboratory. The unstructured triangular mesh allows variable resolution, with finer grids in areas of interest (channels, straits) and coarser grids in open water.</p>
+<p>Per IEC 62600-201 tidal energy resource assessment standards:</p>
+<ul>
+<li>Stage 1 feasibility (reconnaissance-level) assessments require grid resolution &lt; 500 m</li>
+<li>Stage 2 (layout design) assessments require grid resolution &lt; 50 m</li>
+</ul>
+<p>Engineering applications include assessing model fidelity and determining appropriate applications for the data.</p>
+<h4 id="equation_5">Equation<a class="headerlink" href="#equation_5" title="Permanent link">&para;</a></h4>
+<div class="arithmatex">\[
+R = \frac{1}{3}(d_1 + d_2 + d_3)
+\]</div>
+<p><strong>Where:</strong></p>
+<ul>
+<li><span class="arithmatex">\(d_1, d_2, d_3\)</span> = geodesic distances between triangle vertices (m)</li>
+</ul>
+<hr />
+<h2 id="data-formats-and-levels">Data Formats and Levels<a class="headerlink" href="#data-formats-and-levels" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Data Level</th>
+<th>Description</th>
+<th>Format</th>
+<th>Public Access</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>00_raw</code></td>
+<td>Original FVCOM model outputs</td>
+<td>NetCDF</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>a1_std</code></td>
+<td>Standardized with consistent naming</td>
+<td>NetCDF</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>b1_vap</code></td>
+<td>Value-added products with derived variables</td>
+<td>NetCDF</td>
+<td><strong>Yes</strong></td>
+</tr>
+<tr>
+<td><code>b4_vap_summary_parquet</code></td>
+<td>Summary statistics for analytics</td>
+<td>Parquet</td>
+<td><strong>Yes</strong></td>
+</tr>
+<tr>
+<td><code>b5_vap_atlas_summary_parquet</code></td>
+<td>Marine Energy Atlas visualization data</td>
+<td>Parquet</td>
+<td><strong>Yes</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="data-access">Data Access<a class="headerlink" href="#data-access" title="Permanent link">&para;</a></h2>
+<h3 id="python-with-rex">Python with rex<a class="headerlink" href="#python-with-rex" title="Permanent link">&para;</a></h3>
+<p>The easiest way to access the data is using the <a href="https://github.com/nlr/rex">rex</a> library:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rex</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResourceX</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Access tidal data via HSDS</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">tidal_file</span> <span class="o">=</span> <span class="s1">&#39;/nlr/US_tidal/Cook_Inlet/Cook_Inlet_2005.h5&#39;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="k">with</span> <span class="n">ResourceX</span><span class="p">(</span><span class="n">tidal_file</span><span class="p">,</span> <span class="n">hsds</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">meta</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">meta</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">time_index</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">time_index</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">speed</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;sea_water_speed&#39;</span><span class="p">]</span>
+</span></code></pre></div>
+<h3 id="hsds-configuration">HSDS Configuration<a class="headerlink" href="#hsds-configuration" title="Permanent link">&para;</a></h3>
+<p>To use HSDS, first install and configure h5pyd:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>h5pyd
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>hsconfigure
+</span></code></pre></div>
+<p>Enter the following at the prompt:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>hs_endpoint = https://developer.nlr.gov/api/hsds
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>hs_username =
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>hs_password =
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>hs_api_key = YOUR_API_KEY
+</span></code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">API Key Required</p>
+</div>
+<p>Get your own API key at <a href="https://developer.nlr.gov/signup/">https://developer.nlr.gov/signup/</a>. The example key is rate-limited.</p>
+<h3 id="direct-h5pyd-access">Direct h5pyd Access<a class="headerlink" href="#direct-h5pyd-access" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">h5pyd</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">with</span> <span class="n">h5pyd</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="s1">&#39;/nlr/US_tidal/Cook_Inlet/Cook_Inlet_2005.h5&#39;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">meta</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;meta&#39;</span><span class="p">][</span><span class="o">...</span><span class="p">])</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">speed</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;sea_water_speed&#39;</span><span class="p">]</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">scale_factor</span> <span class="o">=</span> <span class="n">speed</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;scale_factor&#39;</span><span class="p">]</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">mean_speed</span> <span class="o">=</span> <span class="n">speed</span><span class="p">[</span><span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale_factor</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;Mean Speed&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mean_speed</span>
+</span></code></pre></div>
+<h3 id="extract-time-series-at-a-location">Extract Time Series at a Location<a class="headerlink" href="#extract-time-series-at-a-location" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rex</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResourceX</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">tidal_file</span> <span class="o">=</span> <span class="s1">&#39;/nlr/US_tidal/Cook_Inlet/Cook_Inlet_2005.h5&#39;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">lat_lon</span> <span class="o">=</span> <span class="p">(</span><span class="mf">60.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">151.5</span><span class="p">)</span>  <span class="c1"># Cook Inlet location</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">with</span> <span class="n">ResourceX</span><span class="p">(</span><span class="n">tidal_file</span><span class="p">,</span> <span class="n">hsds</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">speed_ts</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">get_lat_lon_df</span><span class="p">(</span><span class="s1">&#39;sea_water_speed&#39;</span><span class="p">,</span> <span class="n">lat_lon</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="quality-assurance">Quality Assurance<a class="headerlink" href="#quality-assurance" title="Permanent link">&para;</a></h2>
+<h3 id="verification-process">Verification Process<a class="headerlink" href="#verification-process" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Verification Process</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model Specification</td>
+<td>FVCOM version, CF conventions, required variables</td>
+<td>Compliant</td>
+</tr>
+<tr>
+<td>Temporal Integrity</td>
+<td>Time steps, chronological order, expected frequency</td>
+<td>Compliant</td>
+</tr>
+<tr>
+<td>Spatial Consistency</td>
+<td>Coordinate systems, grid consistency</td>
+<td>Compliant</td>
+</tr>
+<tr>
+<td>Metadata Consistency</td>
+<td>Global attributes across files</td>
+<td>Compliant</td>
+</tr>
+<tr>
+<td>Dataset Structure</td>
+<td>Dimensions, variables, coordinates</td>
+<td>Compliant</td>
+</tr>
+<tr>
+<td>Completeness</td>
+<td>Temporal coverage, required variables</td>
+<td>Compliant</td>
+</tr>
+</tbody>
+</table>
+<h3 id="known-data-gaps">Known Data Gaps<a class="headerlink" href="#known-data-gaps" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Puget Sound</td>
+<td>Missing 2015-12-31</td>
+</tr>
+<tr>
+<td>Aleutian Islands</td>
+<td>File MD_AIS_west_hrBathy_0370.nc excluded</td>
+</tr>
+<tr>
+<td>Cook Inlet</td>
+<td>File cki_0366.nc excluded</td>
+</tr>
+<tr>
+<td>Piscataqua River</td>
+<td>File PIR_0368.nc excluded</td>
+</tr>
+</tbody>
+</table>
+<h2 id="coordinate-systems">Coordinate Systems<a class="headerlink" href="#coordinate-systems" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Original System</th>
+<th>Transformation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Aleutian Islands</td>
+<td>Geographic (lat/lon)</td>
+<td>None</td>
+</tr>
+<tr>
+<td>Cook Inlet</td>
+<td>Geographic (lat/lon)</td>
+<td>None</td>
+</tr>
+<tr>
+<td>Western Passage</td>
+<td>UTM Zone 19 (NAD83)</td>
+<td>→ WGS84</td>
+</tr>
+<tr>
+<td>Piscataqua River</td>
+<td>UTM Zone 19 (NAD83)</td>
+<td>→ WGS84</td>
+</tr>
+<tr>
+<td>Puget Sound</td>
+<td>UTM Zone 10 (NAD83)</td>
+<td>→ WGS84</td>
+</tr>
+</tbody>
+</table>
+<p>All data is transformed to WGS84 (EPSG:4326) for consistency.</p>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<h3 id="standards-and-model-documentation">Standards and Model Documentation<a class="headerlink" href="#standards-and-model-documentation" title="Permanent link">&para;</a></h3>
+<p><strong>(International Electrotechnical Commission 2015)</strong> International Electrotechnical Commission. 2015. 'Marine energy – Wave, tidal and other water current converters – Part 201: Tidal energy resource assessment and characterization'. 1.0. Geneva, Switzerland.</p>
+<p><strong>(Chen, Beardsley, and Cowles 2006)</strong> Chen, Changsheng, Robert C. Beardsley, and Geoffrey Cowles. 2006. 'An Unstructured Grid, Finite-Volume Coastal Ocean Model (FVCOM) System'. Oceanography 19 (1): 78–89. https://doi.org/10.5670/oceanog.2006.92.</p>
+<h3 id="location-specific-validation-studies">Location-Specific Validation Studies<a class="headerlink" href="#location-specific-validation-studies" title="Permanent link">&para;</a></h3>
+<p><strong>Alaska, Aleutian Islands</strong></p>
+<ul>
+<li>Spicer, Preston, Zhaoqing Yang, Taiping Wang, and Mithun Deb. 2025. 'Spatially Varying Seasonal Modulation to Tidal Stream Energy Potential Due to Mixed Tidal Regimes in the Aleutian Islands, AK'. Renewable Energy 253:123564. https://doi.org/10.1016/j.renene.2025.123564.</li>
+</ul>
+<p><strong>Alaska, Cook Inlet</strong></p>
+<ul>
+<li>Deb, Mithun, Zhaoqing Yang, and Taiping Wang. 2025. 'Characterizing In-stream Turbulent Flow for Tidal Energy Converter Siting in Cook Inlet, Alaska'. Renewable Energy 252 (May):123345. https://doi.org/10.1016/j.renene.2025.123345.</li>
+</ul>
+<p><strong>Maine, Western Passage</strong></p>
+<ul>
+<li>Deb, Mithun, Zhaoqing Yang, Taiping Wang, and Levi Kilcher. 2023. 'Turbulence Modeling to Aid Tidal Energy Resource Characterization in the Western Passage, Maine, USA'. Renewable Energy 219 (April). https://doi.org/10.1016/j.renene.2023.04.100.</li>
+<li>Yang, Zhaoqing, Taiping Wang, Ziyu Xiao, Levi Kilcher, Kevin Haas, Huijie Xue, and Xi Feng. 2020. 'Modeling Assessment of Tidal Energy Extraction in the Western Passage'. Journal of Marine Science and Engineering 8 (6). https://doi.org/10.3390/jmse8060411.</li>
+</ul>
+<p><strong>New Hampshire, Piscataqua River</strong></p>
+<ul>
+<li>Spicer, Preston, Zhaoqing Yang, Taiping Wang, and Mithun Deb. 2023. 'Tidal Energy Extraction Modifies Tidal Asymmetry and Transport in a Shallow, Well-mixed Estuary'. Frontiers in Marine Science 10 (September). https://doi.org/10.3389/fmars.2023.1268348.</li>
+</ul>
+<p><strong>Washington, Puget Sound</strong></p>
+<ul>
+<li>Deb, Mithun, Zhaoqing Yang, Kevin Haas, and Taiping Wang. 2024. 'Hydrokinetic Tidal Energy Resource Assessment Following International Electrotechnical Commission Guidelines'. Renewable Energy 229 (June):120767. https://doi.org/10.1016/j.renene.2024.120767.</li>
+<li>Spicer, Preston, Parker Maccready, and Zhaoqing Yang. 2024. 'Localized Tidal Energy Extraction in Puget Sound Can Adjust Estuary Reflection and Friction, Modifying Barotropic Tides System-Wide'. Journal of Geophysical Research: Oceans 129 (May). https://doi.org/10.1029/2023JC020401.</li>
+<li>Yang, Zhaoqing, Taiping Wang, Ruth Branch, Ziyu Xiao, and Mithun Deb. 2021. 'Tidal Stream Energy Resource Characterization in the Salish Sea'. Renewable Energy 172 (March). https://doi.org/10.1016/j.renene.2021.03.028.</li>
+</ul>
+<h2 id="citation">Citation<a class="headerlink" href="#citation" title="Permanent link">&para;</a></h2>
+<p>Yang, Zhaoqing, Mithun Deb, Taiping Wang, Preston Spicer, Andrew Simms, Ethan Young, and Mike Lawson. 2025. "High Resolution Tidal Hindcast."</p>
+<h2 id="acknowledgement">Acknowledgement<a class="headerlink" href="#acknowledgement" title="Permanent link">&para;</a></h2>
+<p>This work was funded by the U.S. Department of Energy, Office of Energy Efficiency &amp; Renewable Energy, Water Power Technologies Office. The authors gratefully acknowledge project support from Heather Spence and Jim McNally (U.S. Department of Energy Water Power Technologies Office) and Mary Serafin (National Laboratory of the Rockies). Technical guidance was provided by Levi Kilcher, Caroline Draxl, and Katie Peterson (National Laboratory of the Rockies).</p>
+<h2 id="disclaimer">Disclaimer<a class="headerlink" href="#disclaimer" title="Permanent link">&para;</a></h2>
+<p>This data arose from work performed under funding provided by the United States Government. Access to or use of this data denotes consent with the fact that this data is provided "AS IS," "WHERE IS" and specifically free from any express or implied warranty of any kind, including but not limited to any implied warranties such as merchantability and/or fitness for any particular purpose.</p>
+<p>The user is granted the right, without any fee or cost, to use or copy the Data, provided that this entire notice appears in all copies. Users engaging in scientific or technical publication utilizing this data agree to credit DOE/PNNL/NLR/BATTELLE/ALLIANCE consistent with professional practice.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Alliance for Energy Innovation, LLC
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/NatLabRockies/Marine_Energy_Resource_Characterization" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 12h2v2h-2c-1.38 0-2.74-.35-4-1-2.5 1.3-5.5 1.3-8 0-1.26.65-2.63 1-4 1H2v-2h2c1.39 0 2.78-.47 4-1.33 2.44 1.71 5.56 1.71 8 0 1.22.86 2.61 1.33 4 1.33m0-6h2v2h-2c-1.38 0-2.74-.35-4-1-2.5 1.3-5.5 1.3-8 0-1.26.65-2.63 1-4 1H2V6h2c1.39 0 2.78-.47 4-1.33 2.44 1.71 5.56 1.71 8 0C17.22 5.53 18.61 6 20 6m0 12h2v2h-2c-1.38 0-2.74-.35-4-1-2.5 1.3-5.5 1.3-8 0-1.26.65-2.63 1-4 1H2v-2h2c1.39 0 2.78-.47 4-1.33 2.44 1.71 5.56 1.71 8 0 1.22.86 2.61 1.33 4 1.33"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.tracking", "toc.integrate", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
