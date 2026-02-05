@@ -98,6 +98,46 @@ _VIZ_CONFIG = {
         "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
         "levels": SEA_WATER_MAX_SPEED_LEVELS,
     },
+    "mean_power_density": {
+        "colormap": MEAN_POWER_DENSITY_CMAP,
+        "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
+        "range_max": SEA_WATER_POWER_DENSITY_CBAR_MAX,
+        "levels": SEA_WATER_POWER_DENSITY_LEVELS,
+    },
+    "min_water_depth": {
+        "colormap": SEA_FLOOR_DEPTH_CMAP,
+        "range_min": SEA_FLOOR_DEPTH_MIN,
+        "range_max": SEA_FLOOR_DEPTH_MAX,
+        "levels": SEA_FLOOR_DEPTH_LEVELS,
+    },
+    "max_water_depth": {
+        "colormap": SEA_FLOOR_DEPTH_CMAP,
+        "range_min": SEA_FLOOR_DEPTH_MIN,
+        "range_max": SEA_FLOOR_DEPTH_MAX,
+        "levels": SEA_FLOOR_DEPTH_LEVELS,
+    },
+    "grid_resolution": {
+        "range_min": 0,
+        "range_max": 500,
+        "levels": 3,
+        "spec_ranges": {
+            "stage_2": {
+                "max": 50,
+                "label": "Stage 2 (≤50m)",
+                "color": "#1f77b4",  # Seaborn Blue
+            },
+            "stage_1": {
+                "max": 500,
+                "label": "Stage 1 (≤500m)",
+                "color": "#ff7f0e",  # Seaborn Orange
+            },
+            "non_compliant": {
+                "max": 100000,
+                "label": "Non-compliant (>500m)",
+                "color": "#DC143C",  # Pleasing red
+            },
+        },
+    },
     "p99_current_speed": {
         "colormap": MAX_SPEED_CMAP,
         "range_min": SEA_WATER_SPEED_CBAR_MIN,
@@ -110,12 +150,6 @@ _VIZ_CONFIG = {
         "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
         "levels": SEA_WATER_MAX_SPEED_LEVELS,
     },
-    "mean_power_density": {
-        "colormap": MEAN_POWER_DENSITY_CMAP,
-        "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
-        "range_max": SEA_WATER_POWER_DENSITY_CBAR_MAX,
-        "levels": SEA_WATER_POWER_DENSITY_LEVELS,
-    },
     "p95_power_density": {
         "colormap": MAX_POWER_DENSITY_CMAP,
         "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
@@ -123,18 +157,6 @@ _VIZ_CONFIG = {
         "levels": SEA_WATER_MAX_POWER_DENSITY_LEVELS,
     },
     "mean_water_depth": {
-        "colormap": SEA_FLOOR_DEPTH_CMAP,
-        "range_min": SEA_FLOOR_DEPTH_MIN,
-        "range_max": SEA_FLOOR_DEPTH_MAX,
-        "levels": SEA_FLOOR_DEPTH_LEVELS,
-    },
-    "min_water_depth": {
-        "colormap": SEA_FLOOR_DEPTH_CMAP,
-        "range_min": SEA_FLOOR_DEPTH_MIN,
-        "range_max": SEA_FLOOR_DEPTH_MAX,
-        "levels": SEA_FLOOR_DEPTH_LEVELS,
-    },
-    "max_water_depth": {
         "colormap": SEA_FLOOR_DEPTH_CMAP,
         "range_min": SEA_FLOOR_DEPTH_MIN,
         "range_max": SEA_FLOOR_DEPTH_MAX,
@@ -163,28 +185,6 @@ _VIZ_CONFIG = {
         "range_min": SEA_WATER_SPEED_CBAR_MIN,
         "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
         "levels": SEA_WATER_MAX_SPEED_LEVELS,
-    },
-    "grid_resolution": {
-        "range_min": 0,
-        "range_max": 500,
-        "levels": 3,
-        "spec_ranges": {
-            "stage_2": {
-                "max": 50,
-                "label": "Stage 2 (≤50m)",
-                "color": "#1f77b4",  # Seaborn Blue
-            },
-            "stage_1": {
-                "max": 500,
-                "label": "Stage 1 (≤500m)",
-                "color": "#ff7f0e",  # Seaborn Orange
-            },
-            "non_compliant": {
-                "max": 100000,
-                "label": "Non-compliant (>500m)",
-                "color": "#DC143C",  # Pleasing red
-            },
-        },
     },
     "ebb_direction": {
         "colormap": cmocean.cm.phase,
