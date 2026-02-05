@@ -29,16 +29,56 @@ Base directory for all data files:
 
 ## Atlas Layer Details
 
-The following table provides the specification for each Marine Energy Atlas layer, including the exact **Details** popup text.
+Specification for each Marine Energy Atlas layer, including the exact **Details** popup text.
 
-| Variable | Units | Data Column | Description | Documentation | Details Text |
-| -------- | ----- | ----------- | ----------- | ------------- | ------------ |
-| Mean Current Speed | m/s | `vap_water_column_mean_sea_water_speed` | Annual average of depth-averaged current speed | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-current-speed) | Annual average of depth-averaged current speed. Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-current-speed |
-| 95th Percentile Current Speed | m/s | `vap_water_column_95th_percentile_sea_water_speed` | 95th percentile of yearly maximum current speed (all depths) | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-current-speed) | 95th percentile of yearly maximum current speed (all depths). Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-current-speed |
-| Mean Power Density | W/m² | `vap_water_column_mean_sea_water_power_density` | Annual average of depth-averaged kinetic energy flux | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density) | Annual average of depth-averaged kinetic energy flux. Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density |
-| Minimum Water Depth | m | `vap_water_column_height_min` | Minimum water depth (during 1 year model run) | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#minimum-water-depth) | Minimum water depth (during 1 year model run). Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#minimum-water-depth |
-| Maximum Water Depth | m | `vap_water_column_height_max` | Maximum water depth (during 1 year model run) | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth) | Maximum water depth (during 1 year model run). Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth |
-| Grid Resolution | m | `vap_grid_resolution` | Average edge length of triangular model grid cells | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#grid-resolution) | Average edge length of triangular model grid cells. Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#grid-resolution |
+### Mean Current Speed
+
+- **Units:** m/s
+- **Data Column:** `vap_water_column_mean_sea_water_speed`
+- **Description:** Annual average of depth-averaged current speed
+- **Documentation:** [https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-current-speed](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-current-speed)
+- **Details Text:** Annual average of depth-averaged current speed. Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-current-speed
+
+### 95th Percentile Current Speed
+
+- **Units:** m/s
+- **Data Column:** `vap_water_column_95th_percentile_sea_water_speed`
+- **Description:** 95th percentile of yearly maximum current speed (all depths)
+- **Documentation:** [https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-current-speed](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-current-speed)
+- **Details Text:** 95th percentile of yearly maximum current speed (all depths). Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-current-speed
+
+### Mean Power Density
+
+- **Units:** W/m²
+- **Data Column:** `vap_water_column_mean_sea_water_power_density`
+- **Description:** Annual average of depth-averaged kinetic energy flux
+- **Documentation:** [https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density)
+- **Details Text:** Annual average of depth-averaged kinetic energy flux. Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density
+
+### Minimum Water Depth
+
+- **Units:** m
+- **Data Column:** `vap_water_column_height_min`
+- **Description:** Minimum water depth (during 1 year model run)
+- **Documentation:** [https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#minimum-water-depth](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#minimum-water-depth)
+- **Details Text:** Minimum water depth (during 1 year model run). Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#minimum-water-depth
+
+### Maximum Water Depth
+
+- **Units:** m
+- **Data Column:** `vap_water_column_height_max`
+- **Description:** Maximum water depth (during 1 year model run)
+- **Documentation:** [https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth)
+- **Details Text:** Maximum water depth (during 1 year model run). Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth
+
+### Grid Resolution
+
+- **Units:** m
+- **Data Column:** `vap_grid_resolution`
+- **Description:** Average edge length of triangular model grid cells
+- **Documentation:** [https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#grid-resolution](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#grid-resolution)
+- **Details Text:** Average edge length of triangular model grid cells. Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#grid-resolution
+
 
 ## Variable Equations
 
@@ -538,7 +578,7 @@ These kernel density estimation (KDE) plots provide clean statistical comparison
 
 ## Document Information
 
-- **Generated:** 2026-02-05 11:46:23 UTC
+- **Generated:** 2026-02-05 11:56:37 UTC
 - **Regions Processed:** AK_aleutian_islands, AK_cook_inlet, ME_western_passage, NH_piscataqua_river, WA_puget_sound
 
 *This specification was auto-generated from the tidal data visualization pipeline.*
