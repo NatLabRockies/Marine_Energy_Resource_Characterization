@@ -1,3 +1,4 @@
+import argparse
 import multiprocessing as mp
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -2025,6 +2026,7 @@ def generate_markdown_specification(
     summaries,  # Now accepts dict of summaries instead of individual parameters
     parquet_paths,
     color_level_data=None,
+    markdown_only=False,
 ):
     """
     Generate a markdown specification file documenting all visualizations.
@@ -2035,6 +2037,7 @@ def generate_markdown_specification(
         summaries: Dictionary of summary objects from analyze_variable_across_regions
         parquet_paths: Dictionary of parquet file paths for each region
         color_level_data: Dictionary containing color level information for each variable
+        markdown_only: If True, skip image copy/optimization (for md-only regeneration)
     """
 
     # Create docs/img directory for web-sized images
@@ -2042,7 +2045,8 @@ def generate_markdown_specification(
     docs_img_dir.mkdir(parents=True, exist_ok=True)
 
     # Copy images to docs/img directory
-    copy_images_for_web(output_dir, docs_img_dir, regions_processed)
+    if not markdown_only:
+        copy_images_for_web(output_dir, docs_img_dir, regions_processed)
 
     # Markdown content
     md_content = []
@@ -2643,118 +2647,149 @@ def process_single_task(
 
 
 if __name__ == "__main__":
-    # Configuration - set this to skip visualization generation
+    parser = argparse.ArgumentParser(description="Atlas preview and specification generator")
+    parser.add_argument(
+        "--md-only",
+        action="store_true",
+        help="Regenerate markdown specification only (no data loading or visualization)",
+    )
+    args = parser.parse_args()
+
+    # Configuration
+    MARKDOWN_ONLY = args.md_only
     BYPASS_VISUALIZATIONS = False  # Set to True to skip all plotting
     BYPASS_COMBINED_VISUALIZATIONS = (
         True  # Set to True to skip combined region plots (slow)
     )
 
-    # Number of parallel workers (default: all available CPUs)
-    # N_WORKERS = int(mp.cpu_count() / 3)
-    N_WORKERS = 30
-    print("Running with up to", N_WORKERS, "parallel workers")
+    if MARKDOWN_ONLY:
+        # Markdown-only mode: regenerate the spec from config without loading data
+        print("MARKDOWN_ONLY mode: regenerating specification from config...")
+        regions = sorted(
+            loc["output_name"]
+            for loc in config["location_specification"].values()
+        )
+        parquet_paths = {region: None for region in regions}
 
-    # Display available regions
-    regions = get_available_regions()
-    # regions.reverse()
-    print("Available regions:")
-    # regions = [region for region in regions if "cook" in region]
-    for i, region in enumerate(regions):
-        print(f"{i + 1}. {region}")
+        generate_markdown_specification(
+            regions_processed=regions,
+            output_dir=VIZ_OUTPUT_DIR,
+            summaries={},
+            parquet_paths=parquet_paths,
+            color_level_data=None,
+            markdown_only=True,
+        )
+        print("Markdown specification regenerated.")
 
-    if BYPASS_VISUALIZATIONS:
-        print("Visualization generation is DISABLED - only performing analysis")
-    if BYPASS_COMBINED_VISUALIZATIONS:
+    else:
+        # Full mode: data loading, analysis, and optional visualization
+
+        # Number of parallel workers (default: all available CPUs)
+        # N_WORKERS = int(mp.cpu_count() / 3)
+        N_WORKERS = 30
+        print("Running with up to", N_WORKERS, "parallel workers")
+
+        # Display available regions
+        regions = get_available_regions()
+        # regions.reverse()
+        print("Available regions:")
+        # regions = [region for region in regions if "cook" in region]
+        for i, region in enumerate(regions):
+            print(f"{i + 1}. {region}")
+
+        if BYPASS_VISUALIZATIONS:
+            print("Visualization generation is DISABLED - only performing analysis")
+        if BYPASS_COMBINED_VISUALIZATIONS:
+            print(
+                "Combined region visualization is DISABLED - skipping slow combined plots"
+            )
+
+        # Build flat task list: all (region, var_key) pairs
+        tasks = [(region, var_key) for region in regions for var_key in VIZ_SPECS]
+        total_tasks = len(tasks)
         print(
-            "Combined region visualization is DISABLED - skipping slow combined plots"
+            f"\nProcessing {total_tasks} tasks across {len(regions)} regions "
+            f"and {len(VIZ_SPECS)} variables with {N_WORKERS} workers..."
         )
 
-    # Build flat task list: all (region, var_key) pairs
-    tasks = [(region, var_key) for region in regions for var_key in VIZ_SPECS]
-    total_tasks = len(tasks)
-    print(
-        f"\nProcessing {total_tasks} tasks across {len(regions)} regions "
-        f"and {len(VIZ_SPECS)} variables with {N_WORKERS} workers..."
-    )
+        # Initialize data structures
+        color_level_data = {}
+        parquet_paths = {}
+        all_stats = {}  # Structure: {region: {var_key: stats_dict}}
 
-    # Initialize data structures
-    color_level_data = {}
-    parquet_paths = {}
-    all_stats = {}  # Structure: {region: {var_key: stats_dict}}
+        # Process all (region, variable) pairs in parallel
+        completed = 0
+        failed = 0
 
-    # Process all (region, variable) pairs in parallel
-    completed = 0
-    failed = 0
+        with ProcessPoolExecutor(max_workers=N_WORKERS) as executor:
+            future_to_task = {
+                executor.submit(
+                    process_single_task,
+                    region,
+                    var_key,
+                    bypass_visualizations=BYPASS_VISUALIZATIONS,
+                    bypass_combined_visualizations=BYPASS_COMBINED_VISUALIZATIONS,
+                ): (region, var_key)
+                for region, var_key in tasks
+            }
 
-    with ProcessPoolExecutor(max_workers=N_WORKERS) as executor:
-        future_to_task = {
-            executor.submit(
-                process_single_task,
-                region,
-                var_key,
-                bypass_visualizations=BYPASS_VISUALIZATIONS,
-                bypass_combined_visualizations=BYPASS_COMBINED_VISUALIZATIONS,
-            ): (region, var_key)
-            for region, var_key in tasks
-        }
+            for future in as_completed(future_to_task):
+                task_region, task_var = future_to_task[future]
+                try:
+                    region, parquet_path, var_key, stats, color_data = future.result()
 
-        for future in as_completed(future_to_task):
-            task_region, task_var = future_to_task[future]
-            try:
-                region, parquet_path, var_key, stats, color_data = future.result()
+                    # Merge results into main data structures
+                    parquet_paths[region] = parquet_path
 
-                # Merge results into main data structures
-                parquet_paths[region] = parquet_path
+                    if region not in all_stats:
+                        all_stats[region] = {}
+                    all_stats[region][var_key] = stats
 
-                if region not in all_stats:
-                    all_stats[region] = {}
-                all_stats[region][var_key] = stats
+                    if not BYPASS_VISUALIZATIONS and color_data is not None:
+                        if var_key not in color_level_data:
+                            color_level_data[var_key] = color_data
 
-                if not BYPASS_VISUALIZATIONS and color_data is not None:
-                    if var_key not in color_level_data:
-                        color_level_data[var_key] = color_data
+                    completed += 1
+                    print(f"  [{completed}/{total_tasks}] Completed {region} / {var_key}")
 
-                completed += 1
-                print(f"  [{completed}/{total_tasks}] Completed {region} / {var_key}")
+                except Exception as e:
+                    failed += 1
+                    completed += 1
+                    print(
+                        f"  [{completed}/{total_tasks}] FAILED {task_region} / "
+                        f"{task_var}: {e}"
+                    )
 
-            except Exception as e:
-                failed += 1
-                completed += 1
-                print(
-                    f"  [{completed}/{total_tasks}] FAILED {task_region} / "
-                    f"{task_var}: {e}"
-                )
+        print(
+            f"\nParallel processing complete: {completed - failed} succeeded, "
+            f"{failed} failed out of {total_tasks} tasks."
+        )
 
-    print(
-        f"\nParallel processing complete: {completed - failed} succeeded, "
-        f"{failed} failed out of {total_tasks} tasks."
-    )
+        # --- Sequential post-processing (cross-region analysis, markdown) ---
 
-    # --- Sequential post-processing (cross-region analysis, markdown) ---
+        # Set theme for summary plots (only if doing visualizations)
+        if not BYPASS_VISUALIZATIONS:
+            sns.set_theme()
 
-    # Set theme for summary plots (only if doing visualizations)
-    if not BYPASS_VISUALIZATIONS:
-        sns.set_theme()
+        # Generate summary analysis for all variables
+        print("Generating cross-region analysis...")
+        summaries = analyze_all_variables_across_regions(
+            all_stats,
+            VIZ_OUTPUT_DIR,
+            VIZ_SPECS,
+        )
 
-    # Generate summary analysis for all variables
-    print("Generating cross-region analysis...")
-    summaries = analyze_all_variables_across_regions(
-        all_stats,
-        VIZ_OUTPUT_DIR,
-        VIZ_SPECS,
-    )
+        # Generate markdown specification
+        print("Generating markdown specification...")
+        generate_markdown_specification(
+            regions_processed=regions,
+            output_dir=VIZ_OUTPUT_DIR,
+            summaries=summaries,
+            parquet_paths=parquet_paths,
+            color_level_data=color_level_data,
+        )
 
-    # Generate markdown specification
-    print("Generating markdown specification...")
-    generate_markdown_specification(
-        regions_processed=regions,
-        output_dir=VIZ_OUTPUT_DIR,
-        summaries=summaries,
-        parquet_paths=parquet_paths,
-        color_level_data=color_level_data,
-    )
-
-    analysis_type = (
-        "Analysis" if BYPASS_VISUALIZATIONS else "Analysis and visualization"
-    )
-    print(f"{analysis_type} complete!")
+        analysis_type = (
+            "Analysis" if BYPASS_VISUALIZATIONS else "Analysis and visualization"
+        )
+        print(f"{analysis_type} complete!")
