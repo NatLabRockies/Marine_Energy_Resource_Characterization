@@ -257,7 +257,8 @@ def get_parquet_path(region):
         parquet_dir = BASE_DIR / region / version / "parquet"
     else:
         # Regular regions have parquet files in b4_vap_summary_parquet subdirectory
-        parquet_dir = BASE_DIR / region / version / "b4_vap_summary_parquet"
+        # parquet_dir = BASE_DIR / region / version / "b4_vap_summary_parquet"
+        parquet_dir = BASE_DIR / region / version / "b5_vap_atlas_summary_parquet"
 
     if not parquet_dir.exists():
         raise FileNotFoundError(
@@ -1810,7 +1811,11 @@ def optimize_image(src_path, dst_path, max_width=1200, quality=85):
 
 
 def copy_images_for_web(
-    source_dir, docs_img_dir, regions_processed, max_width=1200, quality=85,
+    source_dir,
+    docs_img_dir,
+    regions_processed,
+    max_width=1200,
+    quality=85,
     n_workers=None,
 ):
     """
@@ -1879,8 +1884,10 @@ def copy_images_for_web(
                 print(f"FAILED optimizing {futures[future]}: {e}")
 
     if failed:
-        print(f"Image optimization: {len(image_tasks) - failed} succeeded, "
-              f"{failed} failed.")
+        print(
+            f"Image optimization: {len(image_tasks) - failed} succeeded, "
+            f"{failed} failed."
+        )
 
 
 def _print_color_level_ranges(bounds, label, units, cmap, n_colors):
@@ -2471,12 +2478,15 @@ def process_variable(
     return stats, color_data
 
 
-def _analyze_single_variable_task(var_key, display_name, region_stats, output_path, viz_max):
+def _analyze_single_variable_task(
+    var_key, display_name, region_stats, output_path, viz_max
+):
     """Worker for a single variable's cross-region analysis.
 
     Suitable for parallel execution via ProcessPoolExecutor.
     """
     import matplotlib
+
     matplotlib.use("Agg")
 
     print(f"Calculating {display_name} variable summary...")
@@ -2503,13 +2513,15 @@ def analyze_all_variables_across_regions(
     for var_key, var_config in viz_specs.items():
         region_stats = stats_by_variable.get(var_key, [])
         if region_stats:
-            tasks.append((
-                var_key,
-                var_config["display_name"],
-                region_stats,
-                output_path,
-                var_config.get("range_max"),
-            ))
+            tasks.append(
+                (
+                    var_key,
+                    var_config["display_name"],
+                    region_stats,
+                    output_path,
+                    var_config.get("range_max"),
+                )
+            )
         else:
             print(f"Warning: No data found for variable {var_key}")
             summaries[var_key] = None
