@@ -2104,34 +2104,28 @@ def generate_markdown_specification(
             f"| {this_loc['label']} | {this_loc['face_count']:,} | {this_loc['start_date_utc']} to {this_loc['end_date_utc']} | {this_loc['temporal_resolution']} |"
         )
 
+    docs_base_url = "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast"
     md_content.extend(
         [
             "",
-            "## Variable Overview",
+            "## Atlas Layer Details",
             "",
-            "| Variable | Units | Data Column |",
-            "| -------- | ----- | ----------- |",
+            "The following table provides the specification for each Marine Energy Atlas layer, including the exact **Details** popup text.",
+            "",
+            "| Variable | Units | Data Column | Description | Documentation | Details Text |",
+            "| -------- | ----- | ----------- | ----------- | ------------- | ------------ |",
         ]
     )
 
     for var in VIZ_SPECS.values():
-        md_content.append(
-            f"| {var['display_name']} | {var['units']} | {var['column_name']} |"
+        one_liner = var.get("one_liner", "")
+        doc_url = var.get("documentation_url", docs_base_url)
+        details_text = (
+            f"{one_liner}. "
+            f"Complete documentation is at: {doc_url}"
         )
-
-    md_content.extend(
-        [
-            "",
-            "## Variable Usage",
-            "",
-            "| Variable | Meaning | Intended Usage",
-            "| ---- | ------- | --- |",
-        ]
-    )
-
-    for var in VIZ_SPECS.values():
         md_content.append(
-            f"| {var['display_name']} | {var['physical_meaning']} | {var['intended_usage']} |"
+            f"| {var['display_name']} | {var['units']} | `{var['column_name']}` | {one_liner} | [Documentation]({doc_url}) | {details_text} |"
         )
 
     md_content.extend(
