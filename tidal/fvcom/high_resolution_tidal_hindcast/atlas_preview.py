@@ -2057,21 +2057,25 @@ def generate_markdown_specification(
         ]
     )
     # Add location filepath details
+    version = f"v{config['dataset']['version']}"
+    atlas_parquet_rel = config["dir"]["output"]["vap_atlas_summary_parquet"]
     md_content.extend(
         [
             "",
             "## Available Data File Details",
             "",
-            "Base directory for all data files:",
+            "Atlas summary parquet files are located at:",
             "",
-            f"* <base_dir>: `{config['dir']['base']}`",
+            f"```",
+            f"{config['dir']['base']}/<location>/{version}/{atlas_parquet_rel.split('/')[-1]}/",
+            f"```",
             "",
-            "| Location Name | System | File Path |",
-            "| --- | --- | --- |",
+            "| Location Name | `<location>` |",
+            "| --- | --- |",
         ]
     )
 
-    for this_region, parquet_path in parquet_paths.items():
+    for this_region in parquet_paths.keys():
         loc_spec = config["location_specification"]
         region_name = None
         for loc in loc_spec.values():
@@ -2079,7 +2083,7 @@ def generate_markdown_specification(
                 region_name = loc["label"]
 
         md_content.append(
-            f"| {region_name} | NLR Kestrel HPC | `{str(parquet_path).replace(config['dir']['base'], '<base_dir>')}` |"
+            f"| {region_name} | `{this_region}` |"
         )
 
     # Add Location Details
