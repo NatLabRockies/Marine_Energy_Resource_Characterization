@@ -2073,9 +2073,9 @@ def generate_markdown_specification(
             "",
             "Atlas summary parquet files are located at:",
             "",
-            f"```",
+            "```",
             f"{config['dir']['base']}/<location>/{version}/{atlas_parquet_rel.split('/')[-1]}/",
-            f"```",
+            "```",
             "",
             "| Location Name | `<location>` |",
             "| --- | --- |",
@@ -2089,9 +2089,7 @@ def generate_markdown_specification(
             if loc["output_name"] == this_region:
                 region_name = loc["label"]
 
-        md_content.append(
-            f"| {region_name} | `{this_region}` |"
-        )
+        md_content.append(f"| {region_name} | `{this_region}` |")
 
     # Add Location Details
     md_content.extend(
@@ -2129,10 +2127,7 @@ def generate_markdown_specification(
     for var in VIZ_SPECS.values():
         one_liner = var.get("one_liner", "")
         doc_url = var.get("documentation_url", docs_base_url)
-        details_text = (
-            f"{one_liner}. "
-            f"Complete documentation is at: {doc_url}"
-        )
+        details_text = f"{one_liner}. Complete documentation is at: {doc_url}"
         md_content.extend(
             [
                 f"### {var['display_name']}",
@@ -2272,9 +2267,7 @@ def generate_markdown_specification(
 
                     # Use placehold.co for dynamic color swatches in GitHub .md files
                     hex_clean = hex_color.lstrip("#")
-                    color_preview = (
-                        f"![{hex_color}](https://placehold.co/40x15/{hex_clean}/{hex_clean})"
-                    )
+                    color_preview = f"![{hex_color}](https://placehold.co/40x15/{hex_clean}/{hex_clean})"
                     md_content.append(
                         f"| {level_num} | {value_range} | `{hex_color}` | `{rgb_color}` | {color_preview} |"
                     )
@@ -2650,7 +2643,9 @@ def process_single_task(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Atlas preview and specification generator")
+    parser = argparse.ArgumentParser(
+        description="Atlas preview and specification generator"
+    )
     parser.add_argument(
         "--md-only",
         action="store_true",
@@ -2669,8 +2664,7 @@ if __name__ == "__main__":
         # Markdown-only mode: regenerate the spec from config without loading data
         print("MARKDOWN_ONLY mode: regenerating specification from config...")
         regions = sorted(
-            loc["output_name"]
-            for loc in config["location_specification"].values()
+            loc["output_name"] for loc in config["location_specification"].values()
         )
         parquet_paths = {region: None for region in regions}
 
@@ -2753,7 +2747,9 @@ if __name__ == "__main__":
                             color_level_data[var_key] = color_data
 
                     completed += 1
-                    print(f"  [{completed}/{total_tasks}] Completed {region} / {var_key}")
+                    print(
+                        f"  [{completed}/{total_tasks}] Completed {region} / {var_key}"
+                    )
 
                 except Exception as e:
                     failed += 1
