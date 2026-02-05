@@ -2643,7 +2643,8 @@ if __name__ == "__main__":
     )
 
     # Number of parallel workers (default: all available CPUs)
-    N_WORKERS = int(mp.cpu_count() / 3)
+    # N_WORKERS = int(mp.cpu_count() / 3)
+    N_WORKERS = 30
     print("Running with up to", N_WORKERS, "parallel workers")
 
     # Display available regions
