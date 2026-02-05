@@ -2110,10 +2110,8 @@ def generate_markdown_specification(
             "",
             "## Atlas Layer Details",
             "",
-            "The following table provides the specification for each Marine Energy Atlas layer, including the exact **Details** popup text.",
+            "Specification for each Marine Energy Atlas layer, including the exact **Details** popup text.",
             "",
-            "| Variable | Units | Data Column | Description | Documentation | Details Text |",
-            "| -------- | ----- | ----------- | ----------- | ------------- | ------------ |",
         ]
     )
 
@@ -2124,8 +2122,17 @@ def generate_markdown_specification(
             f"{one_liner}. "
             f"Complete documentation is at: {doc_url}"
         )
-        md_content.append(
-            f"| {var['display_name']} | {var['units']} | `{var['column_name']}` | {one_liner} | [Documentation]({doc_url}) | {details_text} |"
+        md_content.extend(
+            [
+                f"### {var['display_name']}",
+                "",
+                f"- **Units:** {var['units']}",
+                f"- **Data Column:** `{var['column_name']}`",
+                f"- **Description:** {one_liner}",
+                f"- **Documentation:** [{doc_url}]({doc_url})",
+                f"- **Details Text:** {details_text}",
+                "",
+            ]
         )
 
     md_content.extend(
