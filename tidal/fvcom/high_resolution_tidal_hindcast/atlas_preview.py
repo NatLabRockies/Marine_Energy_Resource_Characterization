@@ -21,6 +21,7 @@ from PIL import Image, ImageOps
 from pyproj import Transformer
 
 from config import config
+from src.variable_registry import VARIABLE_REGISTRY
 
 
 # Set the base directory - modify this to match your system
@@ -80,244 +81,88 @@ MAX_POWER_DENSITY_CMAP = cmocean.cm.amp
 SEA_FLOOR_DEPTH_CMAP = cmocean.cm.deep
 GRID_RESOLUTION_CMAP = cmocean.cm.haline
 
-VIZ_SPECS = {
-    "mean_sea_water_speed": {
-        "title": "Mean Sea Water Speed",
-        "units": "m/s",
-        "column_name": "vap_water_column_mean_sea_water_speed",
+# Visualization-only config (colormaps, ranges, levels) keyed by unified variable names.
+# Merged with VARIABLE_REGISTRY to build the full VIZ_SPECS dict.
+_VIZ_CONFIG = {
+    "mean_current_speed": {
         "colormap": cmocean.cm.thermal,
         "range_min": 0,
         "range_max": 1.5,
         "levels": 10,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
-    "p95_sea_water_speed": {
-        "title": "95th Percentile Sea Water Speed",
-        "units": "m/s",
-        "column_name": "vap_water_column_95th_percentile_sea_water_speed",
+    "p95_current_speed": {
         "colormap": MAX_SPEED_CMAP,
         "range_min": SEA_WATER_SPEED_CBAR_MIN,
         "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
         "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "95th percentile of yearly depth maximum current speed",
-        "intended_usage": "Generator sizing and power electronics design",
-        "intended_usage_detail": "Critical for sizing electrical generation components. Used to determine maximum generator output capacity, size power electronics and converters for peak electrical loads, design control systems for extreme speed conditions, and set cut-out speeds for generator protection. Essential for electrical system certification, grid connection requirements, and ensuring generators can handle maximum rotational speeds without damage.",
-        "equation": r"$U_{95} = \text{percentile}(95, \left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
-    "p99_sea_water_speed": {
-        "title": "99th Percentile Sea Water Speed",
-        "units": "m/s",
-        "column_name": "vap_water_column_99th_percentile_sea_water_speed",
+    "p99_current_speed": {
         "colormap": MAX_SPEED_CMAP,
         "range_min": SEA_WATER_SPEED_CBAR_MIN,
         "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
         "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "99th percentile of yearly depth maximum current speed",
-        "intended_usage": "Extreme event analysis and safety system design",
-        "intended_usage_detail": "Used for extreme event planning and safety margin calculations. Critical for designing emergency shutdown systems, setting absolute operational limits, and ensuring equipment can survive rare but intense current events. Important for insurance risk assessments, environmental impact studies, and regulatory compliance for extreme conditions.",
-        "equation": r"$U_{99} = \text{percentile}(99, \left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
-    "max_sea_water_speed": {
-        "title": "Maximum Sea Water Speed",
-        "units": "m/s",
-        "column_name": "vap_water_column_max_sea_water_speed",
+    "max_current_speed": {
         "colormap": MAX_SPEED_CMAP,
         "range_min": SEA_WATER_SPEED_CBAR_MIN,
         "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
         "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "Absolute maximum depth-max current speed observed over the year",
-        "intended_usage": "Ultimate load design and survival analysis",
-        "intended_usage_detail": "Defines the absolute worst-case current speed for ultimate load calculations. Essential for structural survival analysis, determining maximum possible loads on turbines and support structures, and designing fail-safe mechanisms. Used for regulatory compliance demonstrating equipment can survive maximum observed conditions.",
-        "equation": r"$U_{\max} = \max\left(\left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
-    "mean_sea_water_power_density": {
-        "title": "Mean Sea Water Power Density",
-        "units": "W/m²",
-        "column_name": "vap_water_column_mean_sea_water_power_density",
+    "mean_power_density": {
         "colormap": MEAN_POWER_DENSITY_CMAP,
         "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
         "range_max": SEA_WATER_POWER_DENSITY_CBAR_MAX,
         "levels": SEA_WATER_POWER_DENSITY_LEVELS,
-        "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
-        "intended_usage": "Resource quantification and economic feasibility analysis",
-        "intended_usage_detail": "Direct measure of extractable energy resource for economic analysis. Used to calculate theoretical power output, estimate capacity factors for project financing, compare energy density between sites, and determine optimal turbine spacing in arrays. Essential for LCOE calculations, investor presentations, and grid integration planning. Minimum thresholds (typically >300 W/m²) define commercial viability.",
-        "equation": r"$\overline{\overline{P}} = P_{\text{average}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$ with $\rho = 1025$ kg/m³",
-            r"$U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
-    "p95_sea_water_power_density": {
-        "title": "95th Percentile Sea Water Power Density",
-        "units": "W/m²",
-        "column_name": "vap_water_column_95th_percentile_sea_water_power_density",
+    "p95_power_density": {
         "colormap": MAX_POWER_DENSITY_CMAP,
         "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
         "range_max": SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
         "levels": SEA_WATER_MAX_POWER_DENSITY_LEVELS,
-        "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
-        "intended_usage": "Structural design loads and extreme loading conditions",
-        "intended_usage_detail": "Essential for structural engineering and extreme load analysis. Used to determine maximum design loads for turbine blades, drive trains, support structures, and foundation systems. Critical for fatigue analysis, ultimate load calculations, and ensuring structural integrity during extreme tidal events. Defines design margins for mooring systems, tower structures, and emergency braking systems. Required for structural certification and insurance assessments.",
-        "equation": r"$P_{95} = \text{percentile}(95, \left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
-        "equation_variables": [
-            r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$ with $\rho = 1025$ kg/m³",
-            r"$U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
-    "distance_to_sea_floor": {
-        "title": "Mean Depth",
-        "units": "m (below NAVD88)",
-        "column_name": "vap_sea_floor_depth",
+    "mean_water_depth": {
         "colormap": SEA_FLOOR_DEPTH_CMAP,
         "range_min": SEA_FLOOR_DEPTH_MIN,
         "range_max": SEA_FLOOR_DEPTH_MAX,
         "levels": SEA_FLOOR_DEPTH_LEVELS,
-        "physical_meaning": "Yearly average distance from water surface to the sea floor",
-        "intended_usage": "Installation planning and foundation design",
-        "intended_usage_detail": "Fundamental constraint for deployment strategy and cost estimation. Used to determine installation vessel requirements, foundation type selection (gravity, pile, suction caisson), and deployment method feasibility. Critical for cost modeling (deeper = more expensive), accessibility planning for maintenance operations, and environmental impact assessments. Optimal depths typically 20-50m for current technology, with deeper sites requiring specialized equipment and higher costs.",
-        "equation": r"$\overline{d} = d_{\text{average}} = \text{mean}\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$h$ is bathymetry below NAVD88 (m)",
-            r"$\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m)",
-            r"$T = 1$ year",
-        ],
     },
-    "water_column_height_min": {
-        "title": "Minimum Water Depth",
-        "units": "m",
-        "column_name": "vap_water_column_height_min",
+    "min_water_depth": {
         "colormap": SEA_FLOOR_DEPTH_CMAP,
         "range_min": SEA_FLOOR_DEPTH_MIN,
         "range_max": SEA_FLOOR_DEPTH_MAX,
         "levels": SEA_FLOOR_DEPTH_LEVELS,
-        "physical_meaning": "Minimum water depth observed over the year (shallowest, typically at low tide)",
-        "intended_usage": "Minimum clearance and grounding risk assessment",
-        "intended_usage_detail": "Critical for determining minimum water depth available for turbine deployment. Used to ensure adequate clearance between turbine blades and seafloor, assess grounding risk during extreme low tides, and determine deployment feasibility in shallow areas. Essential for safety planning and operational constraints.",
-        "equation": r"$d_{\min} = \min\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$h$ is bathymetry below NAVD88 (m)",
-            r"$\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m)",
-            r"$T = 1$ year",
-        ],
     },
-    "water_column_height_max": {
-        "title": "Maximum Water Depth",
-        "units": "m",
-        "column_name": "vap_water_column_height_max",
+    "max_water_depth": {
         "colormap": SEA_FLOOR_DEPTH_CMAP,
         "range_min": SEA_FLOOR_DEPTH_MIN,
         "range_max": SEA_FLOOR_DEPTH_MAX,
         "levels": SEA_FLOOR_DEPTH_LEVELS,
-        "physical_meaning": "Maximum water depth observed over the year (deepest, typically at high tide)",
-        "intended_usage": "Maximum mooring loads and installation planning",
-        "intended_usage_detail": "Defines maximum water depth for mooring system design and installation vessel requirements. Used to determine maximum mooring line lengths, assess tidal range impacts on operations, and plan for extreme high tide conditions. Important for cable routing and connection system design.",
-        "equation": r"$d_{\max} = \max\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$h$ is bathymetry below NAVD88 (m)",
-            r"$\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m)",
-            r"$T = 1$ year",
-        ],
     },
-    "surface_layer_mean_speed": {
-        "title": "Surface Layer Mean Speed",
-        "units": "m/s",
-        "column_name": "vap_surface_layer_mean_sea_water_speed",
+    "surface_mean_speed": {
         "colormap": cmocean.cm.thermal,
         "range_min": 0,
         "range_max": 1.5,
         "levels": 10,
-        "physical_meaning": "Yearly average current speed at the surface layer (sigma_level_1)",
-        "intended_usage": "Surface current assessment for navigation and floating devices",
-        "intended_usage_detail": "Characterizes current conditions at the water surface for floating tidal devices and navigation safety. Used to assess surface current impacts on vessel operations, floating platform stability, and cable/mooring system surface loads. Important for operations planning and environmental flow characterization.",
-        "equation": r"$\overline{U}_{\text{surface}} = \text{mean}\left(\left[U_{1,t} \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$ is velocity magnitude at sigma_level_1 (surface) at time $t$ (m/s)",
-            r"$T = 1$ year",
-        ],
     },
-    "surface_layer_p95_speed": {
-        "title": "Surface Layer 95th Percentile Speed",
-        "units": "m/s",
-        "column_name": "vap_surface_layer_95th_percentile_sea_water_speed",
+    "surface_p95_speed": {
         "colormap": MAX_SPEED_CMAP,
         "range_min": SEA_WATER_SPEED_CBAR_MIN,
         "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
         "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "95th percentile of surface layer current speed over the year",
-        "intended_usage": "Surface current design loads for floating systems",
-        "intended_usage_detail": "Design metric for floating tidal energy systems and surface infrastructure. Used to size mooring systems for floating platforms, design surface buoys and markers, and assess extreme surface current loads on cables and connectors.",
-        "equation": r"$U_{\text{surface},95} = \text{percentile}(95, \left[U_{1,t} \text{ for } t=1,...,T\right])$",
-        "equation_variables": [
-            r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$ is velocity magnitude at sigma_level_1 (surface) at time $t$ (m/s)",
-            r"$T = 1$ year",
-        ],
     },
-    "surface_layer_p99_speed": {
-        "title": "Surface Layer 99th Percentile Speed",
-        "units": "m/s",
-        "column_name": "vap_surface_layer_99th_percentile_sea_water_speed",
+    "surface_p99_speed": {
         "colormap": MAX_SPEED_CMAP,
         "range_min": SEA_WATER_SPEED_CBAR_MIN,
         "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
         "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "99th percentile of surface layer current speed over the year",
-        "intended_usage": "Extreme surface current events for safety systems",
-        "intended_usage_detail": "Characterizes extreme surface current conditions for safety system design. Used for emergency response planning, setting operational limits for surface vessels and floating devices, and designing safety margins for surface infrastructure.",
-        "equation": r"$U_{\text{surface},99} = \text{percentile}(99, \left[U_{1,t} \text{ for } t=1,...,T\right])$",
-        "equation_variables": [
-            r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$ is velocity magnitude at sigma_level_1 (surface) at time $t$ (m/s)",
-            r"$T = 1$ year",
-        ],
     },
-    "surface_layer_max_speed": {
-        "title": "Surface Layer Maximum Speed",
-        "units": "m/s",
-        "column_name": "vap_surface_layer_max_sea_water_speed",
+    "surface_max_speed": {
         "colormap": MAX_SPEED_CMAP,
         "range_min": SEA_WATER_SPEED_CBAR_MIN,
         "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
         "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "Absolute maximum surface layer current speed observed over the year",
-        "intended_usage": "Ultimate surface current loads for survival analysis",
-        "intended_usage_detail": "Defines worst-case surface current conditions for ultimate load analysis. Essential for survival design of floating systems, determining maximum loads on surface infrastructure, and regulatory compliance for extreme surface conditions.",
-        "equation": r"$U_{\text{surface},\max} = \max\left(\left[U_{1,t} \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$ is velocity magnitude at sigma_level_1 (surface) at time $t$ (m/s)",
-            r"$T = 1$ year",
-        ],
     },
-    "grid_resolution_meters": {
-        "title": "Grid Resolution",
-        "units": "m",
-        "column_name": "vap_grid_resolution",
-        # "colormap": GRID_RESOLUTION_CMAP,
+    "grid_resolution": {
         "range_min": 0,
         "range_max": 500,
         "levels": 3,
@@ -338,200 +183,48 @@ VIZ_SPECS = {
                 "color": "#DC143C",  # Pleasing red
             },
         },
-        "physical_meaning": "Average edge length of triangular finite volume elements",
-        "intended_usage": "Model accuracy assessment and validation",
-        "intended_usage_detail": "Indicates the spatial scale at which model results are resolved. Finer resolution (smaller values) provides more detailed results but requires greater computational resources. Used to assess model fidelity, determine appropriate applications for the data, and understand spatial limitations of the model output. Critical for validating model results against observations and determining if resolution is adequate for specific engineering applications. Per IEC 62600-201 standards: Stage 1 assessments require < 500 m resolution, while Stage 2 detailed studies require < 50 m resolution for areas of interest.",
-        "equation": r"$\text{Grid Resolution} = \frac{1}{3}(d_1 + d_2 + d_3)$",
-        "equation_variables": [
-            r"$d_1 = \text{haversine}(\text{lat}_1, \text{lon}_1, \text{lat}_2, \text{lon}_2)$ is the distance between corners 1 and 2",
-            r"$d_2 = \text{haversine}(\text{lat}_2, \text{lon}_2, \text{lat}_3, \text{lon}_3)$ is the distance between corners 2 and 3",
-            r"$d_3 = \text{haversine}(\text{lat}_3, \text{lon}_3, \text{lat}_1, \text{lon}_1)$ is the distance between corners 3 and 1",
-            r"$\text{haversine}(\text{lat}_a, \text{lon}_a, \text{lat}_b, \text{lon}_b) = R \cdot 2\arcsin\left(\sqrt{\sin^2\left(\frac{\Delta\text{lat}}{2}\right) + \cos(\text{lat}_a)\cos(\text{lat}_b)\sin^2\left(\frac{\Delta\text{lon}}{2}\right)}\right)$",
-            r"$R = 6378137.0$ m is the Earth radius (WGS84)",
-        ],
     },
     "ebb_direction": {
-        "title": "Sea Water Ebb Tide To Direction",
-        "units": "m/s",
-        # "column_name": "vap_sea_water_primary_to_direction_sigma_level_3",
-        "column_name": "vap_sea_water_ebb_to_direction_sigma_level_3",
         "colormap": cmocean.cm.phase,
         "range_min": 0,
         "range_max": 360,
         "levels": 16,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
     "flood_direction": {
-        "title": "Sea Water Flood Tide To Direction",
-        "units": "m/s",
-        # "column_name": "vap_sea_water_primary_to_direction_sigma_level_3",
-        "column_name": "vap_sea_water_flood_to_direction_sigma_level_1",
         "colormap": cmocean.cm.phase,
         "range_min": 0,
         "range_max": 360,
         "levels": 16,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
-    # "secondary_direction": {
-    #     "title": "Secondary Sea Water To Direction",
-    #     "units": "m/s",
-    #     "column_name": "vap_sea_water_secondary_to_direction_sigma_level_3",
-    #     "colormap": cmocean.cm.phase,
-    #     "range_min": 0,
-    #     "range_max": 360,
-    #     "levels": 16,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
-    "surface_elevation_mean": {
-        "title": "Mean Sea Surface Elevation",
-        "units": "m",
-        "column_name": "vap_surface_elevation",
+    "mean_surface_elevation": {
         "colormap": cmocean.cm.deep,
         "range_min": 0,
         "range_max": 1,
         "levels": 10,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
-    # "surface_elevation_high_tide_max": {
-    #     "title": "High Tide Maximum Sea Surface Elevation",
-    #     "units": "m",
-    #     "column_name": "vap_sea_surface_elevation_high_tide_max",
-    #     "colormap": cmocean.cm.deep,
-    #     "range_min": 0,
-    #     "range_max": 5,
-    #     "levels": 10,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
-    # "surface_elevation_low_tide_min": {
-    #     "title": "Low Tide Minimum Sea Surface Elevation",
-    #     "units": "m",
-    #     "column_name": "vap_surface_elevation_low_tide_min",
-    #     "colormap": cmocean.cm.deep,
-    #     "range_min": -5,
-    #     "range_max": 0,
-    #     "levels": 10,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
-    "surface_elevation_range": {
-        "title": "Range of Sea Surface Elevation",
-        "units": "m",
-        "column_name": "vap_tidal_range",
+    "tidal_range": {
         "colormap": cmocean.cm.haline,
         "range_min": 0,
         "range_max": 10,
         "levels": 10,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
     "min_tidal_period": {
-        "title": "Shortest Tidal Period",
-        "units": "hours",
-        "column_name": "vap_min_tidal_period",
         "colormap": cmocean.cm.haline,
         "range_min": 10,
         "range_max": 12,
         "levels": 10,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
     "max_tidal_period": {
-        "title": "Longest Tidal Period",
-        "units": "hours",
-        "column_name": "vap_max_tidal_period",
         "colormap": cmocean.cm.haline,
         "range_min": 12,
         "range_max": 14,
         "levels": 10,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
     },
-    # "mean_tidal_period": {
-    #     "title": "Average Tidal Period",
-    #     "units": "h",
-    #     "column_name": "vap_average_tidal_period",
-    #     "colormap": cmocean.cm.haline,
-    #     "range_min": 11,
-    #     "range_max": 13,
-    #     "levels": 10,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
+}
+
+# Build VIZ_SPECS by merging registry metadata with visualization config
+VIZ_SPECS = {
+    key: {**VARIABLE_REGISTRY[key], **viz_conf} for key, viz_conf in _VIZ_CONFIG.items()
 }
 
 
@@ -2388,7 +2081,9 @@ def generate_markdown_specification(
     )
 
     for var in VIZ_SPECS.values():
-        md_content.append(f"| {var['title']} | {var['units']} | {var['column_name']} |")
+        md_content.append(
+            f"| {var['display_name']} | {var['units']} | {var['column_name']} |"
+        )
 
     md_content.extend(
         [
@@ -2402,7 +2097,7 @@ def generate_markdown_specification(
 
     for var in VIZ_SPECS.values():
         md_content.append(
-            f"| {var['title']} | {var['physical_meaning']} | {var['intended_usage']} |"
+            f"| {var['display_name']} | {var['physical_meaning']} | {var['intended_usage']} |"
         )
 
     md_content.extend(
@@ -2416,7 +2111,7 @@ def generate_markdown_specification(
     for var in VIZ_SPECS.values():
         md_content.extend(
             [
-                f"### {var['title']}",
+                f"### {var['display_name']}",
                 "",
                 "Equation:",
                 "",
@@ -2484,7 +2179,7 @@ def generate_markdown_specification(
             colormap_name = spec["colormap"].name
 
         md_content.append(
-            f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {colormap_name} |"
+            f"| {spec['display_name']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {colormap_name} |"
         )
 
     md_content.append("")
@@ -2508,7 +2203,7 @@ def generate_markdown_specification(
                     colormap_name = spec["colormap"].name
                 md_content.extend(
                     [
-                        f"### {spec['title']} [{spec['units']}], `{spec['column_name']}`",
+                        f"### {spec['display_name']} [{spec['units']}], `{spec['column_name']}`",
                         "",
                         f"* **Colormap:** {colormap_name}",
                         f"* **Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}",
@@ -2569,7 +2264,7 @@ def generate_markdown_specification(
     )
 
     # Generate viz_types list dynamically from VIZ_SPECS
-    viz_types = [(key, spec["title"]) for key, spec in VIZ_SPECS.items()]
+    viz_types = [(key, spec["display_name"]) for key, spec in VIZ_SPECS.items()]
 
     for viz_key, viz_title in viz_types:
         md_content.extend(
@@ -2640,7 +2335,7 @@ def generate_markdown_specification(
     for var_key, spec in VIZ_SPECS.items():
         img_file = f"{spec['column_name']}_viz_max_justification.png"
         img_path = f"docs/img/{img_file}"
-        title = spec["title"]
+        title = spec["display_name"]
         units = spec["units"]
         description = f"Validates the visualization maximum used for {title.lower()} analysis, showing data retention rates and outlier filtering effectiveness."
 
@@ -2667,7 +2362,7 @@ def generate_markdown_specification(
     for var_key, spec in VIZ_SPECS.items():
         img_file = f"{spec['column_name']}_regional_comparison.png"
         img_path = f"docs/img/{img_file}"
-        title = spec["title"]
+        title = spec["display_name"]
         units = spec["units"]
         description = f"{title} distribution comparison across regions"
 
@@ -2712,13 +2407,13 @@ def process_variable(
 ):
     """Process a single variable - analyze and optionally plot"""
     action = "Analyzing" if bypass_visualizations else "Plotting"
-    print(f"\t{action} {region} {var_config['title']}...")
+    print(f"\t{action} {region} {var_config['display_name']}...")
 
     # Always analyze variable
     stats = analyze_variable(
         df,
         var_config["column_name"],
-        var_config["title"],
+        var_config["display_name"],
         region,
         units=var_config["units"],  # Pass units from config
         output_path=output_path,
@@ -2734,7 +2429,7 @@ def process_variable(
             df,
             region,
             var_config["column_name"],  # Use column_name consistently
-            var_config["title"],
+            var_config["display_name"],
             var_config["units"],
             var_config["range_min"],
             var_config["range_max"],
@@ -2757,7 +2452,7 @@ def analyze_all_variables_across_regions(all_stats, output_path, viz_specs):
     stats_by_variable = organize_stats_by_variable(all_stats)
 
     for var_key, var_config in viz_specs.items():
-        print(f"Calculating {var_config['title']} variable summary...")
+        print(f"Calculating {var_config['display_name']} variable summary...")
 
         # Get region stats for this variable
         region_stats = stats_by_variable.get(var_key, [])
