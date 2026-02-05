@@ -210,7 +210,7 @@ VIZ_SPECS = {
         ],
     },
     "water_column_height_min": {
-        "title": "Minimum Water Column Height",
+        "title": "Minimum Water Depth",
         "units": "m",
         "column_name": "vap_water_column_height_min",
         "colormap": SEA_FLOOR_DEPTH_CMAP,
@@ -228,7 +228,7 @@ VIZ_SPECS = {
         ],
     },
     "water_column_height_max": {
-        "title": "Maximum Water Column Height",
+        "title": "Maximum Water Depth",
         "units": "m",
         "column_name": "vap_water_column_height_max",
         "colormap": SEA_FLOOR_DEPTH_CMAP,
