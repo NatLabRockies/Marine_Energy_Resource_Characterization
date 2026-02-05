@@ -5,17 +5,19 @@ The following sections provide the specification for visualizing selected high r
 
 ## Available Data File Details
 
-Base directory for all data files:
+Atlas summary parquet files are located at:
 
-* <base_dir>: `/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast`
+```
+/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/<location>/v1.0.0/b5_vap_atlas_summary_parquet/
+```
 
-| Location Name | System | File Path |
-| --- | --- | --- |
-| Piscataqua River, New Hampshire | NLR Kestrel HPC | `<base_dir>/NH_piscataqua_river/v1.0.0/b5_vap_atlas_summary_parquet/NH_piscataqua_river.wpto_high_res_tidal-year_average.b5.0.0.v1.0.0.parquet` |
-| Cook Inlet, Alaska | NLR Kestrel HPC | `<base_dir>/AK_cook_inlet/v1.0.0/b5_vap_atlas_summary_parquet/AK_cook_inlet.wpto_high_res_tidal-year_average.b5.0.0.v1.0.0.parquet` |
-| Western Passage, Maine | NLR Kestrel HPC | `<base_dir>/ME_western_passage/v1.0.0/b5_vap_atlas_summary_parquet/ME_western_passage.wpto_high_res_tidal-year_average.b5.0.0.v1.0.0.parquet` |
-| Puget Sound, Washington | NLR Kestrel HPC | `<base_dir>/WA_puget_sound/v1.0.0/b5_vap_atlas_summary_parquet/WA_puget_sound.wpto_high_res_tidal-year_average.b5.0.0.v1.0.0.parquet` |
-| Aleutian Islands, Alaska | NLR Kestrel HPC | `<base_dir>/AK_aleutian_islands/v1.0.0/b5_vap_atlas_summary_parquet/AK_aleutian_islands.wpto_high_res_tidal-year_average.b5.0.0.v1.0.0.parquet` |
+| Location Name | `<location>` |
+| --- | --- |
+| Piscataqua River, New Hampshire | `NH_piscataqua_river` |
+| Cook Inlet, Alaska | `AK_cook_inlet` |
+| Western Passage, Maine | `ME_western_passage` |
+| Puget Sound, Washington | `WA_puget_sound` |
+| Aleutian Islands, Alaska | `AK_aleutian_islands` |
 
 ## Location Details
 
@@ -578,7 +580,7 @@ These kernel density estimation (KDE) plots provide clean statistical comparison
 
 ## Document Information
 
-- **Generated:** 2026-02-05 11:56:37 UTC
+- **Generated:** 2026-02-05 13:55:51 UTC
 - **Regions Processed:** AK_aleutian_islands, AK_cook_inlet, ME_western_passage, NH_piscataqua_river, WA_puget_sound
 
 *This specification was auto-generated from the tidal data visualization pipeline.*
