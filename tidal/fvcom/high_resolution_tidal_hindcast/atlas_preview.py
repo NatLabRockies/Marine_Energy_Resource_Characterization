@@ -30,7 +30,10 @@ from src.variable_registry import VARIABLE_REGISTRY
 # Set the base directory - modify this to match your system
 BASE_DIR = Path("/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast")
 
-VIZ_OUTPUT_DIR = Path("/home/asimms/tidal/analysis/viz/")
+# VIZ_OUTPUT_DIR = Path("/home/asimms/tidal/analysis/viz/")
+VIZ_OUTPUT_DIR = Path(
+    "/home/asimms/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast/docs/img/"
+)
 # VIZ_OUTPUT_DIR = Path(
 #     "/projects/hindcastra/Tidal/simms_nlr_dev/high_resolution_tidal_hindcast"
 # )
