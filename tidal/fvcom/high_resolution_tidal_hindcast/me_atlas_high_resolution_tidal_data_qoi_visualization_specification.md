@@ -27,27 +27,18 @@ Base directory for all data files:
 | Puget Sound, Washington | 1,734,765 | 2015-01-01 00:00:00 to 2015-12-30 23:30:00 | half-hourly |
 | Aleutian Islands, Alaska | 797,978 | 2010-06-03 00:00:00 to 2011-06-02 23:00:00 | hourly |
 
-## Variable Overview
+## Atlas Layer Details
 
-| Variable | Units | Data Column |
-| -------- | ----- | ----------- |
-| Mean Current Speed | m/s | vap_water_column_mean_sea_water_speed |
-| 95th Percentile Current Speed | m/s | vap_water_column_95th_percentile_sea_water_speed |
-| Mean Power Density | W/m² | vap_water_column_mean_sea_water_power_density |
-| Minimum Water Depth | m | vap_water_column_height_min |
-| Maximum Water Depth | m | vap_water_column_height_max |
-| Grid Resolution | m | vap_grid_resolution |
+The following table provides the specification for each Marine Energy Atlas layer, including the exact **Details** popup text.
 
-## Variable Usage
-
-| Variable | Meaning | Intended Usage
-| ---- | ------- | --- |
-| Mean Current Speed | Yearly average of depth averaged current speed | Site screening and turbine selection for power generation |
-| 95th Percentile Current Speed | 95th percentile of yearly depth maximum current speed | Generator sizing and power electronics design |
-| Mean Power Density | Yearly average of depth averaged power density (kinetic energy flux) | Resource quantification and economic feasibility analysis |
-| Minimum Water Depth | Minimum water depth observed over the year (shallowest, typically at low tide) | Minimum clearance and grounding risk assessment |
-| Maximum Water Depth | Maximum water depth observed over the year (deepest, typically at high tide) | Maximum mooring loads and installation planning |
-| Grid Resolution | Average edge length of triangular finite volume elements | Model accuracy assessment and validation |
+| Variable | Units | Data Column | Description | Documentation | Details Text |
+| -------- | ----- | ----------- | ----------- | ------------- | ------------ |
+| Mean Current Speed | m/s | `vap_water_column_mean_sea_water_speed` | Annual average of depth-averaged current speed | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-current-speed) | Annual average of depth-averaged current speed. Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-current-speed |
+| 95th Percentile Current Speed | m/s | `vap_water_column_95th_percentile_sea_water_speed` | 95th percentile of yearly maximum current speed (all depths) | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-current-speed) | 95th percentile of yearly maximum current speed (all depths). Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-current-speed |
+| Mean Power Density | W/m² | `vap_water_column_mean_sea_water_power_density` | Annual average of depth-averaged kinetic energy flux | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density) | Annual average of depth-averaged kinetic energy flux. Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density |
+| Minimum Water Depth | m | `vap_water_column_height_min` | Minimum water depth (during 1 year model run) | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#minimum-water-depth) | Minimum water depth (during 1 year model run). Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#minimum-water-depth |
+| Maximum Water Depth | m | `vap_water_column_height_max` | Maximum water depth (during 1 year model run) | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth) | Maximum water depth (during 1 year model run). Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth |
+| Grid Resolution | m | `vap_grid_resolution` | Average edge length of triangular model grid cells | [Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#grid-resolution) | Average edge length of triangular model grid cells. Complete documentation is at: https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#grid-resolution |
 
 ## Variable Equations
 
@@ -547,7 +538,7 @@ These kernel density estimation (KDE) plots provide clean statistical comparison
 
 ## Document Information
 
-- **Generated:** 2026-02-05 11:13:44 UTC
+- **Generated:** 2026-02-05 11:46:23 UTC
 - **Regions Processed:** AK_aleutian_islands, AK_cook_inlet, ME_western_passage, NH_piscataqua_river, WA_puget_sound
 
 *This specification was auto-generated from the tidal data visualization pipeline.*
