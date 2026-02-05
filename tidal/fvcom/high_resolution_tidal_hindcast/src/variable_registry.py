@@ -30,7 +30,7 @@ VARIABLE_REGISTRY = {
             "potential across regions, and Stage 1 IEC 62600-201 tidal energy resource "
             "characterization."
         ),
-        "references": ["iec_62600_201", "fvcom"],
+        "references": [],
         # Scientific/engineering context
         "physical_meaning": "Yearly average of depth averaged current speed",
         "intended_usage": "Site screening and turbine selection for power generation",
@@ -74,7 +74,7 @@ VARIABLE_REGISTRY = {
             "support structure design, and fatigue analysis. This metric helps size "
             "components to withstand expected high-flow conditions."
         ),
-        "references": ["iec_62600_201", "fvcom"],
+        "references": [],
         # Scientific/engineering context
         "physical_meaning": "95th percentile of yearly depth maximum current speed",
         "intended_usage": "Generator sizing and power electronics design",
@@ -170,7 +170,7 @@ VARIABLE_REGISTRY = {
             "Engineering applications include comparing relative energy availability between "
             "sites and initial economic feasibility screening."
         ),
-        "references": ["iec_62600_201", "fvcom"],
+        "references": ["hass_2011_assessment"],
         # Scientific/engineering context
         "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
         "intended_usage": "Resource quantification and economic feasibility analysis",
@@ -272,7 +272,7 @@ VARIABLE_REGISTRY = {
             "Engineering applications include assessing turbine clearance requirements and "
             "identifying areas where shallow water may limit device deployment."
         ),
-        "references": ["iec_62600_201", "fvcom"],
+        "references": [],
         # Scientific/engineering context
         "physical_meaning": "Minimum water depth observed over the year (shallowest, typically at low tide)",
         "intended_usage": "Minimum clearance and grounding risk assessment",
@@ -312,7 +312,7 @@ VARIABLE_REGISTRY = {
             "Engineering applications include mooring system design considerations and "
             "understanding the full range of water depths at a site."
         ),
-        "references": ["iec_62600_201", "fvcom"],
+        "references": [],
         # Scientific/engineering context
         "physical_meaning": "Maximum water depth observed over the year (deepest, typically at high tide)",
         "intended_usage": "Maximum mooring loads and installation planning",
@@ -452,7 +452,7 @@ VARIABLE_REGISTRY = {
             "Engineering applications include assessing model fidelity and determining "
             "appropriate applications for the data."
         ),
-        "references": ["iec_62600_201", "fvcom"],
+        "references": ["iec_62600_201"],
         # Scientific/engineering context
         "physical_meaning": "Average edge length of triangular finite volume elements",
         "intended_usage": "Model accuracy assessment and validation",
