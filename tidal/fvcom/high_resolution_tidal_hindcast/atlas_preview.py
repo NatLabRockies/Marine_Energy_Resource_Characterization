@@ -2446,31 +2446,73 @@ def process_variable(
     return stats, color_data
 
 
-def analyze_all_variables_across_regions(all_stats, output_path, viz_specs):
-    """Generate summary analysis for all variables across regions"""
+def _analyze_single_variable_task(var_key, display_name, region_stats, output_path, viz_max):
+    """Worker for a single variable's cross-region analysis.
+
+    Suitable for parallel execution via ProcessPoolExecutor.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+
+    print(f"Calculating {display_name} variable summary...")
+
+    result = analyze_variable_across_regions(
+        region_stats,
+        output_path=output_path,
+        viz_max=viz_max,
+    )
+    return var_key, result
+
+
+def analyze_all_variables_across_regions(
+    all_stats, output_path, viz_specs, n_workers=None
+):
+    """Generate summary analysis for all variables across regions (parallel)"""
     summaries = {}
 
     # Reorganize stats by variable for cross-region analysis
     stats_by_variable = organize_stats_by_variable(all_stats)
 
+    # Build tasks for variables that have data
+    tasks = []
     for var_key, var_config in viz_specs.items():
-        print(f"Calculating {var_config['display_name']} variable summary...")
-
-        # Get region stats for this variable
         region_stats = stats_by_variable.get(var_key, [])
-
         if region_stats:
-            # Determine viz_max from config
-            viz_max = var_config.get("range_max")
-
-            summaries[var_key] = analyze_variable_across_regions(
+            tasks.append((
+                var_key,
+                var_config["display_name"],
                 region_stats,
-                output_path=output_path,
-                viz_max=viz_max,
-            )
+                output_path,
+                var_config.get("range_max"),
+            ))
         else:
             print(f"Warning: No data found for variable {var_key}")
             summaries[var_key] = None
+
+    if n_workers is None:
+        n_workers = mp.cpu_count()
+
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        future_to_key = {
+            executor.submit(
+                _analyze_single_variable_task,
+                var_key,
+                display_name,
+                region_stats,
+                output_path,
+                viz_max,
+            ): var_key
+            for var_key, display_name, region_stats, output_path, viz_max in tasks
+        }
+
+        for future in as_completed(future_to_key):
+            task_key = future_to_key[future]
+            try:
+                var_key, result = future.result()
+                summaries[var_key] = result
+            except Exception as e:
+                print(f"FAILED cross-region analysis for {task_key}: {e}")
+                summaries[task_key] = None
 
     return summaries
 
@@ -2528,6 +2570,7 @@ def process_single_task(
         Tuple of (region, parquet_path, var_key, stats, color_data)
     """
     import matplotlib
+
     matplotlib.use("Agg")  # Non-interactive backend for worker processes
 
     var_config = VIZ_SPECS[var_key]
