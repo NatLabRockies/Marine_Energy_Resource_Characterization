@@ -1,5 +1,6 @@
 #!/bin/bash
-#SBATCH --account=hindcastra
+#SBATCH --account=wpfacilities
+#SBATCH --qos=high
 #SBATCH --output=atlas_preview_%j.out
 #SBATCH --job-name=atlas_preview
 #SBATCH --mail-type=BEGIN,END,FAIL
