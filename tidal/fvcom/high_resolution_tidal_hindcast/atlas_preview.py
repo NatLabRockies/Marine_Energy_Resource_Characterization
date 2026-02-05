@@ -1810,10 +1810,11 @@ def optimize_image(src_path, dst_path, max_width=1200, quality=85):
 
 
 def copy_images_for_web(
-    source_dir, docs_img_dir, regions_processed, max_width=1200, quality=85
+    source_dir, docs_img_dir, regions_processed, max_width=1200, quality=85,
+    n_workers=None,
 ):
     """
-    Copy and optimize images for web display using PIL/Pillow.
+    Copy and optimize images for web display using PIL/Pillow (parallel).
 
     Args:
         source_dir: Source directory containing original images
@@ -1821,6 +1822,7 @@ def copy_images_for_web(
         regions_processed: List of regions to process
         max_width: Maximum width for web images (default 1200px)
         quality: JPEG quality for optimization (default 85)
+        n_workers: Number of parallel workers (default: cpu_count)
     """
 
     # Generate regional image files dynamically from VIZ_SPECS
@@ -1829,7 +1831,10 @@ def copy_images_for_web(
         f"{spec['column_name']}.png" for spec in VIZ_SPECS.values()
     ]
 
-    # Process regional images
+    # Collect all (src_path, dst_path, max_width, quality) tasks
+    image_tasks = []
+
+    # Regional images
     for region in regions_processed:
         region_dir = Path(source_dir, region)
         if region_dir.exists():
@@ -1838,27 +1843,44 @@ def copy_images_for_web(
                 src_path = region_dir / img_file
                 if src_path.exists():
                     dst_path = docs_img_dir / img_file
-                    optimize_image(
-                        src_path, dst_path, max_width=max_width, quality=quality
-                    )
+                    image_tasks.append((src_path, dst_path, max_width, quality))
 
-    # Generate comparison files dynamically from VIZ_SPECS
-    comparison_files = []
-
-    # Add viz max justification plots
+    # Comparison images (viz max justification + regional comparison)
     for spec in VIZ_SPECS.values():
-        comparison_files.append(f"{spec['column_name']}_viz_max_justification.png")
+        for pattern in [
+            f"{spec['column_name']}_viz_max_justification.png",
+            f"{spec['column_name']}_regional_comparison.png",
+        ]:
+            src_path = Path(source_dir) / pattern
+            if src_path.exists():
+                dst_path = docs_img_dir / pattern
+                image_tasks.append((src_path, dst_path, max_width, quality))
 
-    # Add regional comparison plots
-    for spec in VIZ_SPECS.values():
-        comparison_files.append(f"{spec['column_name']}_regional_comparison.png")
+    if not image_tasks:
+        print("No images found to optimize.")
+        return
 
-    # Process comparison images from base directory
-    for img_file in comparison_files:
-        src_path = Path(source_dir) / img_file
-        if src_path.exists():
-            dst_path = docs_img_dir / img_file
-            optimize_image(src_path, dst_path)
+    if n_workers is None:
+        n_workers = mp.cpu_count()
+
+    print(f"Optimizing {len(image_tasks)} images with {n_workers} workers...")
+
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        futures = {
+            executor.submit(optimize_image, src, dst, mw, q): src.name
+            for src, dst, mw, q in image_tasks
+        }
+        failed = 0
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                failed += 1
+                print(f"FAILED optimizing {futures[future]}: {e}")
+
+    if failed:
+        print(f"Image optimization: {len(image_tasks) - failed} succeeded, "
+              f"{failed} failed.")
 
 
 def _print_color_level_ranges(bounds, label, units, cmap, n_colors):
