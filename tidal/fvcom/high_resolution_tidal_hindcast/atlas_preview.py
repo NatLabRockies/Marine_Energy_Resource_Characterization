@@ -1,4 +1,6 @@
+import multiprocessing as mp
 import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
@@ -2486,12 +2488,95 @@ def organize_stats_by_variable(all_stats):
     return stats_by_variable
 
 
+def load_region_data(region):
+    """Load parquet data for a region and convert tidal period units.
+
+    Returns:
+        Tuple of (DataFrame, parquet_path_string)
+    """
+    parquet_file = get_parquet_path(region)
+    if "_geo.parquet" in str(parquet_file):
+        df = gpd.read_parquet(parquet_file)
+    else:
+        df = pd.read_parquet(parquet_file)
+
+    # Convert tidal period columns from seconds to hours
+    for col in [
+        "vap_min_tidal_period",
+        "vap_max_tidal_period",
+        "vap_average_tidal_period",
+    ]:
+        if col in df.columns:
+            df[col] = df[col] / 60 / 60
+
+    return df, str(parquet_file)
+
+
+def process_single_task(
+    region,
+    var_key,
+    bypass_visualizations=False,
+    bypass_combined_visualizations=True,
+):
+    """Process a single (region, variable) pair — suitable for parallel execution.
+
+    Loads data, processes the variable, and returns lightweight results.
+    VIZ_SPECS is looked up inside the worker (module-level constant) to avoid
+    pickling matplotlib colormaps.
+
+    Returns:
+        Tuple of (region, parquet_path, var_key, stats, color_data)
+    """
+    import matplotlib
+    matplotlib.use("Agg")  # Non-interactive backend for worker processes
+
+    var_config = VIZ_SPECS[var_key]
+
+    # Load region data
+    df, parquet_path = load_region_data(region)
+
+    # Create output directory
+    this_output_path = Path(VIZ_OUTPUT_DIR, region)
+    this_output_path.mkdir(parents=True, exist_ok=True)
+
+    # Determine visualization bypass
+    is_combined_region = "combined" in region.lower()
+    should_bypass_viz = bypass_visualizations or (
+        bypass_combined_visualizations and is_combined_region
+    )
+
+    # Process the variable
+    stats, color_data = process_variable(
+        df,
+        region,
+        this_output_path,
+        var_key,
+        var_config,
+        bypass_visualizations=should_bypass_viz,
+    )
+
+    # Replace full DataFrame with minimal single-column DataFrame
+    # to keep return values small while preserving the access pattern
+    # used by analyze_variable_across_regions: stat["df"][variable].values
+    variable_col = var_config["column_name"]
+    if stats.get("df") is not None and variable_col in stats["df"].columns:
+        stats["df"] = pd.DataFrame({variable_col: stats["df"][variable_col].values})
+    elif stats.get("df") is not None:
+        stats["df"] = None
+
+    return region, parquet_path, var_key, stats, color_data
+
+
 if __name__ == "__main__":
     # Configuration - set this to skip visualization generation
     BYPASS_VISUALIZATIONS = False  # Set to True to skip all plotting
     BYPASS_COMBINED_VISUALIZATIONS = (
         True  # Set to True to skip combined region plots (slow)
     )
+
+    # Number of parallel workers (default: all available CPUs)
+    N_WORKERS = int(mp.cpu_count() / 2)
+    print("Running with up to", N_WORKERS, "parallel workers")
 
     # Display available regions
     regions = get_available_regions()
@@ -2508,64 +2593,68 @@ if __name__ == "__main__":
             "Combined region visualization is DISABLED - skipping slow combined plots"
         )
 
+    # Build flat task list: all (region, var_key) pairs
+    tasks = [(region, var_key) for region in regions for var_key in VIZ_SPECS]
+    total_tasks = len(tasks)
+    print(
+        f"\nProcessing {total_tasks} tasks across {len(regions)} regions "
+        f"and {len(VIZ_SPECS)} variables with {N_WORKERS} workers..."
+    )
+
     # Initialize data structures
     color_level_data = {}
     parquet_paths = {}
     all_stats = {}  # Structure: {region: {var_key: stats_dict}}
 
-    # Process each region
-    for this_region in regions:
-        # Get the parquet file path
-        parquet_file = get_parquet_path(this_region)
-        print(f"Reading file: {parquet_file}")
-        parquet_paths[this_region] = str(parquet_file)
+    # Process all (region, variable) pairs in parallel
+    completed = 0
+    failed = 0
 
-        # Read the parquet file (use geopandas for geo parquet files)
-        if "_geo.parquet" in str(parquet_file):
-            df = gpd.read_parquet(parquet_file)
-        else:
-            df = pd.read_parquet(parquet_file)
-
-        df["vap_min_tidal_period"] = (
-            df["vap_min_tidal_period"] / 60 / 60
-        )  # Convert seconds to hours
-        df["vap_max_tidal_period"] = (
-            df["vap_max_tidal_period"] / 60 / 60
-        )  # Convert seconds to hours
-        df["vap_average_tidal_period"] = (
-            df["vap_average_tidal_period"] / 60 / 60
-        )  # Convert seconds to hours
-
-        this_output_path = Path(VIZ_OUTPUT_DIR, this_region)
-        this_output_path.mkdir(parents=True, exist_ok=True)
-
-        # Initialize region stats
-        all_stats[this_region] = {}
-
-        # Process all variables for this region
-        # Determine if visualizations should be bypassed for this region
-        is_combined_region = "combined" in this_region.lower()
-        should_bypass_viz = BYPASS_VISUALIZATIONS or (
-            BYPASS_COMBINED_VISUALIZATIONS and is_combined_region
-        )
-
-        for var_key, var_config in VIZ_SPECS.items():
-            stats, color_data = process_variable(
-                df,
-                this_region,
-                this_output_path,
+    with ProcessPoolExecutor(max_workers=N_WORKERS) as executor:
+        future_to_task = {
+            executor.submit(
+                process_single_task,
+                region,
                 var_key,
-                var_config,
-                bypass_visualizations=should_bypass_viz,
-            )
+                bypass_visualizations=BYPASS_VISUALIZATIONS,
+                bypass_combined_visualizations=BYPASS_COMBINED_VISUALIZATIONS,
+            ): (region, var_key)
+            for region, var_key in tasks
+        }
 
-            # Store stats for this region and variable
-            all_stats[this_region][var_key] = stats
+        for future in as_completed(future_to_task):
+            task_region, task_var = future_to_task[future]
+            try:
+                region, parquet_path, var_key, stats, color_data = future.result()
 
-            # Store color data if not already stored and if we have it
-            if not BYPASS_VISUALIZATIONS and color_data is not None:
-                if var_key not in color_level_data:
-                    color_level_data[var_key] = color_data
+                # Merge results into main data structures
+                parquet_paths[region] = parquet_path
+
+                if region not in all_stats:
+                    all_stats[region] = {}
+                all_stats[region][var_key] = stats
+
+                if not BYPASS_VISUALIZATIONS and color_data is not None:
+                    if var_key not in color_level_data:
+                        color_level_data[var_key] = color_data
+
+                completed += 1
+                print(f"  [{completed}/{total_tasks}] Completed {region} / {var_key}")
+
+            except Exception as e:
+                failed += 1
+                completed += 1
+                print(
+                    f"  [{completed}/{total_tasks}] FAILED {task_region} / "
+                    f"{task_var}: {e}"
+                )
+
+    print(
+        f"\nParallel processing complete: {completed - failed} succeeded, "
+        f"{failed} failed out of {total_tasks} tasks."
+    )
+
+    # --- Sequential post-processing (cross-region analysis, markdown) ---
 
     # Set theme for summary plots (only if doing visualizations)
     if not BYPASS_VISUALIZATIONS:
