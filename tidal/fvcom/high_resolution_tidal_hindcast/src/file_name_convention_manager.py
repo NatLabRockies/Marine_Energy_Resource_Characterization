@@ -1,7 +1,115 @@
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pandas as pd
 import xarray as xr
+
+
+@dataclass
+class DataFileName:
+    """Bidirectional representation of the ME filename convention.
+
+    Filename structure (dot-separated):
+        location_id.dataset_name[-qualifier][-temporal].data_level.date.time[.v{version}][.created=timestamp].ext
+
+    Components at fixed positions from the start:
+        0: location_id      (e.g., "AK_cook_inlet")
+        1: dataset_name     (e.g., "wpto_high_res_tidal-year_average")
+        2: data_level       (e.g., "b3")
+        3: date             (YYYYMMDD, e.g., "20100603") — optional
+        4: time             (HHMMSS, e.g., "000000") — optional
+        tail: version, creation timestamp, extension — all optional
+    """
+
+    location_id: str
+    dataset_name: str  # includes qualifier and temporal (hyphen-joined)
+    data_level: str
+    date: str = None  # YYYYMMDD
+    time: str = None  # HHMMSS
+    version: str = None  # e.g., "1.0.0" (without "v" prefix)
+    creation_timestamp: str = None  # e.g., "20260205_1430Z"
+    ext: str = None
+
+    @classmethod
+    def from_filename(cls, filename):
+        """Parse a filename (with or without path) into its components.
+
+        Examples:
+            >>> DataFileName.from_filename("AK_cook_inlet.wpto_high_res_tidal-year_average.b3.20100603.000000.v1.0.0.nc")
+            DataFileName(location_id='AK_cook_inlet', dataset_name='wpto_high_res_tidal-year_average',
+                        data_level='b3', date='20100603', time='000000', version='1.0.0', ext='nc')
+        """
+        name = Path(str(filename)).name
+        parts = name.split(".")
+
+        location_id = parts[0]
+        dataset_name = parts[1]
+        data_level = parts[2]
+
+        # Detect whether date/time are present (8-digit date at position 3)
+        date = None
+        time = None
+        tail_start = 3
+
+        if len(parts) > 4 and len(parts[3]) == 8 and parts[3].isdigit():
+            date = parts[3]
+            time = parts[4]
+            tail_start = 5
+
+        # Parse remaining parts: version, creation timestamp, extension
+        remaining = parts[tail_start:]
+        version = None
+        creation_timestamp = None
+        ext = None
+
+        i = 0
+        while i < len(remaining):
+            part = remaining[i]
+            if part.startswith("v") and len(part) > 1 and part[1:].isdigit():
+                # Version start — collect "v1", "0", "0" style dot-split parts
+                version_parts = [part[1:]]
+                i += 1
+                while i < len(remaining) and remaining[i].isdigit():
+                    version_parts.append(remaining[i])
+                    i += 1
+                version = ".".join(version_parts)
+            elif part.startswith("created="):
+                creation_timestamp = part[len("created="):]
+                i += 1
+            else:
+                # File extension (last non-version, non-timestamp part)
+                ext = part
+                i += 1
+
+        return cls(
+            location_id=location_id,
+            dataset_name=dataset_name,
+            data_level=data_level,
+            date=date,
+            time=time,
+            version=version,
+            creation_timestamp=creation_timestamp,
+            ext=ext,
+        )
+
+    def to_filename(self):
+        """Reconstruct the filename string from components."""
+        components = [self.location_id, self.dataset_name, self.data_level]
+
+        if self.date is not None:
+            components.extend([self.date, self.time])
+
+        if self.version is not None:
+            components.append(f"v{self.version}")
+
+        if self.creation_timestamp is not None:
+            components.append(f"created={self.creation_timestamp}")
+
+        if self.ext is not None:
+            components.append(self.ext)
+
+        return ".".join(components)
 
 
 def _format_datetime(data):

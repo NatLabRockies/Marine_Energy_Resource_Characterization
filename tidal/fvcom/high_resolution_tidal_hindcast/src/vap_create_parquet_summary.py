@@ -708,9 +708,8 @@ def convert_nc_summary_to_parquet(
             # Remove rows that cross the dateline
             # output_df = output_df[~output_df["row_crosses_dateline"]]
 
-        # 001.AK_cook_inlet.tidal_hindcast_fvcom-1_year_average.b2.20050101.000000.nc
-        # Get the last 2 parts of the filename
-        date_time_parts = nc_file.name.split(".")[-3:-1]
+        parsed_name = file_name_convention_manager.DataFileName.from_filename(nc_file.name)
+        date_time_parts = [parsed_name.date, parsed_name.time]
 
         output_filename = file_name_convention_manager.generate_filename_for_data_level(
             output_df,
