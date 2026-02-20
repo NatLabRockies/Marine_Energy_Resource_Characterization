@@ -1,4 +1,5 @@
 import argparse
+import json
 import multiprocessing as mp
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -2092,6 +2093,62 @@ def generate_markdown_specification(
 
         md_content.append(f"| {region_name} | `{this_region}` |")
 
+    # Add GeoPackage file details
+    base_dir = config["dir"]["base"]
+    atlas_parquet_dir_name = atlas_parquet_rel.split("/")[-1]
+
+    md_content.extend(
+        [
+            "",
+            "### GeoPackage (GPKG) Files",
+            "",
+            "GeoPackage files for each location are located at:",
+            "",
+        ]
+    )
+
+    # Individual gpkg paths per location
+    for this_region in parquet_paths.keys():
+        loc_spec = config["location_specification"]
+        region_name = None
+        for loc in loc_spec.values():
+            if loc["output_name"] == this_region:
+                region_name = loc["label"]
+
+        gpkg_dir = (
+            f"{base_dir}/{this_region}/{version}/{atlas_parquet_dir_name}/gis/gpkg/"
+        )
+        md_content.extend(
+            [
+                f"**{region_name}**",
+                "",
+                "```",
+                gpkg_dir,
+                "```",
+                "",
+            ]
+        )
+
+    # Combined list of all gpkg paths
+    md_content.extend(
+        [
+            "**All locations (combined)**",
+            "",
+            "```",
+        ]
+    )
+    for this_region in parquet_paths.keys():
+        gpkg_dir = (
+            f"{base_dir}/{this_region}/{version}/{atlas_parquet_dir_name}/gis/gpkg/"
+        )
+        md_content.append(gpkg_dir)
+    md_content.extend(
+        [
+            "```",
+            "",
+        ]
+    )
+
     # Add Location Details
     md_content.extend(
         [
@@ -2115,10 +2172,20 @@ def generate_markdown_specification(
         )
 
     docs_base_url = "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast"
+
+    # Load pre-rendered variable specifications from JSON
+    spec_path = Path(__file__).parent / "atlas_variable_spec.json"
+    with open(spec_path) as f:
+        atlas_var_spec = json.load(f)
+
+    # Build column_name -> registry entry lookup
+    _registry_by_col = {v["column_name"]: v for v in VARIABLE_REGISTRY.values()}
+
+    # ── Section A: Atlas Colored Layer Details (VIZ_SPECS key order) ──
     md_content.extend(
         [
             "",
-            "## Atlas Layer Details",
+            "## Atlas Colored Layer Details",
             "",
             "Specification for each Marine Energy Atlas layer, including the exact **Details** popup text.",
             "",
@@ -2126,6 +2193,7 @@ def generate_markdown_specification(
     )
 
     for var in VIZ_SPECS.values():
+        col = var["column_name"]
         one_liner = var.get("one_liner", "")
         doc_url = var.get("documentation_url", docs_base_url)
         details_text = f"{one_liner}. Complete documentation is at: {doc_url}"
@@ -2134,41 +2202,103 @@ def generate_markdown_specification(
                 f"### {var['display_name']}",
                 "",
                 f"- **Units:** {var['units']}",
-                f"- **Data Column:** `{var['column_name']}`",
+                f"- **Data Column:** `{col}`",
                 f"- **Description:** {one_liner}",
                 f"- **Documentation:** [{doc_url}]({doc_url})",
                 f"- **Details Text:** {details_text}",
                 "",
             ]
         )
+        if col in atlas_var_spec:
+            entry = atlas_var_spec[col]
+            md_content.extend(
+                [
+                    "**Text (plain)**",
+                    "",
+                    "```text",
+                    entry["text"],
+                    "```",
+                    "",
+                    "**Markdown**",
+                    "",
+                    "```markdown",
+                    entry["markdown"],
+                    "```",
+                    "",
+                    "**HTML**",
+                    "",
+                    "```html",
+                    entry["html"],
+                    "```",
+                    "",
+                    "**JSON**",
+                    "",
+                    "```json",
+                    json.dumps({col: entry}, indent=2),
+                    "```",
+                    "",
+                ]
+            )
 
+    # ── Section B: Atlas Layer Popup Details (ATLAS_COLUMNS order) ──
+    polygon_set = set(POLYGON_COLUMNS)
     md_content.extend(
         [
             "",
-            "## Variable Equations",
+            "## Atlas Layer Popup Details",
+            "",
+            "Specification for variable names and links on point 'popup' shown when a user clicks a point.",
             "",
         ]
     )
 
-    for var in VIZ_SPECS.values():
+    for col in ATLAS_COLUMNS:
+        if col in polygon_set:
+            continue
+        if col not in atlas_var_spec:
+            continue
+        entry = atlas_var_spec[col]
+        reg = _registry_by_col.get(col, {})
+        display_name = entry["display_name"]
+        units = reg.get("units", "")
+        one_liner = reg.get("one_liner", "")
+        doc_url = reg.get("documentation_url", docs_base_url)
+
         md_content.extend(
             [
-                f"### {var['display_name']}",
+                f"### {display_name}",
                 "",
-                "Equation:",
+                f"- **Units:** {units}",
+                f"- **Data Column:** `{col}`",
+                f"- **Description:** {one_liner}",
+                f"- **Documentation:** [{doc_url}]({doc_url})",
                 "",
-                f"{var['equation']}",
+                "**Text (plain)**",
                 "",
-                "Where:",
+                "```text",
+                entry["text"],
+                "```",
+                "",
+                "**Markdown**",
+                "",
+                "```markdown",
+                entry["markdown"],
+                "```",
+                "",
+                "**HTML**",
+                "",
+                "```html",
+                entry["html"],
+                "```",
+                "",
+                "**JSON**",
+                "",
+                "```json",
+                json.dumps({col: entry}, indent=2),
+                "```",
                 "",
             ]
         )
-
-        # Add equation variables as bullet points
-        for eq_var in var["equation_variables"]:
-            md_content.append(f"- {eq_var}")
-
-        md_content.append("")
 
     # Add coordinate details
     md_content.extend(
