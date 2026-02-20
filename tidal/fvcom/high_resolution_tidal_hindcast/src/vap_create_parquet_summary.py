@@ -17,45 +17,57 @@ from . import file_manager, file_name_convention_manager, s3_uri_manager
 # DATELINE_GAP_DEGREES = 0.0002
 DATELINE_GAP_DEGREES = 0.0010  # 65 meters?
 
-POLYGON_COLUMNS = {
-    "element_corner_1_lat": "Element Corner 1 Latitude",
-    "element_corner_1_lon": "Element Corner 1 Longitude",
-    "element_corner_2_lat": "Element Corner 2 Latitude",
-    "element_corner_2_lon": "Element Corner 2 Longitude",
-    "element_corner_3_lat": "Element Corner 3 Latitude",
-    "element_corner_3_lon": "Element Corner 3 Longitude",
-}
+POLYGON_COLUMNS = [
+    "element_corner_1_lat",
+    "element_corner_1_lon",
+    "element_corner_2_lat",
+    "element_corner_2_lon",
+    "element_corner_3_lat",
+    "element_corner_3_lon",
+]
 
-ATLAS_COLUMNS = {
-    "face_id": "Face ID",
-    **POLYGON_COLUMNS,
-    "lat_center": "Center Latitude",
-    "lon_center": "Center Longitude",
-    # Water column (depth-averaged) velocity statistics
-    "vap_water_column_mean_sea_water_speed": "Mean Sea Water Speed [m/s]",
-    "vap_water_column_95th_percentile_sea_water_speed": "95th Percentile Sea Water Speed [m/s]",
-    # "vap_water_column_99th_percentile_sea_water_speed": "99th Percentile Sea Water Speed [m/s]",
-    # "vap_water_column_max_sea_water_speed": "Maximum Sea Water Speed [m/s]",
-    # "vap_water_column_sea_water_speed_max_to_mean_ratio": "Speed Max to Mean Ratio",
-    # Water column (depth-averaged) power density statistics
-    "vap_water_column_mean_sea_water_power_density": "Mean Sea Water Power Density [W/m^2]",
-    # "vap_water_column_95th_percentile_sea_water_power_density": "95th Percentile Sea Water Power Density [W/m^2]",
-    # "vap_water_column_99th_percentile_sea_water_power_density": "99th Percentile Power Density [W/m^2]",
-    # Surface layer (sigma_level_1) velocity statistics
-    # "vap_surface_layer_mean_sea_water_speed": "Surface Layer Mean Speed [m/s]",
-    # "vap_surface_layer_95th_percentile_sea_water_speed": "Surface Layer 95th Percentile Speed [m/s]",
-    # "vap_surface_layer_99th_percentile_sea_water_speed": "Surface Layer 99th Percentile Speed [m/s]",
-    # "vap_surface_layer_max_sea_water_speed": "Surface Layer Max Speed [m/s]",
-    # Depth statistics
-    "vap_water_column_height_min": "Min Water Column Height [m]",
-    "vap_water_column_height_max": "Max Water Column Height [m]",
-    # "vap_sea_floor_depth": "Sea Floor Depth from Mean Surface Elevation [m]",
-    # Grid Statistics
-    "vap_grid_resolution": "Grid Resolution [m]",
-    # Full year data URIs - links to b1_vap_by_point_partition parquet files
-    "full_year_data_s3_uri": "S3 URI for Full Year Time Series Data",
-    "full_year_data_https_url": "HTTPS URL for Full Year Time Series Data",
-}
+# Atlas columns: display names and metadata live in VARIABLE_REGISTRY (long_name, units)
+ATLAS_COLUMNS = [
+    *POLYGON_COLUMNS,
+    # ── Core Resource Metrics (IEC 62600-201 Stage 1) ──
+    "vap_water_column_mean_sea_water_speed",
+    "vap_water_column_95th_percentile_sea_water_speed",
+    "vap_water_column_max_sea_water_speed",
+    "vap_water_column_mean_sea_water_power_density",
+    "vap_water_column_max_sea_water_power_density",
+    # ── Bathymetry & Depth ──
+    "vap_sea_floor_depth",
+    "vap_water_column_height_min",
+    "vap_water_column_height_max",
+    # ── Sea Surface Elevation & Tidal Characteristics ──
+    "vap_sea_surface_elevation_high_tide_max",
+    "vap_surface_elevation_low_tide_min",
+    "vap_tidal_range",
+    "vap_sea_surface_elevation_mean",
+    # ── Site Context ──
+    "vap_distance_to_shore",
+    "vap_grid_resolution",
+    # ── Location Identity ──
+    "face_id",
+    "lat_center",
+    "lon_center",
+    # ── Data Access ──
+    "full_year_data_s3_uri",
+    "full_year_data_https_url",
+]
+
+ATLAS_COLORED_COLUMNS = 
+
+REVERSE_ATLAS_COLUMN_ORDER = True
+
+
+def get_atlas_columns(reverse=REVERSE_ATLAS_COLUMN_ORDER):
+    """Return ordered list of atlas column names, optionally reversing non-polygon columns."""
+    polygon_set = set(POLYGON_COLUMNS)
+    data_keys = [k for k in ATLAS_COLUMNS if k not in polygon_set]
+    if reverse:
+        data_keys = data_keys[::-1]
+    return POLYGON_COLUMNS + data_keys
 
 
 # def compute_grid_resolution(df):
@@ -708,7 +720,9 @@ def convert_nc_summary_to_parquet(
             # Remove rows that cross the dateline
             # output_df = output_df[~output_df["row_crosses_dateline"]]
 
-        parsed_name = file_name_convention_manager.DataFileName.from_filename(nc_file.name)
+        parsed_name = file_name_convention_manager.DataFileName.from_filename(
+            nc_file.name
+        )
         date_time_parts = [parsed_name.date, parsed_name.time]
 
         output_filename = file_name_convention_manager.generate_filename_for_data_level(
@@ -754,7 +768,7 @@ def convert_nc_summary_to_parquet(
         for col in output_df.columns:
             print(f"{col}: {output_df[col].dtype}")
 
-        atlas_df = output_df[list(ATLAS_COLUMNS.keys())].copy()
+        atlas_df = output_df[get_atlas_columns()].copy()
 
         atlas_output_path = file_manager.get_vap_atlas_summary_parquet_dir(
             config, location
@@ -918,7 +932,7 @@ def convert_nc_summary_to_parquet(
         # Create and save atlas subset GIS outputs (atlas columns only)
         print("\n=== CREATING ATLAS SUBSET GIS OUTPUTS ===")
 
-        combined_atlas_df = combined_df[list(ATLAS_COLUMNS.keys())].copy()
+        combined_atlas_df = combined_df[get_atlas_columns()].copy()
         geo_atlas_df = create_geo_dataframe(combined_atlas_df, geometry_type="polygon")
 
         print(f"Processing atlas subset with {geo_atlas_df.shape[1]} columns...")
