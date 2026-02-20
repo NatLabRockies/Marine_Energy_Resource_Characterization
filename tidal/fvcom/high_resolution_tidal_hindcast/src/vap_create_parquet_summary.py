@@ -56,8 +56,6 @@ ATLAS_COLUMNS = [
     "full_year_data_https_url",
 ]
 
-ATLAS_COLORED_COLUMNS = 
-
 REVERSE_ATLAS_COLUMN_ORDER = True
 
 
