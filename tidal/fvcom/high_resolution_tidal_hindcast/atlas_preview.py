@@ -2060,7 +2060,7 @@ def generate_markdown_specification(
         [
             "# ME Atlas High Resolution Tidal Data QOI Visualization Specification",
             "",
-            "The following sections provide the specification for visualizing selected high resolution tidal hindcast variables on the [NLR Marine Energy Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged)",
+            "The following sections provide the specification for visualizing selected high resolution tidal hindcast variables on the [NLR Marine Energy Atlas](https://maps.nlr.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged)",
             "",
         ]
     )
