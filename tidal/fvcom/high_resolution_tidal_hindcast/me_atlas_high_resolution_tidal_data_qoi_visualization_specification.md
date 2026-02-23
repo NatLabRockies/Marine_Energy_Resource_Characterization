@@ -1285,7 +1285,7 @@ These kernel density estimation (KDE) plots provide clean statistical comparison
 
 ## Document Information
 
-- **Generated:** 2026-02-23 08:01:19 UTC
+- **Generated:** 2026-02-23 09:19:25 UTC
 - **Regions Processed:** AK_aleutian_islands, AK_cook_inlet, ME_western_passage, NH_piscataqua_river, WA_puget_sound
 
 *This specification was auto-generated from the tidal data visualization pipeline.*
