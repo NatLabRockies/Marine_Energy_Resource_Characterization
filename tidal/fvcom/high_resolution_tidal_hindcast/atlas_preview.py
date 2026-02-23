@@ -2057,88 +2057,19 @@ def generate_markdown_specification(
     # Build column_name -> registry entry lookup
     _registry_by_col = {v["column_name"]: v for v in VARIABLE_REGISTRY.values()}
 
-    # ── Section A: Atlas Colored Layer Details (VIZ_SPECS key order) ──
-    md_content.extend(
-        [
-            "",
-            "## Atlas Colored Layer Details",
-            "",
-            "Specification for each Marine Energy Atlas layer, including the exact **Details** popup text.",
-            "",
-        ]
-    )
-
-    for var in VIZ_SPECS.values():
-        col = var["column_name"]
-        one_liner = var.get("one_liner", "")
-        doc_url = var.get("documentation_url", docs_base_url)
-        details_text = f"{one_liner}. Complete documentation is at: {doc_url}"
-        md_content.extend(
-            [
-                f"### {var['display_name']}",
-                "",
-                f"- **Units:** {var['units']}",
-                f"- **Data Column:** `{col}`",
-                f"- **Description:** {one_liner}",
-                f"- **Documentation:** [{doc_url}]({doc_url})",
-                f"- **Details Text:** {details_text}",
-                "",
-            ]
-        )
-        if col in atlas_var_spec:
-            entry = atlas_var_spec[col]
-            md_content.extend(
-                [
-                    "**Rendered Preview**",
-                    "",
-                    entry["markdown"],
-                    "",
-                    "**HTML**",
-                    "",
-                    "```html",
-                    entry["html"],
-                    "```",
-                    "",
-                    "**JSON**",
-                    "",
-                    "```json",
-                    json.dumps({col: entry}, indent=2),
-                    "```",
-                    "",
-                ]
-            )
-
-    # ── Section B: Atlas Layer Popup Details (ATLAS_COLUMNS order) ──
-    polygon_set = set(POLYGON_COLUMNS)
-    md_content.extend(
-        [
-            "",
-            "## Atlas Layer Popup Details",
-            "",
-            "Specification for variable names and links on point 'popup' shown when a user clicks a point.",
-            "",
-        ]
-    )
-
-    for col in ATLAS_COLUMNS:
-        if col in polygon_set:
-            continue
-        if col not in atlas_var_spec:
-            continue
-        entry = atlas_var_spec[col]
-        reg = _registry_by_col.get(col, {})
+    # Helper: emit per-variable detail blocks and collect entries for combined JSON
+    def _emit_variable_details(col, entry, reg, md_out):
+        """Append per-variable markdown blocks. Returns (col, entry) for combined JSON."""
         display_name = entry["display_name"]
         units = reg.get("units", "")
         one_liner = reg.get("one_liner", "")
         doc_url = reg.get("documentation_url", docs_base_url)
-
-        md_content.extend(
+        md_out.extend(
             [
                 f"### {display_name}",
                 "",
-                f"- **Units:** {units}",
                 f"- **Data Column:** `{col}`",
-                f"- **Description:** {one_liner}",
+                f"- **Description:** {one_liner} [{units}]",
                 f"- **Documentation:** [{doc_url}]({doc_url})",
                 "",
                 "**Rendered Preview**",
@@ -2159,6 +2090,75 @@ def generate_markdown_specification(
                 "",
             ]
         )
+
+    polygon_set = set(POLYGON_COLUMNS)
+
+    # ── Section 1: Color Layer Details (VIZ_SPECS key order) ──
+    md_content.extend(
+        [
+            "",
+            "## Color Layer Details",
+            "",
+            "Specification for each color-coded Marine Energy Atlas layer, including the exact **Details** popup text.",
+            "",
+        ]
+    )
+
+    color_layer_combined = {}
+    for var in VIZ_SPECS.values():
+        col = var["column_name"]
+        if col not in atlas_var_spec:
+            continue
+        entry = atlas_var_spec[col]
+        _emit_variable_details(col, entry, var, md_content)
+        color_layer_combined[col] = entry
+
+    # Combined JSON for all color layer variables
+    md_content.extend(
+        [
+            "### Combined Color Layer JSON",
+            "",
+            "```json",
+            json.dumps(color_layer_combined, indent=2),
+            "```",
+            "",
+        ]
+    )
+
+    # ── Section 2: Column / QOI Details (ATLAS_COLUMNS order) ──
+    md_content.extend(
+        [
+            "",
+            "## Column / QOI Details",
+            "",
+            "Specification for all data columns (QOI) available in the atlas popup, "
+            "shown when a user clicks a point.",
+            "",
+        ]
+    )
+
+    qoi_combined = {}
+    for col in ATLAS_COLUMNS:
+        if col in polygon_set:
+            continue
+        if col not in atlas_var_spec:
+            continue
+        entry = atlas_var_spec[col]
+        reg = _registry_by_col.get(col, {})
+        _emit_variable_details(col, entry, reg, md_content)
+        qoi_combined[col] = entry
+
+    # Combined JSON for all QOI variables
+    md_content.extend(
+        [
+            "### Combined QOI JSON",
+            "",
+            "```json",
+            json.dumps(qoi_combined, indent=2),
+            "```",
+            "",
+        ]
+    )
 
     # Add coordinate details
     md_content.extend(
