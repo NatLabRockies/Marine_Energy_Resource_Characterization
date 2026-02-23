@@ -1,4 +1,8 @@
+import argparse
+import json
+import multiprocessing as mp
 import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
@@ -21,12 +25,20 @@ from PIL import Image, ImageOps
 from pyproj import Transformer
 
 from config import config
+from src.gis_colors_registry import GIS_COLORS_REGISTRY, resolve_colormap
+from src.variable_registry import VARIABLE_REGISTRY, POLYGON_COLUMNS, ATLAS_COLUMNS
 
 
 # Set the base directory - modify this to match your system
 BASE_DIR = Path("/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast")
 
-VIZ_OUTPUT_DIR = Path("/home/asimms/tidal/analysis/viz/")
+# VIZ_OUTPUT_DIR = Path("/home/asimms/tidal/analysis/viz/")
+VIZ_OUTPUT_DIR = Path(
+    "/home/asimms/marine_energy_resource_characterization/tidal/fvcom/high_resolution_tidal_hindcast/docs/img/"
+)
+# VIZ_OUTPUT_DIR = Path(
+#     "/projects/hindcastra/Tidal/simms_nlr_dev/high_resolution_tidal_hindcast"
+# )
 VIZ_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 SEA_WATER_SPEED_CBAR_MAX = 1.5
@@ -35,8 +47,8 @@ SEA_WATER_SPEED_CBAR_MIN = 0.0
 # The 9th level is for values outside the range.
 SEA_WATER_SPEED_LEVELS = 10
 
-SEA_WATER_MAX_SPEED_CBAR_MAX = 4.0
-SEA_WATER_MAX_SPEED_LEVELS = 8
+SEA_WATER_MAX_SPEED_CBAR_MAX = 5.0
+SEA_WATER_MAX_SPEED_LEVELS = 10
 
 # SEA_WATER_POWER_DENSITY_CBAR_MAX = 4000  # 0.5 * 1025 * (2.0^3) = 4,100
 SEA_WATER_POWER_DENSITY_CBAR_MAX = 1750  # 0.5 * 1025 * (1.5^3) = 1,729.6875
@@ -80,458 +92,25 @@ MAX_POWER_DENSITY_CMAP = cmocean.cm.amp
 SEA_FLOOR_DEPTH_CMAP = cmocean.cm.deep
 GRID_RESOLUTION_CMAP = cmocean.cm.haline
 
+# Build _VIZ_CONFIG from GIS_COLORS_REGISTRY (single source of truth for color styling).
+# Resolves colormap name strings to matplotlib colormap objects and copies through
+# range/level/spec_ranges fields. Discrete entries (grid_resolution) have no "colormap".
+_VIZ_CONFIG = {}
+for _key, _gcr in GIS_COLORS_REGISTRY.items():
+    _entry = {
+        "range_min": _gcr["range_min"],
+        "range_max": _gcr["range_max"],
+        "levels": _gcr["levels"],
+    }
+    if _gcr["style_type"] == "continuous":
+        _entry["colormap"] = resolve_colormap(_gcr["colormap_name"])
+    if "spec_ranges" in _gcr:
+        _entry["spec_ranges"] = _gcr["spec_ranges"]
+    _VIZ_CONFIG[_key] = _entry
+
+# Build VIZ_SPECS by merging registry metadata with visualization config
 VIZ_SPECS = {
-    "mean_sea_water_speed": {
-        "title": "Mean Sea Water Speed",
-        "units": "m/s",
-        "column_name": "vap_water_column_mean_sea_water_speed",
-        "colormap": cmocean.cm.thermal,
-        "range_min": 0,
-        "range_max": 1.5,
-        "levels": 10,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    "p95_sea_water_speed": {
-        "title": "95th Percentile Sea Water Speed",
-        "units": "m/s",
-        "column_name": "vap_water_column_95th_percentile_sea_water_speed",
-        "colormap": MAX_SPEED_CMAP,
-        "range_min": SEA_WATER_SPEED_CBAR_MIN,
-        "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-        "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "95th percentile of yearly depth maximum current speed",
-        "intended_usage": "Generator sizing and power electronics design",
-        "intended_usage_detail": "Critical for sizing electrical generation components. Used to determine maximum generator output capacity, size power electronics and converters for peak electrical loads, design control systems for extreme speed conditions, and set cut-out speeds for generator protection. Essential for electrical system certification, grid connection requirements, and ensuring generators can handle maximum rotational speeds without damage.",
-        "equation": r"$U_{95} = \text{percentile}(95, \left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    "p99_sea_water_speed": {
-        "title": "99th Percentile Sea Water Speed",
-        "units": "m/s",
-        "column_name": "vap_water_column_99th_percentile_sea_water_speed",
-        "colormap": MAX_SPEED_CMAP,
-        "range_min": SEA_WATER_SPEED_CBAR_MIN,
-        "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-        "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "99th percentile of yearly depth maximum current speed",
-        "intended_usage": "Extreme event analysis and safety system design",
-        "intended_usage_detail": "Used for extreme event planning and safety margin calculations. Critical for designing emergency shutdown systems, setting absolute operational limits, and ensuring equipment can survive rare but intense current events. Important for insurance risk assessments, environmental impact studies, and regulatory compliance for extreme conditions.",
-        "equation": r"$U_{99} = \text{percentile}(99, \left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    "max_sea_water_speed": {
-        "title": "Maximum Sea Water Speed",
-        "units": "m/s",
-        "column_name": "vap_water_column_max_sea_water_speed",
-        "colormap": MAX_SPEED_CMAP,
-        "range_min": SEA_WATER_SPEED_CBAR_MIN,
-        "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-        "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "Absolute maximum depth-max current speed observed over the year",
-        "intended_usage": "Ultimate load design and survival analysis",
-        "intended_usage_detail": "Defines the absolute worst-case current speed for ultimate load calculations. Essential for structural survival analysis, determining maximum possible loads on turbines and support structures, and designing fail-safe mechanisms. Used for regulatory compliance demonstrating equipment can survive maximum observed conditions.",
-        "equation": r"$U_{\max} = \max\left(\left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    "mean_sea_water_power_density": {
-        "title": "Mean Sea Water Power Density",
-        "units": "W/m²",
-        "column_name": "vap_water_column_mean_sea_water_power_density",
-        "colormap": MEAN_POWER_DENSITY_CMAP,
-        "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
-        "range_max": SEA_WATER_POWER_DENSITY_CBAR_MAX,
-        "levels": SEA_WATER_POWER_DENSITY_LEVELS,
-        "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
-        "intended_usage": "Resource quantification and economic feasibility analysis",
-        "intended_usage_detail": "Direct measure of extractable energy resource for economic analysis. Used to calculate theoretical power output, estimate capacity factors for project financing, compare energy density between sites, and determine optimal turbine spacing in arrays. Essential for LCOE calculations, investor presentations, and grid integration planning. Minimum thresholds (typically >300 W/m²) define commercial viability.",
-        "equation": r"$\overline{\overline{P}} = P_{\text{average}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$ with $\rho = 1025$ kg/m³",
-            r"$U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    "p95_sea_water_power_density": {
-        "title": "95th Percentile Sea Water Power Density",
-        "units": "W/m²",
-        "column_name": "vap_water_column_95th_percentile_sea_water_power_density",
-        "colormap": MAX_POWER_DENSITY_CMAP,
-        "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
-        "range_max": SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
-        "levels": SEA_WATER_MAX_POWER_DENSITY_LEVELS,
-        "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
-        "intended_usage": "Structural design loads and extreme loading conditions",
-        "intended_usage_detail": "Essential for structural engineering and extreme load analysis. Used to determine maximum design loads for turbine blades, drive trains, support structures, and foundation systems. Critical for fatigue analysis, ultimate load calculations, and ensuring structural integrity during extreme tidal events. Defines design margins for mooring systems, tower structures, and emergency braking systems. Required for structural certification and insurance assessments.",
-        "equation": r"$P_{95} = \text{percentile}(95, \left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
-        "equation_variables": [
-            r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$ with $\rho = 1025$ kg/m³",
-            r"$U_{i,t}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    "distance_to_sea_floor": {
-        "title": "Mean Depth",
-        "units": "m (below NAVD88)",
-        "column_name": "vap_sea_floor_depth",
-        "colormap": SEA_FLOOR_DEPTH_CMAP,
-        "range_min": SEA_FLOOR_DEPTH_MIN,
-        "range_max": SEA_FLOOR_DEPTH_MAX,
-        "levels": SEA_FLOOR_DEPTH_LEVELS,
-        "physical_meaning": "Yearly average distance from water surface to the sea floor",
-        "intended_usage": "Installation planning and foundation design",
-        "intended_usage_detail": "Fundamental constraint for deployment strategy and cost estimation. Used to determine installation vessel requirements, foundation type selection (gravity, pile, suction caisson), and deployment method feasibility. Critical for cost modeling (deeper = more expensive), accessibility planning for maintenance operations, and environmental impact assessments. Optimal depths typically 20-50m for current technology, with deeper sites requiring specialized equipment and higher costs.",
-        "equation": r"$\overline{d} = d_{\text{average}} = \text{mean}\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$h$ is bathymetry below NAVD88 (m)",
-            r"$\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m)",
-            r"$T = 1$ year",
-        ],
-    },
-    "water_column_height_min": {
-        "title": "Minimum Water Column Height",
-        "units": "m",
-        "column_name": "vap_water_column_height_min",
-        "colormap": SEA_FLOOR_DEPTH_CMAP,
-        "range_min": SEA_FLOOR_DEPTH_MIN,
-        "range_max": SEA_FLOOR_DEPTH_MAX,
-        "levels": SEA_FLOOR_DEPTH_LEVELS,
-        "physical_meaning": "Minimum water depth observed over the year (shallowest, typically at low tide)",
-        "intended_usage": "Minimum clearance and grounding risk assessment",
-        "intended_usage_detail": "Critical for determining minimum water depth available for turbine deployment. Used to ensure adequate clearance between turbine blades and seafloor, assess grounding risk during extreme low tides, and determine deployment feasibility in shallow areas. Essential for safety planning and operational constraints.",
-        "equation": r"$d_{\min} = \min\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$h$ is bathymetry below NAVD88 (m)",
-            r"$\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m)",
-            r"$T = 1$ year",
-        ],
-    },
-    "water_column_height_max": {
-        "title": "Maximum Water Column Height",
-        "units": "m",
-        "column_name": "vap_water_column_height_max",
-        "colormap": SEA_FLOOR_DEPTH_CMAP,
-        "range_min": SEA_FLOOR_DEPTH_MIN,
-        "range_max": SEA_FLOOR_DEPTH_MAX,
-        "levels": SEA_FLOOR_DEPTH_LEVELS,
-        "physical_meaning": "Maximum water depth observed over the year (deepest, typically at high tide)",
-        "intended_usage": "Maximum mooring loads and installation planning",
-        "intended_usage_detail": "Defines maximum water depth for mooring system design and installation vessel requirements. Used to determine maximum mooring line lengths, assess tidal range impacts on operations, and plan for extreme high tide conditions. Important for cable routing and connection system design.",
-        "equation": r"$d_{\max} = \max\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$h$ is bathymetry below NAVD88 (m)",
-            r"$\zeta_t$ is sea surface elevation above NAVD88 at time $t$ (m)",
-            r"$T = 1$ year",
-        ],
-    },
-    "surface_layer_mean_speed": {
-        "title": "Surface Layer Mean Speed",
-        "units": "m/s",
-        "column_name": "vap_surface_layer_mean_sea_water_speed",
-        "colormap": cmocean.cm.thermal,
-        "range_min": 0,
-        "range_max": 1.5,
-        "levels": 10,
-        "physical_meaning": "Yearly average current speed at the surface layer (sigma_level_1)",
-        "intended_usage": "Surface current assessment for navigation and floating devices",
-        "intended_usage_detail": "Characterizes current conditions at the water surface for floating tidal devices and navigation safety. Used to assess surface current impacts on vessel operations, floating platform stability, and cable/mooring system surface loads. Important for operations planning and environmental flow characterization.",
-        "equation": r"$\overline{U}_{\text{surface}} = \text{mean}\left(\left[U_{1,t} \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$ is velocity magnitude at sigma_level_1 (surface) at time $t$ (m/s)",
-            r"$T = 1$ year",
-        ],
-    },
-    "surface_layer_p95_speed": {
-        "title": "Surface Layer 95th Percentile Speed",
-        "units": "m/s",
-        "column_name": "vap_surface_layer_95th_percentile_sea_water_speed",
-        "colormap": MAX_SPEED_CMAP,
-        "range_min": SEA_WATER_SPEED_CBAR_MIN,
-        "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-        "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "95th percentile of surface layer current speed over the year",
-        "intended_usage": "Surface current design loads for floating systems",
-        "intended_usage_detail": "Design metric for floating tidal energy systems and surface infrastructure. Used to size mooring systems for floating platforms, design surface buoys and markers, and assess extreme surface current loads on cables and connectors.",
-        "equation": r"$U_{\text{surface},95} = \text{percentile}(95, \left[U_{1,t} \text{ for } t=1,...,T\right])$",
-        "equation_variables": [
-            r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$ is velocity magnitude at sigma_level_1 (surface) at time $t$ (m/s)",
-            r"$T = 1$ year",
-        ],
-    },
-    "surface_layer_p99_speed": {
-        "title": "Surface Layer 99th Percentile Speed",
-        "units": "m/s",
-        "column_name": "vap_surface_layer_99th_percentile_sea_water_speed",
-        "colormap": MAX_SPEED_CMAP,
-        "range_min": SEA_WATER_SPEED_CBAR_MIN,
-        "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-        "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "99th percentile of surface layer current speed over the year",
-        "intended_usage": "Extreme surface current events for safety systems",
-        "intended_usage_detail": "Characterizes extreme surface current conditions for safety system design. Used for emergency response planning, setting operational limits for surface vessels and floating devices, and designing safety margins for surface infrastructure.",
-        "equation": r"$U_{\text{surface},99} = \text{percentile}(99, \left[U_{1,t} \text{ for } t=1,...,T\right])$",
-        "equation_variables": [
-            r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$ is velocity magnitude at sigma_level_1 (surface) at time $t$ (m/s)",
-            r"$T = 1$ year",
-        ],
-    },
-    "surface_layer_max_speed": {
-        "title": "Surface Layer Maximum Speed",
-        "units": "m/s",
-        "column_name": "vap_surface_layer_max_sea_water_speed",
-        "colormap": MAX_SPEED_CMAP,
-        "range_min": SEA_WATER_SPEED_CBAR_MIN,
-        "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-        "levels": SEA_WATER_MAX_SPEED_LEVELS,
-        "physical_meaning": "Absolute maximum surface layer current speed observed over the year",
-        "intended_usage": "Ultimate surface current loads for survival analysis",
-        "intended_usage_detail": "Defines worst-case surface current conditions for ultimate load analysis. Essential for survival design of floating systems, determining maximum loads on surface infrastructure, and regulatory compliance for extreme surface conditions.",
-        "equation": r"$U_{\text{surface},\max} = \max\left(\left[U_{1,t} \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$ is velocity magnitude at sigma_level_1 (surface) at time $t$ (m/s)",
-            r"$T = 1$ year",
-        ],
-    },
-    "grid_resolution_meters": {
-        "title": "Grid Resolution",
-        "units": "m",
-        "column_name": "vap_grid_resolution",
-        # "colormap": GRID_RESOLUTION_CMAP,
-        "range_min": 0,
-        "range_max": 500,
-        "levels": 3,
-        "spec_ranges": {
-            "stage_2": {
-                "max": 50,
-                "label": "Stage 2 (≤50m)",
-                "color": "#1f77b4",  # Seaborn Blue
-            },
-            "stage_1": {
-                "max": 500,
-                "label": "Stage 1 (≤500m)",
-                "color": "#ff7f0e",  # Seaborn Orange
-            },
-            "non_compliant": {
-                "max": 100000,
-                "label": "Non-compliant (>500m)",
-                "color": "#DC143C",  # Pleasing red
-            },
-        },
-        "physical_meaning": "Average edge length of triangular finite volume elements",
-        "intended_usage": "Model accuracy assessment and validation",
-        "intended_usage_detail": "Indicates the spatial scale at which model results are resolved. Finer resolution (smaller values) provides more detailed results but requires greater computational resources. Used to assess model fidelity, determine appropriate applications for the data, and understand spatial limitations of the model output. Critical for validating model results against observations and determining if resolution is adequate for specific engineering applications. Per IEC 62600-201 standards: Stage 1 assessments require < 500 m resolution, while Stage 2 detailed studies require < 50 m resolution for areas of interest.",
-        "equation": r"$\text{Grid Resolution} = \frac{1}{3}(d_1 + d_2 + d_3)$",
-        "equation_variables": [
-            r"$d_1 = \text{haversine}(\text{lat}_1, \text{lon}_1, \text{lat}_2, \text{lon}_2)$ is the distance between corners 1 and 2",
-            r"$d_2 = \text{haversine}(\text{lat}_2, \text{lon}_2, \text{lat}_3, \text{lon}_3)$ is the distance between corners 2 and 3",
-            r"$d_3 = \text{haversine}(\text{lat}_3, \text{lon}_3, \text{lat}_1, \text{lon}_1)$ is the distance between corners 3 and 1",
-            r"$\text{haversine}(\text{lat}_a, \text{lon}_a, \text{lat}_b, \text{lon}_b) = R \cdot 2\arcsin\left(\sqrt{\sin^2\left(\frac{\Delta\text{lat}}{2}\right) + \cos(\text{lat}_a)\cos(\text{lat}_b)\sin^2\left(\frac{\Delta\text{lon}}{2}\right)}\right)$",
-            r"$R = 6378137.0$ m is the Earth radius (WGS84)",
-        ],
-    },
-    "ebb_direction": {
-        "title": "Sea Water Ebb Tide To Direction",
-        "units": "m/s",
-        # "column_name": "vap_sea_water_primary_to_direction_sigma_level_3",
-        "column_name": "vap_sea_water_ebb_to_direction_sigma_level_3",
-        "colormap": cmocean.cm.phase,
-        "range_min": 0,
-        "range_max": 360,
-        "levels": 16,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    "flood_direction": {
-        "title": "Sea Water Flood Tide To Direction",
-        "units": "m/s",
-        # "column_name": "vap_sea_water_primary_to_direction_sigma_level_3",
-        "column_name": "vap_sea_water_flood_to_direction_sigma_level_1",
-        "colormap": cmocean.cm.phase,
-        "range_min": 0,
-        "range_max": 360,
-        "levels": 16,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Primary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    # "secondary_direction": {
-    #     "title": "Secondary Sea Water To Direction",
-    #     "units": "m/s",
-    #     "column_name": "vap_sea_water_secondary_to_direction_sigma_level_3",
-    #     "colormap": cmocean.cm.phase,
-    #     "range_min": 0,
-    #     "range_max": 360,
-    #     "levels": 16,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
-    "surface_elevation_mean": {
-        "title": "Mean Sea Surface Elevation",
-        "units": "m",
-        "column_name": "vap_surface_elevation",
-        "colormap": cmocean.cm.deep,
-        "range_min": 0,
-        "range_max": 1,
-        "levels": 10,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    # "surface_elevation_high_tide_max": {
-    #     "title": "High Tide Maximum Sea Surface Elevation",
-    #     "units": "m",
-    #     "column_name": "vap_sea_surface_elevation_high_tide_max",
-    #     "colormap": cmocean.cm.deep,
-    #     "range_min": 0,
-    #     "range_max": 5,
-    #     "levels": 10,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
-    # "surface_elevation_low_tide_min": {
-    #     "title": "Low Tide Minimum Sea Surface Elevation",
-    #     "units": "m",
-    #     "column_name": "vap_surface_elevation_low_tide_min",
-    #     "colormap": cmocean.cm.deep,
-    #     "range_min": -5,
-    #     "range_max": 0,
-    #     "levels": 10,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
-    "surface_elevation_range": {
-        "title": "Range of Sea Surface Elevation",
-        "units": "m",
-        "column_name": "vap_tidal_range",
-        "colormap": cmocean.cm.haline,
-        "range_min": 0,
-        "range_max": 10,
-        "levels": 10,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    "min_tidal_period": {
-        "title": "Shortest Tidal Period",
-        "units": "hours",
-        "column_name": "vap_min_tidal_period",
-        "colormap": cmocean.cm.haline,
-        "range_min": 10,
-        "range_max": 12,
-        "levels": 10,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    "max_tidal_period": {
-        "title": "Longest Tidal Period",
-        "units": "hours",
-        "column_name": "vap_max_tidal_period",
-        "colormap": cmocean.cm.haline,
-        "range_min": 12,
-        "range_max": 14,
-        "levels": 10,
-        "physical_meaning": "Yearly average of depth averaged current speed",
-        "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-        "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-        "equation_variables": [
-            r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-            r"$N_{\sigma} = 10$ levels",
-            r"$T = 1$ year",
-        ],
-    },
-    # "mean_tidal_period": {
-    #     "title": "Average Tidal Period",
-    #     "units": "h",
-    #     "column_name": "vap_average_tidal_period",
-    #     "colormap": cmocean.cm.haline,
-    #     "range_min": 11,
-    #     "range_max": 13,
-    #     "levels": 10,
-    #     "physical_meaning": "Yearly average of depth averaged current speed",
-    #     "intended_usage": "Site screening and turbine selection for power generation",
-    #     "intended_usage_detail": "Secondary metric for identifying viable tidal energy sites. Used to estimate annual energy production (AEP), compare site potential across regions, determine minimum viable current speeds for commercial deployment (typically >1.5 m/s), and select appropriate turbine technology. Critical for feasibility studies and initial resource assessments.",
-    #     "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
-    #     "equation_variables": [
-    #         r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$ are velocity magnitudes at uniformly distributed sigma level $i$ at volume centers at time $t$ (m/s)",
-    #         r"$N_{\sigma} = 10$ levels",
-    #         r"$T = 1$ year",
-    #     ],
-    # },
+    key: {**VARIABLE_REGISTRY[key], **viz_conf} for key, viz_conf in _VIZ_CONFIG.items()
 }
 
 
@@ -559,7 +138,8 @@ def get_parquet_path(region):
         parquet_dir = BASE_DIR / region / version / "parquet"
     else:
         # Regular regions have parquet files in b4_vap_summary_parquet subdirectory
-        parquet_dir = BASE_DIR / region / version / "b4_vap_summary_parquet"
+        # parquet_dir = BASE_DIR / region / version / "b4_vap_summary_parquet"
+        parquet_dir = BASE_DIR / region / version / "b5_vap_atlas_summary_parquet"
 
     if not parquet_dir.exists():
         raise FileNotFoundError(
@@ -2112,10 +1692,15 @@ def optimize_image(src_path, dst_path, max_width=1200, quality=85):
 
 
 def copy_images_for_web(
-    source_dir, docs_img_dir, regions_processed, max_width=1200, quality=85
+    source_dir,
+    docs_img_dir,
+    regions_processed,
+    max_width=1200,
+    quality=85,
+    n_workers=None,
 ):
     """
-    Copy and optimize images for web display using PIL/Pillow.
+    Copy and optimize images for web display using PIL/Pillow (parallel).
 
     Args:
         source_dir: Source directory containing original images
@@ -2123,6 +1708,7 @@ def copy_images_for_web(
         regions_processed: List of regions to process
         max_width: Maximum width for web images (default 1200px)
         quality: JPEG quality for optimization (default 85)
+        n_workers: Number of parallel workers (default: cpu_count)
     """
 
     # Generate regional image files dynamically from VIZ_SPECS
@@ -2131,7 +1717,10 @@ def copy_images_for_web(
         f"{spec['column_name']}.png" for spec in VIZ_SPECS.values()
     ]
 
-    # Process regional images
+    # Collect all (src_path, dst_path, max_width, quality) tasks
+    image_tasks = []
+
+    # Regional images
     for region in regions_processed:
         region_dir = Path(source_dir, region)
         if region_dir.exists():
@@ -2140,27 +1729,46 @@ def copy_images_for_web(
                 src_path = region_dir / img_file
                 if src_path.exists():
                     dst_path = docs_img_dir / img_file
-                    optimize_image(
-                        src_path, dst_path, max_width=max_width, quality=quality
-                    )
+                    image_tasks.append((src_path, dst_path, max_width, quality))
 
-    # Generate comparison files dynamically from VIZ_SPECS
-    comparison_files = []
-
-    # Add viz max justification plots
+    # Comparison images (viz max justification + regional comparison)
     for spec in VIZ_SPECS.values():
-        comparison_files.append(f"{spec['column_name']}_viz_max_justification.png")
+        for pattern in [
+            f"{spec['column_name']}_viz_max_justification.png",
+            f"{spec['column_name']}_regional_comparison.png",
+        ]:
+            src_path = Path(source_dir) / pattern
+            if src_path.exists():
+                dst_path = docs_img_dir / pattern
+                image_tasks.append((src_path, dst_path, max_width, quality))
 
-    # Add regional comparison plots
-    for spec in VIZ_SPECS.values():
-        comparison_files.append(f"{spec['column_name']}_regional_comparison.png")
+    if not image_tasks:
+        print("No images found to optimize.")
+        return
 
-    # Process comparison images from base directory
-    for img_file in comparison_files:
-        src_path = Path(source_dir) / img_file
-        if src_path.exists():
-            dst_path = docs_img_dir / img_file
-            optimize_image(src_path, dst_path)
+    if n_workers is None:
+        n_workers = mp.cpu_count()
+
+    print(f"Optimizing {len(image_tasks)} images with {n_workers} workers...")
+
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        futures = {
+            executor.submit(optimize_image, src, dst, mw, q): src.name
+            for src, dst, mw, q in image_tasks
+        }
+        failed = 0
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                failed += 1
+                print(f"FAILED optimizing {futures[future]}: {e}")
+
+    if failed:
+        print(
+            f"Image optimization: {len(image_tasks) - failed} succeeded, "
+            f"{failed} failed."
+        )
 
 
 def _print_color_level_ranges(bounds, label, units, cmap, n_colors):
@@ -2298,6 +1906,7 @@ def generate_markdown_specification(
     summaries,  # Now accepts dict of summaries instead of individual parameters
     parquet_paths,
     color_level_data=None,
+    markdown_only=False,
 ):
     """
     Generate a markdown specification file documenting all visualizations.
@@ -2308,6 +1917,7 @@ def generate_markdown_specification(
         summaries: Dictionary of summary objects from analyze_variable_across_regions
         parquet_paths: Dictionary of parquet file paths for each region
         color_level_data: Dictionary containing color level information for each variable
+        markdown_only: If True, skip image copy/optimization (for md-only regeneration)
     """
 
     # Create docs/img directory for web-sized images
@@ -2315,7 +1925,8 @@ def generate_markdown_specification(
     docs_img_dir.mkdir(parents=True, exist_ok=True)
 
     # Copy images to docs/img directory
-    copy_images_for_web(output_dir, docs_img_dir, regions_processed)
+    if not markdown_only:
+        copy_images_for_web(output_dir, docs_img_dir, regions_processed)
 
     # Markdown content
     md_content = []
@@ -2325,35 +1936,93 @@ def generate_markdown_specification(
         [
             "# ME Atlas High Resolution Tidal Data QOI Visualization Specification",
             "",
-            "The following sections provide the specification for visualizing selected high resolution tidal hindcast variables on the [NLR Marine Energy Atlas](https://maps.nrel.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged)",
+            "The following sections provide the specification for visualizing selected high resolution tidal hindcast variables on the [NLR Marine Energy Atlas](https://maps.nlr.gov/marine-energy-atlas/data-viewer/data-library/layers?vL=WavePowerMerged)",
             "",
         ]
     )
     # Add location filepath details
+    version = f"v{config['dataset']['version']}"
+    atlas_parquet_rel = config["dir"]["output"]["vap_atlas_summary_parquet"]
     md_content.extend(
         [
             "",
             "## Available Data File Details",
             "",
-            "Base directory for all data files:",
+            "Atlas summary parquet files are located at:",
             "",
-            f"* <base_dir>: `{config['dir']['base']}`",
+            "```",
+            f"{config['dir']['base']}/<location>/{version}/{atlas_parquet_rel.split('/')[-1]}/",
+            "```",
             "",
-            "| Location Name | System | File Path |",
-            "| --- | --- | --- |",
+            "| Location Name | `<location>` |",
+            "| --- | --- |",
         ]
     )
 
-    for this_region, parquet_path in parquet_paths.items():
+    for this_region in parquet_paths.keys():
         loc_spec = config["location_specification"]
         region_name = None
         for loc in loc_spec.values():
             if loc["output_name"] == this_region:
                 region_name = loc["label"]
 
-        md_content.append(
-            f"| {region_name} | NLR Kestrel HPC | `{str(parquet_path).replace(config['dir']['base'], '<base_dir>')}` |"
+        md_content.append(f"| {region_name} | `{this_region}` |")
+
+    # Add GeoPackage file details
+    base_dir = config["dir"]["base"]
+    atlas_parquet_dir_name = atlas_parquet_rel.split("/")[-1]
+
+    md_content.extend(
+        [
+            "",
+            "### GeoPackage (GPKG) Files",
+            "",
+            "GeoPackage files for each location are located at:",
+            "",
+        ]
+    )
+
+    # Individual gpkg paths per location
+    for this_region in parquet_paths.keys():
+        loc_spec = config["location_specification"]
+        region_name = None
+        for loc in loc_spec.values():
+            if loc["output_name"] == this_region:
+                region_name = loc["label"]
+
+        gpkg_dir = (
+            f"{base_dir}/{this_region}/{version}/{atlas_parquet_dir_name}/gis/gpkg/"
         )
+        md_content.extend(
+            [
+                f"**{region_name}**",
+                "",
+                "```",
+                gpkg_dir,
+                "```",
+                "",
+            ]
+        )
+
+    # Combined list of all gpkg paths
+    md_content.extend(
+        [
+            "**All locations (combined)**",
+            "",
+            "```",
+        ]
+    )
+    for this_region in parquet_paths.keys():
+        gpkg_dir = (
+            f"{base_dir}/{this_region}/{version}/{atlas_parquet_dir_name}/gis/gpkg/"
+        )
+        md_content.append(gpkg_dir)
+    md_content.extend(
+        [
+            "```",
+            "",
+        ]
+    )
 
     # Add Location Details
     md_content.extend(
@@ -2377,61 +2046,118 @@ def generate_markdown_specification(
             f"| {this_loc['label']} | {this_loc['face_count']:,} | {this_loc['start_date_utc']} to {this_loc['end_date_utc']} | {this_loc['temporal_resolution']} |"
         )
 
-    md_content.extend(
-        [
-            "",
-            "## Variable Overview",
-            "",
-            "| Variable | Units | Data Column |",
-            "| -------- | ----- | ----------- |",
-        ]
-    )
+    docs_base_url = "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast"
 
-    for var in VIZ_SPECS.values():
-        md_content.append(f"| {var['title']} | {var['units']} | {var['column_name']} |")
+    # Load pre-rendered variable specifications from JSON
+    spec_path = Path(__file__).parent / "atlas_variable_spec.json"
+    with open(spec_path) as f:
+        atlas_var_spec = json.load(f)
 
-    md_content.extend(
-        [
-            "",
-            "## Variable Usage",
-            "",
-            "| Variable | Meaning | Intended Usage",
-            "| ---- | ------- | --- |",
-        ]
-    )
+    # Build column_name -> registry entry lookup
+    _registry_by_col = {v["column_name"]: v for v in VARIABLE_REGISTRY.values()}
 
-    for var in VIZ_SPECS.values():
-        md_content.append(
-            f"| {var['title']} | {var['physical_meaning']} | {var['intended_usage']} |"
-        )
-
-    md_content.extend(
-        [
-            "",
-            "## Variable Equations",
-            "",
-        ]
-    )
-
-    for var in VIZ_SPECS.values():
-        md_content.extend(
+    # Helper: emit per-variable detail blocks and collect entries for combined JSON
+    def _emit_variable_details(col, entry, reg, md_out):
+        """Append per-variable markdown blocks. Returns (col, entry) for combined JSON."""
+        display_name = entry["display_name"]
+        units = reg.get("units", "")
+        one_liner = reg.get("one_liner", "")
+        doc_url = reg.get("documentation_url", docs_base_url)
+        md_out.extend(
             [
-                f"### {var['title']}",
+                f"### {display_name}",
                 "",
-                "Equation:",
+                f"- **Data Column:** `{col}`",
+                f"- **Description:** {one_liner} [{units}]",
+                f"- **Documentation:** [{doc_url}]({doc_url})",
                 "",
-                f"{var['equation']}",
+                "**Rendered Preview**",
                 "",
-                "Where:",
+                entry["markdown"],
+                "",
+                "**HTML**",
+                "",
+                "```html",
+                entry["html"],
+                "```",
+                "",
+                "**JSON**",
+                "",
+                "```json",
+                json.dumps({col: entry}, indent=2),
+                "```",
                 "",
             ]
         )
 
-        # Add equation variables as bullet points
-        for eq_var in var["equation_variables"]:
-            md_content.append(f"- {eq_var}")
+    polygon_set = set(POLYGON_COLUMNS)
 
-        md_content.append("")
+    # ── Section 1: Color Layer Details (VIZ_SPECS key order) ──
+    md_content.extend(
+        [
+            "",
+            "## Color Layer Details",
+            "",
+            "Specification for each color-coded Marine Energy Atlas layer, including the exact **Details** popup text.",
+            "",
+        ]
+    )
+
+    color_layer_combined = {}
+    for var in VIZ_SPECS.values():
+        col = var["column_name"]
+        if col not in atlas_var_spec:
+            continue
+        entry = atlas_var_spec[col]
+        _emit_variable_details(col, entry, var, md_content)
+        color_layer_combined[col] = entry
+
+    # Combined JSON for all color layer variables
+    md_content.extend(
+        [
+            "### Combined Color Layer JSON",
+            "",
+            "```json",
+            json.dumps(color_layer_combined, indent=2),
+            "```",
+            "",
+        ]
+    )
+
+    # ── Section 2: Column / QOI Details (ATLAS_COLUMNS order) ──
+    md_content.extend(
+        [
+            "",
+            "## Column / QOI Details",
+            "",
+            "Specification for all data columns (QOI) available in the atlas popup, "
+            "shown when a user clicks a point.",
+            "",
+        ]
+    )
+
+    qoi_combined = {}
+    for col in ATLAS_COLUMNS:
+        if col in polygon_set:
+            continue
+        if col not in atlas_var_spec:
+            continue
+        entry = atlas_var_spec[col]
+        reg = _registry_by_col.get(col, {})
+        _emit_variable_details(col, entry, reg, md_content)
+        qoi_combined[col] = entry
+
+    # Combined JSON for all QOI variables
+    md_content.extend(
+        [
+            "### Combined QOI JSON",
+            "",
+            "```json",
+            json.dumps(qoi_combined, indent=2),
+            "```",
+            "",
+        ]
+    )
 
     # Add coordinate details
     md_content.extend(
@@ -2484,13 +2210,19 @@ def generate_markdown_specification(
             colormap_name = spec["colormap"].name
 
         md_content.append(
-            f"| {spec['title']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {colormap_name} |"
+            f"| {spec['display_name']} | `{spec['column_name']}` | {range_str} | {spec['units']} | {spec['levels']} | {colormap_name} |"
         )
 
     md_content.append("")
 
-    # Add color mapping details if available
-    if color_level_data:
+    # Add color mapping details — use runtime color_level_data if available,
+    # otherwise fall back to color_spec embedded in atlas_variable_spec.json.
+    _has_runtime_colors = bool(color_level_data)
+    _has_json_colors = any(
+        "color_spec" in entry for entry in atlas_var_spec.values()
+    )
+
+    if _has_runtime_colors or _has_json_colors:
         md_content.extend(
             [
                 "## Color Specifications",
@@ -2502,53 +2234,99 @@ def generate_markdown_specification(
         )
 
         for var_key, spec in VIZ_SPECS.items():
-            if var_key in color_level_data:
-                colormap_name = "Custom"
-                if "colormap" in spec:
-                    colormap_name = spec["colormap"].name
-                md_content.extend(
-                    [
-                        f"### {spec['title']} [{spec['units']}], `{spec['column_name']}`",
-                        "",
-                        f"* **Colormap:** {colormap_name}",
-                        f"* **Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}",
-                        f"* **Discrete Levels:** {spec['levels'] + 1} ({spec['levels']} within range + 1 overflow level)",
-                        "",
-                        "| Level | Value Range | Hex Color | RGB Color | Color Preview |",
-                        "| ----- | ----------- | --------- | --------- | ------------- |",
-                    ]
+            colormap_name = "Custom"
+            if "colormap" in spec:
+                colormap_name = spec["colormap"].name
+
+            # Get color levels from runtime data or JSON spec
+            colors_info = None
+            if _has_runtime_colors and var_key in color_level_data:
+                colors_info = color_level_data[var_key]
+            elif _has_json_colors:
+                # Fall back to color_spec from atlas_variable_spec.json
+                col_name = spec.get("column_name", var_key)
+                json_entry = atlas_var_spec.get(col_name, {})
+                json_color_spec = json_entry.get("color_spec", {})
+                json_levels = json_color_spec.get("levels", [])
+                json_categories = json_color_spec.get("categories", {})
+                units = spec.get("units", "")
+                if json_levels:
+                    colors_info = []
+                    for i, lvl in enumerate(json_levels):
+                        hex_color = lvl["color"]
+                        hex_clean = hex_color.lstrip("#")
+                        r = int(hex_clean[0:2], 16)
+                        g = int(hex_clean[2:4], 16)
+                        b = int(hex_clean[4:6], 16)
+                        bin_min = lvl["bin_min"]
+                        bin_max = lvl["bin_max"]
+                        # Overflow level (bin_max is null)
+                        if bin_max is None:
+                            if bin_min >= 1000:
+                                range_str = f"\u2265 {bin_min:.0f}"
+                            elif bin_min >= 100:
+                                range_str = f"\u2265 {bin_min:.1f}"
+                            elif bin_min >= 10:
+                                range_str = f"\u2265 {bin_min:.2f}"
+                            else:
+                                range_str = f"\u2265 {bin_min:.3f}"
+                        else:
+                            max_value = max(abs(bin_min), abs(bin_max))
+                            if max_value >= 100:
+                                range_str = f"{bin_min:.0f} - {bin_max:.0f}"
+                            elif max_value >= 10:
+                                range_str = f"{bin_min:.2f} - {bin_max:.2f}"
+                            else:
+                                range_str = f"{bin_min:.2f} - {bin_max:.2f}"
+                        colors_info.append({
+                            "range": f"{range_str} [{units}]",
+                            "hex": hex_color,
+                            "rgb": f"rgb({r}, {g}, {b})",
+                        })
+                elif json_categories:
+                    colors_info = []
+                    for cat_key, cat in json_categories.items():
+                        hex_color = cat["color"]
+                        hex_clean = hex_color.lstrip("#")
+                        r = int(hex_clean[0:2], 16)
+                        g = int(hex_clean[2:4], 16)
+                        b = int(hex_clean[4:6], 16)
+                        colors_info.append({
+                            "range": f"{cat['label']} [{units}]",
+                            "hex": hex_color,
+                            "rgb": f"rgb({r}, {g}, {b})",
+                        })
+
+            if not colors_info:
+                continue
+
+            md_content.extend(
+                [
+                    f"### {spec['display_name']} [{spec['units']}], `{spec['column_name']}`",
+                    "",
+                    f"* **Colormap:** {colormap_name}",
+                    f"* **Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}",
+                    f"* **Discrete Levels:** {spec['levels']}",
+                    "",
+                    "| Level | Value Range | Hex Color | RGB Color | Color Preview |",
+                    "| ----- | ----------- | --------- | --------- | ------------- |",
+                ]
+            )
+
+            for i, color_info in enumerate(colors_info):
+                level_num = i + 1
+                value_range = color_info["range"]
+                hex_color = color_info["hex"]
+                rgb_color = color_info["rgb"]
+
+                # Use placehold.co for dynamic color swatches in GitHub .md files
+                hex_clean = hex_color.lstrip("#")
+                color_preview = f"![{hex_color}](https://placehold.co/40x15/{hex_clean}/{hex_clean})"
+                md_content.append(
+                    f"| {level_num} | {value_range} | `{hex_color}` | `{rgb_color}` | {color_preview} |"
                 )
 
-                # Add color level data here (this will be populated when we capture the print output)
-                colors_info = color_level_data[var_key]
-                for i, color_info in enumerate(colors_info):
-                    level_num = i + 1
-                    value_range = color_info["range"]
-                    # e7fa5a
-                    hex_color = color_info["hex"]
-                    # rgb(231, 250, 90)
-                    rgb_color = color_info["rgb"]
-
-                    # This works in GitHub/GFM markdown. This is a hack to get around github not allowing inline html
-                    # ${\color[rgb]{0.012, 0.137, 0.200}\rule{30pt}{15pt}}$
-                    hex_clean = hex_color.lstrip("#")
-                    r, g, b = (
-                        int(hex_clean[0:2], 16),
-                        int(hex_clean[2:4], 16),
-                        int(hex_clean[4:6], 16),
-                    )
-                    latex_rgb = f"{r / 255:.3f}, {g / 255:.3f}, {b / 255:.3f}"
-
-                    color_preview = (
-                        f"$\\color[rgb]{{{latex_rgb}}}\\rule{{40pt}}{{15pt}}$"
-                    )
-                    # Create a small color block using HTML
-                    # color_preview = f'<span style="background-color:{hex_color}; color:{hex_color}; padding:2px 8px; border-radius:3px;">████</span>'
-                    md_content.append(
-                        f"| {level_num} | {value_range} | `{hex_color}` | `{rgb_color}` | {color_preview} |"
-                    )
-
-                md_content.append("")
+            md_content.append("")
     else:
         md_content.extend(
             [
@@ -2569,7 +2347,7 @@ def generate_markdown_specification(
     )
 
     # Generate viz_types list dynamically from VIZ_SPECS
-    viz_types = [(key, spec["title"]) for key, spec in VIZ_SPECS.items()]
+    viz_types = [(key, spec["display_name"]) for key, spec in VIZ_SPECS.items()]
 
     for viz_key, viz_title in viz_types:
         md_content.extend(
@@ -2640,7 +2418,7 @@ def generate_markdown_specification(
     for var_key, spec in VIZ_SPECS.items():
         img_file = f"{spec['column_name']}_viz_max_justification.png"
         img_path = f"docs/img/{img_file}"
-        title = spec["title"]
+        title = spec["display_name"]
         units = spec["units"]
         description = f"Validates the visualization maximum used for {title.lower()} analysis, showing data retention rates and outlier filtering effectiveness."
 
@@ -2667,7 +2445,7 @@ def generate_markdown_specification(
     for var_key, spec in VIZ_SPECS.items():
         img_file = f"{spec['column_name']}_regional_comparison.png"
         img_path = f"docs/img/{img_file}"
-        title = spec["title"]
+        title = spec["display_name"]
         units = spec["units"]
         description = f"{title} distribution comparison across regions"
 
@@ -2712,13 +2490,13 @@ def process_variable(
 ):
     """Process a single variable - analyze and optionally plot"""
     action = "Analyzing" if bypass_visualizations else "Plotting"
-    print(f"\t{action} {region} {var_config['title']}...")
+    print(f"\t{action} {region} {var_config['display_name']}...")
 
     # Always analyze variable
     stats = analyze_variable(
         df,
         var_config["column_name"],
-        var_config["title"],
+        var_config["display_name"],
         region,
         units=var_config["units"],  # Pass units from config
         output_path=output_path,
@@ -2734,7 +2512,7 @@ def process_variable(
             df,
             region,
             var_config["column_name"],  # Use column_name consistently
-            var_config["title"],
+            var_config["display_name"],
             var_config["units"],
             var_config["range_min"],
             var_config["range_max"],
@@ -2749,31 +2527,78 @@ def process_variable(
     return stats, color_data
 
 
-def analyze_all_variables_across_regions(all_stats, output_path, viz_specs):
-    """Generate summary analysis for all variables across regions"""
+def _analyze_single_variable_task(
+    var_key, display_name, region_stats, output_path, viz_max
+):
+    """Worker for a single variable's cross-region analysis.
+
+    Suitable for parallel execution via ProcessPoolExecutor.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+
+    print(f"Calculating {display_name} variable summary...")
+
+    result = analyze_variable_across_regions(
+        region_stats,
+        output_path=output_path,
+        viz_max=viz_max,
+    )
+    return var_key, result
+
+
+def analyze_all_variables_across_regions(
+    all_stats, output_path, viz_specs, n_workers=None
+):
+    """Generate summary analysis for all variables across regions (parallel)"""
     summaries = {}
 
     # Reorganize stats by variable for cross-region analysis
     stats_by_variable = organize_stats_by_variable(all_stats)
 
+    # Build tasks for variables that have data
+    tasks = []
     for var_key, var_config in viz_specs.items():
-        print(f"Calculating {var_config['title']} variable summary...")
-
-        # Get region stats for this variable
         region_stats = stats_by_variable.get(var_key, [])
-
         if region_stats:
-            # Determine viz_max from config
-            viz_max = var_config.get("range_max")
-
-            summaries[var_key] = analyze_variable_across_regions(
-                region_stats,
-                output_path=output_path,
-                viz_max=viz_max,
+            tasks.append(
+                (
+                    var_key,
+                    var_config["display_name"],
+                    region_stats,
+                    output_path,
+                    var_config.get("range_max"),
+                )
             )
         else:
             print(f"Warning: No data found for variable {var_key}")
             summaries[var_key] = None
+
+    if n_workers is None:
+        n_workers = mp.cpu_count()
+
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        future_to_key = {
+            executor.submit(
+                _analyze_single_variable_task,
+                var_key,
+                display_name,
+                region_stats,
+                output_path,
+                viz_max,
+            ): var_key
+            for var_key, display_name, region_stats, output_path, viz_max in tasks
+        }
+
+        for future in as_completed(future_to_key):
+            task_key = future_to_key[future]
+            try:
+                var_key, result = future.result()
+                summaries[var_key] = result
+            except Exception as e:
+                print(f"FAILED cross-region analysis for {task_key}: {e}")
+                summaries[task_key] = None
 
     return summaries
 
@@ -2791,110 +2616,233 @@ def organize_stats_by_variable(all_stats):
     return stats_by_variable
 
 
+def load_region_data(region):
+    """Load parquet data for a region and convert tidal period units.
+
+    Returns:
+        Tuple of (DataFrame, parquet_path_string)
+    """
+    parquet_file = get_parquet_path(region)
+    if "_geo.parquet" in str(parquet_file):
+        df = gpd.read_parquet(parquet_file)
+    else:
+        df = pd.read_parquet(parquet_file)
+
+    # Convert tidal period columns from seconds to hours
+    for col in [
+        "vap_min_tidal_period",
+        "vap_max_tidal_period",
+        "vap_average_tidal_period",
+    ]:
+        if col in df.columns:
+            df[col] = df[col] / 60 / 60
+
+    return df, str(parquet_file)
+
+
+def process_single_task(
+    region,
+    var_key,
+    bypass_visualizations=False,
+    bypass_combined_visualizations=True,
+):
+    """Process a single (region, variable) pair — suitable for parallel execution.
+
+    Loads data, processes the variable, and returns lightweight results.
+    VIZ_SPECS is looked up inside the worker (module-level constant) to avoid
+    pickling matplotlib colormaps.
+
+    Returns:
+        Tuple of (region, parquet_path, var_key, stats, color_data)
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")  # Non-interactive backend for worker processes
+
+    var_config = VIZ_SPECS[var_key]
+
+    # Load region data
+    df, parquet_path = load_region_data(region)
+
+    # Create output directory
+    this_output_path = Path(VIZ_OUTPUT_DIR, region)
+    this_output_path.mkdir(parents=True, exist_ok=True)
+
+    # Determine visualization bypass
+    is_combined_region = "combined" in region.lower()
+    should_bypass_viz = bypass_visualizations or (
+        bypass_combined_visualizations and is_combined_region
+    )
+
+    # Process the variable
+    stats, color_data = process_variable(
+        df,
+        region,
+        this_output_path,
+        var_key,
+        var_config,
+        bypass_visualizations=should_bypass_viz,
+    )
+
+    # Replace full DataFrame with minimal single-column DataFrame
+    # to keep return values small while preserving the access pattern
+    # used by analyze_variable_across_regions: stat["df"][variable].values
+    variable_col = var_config["column_name"]
+    if stats.get("df") is not None and variable_col in stats["df"].columns:
+        stats["df"] = pd.DataFrame({variable_col: stats["df"][variable_col].values})
+    elif stats.get("df") is not None:
+        stats["df"] = None
+
+    return region, parquet_path, var_key, stats, color_data
+
+
 if __name__ == "__main__":
-    # Configuration - set this to skip visualization generation
+    parser = argparse.ArgumentParser(
+        description="Atlas preview and specification generator"
+    )
+    parser.add_argument(
+        "--md-only",
+        action="store_true",
+        help="Regenerate markdown specification only (no data loading or visualization)",
+    )
+    args = parser.parse_args()
+
+    # Configuration
+    MARKDOWN_ONLY = args.md_only
     BYPASS_VISUALIZATIONS = False  # Set to True to skip all plotting
     BYPASS_COMBINED_VISUALIZATIONS = (
         True  # Set to True to skip combined region plots (slow)
     )
 
-    # Display available regions
-    regions = get_available_regions()
-    # regions.reverse()
-    print("Available regions:")
-    # regions = [region for region in regions if "cook" in region]
-    for i, region in enumerate(regions):
-        print(f"{i + 1}. {region}")
-
-    if BYPASS_VISUALIZATIONS:
-        print("Visualization generation is DISABLED - only performing analysis")
-    if BYPASS_COMBINED_VISUALIZATIONS:
-        print(
-            "Combined region visualization is DISABLED - skipping slow combined plots"
+    if MARKDOWN_ONLY:
+        # Markdown-only mode: regenerate the spec from config without loading data
+        print("MARKDOWN_ONLY mode: regenerating specification from config...")
+        regions = sorted(
+            loc["output_name"] for loc in config["location_specification"].values()
         )
+        parquet_paths = {region: None for region in regions}
 
-    # Initialize data structures
-    color_level_data = {}
-    parquet_paths = {}
-    all_stats = {}  # Structure: {region: {var_key: stats_dict}}
-
-    # Process each region
-    for this_region in regions:
-        # Get the parquet file path
-        parquet_file = get_parquet_path(this_region)
-        print(f"Reading file: {parquet_file}")
-        parquet_paths[this_region] = str(parquet_file)
-
-        # Read the parquet file (use geopandas for geo parquet files)
-        if "_geo.parquet" in str(parquet_file):
-            df = gpd.read_parquet(parquet_file)
-        else:
-            df = pd.read_parquet(parquet_file)
-
-        df["vap_min_tidal_period"] = (
-            df["vap_min_tidal_period"] / 60 / 60
-        )  # Convert seconds to hours
-        df["vap_max_tidal_period"] = (
-            df["vap_max_tidal_period"] / 60 / 60
-        )  # Convert seconds to hours
-        df["vap_average_tidal_period"] = (
-            df["vap_average_tidal_period"] / 60 / 60
-        )  # Convert seconds to hours
-
-        this_output_path = Path(VIZ_OUTPUT_DIR, this_region)
-        this_output_path.mkdir(parents=True, exist_ok=True)
-
-        # Initialize region stats
-        all_stats[this_region] = {}
-
-        # Process all variables for this region
-        # Determine if visualizations should be bypassed for this region
-        is_combined_region = "combined" in this_region.lower()
-        should_bypass_viz = BYPASS_VISUALIZATIONS or (
-            BYPASS_COMBINED_VISUALIZATIONS and is_combined_region
+        generate_markdown_specification(
+            regions_processed=regions,
+            output_dir=VIZ_OUTPUT_DIR,
+            summaries={},
+            parquet_paths=parquet_paths,
+            color_level_data=None,
+            markdown_only=True,
         )
+        print("Markdown specification regenerated.")
 
-        for var_key, var_config in VIZ_SPECS.items():
-            stats, color_data = process_variable(
-                df,
-                this_region,
-                this_output_path,
-                var_key,
-                var_config,
-                bypass_visualizations=should_bypass_viz,
+    else:
+        # Full mode: data loading, analysis, and optional visualization
+
+        # Number of parallel workers (default: all available CPUs)
+        # N_WORKERS = int(mp.cpu_count() / 3)
+        N_WORKERS = 30
+        print("Running with up to", N_WORKERS, "parallel workers")
+
+        # Display available regions
+        regions = get_available_regions()
+        # regions.reverse()
+        print("Available regions:")
+        # regions = [region for region in regions if "cook" in region]
+        for i, region in enumerate(regions):
+            print(f"{i + 1}. {region}")
+
+        if BYPASS_VISUALIZATIONS:
+            print("Visualization generation is DISABLED - only performing analysis")
+        if BYPASS_COMBINED_VISUALIZATIONS:
+            print(
+                "Combined region visualization is DISABLED - skipping slow combined plots"
             )
 
-            # Store stats for this region and variable
-            all_stats[this_region][var_key] = stats
+        # Build flat task list: all (region, var_key) pairs
+        tasks = [(region, var_key) for region in regions for var_key in VIZ_SPECS]
+        total_tasks = len(tasks)
+        print(
+            f"\nProcessing {total_tasks} tasks across {len(regions)} regions "
+            f"and {len(VIZ_SPECS)} variables with {N_WORKERS} workers..."
+        )
 
-            # Store color data if not already stored and if we have it
-            if not BYPASS_VISUALIZATIONS and color_data is not None:
-                if var_key not in color_level_data:
-                    color_level_data[var_key] = color_data
+        # Initialize data structures
+        color_level_data = {}
+        parquet_paths = {}
+        all_stats = {}  # Structure: {region: {var_key: stats_dict}}
 
-    # Set theme for summary plots (only if doing visualizations)
-    if not BYPASS_VISUALIZATIONS:
-        sns.set_theme()
+        # Process all (region, variable) pairs in parallel
+        completed = 0
+        failed = 0
 
-    # Generate summary analysis for all variables
-    print("Generating cross-region analysis...")
-    summaries = analyze_all_variables_across_regions(
-        all_stats,
-        VIZ_OUTPUT_DIR,
-        VIZ_SPECS,
-    )
+        with ProcessPoolExecutor(max_workers=N_WORKERS) as executor:
+            future_to_task = {
+                executor.submit(
+                    process_single_task,
+                    region,
+                    var_key,
+                    bypass_visualizations=BYPASS_VISUALIZATIONS,
+                    bypass_combined_visualizations=BYPASS_COMBINED_VISUALIZATIONS,
+                ): (region, var_key)
+                for region, var_key in tasks
+            }
 
-    # Generate markdown specification
-    print("Generating markdown specification...")
-    generate_markdown_specification(
-        regions_processed=regions,
-        output_dir=VIZ_OUTPUT_DIR,
-        summaries=summaries,
-        parquet_paths=parquet_paths,
-        color_level_data=color_level_data,
-    )
+            for future in as_completed(future_to_task):
+                task_region, task_var = future_to_task[future]
+                try:
+                    region, parquet_path, var_key, stats, color_data = future.result()
 
-    analysis_type = (
-        "Analysis" if BYPASS_VISUALIZATIONS else "Analysis and visualization"
-    )
-    print(f"{analysis_type} complete!")
+                    # Merge results into main data structures
+                    parquet_paths[region] = parquet_path
+
+                    if region not in all_stats:
+                        all_stats[region] = {}
+                    all_stats[region][var_key] = stats
+
+                    if not BYPASS_VISUALIZATIONS and color_data is not None:
+                        if var_key not in color_level_data:
+                            color_level_data[var_key] = color_data
+
+                    completed += 1
+                    print(
+                        f"  [{completed}/{total_tasks}] Completed {region} / {var_key}"
+                    )
+
+                except Exception as e:
+                    failed += 1
+                    completed += 1
+                    print(
+                        f"  [{completed}/{total_tasks}] FAILED {task_region} / "
+                        f"{task_var}: {e}"
+                    )
+
+        print(
+            f"\nParallel processing complete: {completed - failed} succeeded, "
+            f"{failed} failed out of {total_tasks} tasks."
+        )
+
+        # --- Sequential post-processing (cross-region analysis, markdown) ---
+
+        # Set theme for summary plots (only if doing visualizations)
+        if not BYPASS_VISUALIZATIONS:
+            sns.set_theme()
+
+        # Generate summary analysis for all variables
+        print("Generating cross-region analysis...")
+        summaries = analyze_all_variables_across_regions(
+            all_stats,
+            VIZ_OUTPUT_DIR,
+            VIZ_SPECS,
+        )
+
+        # Generate markdown specification
+        print("Generating markdown specification...")
+        generate_markdown_specification(
+            regions_processed=regions,
+            output_dir=VIZ_OUTPUT_DIR,
+            summaries=summaries,
+            parquet_paths=parquet_paths,
+            color_level_data=color_level_data,
+        )
+
+        analysis_type = (
+            "Analysis" if BYPASS_VISUALIZATIONS else "Analysis and visualization"
+        )
+        print(f"{analysis_type} complete!")

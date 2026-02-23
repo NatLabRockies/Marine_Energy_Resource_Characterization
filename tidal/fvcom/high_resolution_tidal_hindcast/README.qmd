@@ -182,15 +182,15 @@ display(Markdown(tabulate(df, tablefmt="markdown", headers="keys", showindex=Fal
 5 US locations of new high resolution 3D tidal data, generated using FVCOM version 4.3.1, with `u` and `v` vectors, and calculated
 `sea_water_speed`, `sea_water_to_direction`, and `sea_water_power_density` at 10 sigma layers:
 
-![Cook Inlet, Alaska - Sea Water Speed, Yearly Average, Depth Average](./docs/img/ak_cook_inlet_speed.png){#fig-ak-cook-speed}
+![Cook Inlet, Alaska - Sea Water Speed, Yearly Average, Depth Average](./docs/img/AK_cook_inlet_mean_sea_water_speed.png){#fig-ak-cook-speed}
 
-![Aleutian Islands - Sea Water Speed, Yearly Average, Depth Average](./docs/img/ak_aleutian_islands_speed.png){#fig-ak-aleutian-speed}
+![Aleutian Islands - Sea Water Speed, Yearly Average, Depth Average](./docs/img/AK_aleutian_islands_mean_sea_water_speed.png){#fig-ak-aleutian-speed}
 
-![Western Passage, Maine - Sea Water Speed, Yearly Average, Depth Average](./docs/img/ak_cook_inlet_speed.png){#fig-me-west-speed-speed}
+![Western Passage, Maine - Sea Water Speed, Yearly Average, Depth Average](./docs/img/ME_western_passage_mean_sea_water_speed.png){#fig-me-west-speed-speed}
 
-![Piscataqua River New Hampshire - Sea Water Speed, Yearly Average, Depth Average](./docs/img/nh_piscataqua_river_speed.png){#fig-nh-piscataqua-speed}
+![Piscataqua River New Hampshire - Sea Water Speed, Yearly Average, Depth Average](./docs/img/NH_piscataqua_river_mean_sea_water_speed.png){#fig-nh-piscataqua-speed}
 
-![Puget Sound, Washington - Sea Water Speed, Yearly Average, Depth Average](./docs/img/wa_puget_sound_speed.png){#fig-wa-puget-speed}
+![Puget Sound, Washington - Sea Water Speed, Yearly Average, Depth Average](./docs/img/WA_puget_sound_mean_sea_water_speed.png){#fig-wa-puget-speed}
 
 ## Data Output Plan
 

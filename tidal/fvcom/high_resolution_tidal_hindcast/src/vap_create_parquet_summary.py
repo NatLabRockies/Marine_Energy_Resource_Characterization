@@ -10,51 +10,24 @@ import xarray as xr
 
 from shapely.geometry import Point, Polygon, MultiPolygon
 
-from . import file_manager, file_name_convention_manager, s3_uri_manager
+from . import file_manager, file_name_convention_manager, gis_colors_manager, s3_uri_manager
+from .variable_registry import ATLAS_COLUMNS, POLYGON_COLUMNS
 
 # Default optimized for Aleutian Islands (~52-55°N latitude)
 # At 53°N, 0.0002° ≈ 13 meters (cos(53°) * 111000 * 0.0002 ≈ 13.4m)
 # DATELINE_GAP_DEGREES = 0.0002
 DATELINE_GAP_DEGREES = 0.0010  # 65 meters?
 
-POLYGON_COLUMNS = {
-    "element_corner_1_lat": "Element Corner 1 Latitude",
-    "element_corner_1_lon": "Element Corner 1 Longitude",
-    "element_corner_2_lat": "Element Corner 2 Latitude",
-    "element_corner_2_lon": "Element Corner 2 Longitude",
-    "element_corner_3_lat": "Element Corner 3 Latitude",
-    "element_corner_3_lon": "Element Corner 3 Longitude",
-}
+REVERSE_ATLAS_COLUMN_ORDER = True
 
-ATLAS_COLUMNS = {
-    "face_id": "Face ID",
-    **POLYGON_COLUMNS,
-    "lat_center": "Center Latitude",
-    "lon_center": "Center Longitude",
-    # Water column (depth-averaged) velocity statistics
-    "vap_water_column_mean_sea_water_speed": "Mean Sea Water Speed [m/s]",
-    "vap_water_column_95th_percentile_sea_water_speed": "95th Percentile Sea Water Speed [m/s]",
-    "vap_water_column_99th_percentile_sea_water_speed": "99th Percentile Sea Water Speed [m/s]",
-    "vap_water_column_max_sea_water_speed": "Maximum Sea Water Speed [m/s]",
-    "vap_water_column_sea_water_speed_max_to_mean_ratio": "Speed Max to Mean Ratio",
-    # Water column (depth-averaged) power density statistics
-    "vap_water_column_mean_sea_water_power_density": "Mean Sea Water Power Density [W/m^2]",
-    "vap_water_column_95th_percentile_sea_water_power_density": "95th Percentile Sea Water Power Density [W/m^2]",
-    "vap_water_column_99th_percentile_sea_water_power_density": "99th Percentile Power Density [W/m^2]",
-    # Surface layer (sigma_level_1) velocity statistics
-    "vap_surface_layer_mean_sea_water_speed": "Surface Layer Mean Speed [m/s]",
-    "vap_surface_layer_95th_percentile_sea_water_speed": "Surface Layer 95th Percentile Speed [m/s]",
-    "vap_surface_layer_99th_percentile_sea_water_speed": "Surface Layer 99th Percentile Speed [m/s]",
-    "vap_surface_layer_max_sea_water_speed": "Surface Layer Max Speed [m/s]",
-    # Depth statistics
-    "vap_grid_resolution": "Grid Resolution [m]",
-    "vap_sea_floor_depth": "Sea Floor Depth from Mean Surface Elevation [m]",
-    "vap_water_column_height_min": "Min Water Column Height [m]",
-    "vap_water_column_height_max": "Max Water Column Height [m]",
-    # Full year data URIs - links to b1_vap_by_point_partition parquet files
-    "full_year_data_s3_uri": "S3 URI for Full Year Time Series Data",
-    "full_year_data_https_url": "HTTPS URL for Full Year Time Series Data",
-}
+
+def get_atlas_columns(reverse=REVERSE_ATLAS_COLUMN_ORDER):
+    """Return ordered list of atlas column names, optionally reversing non-polygon columns."""
+    polygon_set = set(POLYGON_COLUMNS)
+    data_keys = [k for k in ATLAS_COLUMNS if k not in polygon_set]
+    if reverse:
+        data_keys = data_keys[::-1]
+    return POLYGON_COLUMNS + data_keys
 
 
 # def compute_grid_resolution(df):
@@ -501,6 +474,7 @@ def save_geo_dataframe(
     # formats=["geojson", "gpkg", "parquet"],
     formats=["geojson", "gpkg", "parquet"],
     # formats=["parquet"],
+    enable_gis_colors=True,
 ):
     """
     Save GeoDataFrame in multiple formats including GeoPackage
@@ -528,6 +502,14 @@ def save_geo_dataframe(
         )
         print(f"    Longest columns: {long_columns[:3]}...")
 
+    # Build a colored GDF for formats that support fill_color columns
+    # (geojson, parquet). GPKG uses embedded SLD styles on the numeric
+    # column instead, so it does not need the extra columns.
+    if enable_gis_colors:
+        gdf_colored = gis_colors_manager.add_fill_color_columns(gdf.copy())
+    else:
+        gdf_colored = gdf
+
     for fmt in formats:
         print(
             f"Planning to make this_output_path from {output_path} and {fmt} with types {type(output_path)} and {type(fmt)}"
@@ -544,25 +526,29 @@ def save_geo_dataframe(
 
         elif fmt == "geojson":
             filepath = this_output_path / f"{filename_base}.geojson"
-            gdf.to_file(filepath, driver="GeoJSON")
+            gdf_colored.to_file(filepath, driver="GeoJSON")
             saved_files.append(filepath)
             print("✓")
 
         elif fmt == "gpkg":
             filepath = this_output_path / f"{filename_base}.gpkg"
             gdf.to_file(filepath, driver="GPKG")
+            if enable_gis_colors:
+                gis_colors_manager.embed_gpkg_styles(filepath)
             saved_files.append(filepath)
             print("✓")
 
         elif fmt == "parquet":
             filepath = this_output_path / f"{filename_base}_geo.parquet"
-            gdf.to_parquet(filepath)
+            gdf_colored.to_parquet(filepath)
+            if enable_gis_colors:
+                gis_colors_manager.embed_kepler_config_in_parquet(filepath, gdf)
             saved_files.append(filepath)
             print("✓")
         elif fmt == "arrow":
             filepath = this_output_path / f"{filename_base}_geo.arrow"
             # Convert to Arrow table and save as IPC format
-            gdf_arrow = gdf.copy()
+            gdf_arrow = gdf_colored.copy()
             gdf_arrow["geometry"] = gdf_arrow["geometry"].to_wkb()
 
             table = pa.Table.from_pandas(gdf_arrow, preserve_index=False)
@@ -572,6 +558,11 @@ def save_geo_dataframe(
                     writer.write_table(table)
             saved_files.append(filepath)
             print("✓")
+
+    # Write sidecar JSON files for web map consumers
+    if enable_gis_colors:
+        gis_colors_manager.write_sidecar_style_json(output_path, gdf_colored)
+        gis_colors_manager.write_kepler_config_json(output_path, gdf)
 
     print(f"Successfully saved {len(saved_files)} files for {filename_base}")
     return saved_files
@@ -707,9 +698,10 @@ def convert_nc_summary_to_parquet(
             # Remove rows that cross the dateline
             # output_df = output_df[~output_df["row_crosses_dateline"]]
 
-        # 001.AK_cook_inlet.tidal_hindcast_fvcom-1_year_average.b2.20050101.000000.nc
-        # Get the last 2 parts of the filename
-        date_time_parts = nc_file.name.split(".")[-3:-1]
+        parsed_name = file_name_convention_manager.DataFileName.from_filename(
+            nc_file.name
+        )
+        date_time_parts = [parsed_name.date, parsed_name.time]
 
         output_filename = file_name_convention_manager.generate_filename_for_data_level(
             output_df,
@@ -754,7 +746,7 @@ def convert_nc_summary_to_parquet(
         for col in output_df.columns:
             print(f"{col}: {output_df[col].dtype}")
 
-        atlas_df = output_df[list(ATLAS_COLUMNS.keys())].copy()
+        atlas_df = output_df[get_atlas_columns()].copy()
 
         atlas_output_path = file_manager.get_vap_atlas_summary_parquet_dir(
             config, location
@@ -918,7 +910,7 @@ def convert_nc_summary_to_parquet(
         # Create and save atlas subset GIS outputs (atlas columns only)
         print("\n=== CREATING ATLAS SUBSET GIS OUTPUTS ===")
 
-        combined_atlas_df = combined_df[list(ATLAS_COLUMNS.keys())].copy()
+        combined_atlas_df = combined_df[get_atlas_columns()].copy()
         geo_atlas_df = create_geo_dataframe(combined_atlas_df, geometry_type="polygon")
 
         print(f"Processing atlas subset with {geo_atlas_df.shape[1]} columns...")
