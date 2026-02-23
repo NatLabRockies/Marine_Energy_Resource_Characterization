@@ -1027,12 +1027,17 @@ def documentation_variable_spec(variable_spec, keyword_spec):
 atlas_variable_specification = {}
 documentation_variable_specification = {}
 
+# Only generate specs for columns actually used on the atlas
+from src.vap_create_parquet_summary import ATLAS_COLUMNS, POLYGON_COLUMNS
+
+_atlas_column_set = set(ATLAS_COLUMNS) - set(POLYGON_COLUMNS)
+
 for _var_key, _var_entry in VARIABLE_REGISTRY.items():
-    if not _var_entry.get("included_on_atlas"):
+    _col_name = _var_entry["column_name"]
+    if _col_name not in _atlas_column_set:
         continue
     if "documentation_url" not in _var_entry:
         continue
-    _col_name = _var_entry["column_name"]
     atlas_variable_specification[_col_name] = atlas_variable_spec(
         _var_entry, DOCUMENTATION_REGISTRY
     )
