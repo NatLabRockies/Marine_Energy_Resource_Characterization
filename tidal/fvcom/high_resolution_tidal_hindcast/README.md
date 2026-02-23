@@ -180,7 +180,7 @@ FVCOM version 4.3.1, with `u` and `v` vectors, and calculated
 
 <div id="fig-ak-cook-speed">
 
-![](./docs/img/ak_cook_inlet_speed.png)
+![](./docs/img/AK_cook_inlet_mean_sea_water_speed.png)
 
 Figure 1: Cook Inlet, Alaska - Sea Water Speed, Yearly Average, Depth
 Average
@@ -189,7 +189,7 @@ Average
 
 <div id="fig-ak-aleutian-speed">
 
-![](./docs/img/ak_aleutian_islands_speed.png)
+![](./docs/img/AK_aleutian_islands_mean_sea_water_speed.png)
 
 Figure 2: Aleutian Islands - Sea Water Speed, Yearly Average, Depth
 Average
@@ -198,7 +198,7 @@ Average
 
 <div id="fig-me-west-speed-speed">
 
-![](./docs/img/ak_cook_inlet_speed.png)
+![](./docs/img/ME_western_passage_mean_sea_water_speed.png)
 
 Figure 3: Western Passage, Maine - Sea Water Speed, Yearly Average,
 Depth Average
@@ -207,7 +207,7 @@ Depth Average
 
 <div id="fig-nh-piscataqua-speed">
 
-![](./docs/img/nh_piscataqua_river_speed.png)
+![](./docs/img/NH_piscataqua_river_mean_sea_water_speed.png)
 
 Figure 4: Piscataqua River New Hampshire - Sea Water Speed, Yearly
 Average, Depth Average
@@ -216,7 +216,7 @@ Average, Depth Average
 
 <div id="fig-wa-puget-speed">
 
-![](./docs/img/wa_puget_sound_speed.png)
+![](./docs/img/WA_puget_sound_mean_sea_water_speed.png)
 
 Figure 5: Puget Sound, Washington - Sea Water Speed, Yearly Average,
 Depth Average
