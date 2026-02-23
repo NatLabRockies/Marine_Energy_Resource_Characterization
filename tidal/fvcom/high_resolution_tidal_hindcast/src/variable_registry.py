@@ -7,13 +7,13 @@ import re
 DOCUMENTATION_REGISTRY = {
     "data_availability": {
         "href": "https://mhkdr.openei.org/submissions/632",
-        "full_text": "High Resolution Tidal Hindcast Data Repository on OpenEI",
+        "full_text": "High Resolution Tidal Hindcast Data Repository",
         "short_text": "Dataset Repository",
         "keyword": "DATA_CITATION",
     },
     "data_access": {
         "href": "https://data.openei.org/s3_viewer?bucket=marine-energy-data&prefix=us-tidal%2F",
-        "full_text": "High Resolution Tidal Hindcast Data Repository on OpenEI",
+        "full_text": "High Resolution Tidal Hindcast Data Access on OpenEI",
         "short_text": "Dataset Repository",
         "keyword": "DATA_ACCESS",
     },
@@ -25,7 +25,7 @@ DOCUMENTATION_REGISTRY = {
     },
     "pnnl_team": {
         "href": "https://www.pnnl.gov/projects/ocean-dynamics-modeling",
-        "full_text": "Pacific Northwest National Laboratory  Ocean Dynamics and Modeling Group",
+        "full_text": "Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group",
         "short_text": "PNNL Ocean Dynamics and Modeling Group",
         "keyword": "PNNL",
     },
@@ -46,6 +46,12 @@ DOCUMENTATION_REGISTRY = {
         "full_text": "Water Power Technologies Office",
         "short_text": "WPTO",
         "keyword": "WPTO",
+    },
+    "contact_email": {
+        "href": "mailto:marineresource@nlr.gov",
+        "full_text": "marineresource@nlr.gov",
+        "short_text": "marineresource@nlr.gov",
+        "keyword": "CONTACT_EMAIL",
     },
 }
 
@@ -856,8 +862,8 @@ VARIABLE_REGISTRY = {
         "units": "",
         "long_name": "Face ID",
         "included_on_atlas": True,
-        "one_liner": "Unique integer identifier for each triangular grid element",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/",
+        "one_liner": "Location specific unique integer identifier for each triangular grid element",
+        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#face_id",
     },
     "center_latitude": {
         "display_name": "Center Latitude",
@@ -866,7 +872,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Center Latitude",
         "included_on_atlas": True,
         "one_liner": "Latitude of the triangular element centroid (WGS84)",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/",
+        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#center_latitude",
     },
     "center_longitude": {
         "display_name": "Center Longitude",
@@ -875,7 +881,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Center Longitude",
         "included_on_atlas": True,
         "one_liner": "Longitude of the triangular element centroid (WGS84)",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/",
+        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#center_longitude",
     },
     "full_year_s3_uri": {
         "display_name": "S3 URI for Full Year Time Series Data",
@@ -883,8 +889,8 @@ VARIABLE_REGISTRY = {
         "units": "",
         "long_name": "S3 URI for Full Year Time Series Data",
         "included_on_atlas": True,
-        "one_liner": "Amazon S3 URI for downloading the complete one-year time series for this grid element",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/",
+        "one_liner": "direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.",
+        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri",
     },
     "full_year_https_url": {
         "display_name": "HTTPS URL for Full Year Time Series Data",
@@ -892,28 +898,30 @@ VARIABLE_REGISTRY = {
         "units": "",
         "long_name": "HTTPS URL for Full Year Time Series Data",
         "included_on_atlas": True,
-        "one_liner": "HTTPS URL for downloading the complete one-year time series for this grid element",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/",
+        "one_liner": "direct link (HTTPS)  to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals",
+        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_https_url",
     },
 }
 
 
 dataset_info = (
-    "<DISPLAY_NAME> is part of the <DATA_CITATION>, intended for "
-    "reconnaissance-level tidal energy resource characterization. "
-    "The dataset was funded by <DOE> <WPTO>, designed and validated by "
-    "<PNNL>, and standardized, visualized, and released by <NLR>. "
-    "Citation information and dataset documentation are available at "
-    "<DOCUMENTATION>. Data are available through <DATA_ACCESS>, which "
-    "provides access to the full hindcast dataset. For questions, "
-    "please contact <NLR>."
+    "Source: <DATA_CITATION>, funded by <DOE> <WPTO>. "
+    "Modeled by <PNNL>; standardized and released by <NLR>. "
+    "See <DOCUMENTATION> for methodology, citations, and full dataset access. "
+    "Contact <CONTACT_EMAIL> with questions."
 )
+
+
+def _html_link(text, href):
+    if href.startswith("mailto:"):
+        return f'<a href="{href}">{text}</a>'
+    return f'<a href="{href}" target="_blank" rel="noopener noreferrer">{text}</a>'
 
 
 _LINK_FORMATTERS = {
     "text": lambda text, href: text,
     "markdown": lambda text, href: f"[{text}]({href})",
-    "html": lambda text, href: f'<a href="{href}">{text}</a>',
+    "html": _html_link,
 }
 
 
@@ -946,7 +954,13 @@ def _render(
                 if not preceding or preceding[-1] in ".!?\n":
                     result += val_str + part
                 else:
-                    result += val_str[0].lower() + val_str[1:] + part
+                    # Lowercase first char unless the first word is all-caps
+                    # (acronym like "HTTPS", "URI") which must stay as-is.
+                    first_word = val_str.split()[0] if val_str else ""
+                    if first_word.isupper() and len(first_word) > 1:
+                        result += val_str + part
+                    else:
+                        result += val_str[0].lower() + val_str[1:] + part
         else:
             result = result.replace(placeholder, val_str)
     unresolved = re.findall(r"<[A-Z_]+>", result)
@@ -966,15 +980,17 @@ def _render_all_formats(text_spec, keyword_spec, variable_spec):
 # This goes with each variable on the atlas page
 # Concise, points the user to the right place
 def atlas_variable_spec(variable_spec, keyword_spec):
+    units_part = " [<UNITS>]" if variable_spec.get("units") else ""
     text_spec = (
-        "<DISPLAY_NAME> [<UNITS>] is the <ONE_LINER>. "
-        "For details, see the <VARIABLE_LINK>. " + dataset_info
+        f"<DISPLAY_NAME>{units_part} is the <ONE_LINER>. "
+        "For more detail, see <VARIABLE_LINK>. " + dataset_info
     )
+    display_lower = variable_spec["display_name"].lower()
     augmented_keywords = dict(keyword_spec)
     augmented_keywords["_variable_link"] = {
         "href": variable_spec["documentation_url"],
-        "full_text": "detailed <DISPLAY_NAME> documentation",
-        "short_text": "detailed <DISPLAY_NAME> documentation",
+        "full_text": f"complete {display_lower} documentation",
+        "short_text": f"complete {display_lower} documentation",
         "keyword": "VARIABLE_LINK",
     }
     return {
@@ -984,8 +1000,9 @@ def atlas_variable_spec(variable_spec, keyword_spec):
 
 
 def documentation_variable_spec(variable_spec, keyword_spec):
+    units_part = " [<UNITS>]" if variable_spec.get("units") else ""
     text_spec = (
-        "<DISPLAY_NAME> [<UNITS>] is the <COMPLETE_DESCRIPTION>. " + dataset_info
+        f"<DISPLAY_NAME>{units_part} is the <COMPLETE_DESCRIPTION>. " + dataset_info
     )
     result = {
         "display_name": variable_spec["display_name"],
