@@ -13,20 +13,20 @@ Atlas summary parquet files are located at:
 
 | Location Name | `<location>` |
 | --- | --- |
-| Aleutian Islands, Alaska | `AK_aleutian_islands` |
+| Piscataqua River, New Hampshire | `NH_piscataqua_river` |
 | Cook Inlet, Alaska | `AK_cook_inlet` |
 | Western Passage, Maine | `ME_western_passage` |
-| Piscataqua River, New Hampshire | `NH_piscataqua_river` |
 | Puget Sound, Washington | `WA_puget_sound` |
+| Aleutian Islands, Alaska | `AK_aleutian_islands` |
 
 ### GeoPackage (GPKG) Files
 
 GeoPackage files for each location are located at:
 
-**Aleutian Islands, Alaska**
+**Piscataqua River, New Hampshire**
 
 ```
-/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_aleutian_islands/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
+/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/NH_piscataqua_river/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 ```
 
 **Cook Inlet, Alaska**
@@ -41,26 +41,26 @@ GeoPackage files for each location are located at:
 /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/ME_western_passage/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 ```
 
-**Piscataqua River, New Hampshire**
-
-```
-/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/NH_piscataqua_river/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
-```
-
 **Puget Sound, Washington**
 
 ```
 /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/WA_puget_sound/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 ```
 
-**All locations (combined)**
+**Aleutian Islands, Alaska**
 
 ```
 /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_aleutian_islands/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
+```
+
+**All locations (combined)**
+
+```
+/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/NH_piscataqua_river/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_cook_inlet/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/ME_western_passage/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
-/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/NH_piscataqua_river/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/WA_puget_sound/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
+/projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_aleutian_islands/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 ```
 
 
@@ -68,11 +68,11 @@ GeoPackage files for each location are located at:
 
 | Location Name | Face Count | Averaging Dates [UTC] | Averaging Temporal Resolution
 | --- | --- | --- | --- |
-| Aleutian Islands, Alaska | 797,978 | 2010-06-03 00:00:00 to 2011-06-02 23:00:00 | hourly |
+| Piscataqua River, New Hampshire | 292,927 | 2007-01-01 00:00:00 to 2007-12-31 23:30:00 | half-hourly |
 | Cook Inlet, Alaska | 392,002 | 2005-01-01 00:00:00 to 2005-12-31 23:00:00 | hourly |
 | Western Passage, Maine | 231,208 | 2017-01-01 00:00:00 to 2017-12-31 23:30:00 | half-hourly |
-| Piscataqua River, New Hampshire | 292,927 | 2007-01-01 00:00:00 to 2007-12-31 23:30:00 | half-hourly |
 | Puget Sound, Washington | 1,734,765 | 2015-01-01 00:00:00 to 2015-12-30 23:30:00 | half-hourly |
+| Aleutian Islands, Alaska | 797,978 | 2010-06-03 00:00:00 to 2011-06-02 23:00:00 | hourly |
 
 ## Color Layer Details
 
@@ -950,10 +950,119 @@ Notes:
 | Maximum Water Depth | `vap_water_column_height_max` | 0 - 200 | m | 10 | cmo.deep |
 | Grid Resolution | `vap_grid_resolution` | 0 - 500 | m | 3 | Custom |
 
-## Color Mapping Specifications
+## Color Specifications
 
-**Note:** Color level details will be populated when the visualization functions are executed.
-The color mapping system uses discrete levels for improved interpretation.
+The following tables provide exact color specifications for each variable.
+All colors use discrete levels with an overflow level for values exceeding the maximum range.
+
+### Mean Current Speed [m/s], `vap_water_column_mean_sea_water_speed`
+
+* **Colormap:** cmo.thermal
+* **Data Range:** 0 to 1.5 m/s
+* **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 0.15 [m/s] | `#032333` | `rgb(3, 35, 51)` | ![#032333](https://placehold.co/40x15/032333/032333) |
+| 2 | 0.15 - 0.30 [m/s] | `#0f3169` | `rgb(15, 49, 105)` | ![#0f3169](https://placehold.co/40x15/0f3169/0f3169) |
+| 3 | 0.30 - 0.45 [m/s] | `#3f339f` | `rgb(63, 51, 159)` | ![#3f339f](https://placehold.co/40x15/3f339f/3f339f) |
+| 4 | 0.45 - 0.60 [m/s] | `#674396` | `rgb(103, 67, 150)` | ![#674396](https://placehold.co/40x15/674396/674396) |
+| 5 | 0.60 - 0.75 [m/s] | `#8a528c` | `rgb(138, 82, 140)` | ![#8a528c](https://placehold.co/40x15/8a528c/8a528c) |
+| 6 | 0.75 - 0.90 [m/s] | `#b05f81` | `rgb(176, 95, 129)` | ![#b05f81](https://placehold.co/40x15/b05f81/b05f81) |
+| 7 | 0.90 - 1.05 [m/s] | `#d56b6c` | `rgb(213, 107, 108)` | ![#d56b6c](https://placehold.co/40x15/d56b6c/d56b6c) |
+| 8 | 1.05 - 1.20 [m/s] | `#f2824c` | `rgb(242, 130, 76)` | ![#f2824c](https://placehold.co/40x15/f2824c/f2824c) |
+| 9 | 1.20 - 1.35 [m/s] | `#fba53c` | `rgb(251, 165, 60)` | ![#fba53c](https://placehold.co/40x15/fba53c/fba53c) |
+| 10 | 1.35 - 1.50 [m/s] | `#f6d045` | `rgb(246, 208, 69)` | ![#f6d045](https://placehold.co/40x15/f6d045/f6d045) |
+| 11 | ≥ 1.500 m/s | `#e7fa5a` | `rgb(231, 250, 90)` | ![#e7fa5a](https://placehold.co/40x15/e7fa5a/e7fa5a) |
+
+### 95th Percentile Current Speed [m/s], `vap_water_column_95th_percentile_sea_water_speed`
+
+* **Colormap:** cmo.matter
+* **Data Range:** 0 to 5.0 m/s
+* **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 0.50 [m/s] | `#fdedb0` | `rgb(253, 237, 176)` | ![#fdedb0](https://placehold.co/40x15/fdedb0/fdedb0) |
+| 2 | 0.50 - 1.00 [m/s] | `#faca8f` | `rgb(250, 202, 143)` | ![#faca8f](https://placehold.co/40x15/faca8f/faca8f) |
+| 3 | 1.00 - 1.50 [m/s] | `#f5a672` | `rgb(245, 166, 114)` | ![#f5a672](https://placehold.co/40x15/f5a672/f5a672) |
+| 4 | 1.50 - 2.00 [m/s] | `#ee845d` | `rgb(238, 132, 93)` | ![#ee845d](https://placehold.co/40x15/ee845d/ee845d) |
+| 5 | 2.00 - 2.50 [m/s] | `#e26152` | `rgb(226, 97, 82)` | ![#e26152](https://placehold.co/40x15/e26152/e26152) |
+| 6 | 2.50 - 3.00 [m/s] | `#ce4356` | `rgb(206, 67, 86)` | ![#ce4356](https://placehold.co/40x15/ce4356/ce4356) |
+| 7 | 3.00 - 3.50 [m/s] | `#b32e5e` | `rgb(179, 46, 94)` | ![#b32e5e](https://placehold.co/40x15/b32e5e/b32e5e) |
+| 8 | 3.50 - 4.00 [m/s] | `#931f63` | `rgb(147, 31, 99)` | ![#931f63](https://placehold.co/40x15/931f63/931f63) |
+| 9 | 4.00 - 4.50 [m/s] | `#72195f` | `rgb(114, 25, 95)` | ![#72195f](https://placehold.co/40x15/72195f/72195f) |
+| 10 | 4.50 - 5.00 [m/s] | `#4f1552` | `rgb(79, 21, 82)` | ![#4f1552](https://placehold.co/40x15/4f1552/4f1552) |
+| 11 | ≥ 5.000 m/s | `#2f0f3d` | `rgb(47, 15, 61)` | ![#2f0f3d](https://placehold.co/40x15/2f0f3d/2f0f3d) |
+
+### Mean Power Density [W/m²], `vap_water_column_mean_sea_water_power_density`
+
+* **Colormap:** cmo.dense
+* **Data Range:** 0 to 1750 W/m²
+* **Discrete Levels:** 8 (7 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0 - 250 [W/m²] | `#e6f0f0` | `rgb(230, 240, 240)` | ![#e6f0f0](https://placehold.co/40x15/e6f0f0/e6f0f0) |
+| 2 | 250 - 500 [W/m²] | `#aad2e2` | `rgb(170, 210, 226)` | ![#aad2e2](https://placehold.co/40x15/aad2e2/aad2e2) |
+| 3 | 500 - 750 [W/m²] | `#7db0e3` | `rgb(125, 176, 227)` | ![#7db0e3](https://placehold.co/40x15/7db0e3/7db0e3) |
+| 4 | 750 - 1000 [W/m²] | `#7487e0` | `rgb(116, 135, 224)` | ![#7487e0](https://placehold.co/40x15/7487e0/7487e0) |
+| 5 | 1000 - 1250 [W/m²] | `#795cc3` | `rgb(121, 92, 195)` | ![#795cc3](https://placehold.co/40x15/795cc3/795cc3) |
+| 6 | 1250 - 1500 [W/m²] | `#723693` | `rgb(114, 54, 147)` | ![#723693](https://placehold.co/40x15/723693/723693) |
+| 7 | 1500 - 1750 [W/m²] | `#5c1957` | `rgb(92, 25, 87)` | ![#5c1957](https://placehold.co/40x15/5c1957/5c1957) |
+| 8 | ≥ 1750 W/m² | `#360e24` | `rgb(54, 14, 36)` | ![#360e24](https://placehold.co/40x15/360e24/360e24) |
+
+### Minimum Water Depth [m], `vap_water_column_height_min`
+
+* **Colormap:** cmo.deep
+* **Data Range:** 0 to 200 m
+* **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 20.00 [m] | `#fdfdcc` | `rgb(253, 253, 204)` | ![#fdfdcc](https://placehold.co/40x15/fdfdcc/fdfdcc) |
+| 2 | 20.00 - 40.00 [m] | `#c9ebb1` | `rgb(201, 235, 177)` | ![#c9ebb1](https://placehold.co/40x15/c9ebb1/c9ebb1) |
+| 3 | 40.00 - 60.00 [m] | `#91d8a3` | `rgb(145, 216, 163)` | ![#91d8a3](https://placehold.co/40x15/91d8a3/91d8a3) |
+| 4 | 60.00 - 80.00 [m] | `#66c2a3` | `rgb(102, 194, 163)` | ![#66c2a3](https://placehold.co/40x15/66c2a3/66c2a3) |
+| 5 | 80 - 100 [m] | `#51a8a2` | `rgb(81, 168, 162)` | ![#51a8a2](https://placehold.co/40x15/51a8a2/51a8a2) |
+| 6 | 100 - 120 [m] | `#488d9d` | `rgb(72, 141, 157)` | ![#488d9d](https://placehold.co/40x15/488d9d/488d9d) |
+| 7 | 120 - 140 [m] | `#407598` | `rgb(64, 117, 152)` | ![#407598](https://placehold.co/40x15/407598/407598) |
+| 8 | 140 - 160 [m] | `#3d5a92` | `rgb(61, 90, 146)` | ![#3d5a92](https://placehold.co/40x15/3d5a92/3d5a92) |
+| 9 | 160 - 180 [m] | `#41407b` | `rgb(65, 64, 123)` | ![#41407b](https://placehold.co/40x15/41407b/41407b) |
+| 10 | 180 - 200 [m] | `#372c50` | `rgb(55, 44, 80)` | ![#372c50](https://placehold.co/40x15/372c50/372c50) |
+| 11 | ≥ 200.0 m | `#271a2c` | `rgb(39, 26, 44)` | ![#271a2c](https://placehold.co/40x15/271a2c/271a2c) |
+
+### Maximum Water Depth [m], `vap_water_column_height_max`
+
+* **Colormap:** cmo.deep
+* **Data Range:** 0 to 200 m
+* **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 20.00 [m] | `#fdfdcc` | `rgb(253, 253, 204)` | ![#fdfdcc](https://placehold.co/40x15/fdfdcc/fdfdcc) |
+| 2 | 20.00 - 40.00 [m] | `#c9ebb1` | `rgb(201, 235, 177)` | ![#c9ebb1](https://placehold.co/40x15/c9ebb1/c9ebb1) |
+| 3 | 40.00 - 60.00 [m] | `#91d8a3` | `rgb(145, 216, 163)` | ![#91d8a3](https://placehold.co/40x15/91d8a3/91d8a3) |
+| 4 | 60.00 - 80.00 [m] | `#66c2a3` | `rgb(102, 194, 163)` | ![#66c2a3](https://placehold.co/40x15/66c2a3/66c2a3) |
+| 5 | 80 - 100 [m] | `#51a8a2` | `rgb(81, 168, 162)` | ![#51a8a2](https://placehold.co/40x15/51a8a2/51a8a2) |
+| 6 | 100 - 120 [m] | `#488d9d` | `rgb(72, 141, 157)` | ![#488d9d](https://placehold.co/40x15/488d9d/488d9d) |
+| 7 | 120 - 140 [m] | `#407598` | `rgb(64, 117, 152)` | ![#407598](https://placehold.co/40x15/407598/407598) |
+| 8 | 140 - 160 [m] | `#3d5a92` | `rgb(61, 90, 146)` | ![#3d5a92](https://placehold.co/40x15/3d5a92/3d5a92) |
+| 9 | 160 - 180 [m] | `#41407b` | `rgb(65, 64, 123)` | ![#41407b](https://placehold.co/40x15/41407b/41407b) |
+| 10 | 180 - 200 [m] | `#372c50` | `rgb(55, 44, 80)` | ![#372c50](https://placehold.co/40x15/372c50/372c50) |
+| 11 | ≥ 200.0 m | `#271a2c` | `rgb(39, 26, 44)` | ![#271a2c](https://placehold.co/40x15/271a2c/271a2c) |
+
+### Grid Resolution [m], `vap_grid_resolution`
+
+* **Colormap:** Custom
+* **Data Range:** 0 to 500 m
+* **Discrete Levels:** 4 (3 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+| ----- | ----------- | --------- | --------- | ------------- |
+| 1 | 0.00 - 50.00 [m] | `#1f77b4` | `rgb(31, 119, 180)` | ![#1f77b4](https://placehold.co/40x15/1f77b4/1f77b4) |
+| 2 | 50 - 500 [m] | `#ff7f0e` | `rgb(255, 127, 14)` | ![#ff7f0e](https://placehold.co/40x15/ff7f0e/ff7f0e) |
+| 3 | ≥ 500.0 m | `#dc143c` | `rgb(220, 20, 60)` | ![#dc143c](https://placehold.co/40x15/dc143c/dc143c) |
 
 ## Visualizations by Variable
 
@@ -1224,7 +1333,7 @@ These kernel density estimation (KDE) plots provide clean statistical comparison
 
 ## Document Information
 
-- **Generated:** 2026-02-23 11:38:33 UTC
+- **Generated:** 2026-02-23 13:53:49 UTC
 - **Regions Processed:** AK_aleutian_islands, AK_cook_inlet, ME_western_passage, NH_piscataqua_river, WA_puget_sound
 
 *This specification was auto-generated from the tidal data visualization pipeline.*
