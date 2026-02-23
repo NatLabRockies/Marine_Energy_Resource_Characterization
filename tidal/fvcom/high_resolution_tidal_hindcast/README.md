@@ -1240,19 +1240,19 @@ Atlas summary parquet files are located at:
 
 | Location Name                   | `<location>`          |
 |---------------------------------|-----------------------|
-| Aleutian Islands, Alaska        | `AK_aleutian_islands` |
+| Piscataqua River, New Hampshire | `NH_piscataqua_river` |
 | Cook Inlet, Alaska              | `AK_cook_inlet`       |
 | Western Passage, Maine          | `ME_western_passage`  |
-| Piscataqua River, New Hampshire | `NH_piscataqua_river` |
 | Puget Sound, Washington         | `WA_puget_sound`      |
+| Aleutian Islands, Alaska        | `AK_aleutian_islands` |
 
 ### GeoPackage (GPKG) Files
 
 GeoPackage files for each location are located at:
 
-**Aleutian Islands, Alaska**
+**Piscataqua River, New Hampshire**
 
-    /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_aleutian_islands/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
+    /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/NH_piscataqua_river/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 
 **Cook Inlet, Alaska**
 
@@ -1262,31 +1262,31 @@ GeoPackage files for each location are located at:
 
     /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/ME_western_passage/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 
-**Piscataqua River, New Hampshire**
-
-    /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/NH_piscataqua_river/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
-
 **Puget Sound, Washington**
 
     /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/WA_puget_sound/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 
-**All locations (combined)**
+**Aleutian Islands, Alaska**
 
     /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_aleutian_islands/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
+
+**All locations (combined)**
+
+    /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/NH_piscataqua_river/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
     /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_cook_inlet/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
     /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/ME_western_passage/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
-    /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/NH_piscataqua_river/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
     /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/WA_puget_sound/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
+    /projects/hindcastra/Tidal/datasets/high_resolution_tidal_hindcast/AK_aleutian_islands/v1.0.0/b5_vap_atlas_summary_parquet/gis/gpkg/
 
 ## Location Details
 
 | Location Name | Face Count | Averaging Dates \[UTC\] | Averaging Temporal Resolution |
 |----|----|----|----|
-| Aleutian Islands, Alaska | 797,978 | 2010-06-03 00:00:00 to 2011-06-02 23:00:00 | hourly |
+| Piscataqua River, New Hampshire | 292,927 | 2007-01-01 00:00:00 to 2007-12-31 23:30:00 | half-hourly |
 | Cook Inlet, Alaska | 392,002 | 2005-01-01 00:00:00 to 2005-12-31 23:00:00 | hourly |
 | Western Passage, Maine | 231,208 | 2017-01-01 00:00:00 to 2017-12-31 23:30:00 | half-hourly |
-| Piscataqua River, New Hampshire | 292,927 | 2007-01-01 00:00:00 to 2007-12-31 23:30:00 | half-hourly |
 | Puget Sound, Washington | 1,734,765 | 2015-01-01 00:00:00 to 2015-12-30 23:30:00 | half-hourly |
+| Aleutian Islands, Alaska | 797,978 | 2010-06-03 00:00:00 to 2011-06-02 23:00:00 | hourly |
 
 ## Color Layer Details
 
@@ -1822,53 +1822,6 @@ for methodology, citations, and full dataset access. Contact
 }
 ```
 
-### Sea Floor Depth
-
-- **Data Column:** `vap_sea_floor_depth`
-- **Description:** Model bathymetry depth below NAVD88 vertical datum
-  \[m (below NAVD88)\]
-- **Documentation:**
-  <https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#sea-floor-depth>
-
-**Rendered Preview**
-
-Sea Floor Depth \[m (below NAVD88)\] is the model bathymetry depth below
-NAVD88 vertical datum. For more detail, see [complete sea floor depth
-documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#sea-floor-depth).
-Source: [High Resolution Tidal Hindcast Data
-Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S.
-Department of Energy](https://www.energy.gov/) [Water Power Technologies
-Office](https://www.energy.gov/eere/water/water-power-technologies-office).
-Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and
-Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling);
-standardized and released by [National Laboratory of the Rockies Marine
-Energy Resource Characterization
-Team](https://www.nlr.gov/water/resource-characterization). See [Tidal
-Hindcast Dataset
-Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/)
-for methodology, citations, and full dataset access. Contact
-<marineresource@nlr.gov> with questions.
-
-**HTML**
-
-``` html
-<div><p>Sea Floor Depth [m (below NAVD88)] is the model bathymetry depth below NAVD88 vertical datum. For more detail, see <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#sea-floor-depth" target="_blank" rel="noopener noreferrer">complete sea floor depth documentation</a>.<br/></p><p>Source: <a href="https://mhkdr.openei.org/submissions/632" target="_blank" rel="noopener noreferrer">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href="https://www.energy.gov/" target="_blank" rel="noopener noreferrer">U.S. Department of Energy</a> <a href="https://www.energy.gov/eere/water/water-power-technologies-office" target="_blank" rel="noopener noreferrer">Water Power Technologies Office</a>. Modeled by <a href="https://www.pnnl.gov/projects/ocean-dynamics-modeling" target="_blank" rel="noopener noreferrer">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href="https://www.nlr.gov/water/resource-characterization" target="_blank" rel="noopener noreferrer">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/" target="_blank" rel="noopener noreferrer">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href="mailto:marineresource@nlr.gov">marineresource@nlr.gov</a> with questions.</p></div>
-```
-
-**JSON**
-
-``` json
-{
-  "vap_sea_floor_depth": {
-    "display_name": "Sea Floor Depth",
-    "text": "Sea Floor Depth [m (below NAVD88)] is the model bathymetry depth below NAVD88 vertical datum. For more detail, see complete sea floor depth documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
-    "markdown": "Sea Floor Depth [m (below NAVD88)] is the model bathymetry depth below NAVD88 vertical datum. For more detail, see [complete sea floor depth documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#sea-floor-depth). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
-    "html": "<div><p>Sea Floor Depth [m (below NAVD88)] is the model bathymetry depth below NAVD88 vertical datum. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#sea-floor-depth\" target=\"_blank\" rel=\"noopener noreferrer\">complete sea floor depth documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
-    "show_as_layer_with_color_spec": false
-  }
-}
-```
-
 ### Minimum Water Depth
 
 - **Data Column:** `vap_water_column_height_min`
@@ -1957,6 +1910,101 @@ for methodology, citations, and full dataset access. Contact
     "markdown": "Maximum Water Depth [m] is the maximum water depth (during 1 year model run). For more detail, see [complete maximum water depth documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
     "html": "<div><p>Maximum Water Depth [m] is the maximum water depth (during 1 year model run). For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth\" target=\"_blank\" rel=\"noopener noreferrer\">complete maximum water depth documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
     "show_as_layer_with_color_spec": true
+  }
+}
+```
+
+### Tidal Range
+
+- **Data Column:** `vap_tidal_range`
+- **Description:** Difference between maximum and minimum sea surface
+  elevation over the hindcast year \[m\]
+- **Documentation:**
+  <https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range>
+
+**Rendered Preview**
+
+Tidal Range \[m\] is the difference between maximum and minimum sea
+surface elevation over the hindcast year. For more detail, see [complete
+tidal range
+documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range).
+Source: [High Resolution Tidal Hindcast Data
+Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S.
+Department of Energy](https://www.energy.gov/) [Water Power Technologies
+Office](https://www.energy.gov/eere/water/water-power-technologies-office).
+Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and
+Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling);
+standardized and released by [National Laboratory of the Rockies Marine
+Energy Resource Characterization
+Team](https://www.nlr.gov/water/resource-characterization). See [Tidal
+Hindcast Dataset
+Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/)
+for methodology, citations, and full dataset access. Contact
+<marineresource@nlr.gov> with questions.
+
+**HTML**
+
+``` html
+<div><p>Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range" target="_blank" rel="noopener noreferrer">complete tidal range documentation</a>.<br/></p><p>Source: <a href="https://mhkdr.openei.org/submissions/632" target="_blank" rel="noopener noreferrer">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href="https://www.energy.gov/" target="_blank" rel="noopener noreferrer">U.S. Department of Energy</a> <a href="https://www.energy.gov/eere/water/water-power-technologies-office" target="_blank" rel="noopener noreferrer">Water Power Technologies Office</a>. Modeled by <a href="https://www.pnnl.gov/projects/ocean-dynamics-modeling" target="_blank" rel="noopener noreferrer">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href="https://www.nlr.gov/water/resource-characterization" target="_blank" rel="noopener noreferrer">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/" target="_blank" rel="noopener noreferrer">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href="mailto:marineresource@nlr.gov">marineresource@nlr.gov</a> with questions.</p></div>
+```
+
+**JSON**
+
+``` json
+{
+  "vap_tidal_range": {
+    "display_name": "Tidal Range",
+    "text": "Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see complete tidal range documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
+    "markdown": "Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see [complete tidal range documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
+    "html": "<div><p>Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range\" target=\"_blank\" rel=\"noopener noreferrer\">complete tidal range documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
+    "show_as_layer_with_color_spec": false
+  }
+}
+```
+
+### Distance to Shore
+
+- **Data Column:** `vap_distance_to_shore`
+- **Description:** Geodesic distance from grid cell center to nearest
+  shoreline \[NM\]
+- **Documentation:**
+  <https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore>
+
+**Rendered Preview**
+
+Distance to Shore \[NM\] is the geodesic distance from grid cell center
+to nearest shoreline. For more detail, see [complete distance to shore
+documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore).
+Source: [High Resolution Tidal Hindcast Data
+Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S.
+Department of Energy](https://www.energy.gov/) [Water Power Technologies
+Office](https://www.energy.gov/eere/water/water-power-technologies-office).
+Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and
+Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling);
+standardized and released by [National Laboratory of the Rockies Marine
+Energy Resource Characterization
+Team](https://www.nlr.gov/water/resource-characterization). See [Tidal
+Hindcast Dataset
+Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/)
+for methodology, citations, and full dataset access. Contact
+<marineresource@nlr.gov> with questions.
+
+**HTML**
+
+``` html
+<div><p>Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore" target="_blank" rel="noopener noreferrer">complete distance to shore documentation</a>.<br/></p><p>Source: <a href="https://mhkdr.openei.org/submissions/632" target="_blank" rel="noopener noreferrer">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href="https://www.energy.gov/" target="_blank" rel="noopener noreferrer">U.S. Department of Energy</a> <a href="https://www.energy.gov/eere/water/water-power-technologies-office" target="_blank" rel="noopener noreferrer">Water Power Technologies Office</a>. Modeled by <a href="https://www.pnnl.gov/projects/ocean-dynamics-modeling" target="_blank" rel="noopener noreferrer">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href="https://www.nlr.gov/water/resource-characterization" target="_blank" rel="noopener noreferrer">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/" target="_blank" rel="noopener noreferrer">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href="mailto:marineresource@nlr.gov">marineresource@nlr.gov</a> with questions.</p></div>
+```
+
+**JSON**
+
+``` json
+{
+  "vap_distance_to_shore": {
+    "display_name": "Distance to Shore",
+    "text": "Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see complete distance to shore documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
+    "markdown": "Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see [complete distance to shore documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
+    "html": "<div><p>Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore\" target=\"_blank\" rel=\"noopener noreferrer\">complete distance to shore documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
+    "show_as_layer_with_color_spec": false
   }
 }
 ```
@@ -2054,149 +2102,6 @@ for methodology, citations, and full dataset access. Contact
     "text": "Minimum Sea Surface Elevation at Low Tide [m (relative to model MSL)] is the lowest sea surface elevation observed during low tide over the hindcast year. For more detail, see complete minimum sea surface elevation at low tide documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
     "markdown": "Minimum Sea Surface Elevation at Low Tide [m (relative to model MSL)] is the lowest sea surface elevation observed during low tide over the hindcast year. For more detail, see [complete minimum sea surface elevation at low tide documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#min-sea-surface-elevation-at-low-tide). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
     "html": "<div><p>Minimum Sea Surface Elevation at Low Tide [m (relative to model MSL)] is the lowest sea surface elevation observed during low tide over the hindcast year. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#min-sea-surface-elevation-at-low-tide\" target=\"_blank\" rel=\"noopener noreferrer\">complete minimum sea surface elevation at low tide documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
-    "show_as_layer_with_color_spec": false
-  }
-}
-```
-
-### Tidal Range
-
-- **Data Column:** `vap_tidal_range`
-- **Description:** Difference between maximum and minimum sea surface
-  elevation over the hindcast year \[m\]
-- **Documentation:**
-  <https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range>
-
-**Rendered Preview**
-
-Tidal Range \[m\] is the difference between maximum and minimum sea
-surface elevation over the hindcast year. For more detail, see [complete
-tidal range
-documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range).
-Source: [High Resolution Tidal Hindcast Data
-Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S.
-Department of Energy](https://www.energy.gov/) [Water Power Technologies
-Office](https://www.energy.gov/eere/water/water-power-technologies-office).
-Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and
-Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling);
-standardized and released by [National Laboratory of the Rockies Marine
-Energy Resource Characterization
-Team](https://www.nlr.gov/water/resource-characterization). See [Tidal
-Hindcast Dataset
-Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/)
-for methodology, citations, and full dataset access. Contact
-<marineresource@nlr.gov> with questions.
-
-**HTML**
-
-``` html
-<div><p>Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range" target="_blank" rel="noopener noreferrer">complete tidal range documentation</a>.<br/></p><p>Source: <a href="https://mhkdr.openei.org/submissions/632" target="_blank" rel="noopener noreferrer">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href="https://www.energy.gov/" target="_blank" rel="noopener noreferrer">U.S. Department of Energy</a> <a href="https://www.energy.gov/eere/water/water-power-technologies-office" target="_blank" rel="noopener noreferrer">Water Power Technologies Office</a>. Modeled by <a href="https://www.pnnl.gov/projects/ocean-dynamics-modeling" target="_blank" rel="noopener noreferrer">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href="https://www.nlr.gov/water/resource-characterization" target="_blank" rel="noopener noreferrer">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/" target="_blank" rel="noopener noreferrer">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href="mailto:marineresource@nlr.gov">marineresource@nlr.gov</a> with questions.</p></div>
-```
-
-**JSON**
-
-``` json
-{
-  "vap_tidal_range": {
-    "display_name": "Tidal Range",
-    "text": "Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see complete tidal range documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
-    "markdown": "Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see [complete tidal range documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
-    "html": "<div><p>Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range\" target=\"_blank\" rel=\"noopener noreferrer\">complete tidal range documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
-    "show_as_layer_with_color_spec": false
-  }
-}
-```
-
-### Mean Sea Surface Elevation
-
-- **Data Column:** `vap_sea_surface_elevation_mean`
-- **Description:** Average sea surface elevation representing the model
-  mean sea level offset from NAVD88 \[m (offset from NAVD88)\]
-- **Documentation:**
-  <https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-sea-surface-elevation>
-
-**Rendered Preview**
-
-Mean Sea Surface Elevation \[m (offset from NAVD88)\] is the average sea
-surface elevation representing the model mean sea level offset from
-NAVD88. For more detail, see [complete mean sea surface elevation
-documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-sea-surface-elevation).
-Source: [High Resolution Tidal Hindcast Data
-Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S.
-Department of Energy](https://www.energy.gov/) [Water Power Technologies
-Office](https://www.energy.gov/eere/water/water-power-technologies-office).
-Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and
-Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling);
-standardized and released by [National Laboratory of the Rockies Marine
-Energy Resource Characterization
-Team](https://www.nlr.gov/water/resource-characterization). See [Tidal
-Hindcast Dataset
-Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/)
-for methodology, citations, and full dataset access. Contact
-<marineresource@nlr.gov> with questions.
-
-**HTML**
-
-``` html
-<div><p>Mean Sea Surface Elevation [m (offset from NAVD88)] is the average sea surface elevation representing the model mean sea level offset from NAVD88. For more detail, see <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-sea-surface-elevation" target="_blank" rel="noopener noreferrer">complete mean sea surface elevation documentation</a>.<br/></p><p>Source: <a href="https://mhkdr.openei.org/submissions/632" target="_blank" rel="noopener noreferrer">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href="https://www.energy.gov/" target="_blank" rel="noopener noreferrer">U.S. Department of Energy</a> <a href="https://www.energy.gov/eere/water/water-power-technologies-office" target="_blank" rel="noopener noreferrer">Water Power Technologies Office</a>. Modeled by <a href="https://www.pnnl.gov/projects/ocean-dynamics-modeling" target="_blank" rel="noopener noreferrer">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href="https://www.nlr.gov/water/resource-characterization" target="_blank" rel="noopener noreferrer">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/" target="_blank" rel="noopener noreferrer">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href="mailto:marineresource@nlr.gov">marineresource@nlr.gov</a> with questions.</p></div>
-```
-
-**JSON**
-
-``` json
-{
-  "vap_sea_surface_elevation_mean": {
-    "display_name": "Mean Sea Surface Elevation",
-    "text": "Mean Sea Surface Elevation [m (offset from NAVD88)] is the average sea surface elevation representing the model mean sea level offset from NAVD88. For more detail, see complete mean sea surface elevation documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
-    "markdown": "Mean Sea Surface Elevation [m (offset from NAVD88)] is the average sea surface elevation representing the model mean sea level offset from NAVD88. For more detail, see [complete mean sea surface elevation documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-sea-surface-elevation). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
-    "html": "<div><p>Mean Sea Surface Elevation [m (offset from NAVD88)] is the average sea surface elevation representing the model mean sea level offset from NAVD88. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-sea-surface-elevation\" target=\"_blank\" rel=\"noopener noreferrer\">complete mean sea surface elevation documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
-    "show_as_layer_with_color_spec": false
-  }
-}
-```
-
-### Distance to Shore
-
-- **Data Column:** `vap_distance_to_shore`
-- **Description:** Geodesic distance from grid cell center to nearest
-  shoreline \[NM\]
-- **Documentation:**
-  <https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore>
-
-**Rendered Preview**
-
-Distance to Shore \[NM\] is the geodesic distance from grid cell center
-to nearest shoreline. For more detail, see [complete distance to shore
-documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore).
-Source: [High Resolution Tidal Hindcast Data
-Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S.
-Department of Energy](https://www.energy.gov/) [Water Power Technologies
-Office](https://www.energy.gov/eere/water/water-power-technologies-office).
-Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and
-Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling);
-standardized and released by [National Laboratory of the Rockies Marine
-Energy Resource Characterization
-Team](https://www.nlr.gov/water/resource-characterization). See [Tidal
-Hindcast Dataset
-Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/)
-for methodology, citations, and full dataset access. Contact
-<marineresource@nlr.gov> with questions.
-
-**HTML**
-
-``` html
-<div><p>Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore" target="_blank" rel="noopener noreferrer">complete distance to shore documentation</a>.<br/></p><p>Source: <a href="https://mhkdr.openei.org/submissions/632" target="_blank" rel="noopener noreferrer">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href="https://www.energy.gov/" target="_blank" rel="noopener noreferrer">U.S. Department of Energy</a> <a href="https://www.energy.gov/eere/water/water-power-technologies-office" target="_blank" rel="noopener noreferrer">Water Power Technologies Office</a>. Modeled by <a href="https://www.pnnl.gov/projects/ocean-dynamics-modeling" target="_blank" rel="noopener noreferrer">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href="https://www.nlr.gov/water/resource-characterization" target="_blank" rel="noopener noreferrer">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/" target="_blank" rel="noopener noreferrer">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href="mailto:marineresource@nlr.gov">marineresource@nlr.gov</a> with questions.</p></div>
-```
-
-**JSON**
-
-``` json
-{
-  "vap_distance_to_shore": {
-    "display_name": "Distance to Shore",
-    "text": "Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see complete distance to shore documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
-    "markdown": "Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see [complete distance to shore documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
-    "html": "<div><p>Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore\" target=\"_blank\" rel=\"noopener noreferrer\">complete distance to shore documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
     "show_as_layer_with_color_spec": false
   }
 }
@@ -2391,58 +2296,6 @@ for methodology, citations, and full dataset access. Contact
 }
 ```
 
-### S3 URI for Full Year Time Series Data
-
-- **Data Column:** `full_year_data_s3_uri`
-- **Description:** direct link (S3 URI) to download the one-year
-  hindcast time series (parquet) for this location. Includes speed,
-  direction, for 10 uniform sigma levels at half-hourly (lower 48) or
-  hourly (Alaska) intervals. \[\]
-- **Documentation:**
-  <https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri>
-
-**Rendered Preview**
-
-S3 URI for Full Year Time Series Data is the direct link (S3 URI) to
-download the one-year hindcast time series (parquet) for this location.
-Includes speed, direction, for 10 uniform sigma levels at half-hourly
-(lower 48) or hourly (Alaska) intervals.. For more detail, see [complete
-s3 uri for full year time series data
-documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri).
-Source: [High Resolution Tidal Hindcast Data
-Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S.
-Department of Energy](https://www.energy.gov/) [Water Power Technologies
-Office](https://www.energy.gov/eere/water/water-power-technologies-office).
-Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and
-Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling);
-standardized and released by [National Laboratory of the Rockies Marine
-Energy Resource Characterization
-Team](https://www.nlr.gov/water/resource-characterization). See [Tidal
-Hindcast Dataset
-Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/)
-for methodology, citations, and full dataset access. Contact
-<marineresource@nlr.gov> with questions.
-
-**HTML**
-
-``` html
-<div><p>S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri" target="_blank" rel="noopener noreferrer">complete s3 uri for full year time series data documentation</a>.<br/></p><p>Source: <a href="https://mhkdr.openei.org/submissions/632" target="_blank" rel="noopener noreferrer">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href="https://www.energy.gov/" target="_blank" rel="noopener noreferrer">U.S. Department of Energy</a> <a href="https://www.energy.gov/eere/water/water-power-technologies-office" target="_blank" rel="noopener noreferrer">Water Power Technologies Office</a>. Modeled by <a href="https://www.pnnl.gov/projects/ocean-dynamics-modeling" target="_blank" rel="noopener noreferrer">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href="https://www.nlr.gov/water/resource-characterization" target="_blank" rel="noopener noreferrer">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/" target="_blank" rel="noopener noreferrer">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href="mailto:marineresource@nlr.gov">marineresource@nlr.gov</a> with questions.</p></div>
-```
-
-**JSON**
-
-``` json
-{
-  "full_year_data_s3_uri": {
-    "display_name": "S3 URI for Full Year Time Series Data",
-    "text": "S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see complete s3 uri for full year time series data documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
-    "markdown": "S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see [complete s3 uri for full year time series data documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
-    "html": "<div><p>S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri\" target=\"_blank\" rel=\"noopener noreferrer\">complete s3 uri for full year time series data documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
-    "show_as_layer_with_color_spec": false
-  }
-}
-```
-
 ### HTTPS URL for Full Year Time Series Data
 
 - **Data Column:** `full_year_data_https_url`
@@ -2495,6 +2348,58 @@ for methodology, citations, and full dataset access. Contact
 }
 ```
 
+### S3 URI for Full Year Time Series Data
+
+- **Data Column:** `full_year_data_s3_uri`
+- **Description:** direct link (S3 URI) to download the one-year
+  hindcast time series (parquet) for this location. Includes speed,
+  direction, for 10 uniform sigma levels at half-hourly (lower 48) or
+  hourly (Alaska) intervals. \[\]
+- **Documentation:**
+  <https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri>
+
+**Rendered Preview**
+
+S3 URI for Full Year Time Series Data is the direct link (S3 URI) to
+download the one-year hindcast time series (parquet) for this location.
+Includes speed, direction, for 10 uniform sigma levels at half-hourly
+(lower 48) or hourly (Alaska) intervals.. For more detail, see [complete
+s3 uri for full year time series data
+documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri).
+Source: [High Resolution Tidal Hindcast Data
+Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S.
+Department of Energy](https://www.energy.gov/) [Water Power Technologies
+Office](https://www.energy.gov/eere/water/water-power-technologies-office).
+Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and
+Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling);
+standardized and released by [National Laboratory of the Rockies Marine
+Energy Resource Characterization
+Team](https://www.nlr.gov/water/resource-characterization). See [Tidal
+Hindcast Dataset
+Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/)
+for methodology, citations, and full dataset access. Contact
+<marineresource@nlr.gov> with questions.
+
+**HTML**
+
+``` html
+<div><p>S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri" target="_blank" rel="noopener noreferrer">complete s3 uri for full year time series data documentation</a>.<br/></p><p>Source: <a href="https://mhkdr.openei.org/submissions/632" target="_blank" rel="noopener noreferrer">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href="https://www.energy.gov/" target="_blank" rel="noopener noreferrer">U.S. Department of Energy</a> <a href="https://www.energy.gov/eere/water/water-power-technologies-office" target="_blank" rel="noopener noreferrer">Water Power Technologies Office</a>. Modeled by <a href="https://www.pnnl.gov/projects/ocean-dynamics-modeling" target="_blank" rel="noopener noreferrer">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href="https://www.nlr.gov/water/resource-characterization" target="_blank" rel="noopener noreferrer">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href="https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/" target="_blank" rel="noopener noreferrer">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href="mailto:marineresource@nlr.gov">marineresource@nlr.gov</a> with questions.</p></div>
+```
+
+**JSON**
+
+``` json
+{
+  "full_year_data_s3_uri": {
+    "display_name": "S3 URI for Full Year Time Series Data",
+    "text": "S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see complete s3 uri for full year time series data documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
+    "markdown": "S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see [complete s3 uri for full year time series data documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
+    "html": "<div><p>S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri\" target=\"_blank\" rel=\"noopener noreferrer\">complete s3 uri for full year time series data documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
+    "show_as_layer_with_color_spec": false
+  }
+}
+```
+
 ### Combined QOI JSON
 
 ``` json
@@ -2527,13 +2432,6 @@ for methodology, citations, and full dataset access. Contact
     "html": "<div><p>95th Percentile Power Density [W/m\u00b2] is the estimated extreme power density, outlier-tolerant and comparable across sites for reconnaissance-level assessment. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-power-density\" target=\"_blank\" rel=\"noopener noreferrer\">complete 95th percentile power density documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
     "show_as_layer_with_color_spec": false
   },
-  "vap_sea_floor_depth": {
-    "display_name": "Sea Floor Depth",
-    "text": "Sea Floor Depth [m (below NAVD88)] is the model bathymetry depth below NAVD88 vertical datum. For more detail, see complete sea floor depth documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
-    "markdown": "Sea Floor Depth [m (below NAVD88)] is the model bathymetry depth below NAVD88 vertical datum. For more detail, see [complete sea floor depth documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#sea-floor-depth). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
-    "html": "<div><p>Sea Floor Depth [m (below NAVD88)] is the model bathymetry depth below NAVD88 vertical datum. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#sea-floor-depth\" target=\"_blank\" rel=\"noopener noreferrer\">complete sea floor depth documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
-    "show_as_layer_with_color_spec": false
-  },
   "vap_water_column_height_min": {
     "display_name": "Minimum Water Depth",
     "text": "Minimum Water Depth [m] is the minimum water depth (during 1 year model run). For more detail, see complete minimum water depth documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
@@ -2548,6 +2446,20 @@ for methodology, citations, and full dataset access. Contact
     "html": "<div><p>Maximum Water Depth [m] is the maximum water depth (during 1 year model run). For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth\" target=\"_blank\" rel=\"noopener noreferrer\">complete maximum water depth documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
     "show_as_layer_with_color_spec": true
   },
+  "vap_tidal_range": {
+    "display_name": "Tidal Range",
+    "text": "Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see complete tidal range documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
+    "markdown": "Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see [complete tidal range documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
+    "html": "<div><p>Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range\" target=\"_blank\" rel=\"noopener noreferrer\">complete tidal range documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
+    "show_as_layer_with_color_spec": false
+  },
+  "vap_distance_to_shore": {
+    "display_name": "Distance to Shore",
+    "text": "Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see complete distance to shore documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
+    "markdown": "Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see [complete distance to shore documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
+    "html": "<div><p>Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore\" target=\"_blank\" rel=\"noopener noreferrer\">complete distance to shore documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
+    "show_as_layer_with_color_spec": false
+  },
   "vap_sea_surface_elevation_high_tide_max": {
     "display_name": "Maximum Sea Surface Elevation at High Tide",
     "text": "Maximum Sea Surface Elevation at High Tide [m (relative to model MSL)] is the highest sea surface elevation observed during high tide over the hindcast year. For more detail, see complete maximum sea surface elevation at high tide documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
@@ -2560,27 +2472,6 @@ for methodology, citations, and full dataset access. Contact
     "text": "Minimum Sea Surface Elevation at Low Tide [m (relative to model MSL)] is the lowest sea surface elevation observed during low tide over the hindcast year. For more detail, see complete minimum sea surface elevation at low tide documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
     "markdown": "Minimum Sea Surface Elevation at Low Tide [m (relative to model MSL)] is the lowest sea surface elevation observed during low tide over the hindcast year. For more detail, see [complete minimum sea surface elevation at low tide documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#min-sea-surface-elevation-at-low-tide). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
     "html": "<div><p>Minimum Sea Surface Elevation at Low Tide [m (relative to model MSL)] is the lowest sea surface elevation observed during low tide over the hindcast year. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#min-sea-surface-elevation-at-low-tide\" target=\"_blank\" rel=\"noopener noreferrer\">complete minimum sea surface elevation at low tide documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
-    "show_as_layer_with_color_spec": false
-  },
-  "vap_tidal_range": {
-    "display_name": "Tidal Range",
-    "text": "Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see complete tidal range documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
-    "markdown": "Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see [complete tidal range documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
-    "html": "<div><p>Tidal Range [m] is the difference between maximum and minimum sea surface elevation over the hindcast year. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range\" target=\"_blank\" rel=\"noopener noreferrer\">complete tidal range documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
-    "show_as_layer_with_color_spec": false
-  },
-  "vap_sea_surface_elevation_mean": {
-    "display_name": "Mean Sea Surface Elevation",
-    "text": "Mean Sea Surface Elevation [m (offset from NAVD88)] is the average sea surface elevation representing the model mean sea level offset from NAVD88. For more detail, see complete mean sea surface elevation documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
-    "markdown": "Mean Sea Surface Elevation [m (offset from NAVD88)] is the average sea surface elevation representing the model mean sea level offset from NAVD88. For more detail, see [complete mean sea surface elevation documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-sea-surface-elevation). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
-    "html": "<div><p>Mean Sea Surface Elevation [m (offset from NAVD88)] is the average sea surface elevation representing the model mean sea level offset from NAVD88. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-sea-surface-elevation\" target=\"_blank\" rel=\"noopener noreferrer\">complete mean sea surface elevation documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
-    "show_as_layer_with_color_spec": false
-  },
-  "vap_distance_to_shore": {
-    "display_name": "Distance to Shore",
-    "text": "Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see complete distance to shore documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
-    "markdown": "Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see [complete distance to shore documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
-    "html": "<div><p>Distance to Shore [NM] is the geodesic distance from grid cell center to nearest shoreline. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore\" target=\"_blank\" rel=\"noopener noreferrer\">complete distance to shore documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
     "show_as_layer_with_color_spec": false
   },
   "vap_grid_resolution": {
@@ -2611,18 +2502,18 @@ for methodology, citations, and full dataset access. Contact
     "html": "<div><p>Center Longitude [degrees_east] is the longitude of the triangular element centroid (WGS84). For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#center_longitude\" target=\"_blank\" rel=\"noopener noreferrer\">complete center longitude documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
     "show_as_layer_with_color_spec": false
   },
-  "full_year_data_s3_uri": {
-    "display_name": "S3 URI for Full Year Time Series Data",
-    "text": "S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see complete s3 uri for full year time series data documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
-    "markdown": "S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see [complete s3 uri for full year time series data documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
-    "html": "<div><p>S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri\" target=\"_blank\" rel=\"noopener noreferrer\">complete s3 uri for full year time series data documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
-    "show_as_layer_with_color_spec": false
-  },
   "full_year_data_https_url": {
     "display_name": "HTTPS URL for Full Year Time Series Data",
     "text": "HTTPS URL for Full Year Time Series Data is the direct link (HTTPS)  to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals. For more detail, see complete https url for full year time series data documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
     "markdown": "HTTPS URL for Full Year Time Series Data is the direct link (HTTPS)  to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals. For more detail, see [complete https url for full year time series data documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_https_url). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
     "html": "<div><p>HTTPS URL for Full Year Time Series Data is the direct link (HTTPS)  to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_https_url\" target=\"_blank\" rel=\"noopener noreferrer\">complete https url for full year time series data documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
+    "show_as_layer_with_color_spec": false
+  },
+  "full_year_data_s3_uri": {
+    "display_name": "S3 URI for Full Year Time Series Data",
+    "text": "S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see complete s3 uri for full year time series data documentation. Source: High Resolution Tidal Hindcast Data Repository, funded by U.S. Department of Energy Water Power Technologies Office. Modeled by Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group; standardized and released by National Laboratory of the Rockies Marine Energy Resource Characterization Team. See Tidal Hindcast Dataset Documentation for methodology, citations, and full dataset access. Contact marineresource@nlr.gov with questions.",
+    "markdown": "S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see [complete s3 uri for full year time series data documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri). Source: [High Resolution Tidal Hindcast Data Repository](https://mhkdr.openei.org/submissions/632), funded by [U.S. Department of Energy](https://www.energy.gov/) [Water Power Technologies Office](https://www.energy.gov/eere/water/water-power-technologies-office). Modeled by [Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group](https://www.pnnl.gov/projects/ocean-dynamics-modeling); standardized and released by [National Laboratory of the Rockies Marine Energy Resource Characterization Team](https://www.nlr.gov/water/resource-characterization). See [Tidal Hindcast Dataset Documentation](https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/) for methodology, citations, and full dataset access. Contact [marineresource@nlr.gov](mailto:marineresource@nlr.gov) with questions.",
+    "html": "<div><p>S3 URI for Full Year Time Series Data is the direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.. For more detail, see <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri\" target=\"_blank\" rel=\"noopener noreferrer\">complete s3 uri for full year time series data documentation</a>.<br/></p><p>Source: <a href=\"https://mhkdr.openei.org/submissions/632\" target=\"_blank\" rel=\"noopener noreferrer\">High Resolution Tidal Hindcast Data Repository</a>, funded by <a href=\"https://www.energy.gov/\" target=\"_blank\" rel=\"noopener noreferrer\">U.S. Department of Energy</a> <a href=\"https://www.energy.gov/eere/water/water-power-technologies-office\" target=\"_blank\" rel=\"noopener noreferrer\">Water Power Technologies Office</a>. Modeled by <a href=\"https://www.pnnl.gov/projects/ocean-dynamics-modeling\" target=\"_blank\" rel=\"noopener noreferrer\">Pacific Northwest National Laboratory Ocean Dynamics and Modeling Group</a>; standardized and released by <a href=\"https://www.nlr.gov/water/resource-characterization\" target=\"_blank\" rel=\"noopener noreferrer\">National Laboratory of the Rockies Marine Energy Resource Characterization Team</a>. See <a href=\"https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/\" target=\"_blank\" rel=\"noopener noreferrer\">Tidal Hindcast Dataset Documentation</a> for methodology, citations, and full dataset access. Contact <a href=\"mailto:marineresource@nlr.gov\">marineresource@nlr.gov</a> with questions.</p></div>",
     "show_as_layer_with_color_spec": false
   }
 }
@@ -2675,11 +2566,120 @@ Notes:
 | Maximum Water Depth | `vap_water_column_height_max` | 0 - 200 | m | 10 | cmo.deep |
 | Grid Resolution | `vap_grid_resolution` | 0 - 500 | m | 3 | Custom |
 
-## Color Mapping Specifications
+## Color Specifications
 
-**Note:** Color level details will be populated when the visualization
-functions are executed. The color mapping system uses discrete levels
-for improved interpretation.
+The following tables provide exact color specifications for each
+variable. All colors use discrete levels with an overflow level for
+values exceeding the maximum range.
+
+### Mean Current Speed \[m/s\], `vap_water_column_mean_sea_water_speed`
+
+- **Colormap:** cmo.thermal
+- **Data Range:** 0 to 1.5 m/s
+- **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+|----|----|----|----|----|
+| 1 | 0.00 - 0.15 \[m/s\] | `#032333` | `rgb(3, 35, 51)` | ![\#032333](https://placehold.co/40x15/032333/032333.png) |
+| 2 | 0.15 - 0.30 \[m/s\] | `#0f3169` | `rgb(15, 49, 105)` | ![\#0f3169](https://placehold.co/40x15/0f3169/0f3169.png) |
+| 3 | 0.30 - 0.45 \[m/s\] | `#3f339f` | `rgb(63, 51, 159)` | ![\#3f339f](https://placehold.co/40x15/3f339f/3f339f.png) |
+| 4 | 0.45 - 0.60 \[m/s\] | `#674396` | `rgb(103, 67, 150)` | ![\#674396](https://placehold.co/40x15/674396/674396.png) |
+| 5 | 0.60 - 0.75 \[m/s\] | `#8a528c` | `rgb(138, 82, 140)` | ![\#8a528c](https://placehold.co/40x15/8a528c/8a528c.png) |
+| 6 | 0.75 - 0.90 \[m/s\] | `#b05f81` | `rgb(176, 95, 129)` | ![\#b05f81](https://placehold.co/40x15/b05f81/b05f81.png) |
+| 7 | 0.90 - 1.05 \[m/s\] | `#d56b6c` | `rgb(213, 107, 108)` | ![\#d56b6c](https://placehold.co/40x15/d56b6c/d56b6c.png) |
+| 8 | 1.05 - 1.20 \[m/s\] | `#f2824c` | `rgb(242, 130, 76)` | ![\#f2824c](https://placehold.co/40x15/f2824c/f2824c.png) |
+| 9 | 1.20 - 1.35 \[m/s\] | `#fba53c` | `rgb(251, 165, 60)` | ![\#fba53c](https://placehold.co/40x15/fba53c/fba53c.png) |
+| 10 | 1.35 - 1.50 \[m/s\] | `#f6d045` | `rgb(246, 208, 69)` | ![\#f6d045](https://placehold.co/40x15/f6d045/f6d045.png) |
+| 11 | ≥ 1.500 m/s | `#e7fa5a` | `rgb(231, 250, 90)` | ![\#e7fa5a](https://placehold.co/40x15/e7fa5a/e7fa5a.png) |
+
+### 95th Percentile Current Speed \[m/s\], `vap_water_column_95th_percentile_sea_water_speed`
+
+- **Colormap:** cmo.matter
+- **Data Range:** 0 to 5.0 m/s
+- **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+|----|----|----|----|----|
+| 1 | 0.00 - 0.50 \[m/s\] | `#fdedb0` | `rgb(253, 237, 176)` | ![\#fdedb0](https://placehold.co/40x15/fdedb0/fdedb0.png) |
+| 2 | 0.50 - 1.00 \[m/s\] | `#faca8f` | `rgb(250, 202, 143)` | ![\#faca8f](https://placehold.co/40x15/faca8f/faca8f.png) |
+| 3 | 1.00 - 1.50 \[m/s\] | `#f5a672` | `rgb(245, 166, 114)` | ![\#f5a672](https://placehold.co/40x15/f5a672/f5a672.png) |
+| 4 | 1.50 - 2.00 \[m/s\] | `#ee845d` | `rgb(238, 132, 93)` | ![\#ee845d](https://placehold.co/40x15/ee845d/ee845d.png) |
+| 5 | 2.00 - 2.50 \[m/s\] | `#e26152` | `rgb(226, 97, 82)` | ![\#e26152](https://placehold.co/40x15/e26152/e26152.png) |
+| 6 | 2.50 - 3.00 \[m/s\] | `#ce4356` | `rgb(206, 67, 86)` | ![\#ce4356](https://placehold.co/40x15/ce4356/ce4356.png) |
+| 7 | 3.00 - 3.50 \[m/s\] | `#b32e5e` | `rgb(179, 46, 94)` | ![\#b32e5e](https://placehold.co/40x15/b32e5e/b32e5e.png) |
+| 8 | 3.50 - 4.00 \[m/s\] | `#931f63` | `rgb(147, 31, 99)` | ![\#931f63](https://placehold.co/40x15/931f63/931f63.png) |
+| 9 | 4.00 - 4.50 \[m/s\] | `#72195f` | `rgb(114, 25, 95)` | ![\#72195f](https://placehold.co/40x15/72195f/72195f.png) |
+| 10 | 4.50 - 5.00 \[m/s\] | `#4f1552` | `rgb(79, 21, 82)` | ![\#4f1552](https://placehold.co/40x15/4f1552/4f1552.png) |
+| 11 | ≥ 5.000 m/s | `#2f0f3d` | `rgb(47, 15, 61)` | ![\#2f0f3d](https://placehold.co/40x15/2f0f3d/2f0f3d.png) |
+
+### Mean Power Density \[W/m²\], `vap_water_column_mean_sea_water_power_density`
+
+- **Colormap:** cmo.dense
+- **Data Range:** 0 to 1750 W/m²
+- **Discrete Levels:** 8 (7 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+|----|----|----|----|----|
+| 1 | 0 - 250 \[W/m²\] | `#e6f0f0` | `rgb(230, 240, 240)` | ![\#e6f0f0](https://placehold.co/40x15/e6f0f0/e6f0f0.png) |
+| 2 | 250 - 500 \[W/m²\] | `#aad2e2` | `rgb(170, 210, 226)` | ![\#aad2e2](https://placehold.co/40x15/aad2e2/aad2e2.png) |
+| 3 | 500 - 750 \[W/m²\] | `#7db0e3` | `rgb(125, 176, 227)` | ![\#7db0e3](https://placehold.co/40x15/7db0e3/7db0e3.png) |
+| 4 | 750 - 1000 \[W/m²\] | `#7487e0` | `rgb(116, 135, 224)` | ![\#7487e0](https://placehold.co/40x15/7487e0/7487e0.png) |
+| 5 | 1000 - 1250 \[W/m²\] | `#795cc3` | `rgb(121, 92, 195)` | ![\#795cc3](https://placehold.co/40x15/795cc3/795cc3.png) |
+| 6 | 1250 - 1500 \[W/m²\] | `#723693` | `rgb(114, 54, 147)` | ![\#723693](https://placehold.co/40x15/723693/723693.png) |
+| 7 | 1500 - 1750 \[W/m²\] | `#5c1957` | `rgb(92, 25, 87)` | ![\#5c1957](https://placehold.co/40x15/5c1957/5c1957.png) |
+| 8 | ≥ 1750 W/m² | `#360e24` | `rgb(54, 14, 36)` | ![\#360e24](https://placehold.co/40x15/360e24/360e24.png) |
+
+### Minimum Water Depth \[m\], `vap_water_column_height_min`
+
+- **Colormap:** cmo.deep
+- **Data Range:** 0 to 200 m
+- **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+|----|----|----|----|----|
+| 1 | 0.00 - 20.00 \[m\] | `#fdfdcc` | `rgb(253, 253, 204)` | ![\#fdfdcc](https://placehold.co/40x15/fdfdcc/fdfdcc.png) |
+| 2 | 20.00 - 40.00 \[m\] | `#c9ebb1` | `rgb(201, 235, 177)` | ![\#c9ebb1](https://placehold.co/40x15/c9ebb1/c9ebb1.png) |
+| 3 | 40.00 - 60.00 \[m\] | `#91d8a3` | `rgb(145, 216, 163)` | ![\#91d8a3](https://placehold.co/40x15/91d8a3/91d8a3.png) |
+| 4 | 60.00 - 80.00 \[m\] | `#66c2a3` | `rgb(102, 194, 163)` | ![\#66c2a3](https://placehold.co/40x15/66c2a3/66c2a3.png) |
+| 5 | 80 - 100 \[m\] | `#51a8a2` | `rgb(81, 168, 162)` | ![\#51a8a2](https://placehold.co/40x15/51a8a2/51a8a2.png) |
+| 6 | 100 - 120 \[m\] | `#488d9d` | `rgb(72, 141, 157)` | ![\#488d9d](https://placehold.co/40x15/488d9d/488d9d.png) |
+| 7 | 120 - 140 \[m\] | `#407598` | `rgb(64, 117, 152)` | ![\#407598](https://placehold.co/40x15/407598/407598.png) |
+| 8 | 140 - 160 \[m\] | `#3d5a92` | `rgb(61, 90, 146)` | ![\#3d5a92](https://placehold.co/40x15/3d5a92/3d5a92.png) |
+| 9 | 160 - 180 \[m\] | `#41407b` | `rgb(65, 64, 123)` | ![\#41407b](https://placehold.co/40x15/41407b/41407b.png) |
+| 10 | 180 - 200 \[m\] | `#372c50` | `rgb(55, 44, 80)` | ![\#372c50](https://placehold.co/40x15/372c50/372c50.png) |
+| 11 | ≥ 200.0 m | `#271a2c` | `rgb(39, 26, 44)` | ![\#271a2c](https://placehold.co/40x15/271a2c/271a2c.png) |
+
+### Maximum Water Depth \[m\], `vap_water_column_height_max`
+
+- **Colormap:** cmo.deep
+- **Data Range:** 0 to 200 m
+- **Discrete Levels:** 11 (10 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+|----|----|----|----|----|
+| 1 | 0.00 - 20.00 \[m\] | `#fdfdcc` | `rgb(253, 253, 204)` | ![\#fdfdcc](https://placehold.co/40x15/fdfdcc/fdfdcc.png) |
+| 2 | 20.00 - 40.00 \[m\] | `#c9ebb1` | `rgb(201, 235, 177)` | ![\#c9ebb1](https://placehold.co/40x15/c9ebb1/c9ebb1.png) |
+| 3 | 40.00 - 60.00 \[m\] | `#91d8a3` | `rgb(145, 216, 163)` | ![\#91d8a3](https://placehold.co/40x15/91d8a3/91d8a3.png) |
+| 4 | 60.00 - 80.00 \[m\] | `#66c2a3` | `rgb(102, 194, 163)` | ![\#66c2a3](https://placehold.co/40x15/66c2a3/66c2a3.png) |
+| 5 | 80 - 100 \[m\] | `#51a8a2` | `rgb(81, 168, 162)` | ![\#51a8a2](https://placehold.co/40x15/51a8a2/51a8a2.png) |
+| 6 | 100 - 120 \[m\] | `#488d9d` | `rgb(72, 141, 157)` | ![\#488d9d](https://placehold.co/40x15/488d9d/488d9d.png) |
+| 7 | 120 - 140 \[m\] | `#407598` | `rgb(64, 117, 152)` | ![\#407598](https://placehold.co/40x15/407598/407598.png) |
+| 8 | 140 - 160 \[m\] | `#3d5a92` | `rgb(61, 90, 146)` | ![\#3d5a92](https://placehold.co/40x15/3d5a92/3d5a92.png) |
+| 9 | 160 - 180 \[m\] | `#41407b` | `rgb(65, 64, 123)` | ![\#41407b](https://placehold.co/40x15/41407b/41407b.png) |
+| 10 | 180 - 200 \[m\] | `#372c50` | `rgb(55, 44, 80)` | ![\#372c50](https://placehold.co/40x15/372c50/372c50.png) |
+| 11 | ≥ 200.0 m | `#271a2c` | `rgb(39, 26, 44)` | ![\#271a2c](https://placehold.co/40x15/271a2c/271a2c.png) |
+
+### Grid Resolution \[m\], `vap_grid_resolution`
+
+- **Colormap:** Custom
+- **Data Range:** 0 to 500 m
+- **Discrete Levels:** 4 (3 within range + 1 overflow level)
+
+| Level | Value Range | Hex Color | RGB Color | Color Preview |
+|----|----|----|----|----|
+| 1 | 0.00 - 50.00 \[m\] | `#1f77b4` | `rgb(31, 119, 180)` | ![\#1f77b4](https://placehold.co/40x15/1f77b4/1f77b4.png) |
+| 2 | 50 - 500 \[m\] | `#ff7f0e` | `rgb(255, 127, 14)` | ![\#ff7f0e](https://placehold.co/40x15/ff7f0e/ff7f0e.png) |
+| 3 | ≥ 500.0 m | `#dc143c` | `rgb(220, 20, 60)` | ![\#dc143c](https://placehold.co/40x15/dc143c/dc143c.png) |
 
 ## Visualizations by Variable
 
@@ -3070,7 +3070,7 @@ bounds for optimal clarity.*
 
 ## Document Information
 
-- **Generated:** 2026-02-23 11:29:24 UTC
+- **Generated:** 2026-02-23 13:53:49 UTC
 - **Regions Processed:** AK_aleutian_islands, AK_cook_inlet,
   ME_western_passage, NH_piscataqua_river, WA_puget_sound
 
