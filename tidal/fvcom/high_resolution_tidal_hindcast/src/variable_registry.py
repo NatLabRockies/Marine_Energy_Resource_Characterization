@@ -915,24 +915,24 @@ ATLAS_COLUMNS = [
     # "vap_water_column_max_sea_water_speed",
     # "vap_water_column_max_sea_water_power_density",
     # ── Bathymetry & Depth ──
-    "vap_sea_floor_depth",
     "vap_water_column_height_min",
     "vap_water_column_height_max",
+    "vap_tidal_range",
+    # "vap_sea_floor_depth",
+    "vap_distance_to_shore",
     # ── Sea Surface Elevation & Tidal Characteristics ──
     "vap_sea_surface_elevation_high_tide_max",
     "vap_surface_elevation_low_tide_min",
-    "vap_tidal_range",
-    "vap_sea_surface_elevation_mean",
+    # "vap_sea_surface_elevation_mean",
     # ── Site Context ──
-    "vap_distance_to_shore",
     "vap_grid_resolution",
     # ── Location Identity ──
     "face_id",
     "lat_center",
     "lon_center",
     # ── Data Access ──
-    "full_year_data_s3_uri",
     "full_year_data_https_url",
+    "full_year_data_s3_uri",
 ]
 
 # Derive included_on_atlas from ATLAS_COLUMNS (single source of truth)
