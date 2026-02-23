@@ -11,35 +11,35 @@ GIS_COLORS_REGISTRY = {
     # --- Continuous colormaps ---
     "mean_current_speed": {
         "style_type": "continuous",
-        "colormap_name": "cmocean.thermal",
+        "colormap_name": "cmo.thermal",
         "range_min": 0,
         "range_max": 1.5,
         "levels": 10,
     },
     "p95_current_speed": {
         "style_type": "continuous",
-        "colormap_name": "cmocean.matter",
+        "colormap_name": "cmo.matter",
         "range_min": 0,
         "range_max": 5.0,
         "levels": 10,
     },
     "mean_power_density": {
         "style_type": "continuous",
-        "colormap_name": "cmocean.dense",
+        "colormap_name": "cmo.dense",
         "range_min": 0,
         "range_max": 1750,
         "levels": 7,
     },
     "min_water_depth": {
         "style_type": "continuous",
-        "colormap_name": "cmocean.deep",
+        "colormap_name": "cmo.deep",
         "range_min": 0,
         "range_max": 200,
         "levels": 10,
     },
     "max_water_depth": {
         "style_type": "continuous",
-        "colormap_name": "cmocean.deep",
+        "colormap_name": "cmo.deep",
         "range_min": 0,
         "range_max": 200,
         "levels": 10,
@@ -53,12 +53,12 @@ GIS_COLORS_REGISTRY = {
         "spec_ranges": {
             "stage_2": {
                 "max": 50,
-                "label": "Stage 2 (\u226450m)",
+                "label": "Stage 2 (≤50m)",
                 "color": "#1f77b4",
             },
             "stage_1": {
                 "max": 500,
-                "label": "Stage 1 (\u2264500m)",
+                "label": "Stage 1 (≤500m)",
                 "color": "#ff7f0e",
             },
             "non_compliant": {
@@ -72,17 +72,13 @@ GIS_COLORS_REGISTRY = {
 
 
 def resolve_colormap(name):
-    """Lazily resolve a colormap name string to a matplotlib colormap object.
+    """Resolve a colormap name string to a matplotlib colormap object.
 
-    Supports ``"cmocean.<name>"`` (e.g. ``"cmocean.thermal"``) and any
-    matplotlib builtin name (e.g. ``"viridis"``).
+    Importing cmocean registers its colormaps with matplotlib under the
+    ``cmo.`` prefix (e.g. ``"cmo.thermal"``).  Any matplotlib builtin
+    name (e.g. ``"viridis"``) also works.
     """
-    if name.startswith("cmocean."):
-        import cmocean
+    import cmocean  # noqa: F401 -- registers cmo.* colormaps with matplotlib
+    import matplotlib as mpl
 
-        cmap_attr = name.split(".", 1)[1]
-        return getattr(cmocean.cm, cmap_attr)
-    else:
-        import matplotlib.pyplot as plt
-
-        return plt.get_cmap(name)
+    return mpl.colormaps[name]

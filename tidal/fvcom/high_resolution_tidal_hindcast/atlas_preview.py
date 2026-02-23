@@ -25,6 +25,7 @@ from PIL import Image, ImageOps
 from pyproj import Transformer
 
 from config import config
+from src.gis_colors_registry import GIS_COLORS_REGISTRY, resolve_colormap
 from src.variable_registry import VARIABLE_REGISTRY
 from src.vap_create_parquet_summary import POLYGON_COLUMNS, ATLAS_COLUMNS
 
@@ -92,146 +93,21 @@ MAX_POWER_DENSITY_CMAP = cmocean.cm.amp
 SEA_FLOOR_DEPTH_CMAP = cmocean.cm.deep
 GRID_RESOLUTION_CMAP = cmocean.cm.haline
 
-# Visualization-only config (colormaps, ranges, levels) keyed by unified variable names.
-# Merged with VARIABLE_REGISTRY to build the full VIZ_SPECS dict.
-_VIZ_CONFIG = {
-    "mean_current_speed": {
-        "colormap": cmocean.cm.thermal,
-        "range_min": 0,
-        "range_max": 1.5,
-        "levels": 10,
-    },
-    "p95_current_speed": {
-        "colormap": MAX_SPEED_CMAP,
-        "range_min": SEA_WATER_SPEED_CBAR_MIN,
-        "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-        "levels": SEA_WATER_MAX_SPEED_LEVELS,
-    },
-    "mean_power_density": {
-        "colormap": MEAN_POWER_DENSITY_CMAP,
-        "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
-        "range_max": SEA_WATER_POWER_DENSITY_CBAR_MAX,
-        "levels": SEA_WATER_POWER_DENSITY_LEVELS,
-    },
-    "min_water_depth": {
-        "colormap": SEA_FLOOR_DEPTH_CMAP,
-        "range_min": SEA_FLOOR_DEPTH_MIN,
-        "range_max": SEA_FLOOR_DEPTH_MAX,
-        "levels": SEA_FLOOR_DEPTH_LEVELS,
-    },
-    "max_water_depth": {
-        "colormap": SEA_FLOOR_DEPTH_CMAP,
-        "range_min": SEA_FLOOR_DEPTH_MIN,
-        "range_max": SEA_FLOOR_DEPTH_MAX,
-        "levels": SEA_FLOOR_DEPTH_LEVELS,
-    },
-    "grid_resolution": {
-        "range_min": 0,
-        "range_max": 500,
-        "levels": 3,
-        "spec_ranges": {
-            "stage_2": {
-                "max": 50,
-                "label": "Stage 2 (≤50m)",
-                "color": "#1f77b4",  # Seaborn Blue
-            },
-            "stage_1": {
-                "max": 500,
-                "label": "Stage 1 (≤500m)",
-                "color": "#ff7f0e",  # Seaborn Orange
-            },
-            "non_compliant": {
-                "max": 100000,
-                "label": "Non-compliant (>500m)",
-                "color": "#DC143C",  # Pleasing red
-            },
-        },
-    },
-    # "p99_current_speed": {
-    #     "colormap": MAX_SPEED_CMAP,
-    #     "range_min": SEA_WATER_SPEED_CBAR_MIN,
-    #     "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-    #     "levels": SEA_WATER_MAX_SPEED_LEVELS,
-    # },
-    # "max_current_speed": {
-    #     "colormap": MAX_SPEED_CMAP,
-    #     "range_min": SEA_WATER_SPEED_CBAR_MIN,
-    #     "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-    #     "levels": SEA_WATER_MAX_SPEED_LEVELS,
-    # },
-    # "p95_power_density": {
-    #     "colormap": MAX_POWER_DENSITY_CMAP,
-    #     "range_min": SEA_WATER_POWER_DENSITY_CBAR_MIN,
-    #     "range_max": SEA_WATER_MAX_POWER_DENSITY_CBAR_MAX,
-    #     "levels": SEA_WATER_MAX_POWER_DENSITY_LEVELS,
-    # },
-    # "mean_water_depth": {
-    #     "colormap": SEA_FLOOR_DEPTH_CMAP,
-    #     "range_min": SEA_FLOOR_DEPTH_MIN,
-    #     "range_max": SEA_FLOOR_DEPTH_MAX,
-    #     "levels": SEA_FLOOR_DEPTH_LEVELS,
-    # },
-    # "surface_mean_speed": {
-    #     "colormap": cmocean.cm.thermal,
-    #     "range_min": 0,
-    #     "range_max": 1.5,
-    #     "levels": 10,
-    # },
-    # "surface_p95_speed": {
-    #     "colormap": MAX_SPEED_CMAP,
-    #     "range_min": SEA_WATER_SPEED_CBAR_MIN,
-    #     "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-    #     "levels": SEA_WATER_MAX_SPEED_LEVELS,
-    # },
-    # "surface_p99_speed": {
-    #     "colormap": MAX_SPEED_CMAP,
-    #     "range_min": SEA_WATER_SPEED_CBAR_MIN,
-    #     "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-    #     "levels": SEA_WATER_MAX_SPEED_LEVELS,
-    # },
-    # "surface_max_speed": {
-    #     "colormap": MAX_SPEED_CMAP,
-    #     "range_min": SEA_WATER_SPEED_CBAR_MIN,
-    #     "range_max": SEA_WATER_MAX_SPEED_CBAR_MAX,
-    #     "levels": SEA_WATER_MAX_SPEED_LEVELS,
-    # },
-    # "ebb_direction": {
-    #     "colormap": cmocean.cm.phase,
-    #     "range_min": 0,
-    #     "range_max": 360,
-    #     "levels": 16,
-    # },
-    # "flood_direction": {
-    #     "colormap": cmocean.cm.phase,
-    #     "range_min": 0,
-    #     "range_max": 360,
-    #     "levels": 16,
-    # },
-    # "mean_surface_elevation": {
-    #     "colormap": cmocean.cm.deep,
-    #     "range_min": 0,
-    #     "range_max": 1,
-    #     "levels": 10,
-    # },
-    # "tidal_range": {
-    #     "colormap": cmocean.cm.haline,
-    #     "range_min": 0,
-    #     "range_max": 10,
-    #     "levels": 10,
-    # },
-    # "min_tidal_period": {
-    #     "colormap": cmocean.cm.haline,
-    #     "range_min": 10,
-    #     "range_max": 12,
-    #     "levels": 10,
-    # },
-    # "max_tidal_period": {
-    #     "colormap": cmocean.cm.haline,
-    #     "range_min": 12,
-    #     "range_max": 14,
-    #     "levels": 10,
-    # },
-}
+# Build _VIZ_CONFIG from GIS_COLORS_REGISTRY (single source of truth for color styling).
+# Resolves colormap name strings to matplotlib colormap objects and copies through
+# range/level/spec_ranges fields. Discrete entries (grid_resolution) have no "colormap".
+_VIZ_CONFIG = {}
+for _key, _gcr in GIS_COLORS_REGISTRY.items():
+    _entry = {
+        "range_min": _gcr["range_min"],
+        "range_max": _gcr["range_max"],
+        "levels": _gcr["levels"],
+    }
+    if _gcr["style_type"] == "continuous":
+        _entry["colormap"] = resolve_colormap(_gcr["colormap_name"])
+    if "spec_ranges" in _gcr:
+        _entry["spec_ranges"] = _gcr["spec_ranges"]
+    _VIZ_CONFIG[_key] = _entry
 
 # Build VIZ_SPECS by merging registry metadata with visualization config
 VIZ_SPECS = {

@@ -10,7 +10,7 @@ import xarray as xr
 
 from shapely.geometry import Point, Polygon, MultiPolygon
 
-from . import file_manager, file_name_convention_manager, s3_uri_manager
+from . import file_manager, file_name_convention_manager, gis_colors_manager, s3_uri_manager
 
 # Default optimized for Aleutian Islands (~52-55°N latitude)
 # At 53°N, 0.0002° ≈ 13 meters (cos(53°) * 111000 * 0.0002 ≈ 13.4m)
@@ -512,6 +512,7 @@ def save_geo_dataframe(
     # formats=["geojson", "gpkg", "parquet"],
     formats=["geojson", "gpkg", "parquet"],
     # formats=["parquet"],
+    enable_gis_colors=True,
 ):
     """
     Save GeoDataFrame in multiple formats including GeoPackage
@@ -539,6 +540,14 @@ def save_geo_dataframe(
         )
         print(f"    Longest columns: {long_columns[:3]}...")
 
+    # Build a colored GDF for formats that support fill_color columns
+    # (geojson, parquet). GPKG uses embedded SLD styles on the numeric
+    # column instead, so it does not need the extra columns.
+    if enable_gis_colors:
+        gdf_colored = gis_colors_manager.add_fill_color_columns(gdf.copy())
+    else:
+        gdf_colored = gdf
+
     for fmt in formats:
         print(
             f"Planning to make this_output_path from {output_path} and {fmt} with types {type(output_path)} and {type(fmt)}"
@@ -555,25 +564,29 @@ def save_geo_dataframe(
 
         elif fmt == "geojson":
             filepath = this_output_path / f"{filename_base}.geojson"
-            gdf.to_file(filepath, driver="GeoJSON")
+            gdf_colored.to_file(filepath, driver="GeoJSON")
             saved_files.append(filepath)
             print("✓")
 
         elif fmt == "gpkg":
             filepath = this_output_path / f"{filename_base}.gpkg"
             gdf.to_file(filepath, driver="GPKG")
+            if enable_gis_colors:
+                gis_colors_manager.embed_gpkg_styles(filepath)
             saved_files.append(filepath)
             print("✓")
 
         elif fmt == "parquet":
             filepath = this_output_path / f"{filename_base}_geo.parquet"
-            gdf.to_parquet(filepath)
+            gdf_colored.to_parquet(filepath)
+            if enable_gis_colors:
+                gis_colors_manager.embed_kepler_config_in_parquet(filepath, gdf)
             saved_files.append(filepath)
             print("✓")
         elif fmt == "arrow":
             filepath = this_output_path / f"{filename_base}_geo.arrow"
             # Convert to Arrow table and save as IPC format
-            gdf_arrow = gdf.copy()
+            gdf_arrow = gdf_colored.copy()
             gdf_arrow["geometry"] = gdf_arrow["geometry"].to_wkb()
 
             table = pa.Table.from_pandas(gdf_arrow, preserve_index=False)
@@ -583,6 +596,11 @@ def save_geo_dataframe(
                     writer.write_table(table)
             saved_files.append(filepath)
             print("✓")
+
+    # Write sidecar JSON files for web map consumers
+    if enable_gis_colors:
+        gis_colors_manager.write_sidecar_style_json(output_path, gdf_colored)
+        gis_colors_manager.write_kepler_config_json(output_path, gdf)
 
     print(f"Successfully saved {len(saved_files)} files for {filename_base}")
     return saved_files
