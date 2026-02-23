@@ -11,50 +11,12 @@ import xarray as xr
 from shapely.geometry import Point, Polygon, MultiPolygon
 
 from . import file_manager, file_name_convention_manager, gis_colors_manager, s3_uri_manager
+from .variable_registry import ATLAS_COLUMNS, POLYGON_COLUMNS
 
 # Default optimized for Aleutian Islands (~52-55°N latitude)
 # At 53°N, 0.0002° ≈ 13 meters (cos(53°) * 111000 * 0.0002 ≈ 13.4m)
 # DATELINE_GAP_DEGREES = 0.0002
 DATELINE_GAP_DEGREES = 0.0010  # 65 meters?
-
-POLYGON_COLUMNS = [
-    "element_corner_1_lat",
-    "element_corner_1_lon",
-    "element_corner_2_lat",
-    "element_corner_2_lon",
-    "element_corner_3_lat",
-    "element_corner_3_lon",
-]
-
-# Atlas columns: display names and metadata live in VARIABLE_REGISTRY (long_name, units)
-ATLAS_COLUMNS = [
-    *POLYGON_COLUMNS,
-    # ── Core Resource Metrics (IEC 62600-201 Stage 1) ──
-    "vap_water_column_mean_sea_water_speed",
-    "vap_water_column_95th_percentile_sea_water_speed",
-    "vap_water_column_max_sea_water_speed",
-    "vap_water_column_mean_sea_water_power_density",
-    "vap_water_column_max_sea_water_power_density",
-    # ── Bathymetry & Depth ──
-    "vap_sea_floor_depth",
-    "vap_water_column_height_min",
-    "vap_water_column_height_max",
-    # ── Sea Surface Elevation & Tidal Characteristics ──
-    "vap_sea_surface_elevation_high_tide_max",
-    "vap_surface_elevation_low_tide_min",
-    "vap_tidal_range",
-    "vap_sea_surface_elevation_mean",
-    # ── Site Context ──
-    "vap_distance_to_shore",
-    "vap_grid_resolution",
-    # ── Location Identity ──
-    "face_id",
-    "lat_center",
-    "lon_center",
-    # ── Data Access ──
-    "full_year_data_s3_uri",
-    "full_year_data_https_url",
-]
 
 REVERSE_ATLAS_COLUMN_ORDER = True
 

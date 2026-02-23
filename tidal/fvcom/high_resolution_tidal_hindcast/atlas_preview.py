@@ -26,8 +26,7 @@ from pyproj import Transformer
 
 from config import config
 from src.gis_colors_registry import GIS_COLORS_REGISTRY, resolve_colormap
-from src.variable_registry import VARIABLE_REGISTRY
-from src.vap_create_parquet_summary import POLYGON_COLUMNS, ATLAS_COLUMNS
+from src.variable_registry import VARIABLE_REGISTRY, POLYGON_COLUMNS, ATLAS_COLUMNS
 
 
 # Set the base directory - modify this to match your system

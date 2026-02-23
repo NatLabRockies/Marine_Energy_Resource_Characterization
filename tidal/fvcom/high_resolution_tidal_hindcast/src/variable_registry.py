@@ -903,6 +903,45 @@ VARIABLE_REGISTRY = {
     },
 }
 
+POLYGON_COLUMNS = [
+    "element_corner_1_lat",
+    "element_corner_1_lon",
+    "element_corner_2_lat",
+    "element_corner_2_lon",
+    "element_corner_3_lat",
+    "element_corner_3_lon",
+]
+
+# Atlas columns: display names and metadata live in VARIABLE_REGISTRY (long_name, units)
+ATLAS_COLUMNS = [
+    *POLYGON_COLUMNS,
+    # ── Core Resource Metrics (IEC 62600-201 Stage 1) ──
+    "vap_water_column_mean_sea_water_speed",
+    "vap_water_column_95th_percentile_sea_water_speed",
+    "vap_water_column_max_sea_water_speed",
+    "vap_water_column_mean_sea_water_power_density",
+    "vap_water_column_max_sea_water_power_density",
+    # ── Bathymetry & Depth ──
+    "vap_sea_floor_depth",
+    "vap_water_column_height_min",
+    "vap_water_column_height_max",
+    # ── Sea Surface Elevation & Tidal Characteristics ──
+    "vap_sea_surface_elevation_high_tide_max",
+    "vap_surface_elevation_low_tide_min",
+    "vap_tidal_range",
+    "vap_sea_surface_elevation_mean",
+    # ── Site Context ──
+    "vap_distance_to_shore",
+    "vap_grid_resolution",
+    # ── Location Identity ──
+    "face_id",
+    "lat_center",
+    "lon_center",
+    # ── Data Access ──
+    "full_year_data_s3_uri",
+    "full_year_data_https_url",
+]
+
 
 dataset_info = (
     "Source: <DATA_CITATION>, funded by <DOE> <WPTO>. "
@@ -1027,9 +1066,7 @@ def documentation_variable_spec(variable_spec, keyword_spec):
 atlas_variable_specification = {}
 documentation_variable_specification = {}
 
-# Only generate specs for columns actually used on the atlas
-from src.vap_create_parquet_summary import ATLAS_COLUMNS, POLYGON_COLUMNS
-
+# Only generate specs for non-polygon columns on the atlas
 _atlas_column_set = set(ATLAS_COLUMNS) - set(POLYGON_COLUMNS)
 
 for _var_key, _var_entry in VARIABLE_REGISTRY.items():
