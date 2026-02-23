@@ -1124,18 +1124,22 @@ def _build_color_spec_for_var(gcr_key):
             hex_color = f"#{rgb_255[0]:02x}{rgb_255[1]:02x}{rgb_255[2]:02x}"
 
             if i < n_levels:
-                levels_list.append({
-                    "bin_min": float(edges[i]),
-                    "bin_max": float(edges[i + 1]),
-                    "color": hex_color,
-                })
+                levels_list.append(
+                    {
+                        "bin_min": float(edges[i]),
+                        "bin_max": float(edges[i + 1]),
+                        "color": hex_color,
+                    }
+                )
             else:
                 # Overflow level (≥ range_max)
-                levels_list.append({
-                    "bin_min": float(edges[-1]),
-                    "bin_max": None,
-                    "color": hex_color,
-                })
+                levels_list.append(
+                    {
+                        "bin_min": float(edges[-1]),
+                        "bin_max": None,
+                        "color": hex_color,
+                    }
+                )
 
         result["colormap_name"] = style["colormap_name"]
         result["n_levels"] = n_levels
@@ -1156,7 +1160,6 @@ for _var_key, _var_entry in VARIABLE_REGISTRY.items():
     if "documentation_url" not in _var_entry:
         continue
     spec = atlas_variable_spec(_var_entry, DOCUMENTATION_REGISTRY)
-    spec["show_as_layer_with_color_spec"] = _col_name in _colored_layer_columns
     if _col_name in _col_to_gcr_key:
         spec["color_spec"] = _build_color_spec_for_var(_col_to_gcr_key[_col_name])
     atlas_variable_specification[_col_name] = spec
