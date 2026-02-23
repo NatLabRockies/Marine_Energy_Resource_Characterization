@@ -981,10 +981,11 @@ def _render_all_formats(text_spec, keyword_spec, variable_spec):
 # Concise, points the user to the right place
 def atlas_variable_spec(variable_spec, keyword_spec):
     units_part = " [<UNITS>]" if variable_spec.get("units") else ""
-    text_spec = (
+    first_sentence = (
         f"<DISPLAY_NAME>{units_part} is the <ONE_LINER>. "
-        "For more detail, see <VARIABLE_LINK>. " + dataset_info
+        "For more detail, see <VARIABLE_LINK>."
     )
+    rest = dataset_info
     display_lower = variable_spec["display_name"].lower()
     augmented_keywords = dict(keyword_spec)
     augmented_keywords["_variable_link"] = {
@@ -993,10 +994,18 @@ def atlas_variable_spec(variable_spec, keyword_spec):
         "short_text": f"complete {display_lower} documentation",
         "keyword": "VARIABLE_LINK",
     }
-    return {
+    # Text and markdown: single paragraph
+    flat_spec = first_sentence + " " + rest
+    result = {
         "display_name": variable_spec["display_name"],
-        **_render_all_formats(text_spec, augmented_keywords, variable_spec),
+        "text": _render(flat_spec, augmented_keywords, variable_spec, _LINK_FORMATTERS["text"]),
+        "markdown": _render(flat_spec, augmented_keywords, variable_spec, _LINK_FORMATTERS["markdown"]),
     }
+    # HTML: wrap in <div> with first sentence in its own <p> with <br/>
+    html_first = _render(first_sentence, augmented_keywords, variable_spec, _LINK_FORMATTERS["html"])
+    html_rest = _render(rest, augmented_keywords, variable_spec, _LINK_FORMATTERS["html"])
+    result["html"] = f"<div><p>{html_first}<br/></p><p>{html_rest}</p></div>"
+    return result
 
 
 def documentation_variable_spec(variable_spec, keyword_spec):
