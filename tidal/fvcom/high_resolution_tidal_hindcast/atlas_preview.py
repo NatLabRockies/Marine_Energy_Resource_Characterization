@@ -2215,8 +2215,14 @@ def generate_markdown_specification(
 
     md_content.append("")
 
-    # Add color mapping details if available
-    if color_level_data:
+    # Add color mapping details — use runtime color_level_data if available,
+    # otherwise fall back to color_spec embedded in atlas_variable_spec.json.
+    _has_runtime_colors = bool(color_level_data)
+    _has_json_colors = any(
+        "color_spec" in entry for entry in atlas_var_spec.values()
+    )
+
+    if _has_runtime_colors or _has_json_colors:
         md_content.extend(
             [
                 "## Color Specifications",
@@ -2228,41 +2234,99 @@ def generate_markdown_specification(
         )
 
         for var_key, spec in VIZ_SPECS.items():
-            if var_key in color_level_data:
-                colormap_name = "Custom"
-                if "colormap" in spec:
-                    colormap_name = spec["colormap"].name
-                md_content.extend(
-                    [
-                        f"### {spec['display_name']} [{spec['units']}], `{spec['column_name']}`",
-                        "",
-                        f"* **Colormap:** {colormap_name}",
-                        f"* **Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}",
-                        f"* **Discrete Levels:** {spec['levels'] + 1} ({spec['levels']} within range + 1 overflow level)",
-                        "",
-                        "| Level | Value Range | Hex Color | RGB Color | Color Preview |",
-                        "| ----- | ----------- | --------- | --------- | ------------- |",
-                    ]
+            colormap_name = "Custom"
+            if "colormap" in spec:
+                colormap_name = spec["colormap"].name
+
+            # Get color levels from runtime data or JSON spec
+            colors_info = None
+            if _has_runtime_colors and var_key in color_level_data:
+                colors_info = color_level_data[var_key]
+            elif _has_json_colors:
+                # Fall back to color_spec from atlas_variable_spec.json
+                col_name = spec.get("column_name", var_key)
+                json_entry = atlas_var_spec.get(col_name, {})
+                json_color_spec = json_entry.get("color_spec", {})
+                json_levels = json_color_spec.get("levels", [])
+                json_categories = json_color_spec.get("categories", {})
+                units = spec.get("units", "")
+                if json_levels:
+                    colors_info = []
+                    for i, lvl in enumerate(json_levels):
+                        hex_color = lvl["color"]
+                        hex_clean = hex_color.lstrip("#")
+                        r = int(hex_clean[0:2], 16)
+                        g = int(hex_clean[2:4], 16)
+                        b = int(hex_clean[4:6], 16)
+                        bin_min = lvl["bin_min"]
+                        bin_max = lvl["bin_max"]
+                        # Overflow level (bin_max is null)
+                        if bin_max is None:
+                            if bin_min >= 1000:
+                                range_str = f"\u2265 {bin_min:.0f}"
+                            elif bin_min >= 100:
+                                range_str = f"\u2265 {bin_min:.1f}"
+                            elif bin_min >= 10:
+                                range_str = f"\u2265 {bin_min:.2f}"
+                            else:
+                                range_str = f"\u2265 {bin_min:.3f}"
+                        else:
+                            max_value = max(abs(bin_min), abs(bin_max))
+                            if max_value >= 100:
+                                range_str = f"{bin_min:.0f} - {bin_max:.0f}"
+                            elif max_value >= 10:
+                                range_str = f"{bin_min:.2f} - {bin_max:.2f}"
+                            else:
+                                range_str = f"{bin_min:.2f} - {bin_max:.2f}"
+                        colors_info.append({
+                            "range": f"{range_str} [{units}]",
+                            "hex": hex_color,
+                            "rgb": f"rgb({r}, {g}, {b})",
+                        })
+                elif json_categories:
+                    colors_info = []
+                    for cat_key, cat in json_categories.items():
+                        hex_color = cat["color"]
+                        hex_clean = hex_color.lstrip("#")
+                        r = int(hex_clean[0:2], 16)
+                        g = int(hex_clean[2:4], 16)
+                        b = int(hex_clean[4:6], 16)
+                        colors_info.append({
+                            "range": f"{cat['label']} [{units}]",
+                            "hex": hex_color,
+                            "rgb": f"rgb({r}, {g}, {b})",
+                        })
+
+            if not colors_info:
+                continue
+
+            md_content.extend(
+                [
+                    f"### {spec['display_name']} [{spec['units']}], `{spec['column_name']}`",
+                    "",
+                    f"* **Colormap:** {colormap_name}",
+                    f"* **Data Range:** {spec['range_min']} to {spec['range_max']} {spec['units']}",
+                    f"* **Discrete Levels:** {spec['levels']}",
+                    "",
+                    "| Level | Value Range | Hex Color | RGB Color | Color Preview |",
+                    "| ----- | ----------- | --------- | --------- | ------------- |",
+                ]
+            )
+
+            for i, color_info in enumerate(colors_info):
+                level_num = i + 1
+                value_range = color_info["range"]
+                hex_color = color_info["hex"]
+                rgb_color = color_info["rgb"]
+
+                # Use placehold.co for dynamic color swatches in GitHub .md files
+                hex_clean = hex_color.lstrip("#")
+                color_preview = f"![{hex_color}](https://placehold.co/40x15/{hex_clean}/{hex_clean})"
+                md_content.append(
+                    f"| {level_num} | {value_range} | `{hex_color}` | `{rgb_color}` | {color_preview} |"
                 )
 
-                # Add color level data here (this will be populated when we capture the print output)
-                colors_info = color_level_data[var_key]
-                for i, color_info in enumerate(colors_info):
-                    level_num = i + 1
-                    value_range = color_info["range"]
-                    # e7fa5a
-                    hex_color = color_info["hex"]
-                    # rgb(231, 250, 90)
-                    rgb_color = color_info["rgb"]
-
-                    # Use placehold.co for dynamic color swatches in GitHub .md files
-                    hex_clean = hex_color.lstrip("#")
-                    color_preview = f"![{hex_color}](https://placehold.co/40x15/{hex_clean}/{hex_clean})"
-                    md_content.append(
-                        f"| {level_num} | {value_range} | `{hex_color}` | `{rgb_color}` | {color_preview} |"
-                    )
-
-                md_content.append("")
+            md_content.append("")
     else:
         md_content.extend(
             [

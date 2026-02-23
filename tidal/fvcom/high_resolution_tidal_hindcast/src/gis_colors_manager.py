@@ -345,12 +345,21 @@ def _discrete_hex_colors(values, spec_ranges):
 
 
 def _build_color_level_list(colormap_name, vmin, vmax, levels):
-    """Return a list of dicts describing each color level (for JSON spec)."""
+    """Return a list of dicts describing each color level (for JSON spec).
+
+    Includes an overflow level (≥ vmax) using the top-of-colormap color,
+    matching the visual legend used in atlas visualizations.
+    """
     edges, hex_palette = _make_hex_palette(colormap_name, vmin, vmax, levels)
-    return [
+    result = [
         {"bin_min": float(edges[i]), "bin_max": float(edges[i + 1]), "color": hex_palette[i]}
         for i in range(levels)
     ]
+    # Overflow level — sample the colormap at its maximum (1.0)
+    cmap = resolve_colormap(colormap_name)
+    overflow_color = mcolors.to_hex(cmap(1.0))
+    result.append({"bin_min": float(vmax), "bin_max": None, "color": overflow_color})
+    return result
 
 
 # ---------------------------------------------------------------------------

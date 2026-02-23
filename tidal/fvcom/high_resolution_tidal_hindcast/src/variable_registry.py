@@ -1083,6 +1083,72 @@ _colored_layer_columns = {
     if key in VARIABLE_REGISTRY
 }
 
+# Reverse lookup: column_name -> GIS_COLORS_REGISTRY key
+_col_to_gcr_key = {
+    VARIABLE_REGISTRY[key]["column_name"]: key
+    for key in GIS_COLORS_REGISTRY
+    if key in VARIABLE_REGISTRY
+}
+
+
+def _build_color_spec_for_var(gcr_key):
+    """Build color specification dict from GIS_COLORS_REGISTRY for embedding in JSON.
+
+    Uses the same evenly-spaced colormap sampling as the atlas visualization
+    legend (``capture_color_level_ranges`` in atlas_preview.py):
+    ``cmap(i / (n_colors - 1))`` where n_colors = levels + 1.
+    """
+    import numpy as np
+    from src.gis_colors_registry import resolve_colormap
+
+    style = GIS_COLORS_REGISTRY[gcr_key]
+    reg = VARIABLE_REGISTRY.get(gcr_key, {})
+    result = {
+        "display_name": reg.get("display_name", gcr_key),
+        "column_name": reg.get("column_name", gcr_key),
+        "units": reg.get("units", ""),
+        "style_type": style["style_type"],
+        "range_min": style["range_min"],
+        "range_max": style["range_max"],
+    }
+    if style["style_type"] == "continuous":
+        cmap = resolve_colormap(style["colormap_name"])
+        n_levels = style["levels"]
+        n_colors = n_levels + 1  # +1 for overflow
+        edges = np.linspace(style["range_min"], style["range_max"], n_levels + 1)
+
+        levels_list = []
+        for i in range(n_colors):
+            rgba = cmap(i / (n_colors - 1))
+            rgb_255 = tuple(int(c * 255) for c in rgba[:3])
+            hex_color = f"#{rgb_255[0]:02x}{rgb_255[1]:02x}{rgb_255[2]:02x}"
+
+            if i < n_levels:
+                levels_list.append({
+                    "bin_min": float(edges[i]),
+                    "bin_max": float(edges[i + 1]),
+                    "color": hex_color,
+                })
+            else:
+                # Overflow level (≥ range_max)
+                levels_list.append({
+                    "bin_min": float(edges[-1]),
+                    "bin_max": None,
+                    "color": hex_color,
+                })
+
+        result["colormap_name"] = style["colormap_name"]
+        result["n_levels"] = n_levels
+        result["levels"] = levels_list
+    elif style["style_type"] == "discrete" and "spec_ranges" in style:
+        result["n_levels"] = len(style["spec_ranges"])
+        result["categories"] = {
+            k: {"max": v["max"], "label": v["label"], "color": v["color"]}
+            for k, v in style["spec_ranges"].items()
+        }
+    return result
+
+
 for _var_key, _var_entry in VARIABLE_REGISTRY.items():
     _col_name = _var_entry["column_name"]
     if _col_name not in _atlas_column_set:
@@ -1091,6 +1157,8 @@ for _var_key, _var_entry in VARIABLE_REGISTRY.items():
         continue
     spec = atlas_variable_spec(_var_entry, DOCUMENTATION_REGISTRY)
     spec["show_as_layer_with_color_spec"] = _col_name in _colored_layer_columns
+    if _col_name in _col_to_gcr_key:
+        spec["color_spec"] = _build_color_spec_for_var(_col_to_gcr_key[_col_name])
     atlas_variable_specification[_col_name] = spec
     if "complete_description" in _var_entry:
         documentation_variable_specification[_col_name] = documentation_variable_spec(
