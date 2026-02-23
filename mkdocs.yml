@@ -18,7 +18,7 @@ theme:
     - navigation.sections
     - navigation.top
     - navigation.tracking
-    - toc.integrate
+    # toc.integrate removed: TOC now renders in right sidebar
     - search.suggest
     - search.highlight
     - content.code.copy

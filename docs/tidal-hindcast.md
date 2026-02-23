@@ -149,201 +149,331 @@ Known Data Gaps: Puget Sound is missing December 31, 2015. Specific files were e
 
 ## Variable Documentation
 
+<!-- GENERATED:VARIABLE_DOCS_START -->
 ### Variable Quick Reference
 
-| Variable                                                        | Internal Name                                      | Units | Description                                                  |
-| --------------------------------------------------------------- | -------------------------------------------------- | ----- | ------------------------------------------------------------ |
-| [Mean Current Speed](#mean-current-speed)                       | `vap_water_column_mean_sea_water_speed`            | m/s   | Annual average of depth-averaged current speed               |
-| [Mean Power Density](#mean-power-density)                       | `vap_water_column_mean_sea_water_power_density`    | W/m²  | Annual average of depth-averaged kinetic energy flux         |
-| [95th Percentile Current Speed](#95th-percentile-current-speed) | `vap_water_column_95th_percentile_sea_water_speed` | m/s   | 95th percentile of yearly maximum current speed (all depths) |
-| [Minimum Water Depth](#minimum-water-depth)                     | `vap_water_column_height_min`                      | m     | Minimum water depth (during 1 year model run)                |
-| [Maximum Water Depth](#maximum-water-depth)                     | `vap_water_column_height_max`                      | m     | Maximum water depth (during 1 year model run)                |
-| [Grid Resolution](#grid-resolution)                             | `vap_grid_resolution`                              | m     | Average edge length of triangular model grid cells           |
+| Variable | Internal Name | Units | Description |
+| --- | --- | --- | --- |
+| [Mean Current Speed](#mean-current-speed) | `vap_water_column_mean_sea_water_speed` | m/s | Annual average of depth-averaged current speed |
+| [95th Percentile Current Speed](#95th-percentile-current-speed) | `vap_water_column_95th_percentile_sea_water_speed` | m/s | Estimated extreme current speed, outlier-tolerant and comparable across sites for reconnaissance-level assessment |
+| [Mean Power Density](#mean-power-density) | `vap_water_column_mean_sea_water_power_density` | W/m² | Annual average of depth-averaged kinetic energy flux |
+| [95th Percentile Power Density](#95th-percentile-power-density) | `vap_water_column_95th_percentile_sea_water_power_density` | W/m² | Estimated extreme power density, outlier-tolerant and comparable across sites for reconnaissance-level assessment |
+| [Minimum Water Depth](#minimum-water-depth) | `vap_water_column_height_min` | m | Minimum water depth (during 1 year model run) |
+| [Maximum Water Depth](#maximum-water-depth) | `vap_water_column_height_max` | m | Maximum water depth (during 1 year model run) |
+| [Grid Resolution](#grid-resolution) | `vap_grid_resolution` | m | Average edge length of triangular model grid cells |
+| [Tidal Range](#tidal-range) | `vap_tidal_range` | m | Difference between maximum and minimum sea surface elevation over the hindcast year |
+| [Distance to Shore](#distance-to-shore) | `vap_distance_to_shore` | NM | Geodesic distance from grid cell center to nearest shoreline |
+| [Maximum Sea Surface Elevation at High Tide](#max-sea-surface-elevation-at-high-tide) | `vap_sea_surface_elevation_high_tide_max` | m (relative to model MSL) | Highest sea surface elevation observed during high tide over the hindcast year |
+| [Minimum Sea Surface Elevation at Low Tide](#min-sea-surface-elevation-at-low-tide) | `vap_surface_elevation_low_tide_min` | m (relative to model MSL) | Lowest sea surface elevation observed during low tide over the hindcast year |
 
 ---
 
-### Mean Current Speed {#mean-current-speed}
+### Mean Current Speed [m/s] {#mean-current-speed}
 
-**Internal Name:** `vap_water_column_mean_sea_water_speed`
-**Units:** m/s
+*Annual average of depth-averaged current speed*
 
-> Annual average of depth-averaged current speed
+**Description**
 
-#### Description
+Annual average of the depth-averaged current velocity magnitude, representing the characteristic flow speed at each grid location under free-stream (undisturbed) conditions. This metric is intended for IEC 62600-201 Stage 1 reconnaissance-level analysis to identify areas with tidal current resources. Engineering applications include initial site screening, comparing relative site potential across regions, and Stage 1 IEC 62600-201 tidal energy resource characterization.
 
-Mean Current Speed is the annual average of the depth-averaged current velocity magnitude, representing the characteristic flow speed at each grid location under free-stream (undisturbed) conditions. This metric is intended for IEC 62600-201 Stage 1 reconnaissance-level analysis to identify areas with tidal current resources. Calculated as the temporal mean of depth-averaged |U| where U = √(u² + v²).
-
-Mean Current Speed is computed by first averaging velocity magnitudes across all 10 sigma layers at each timestep, then averaging over the full hindcast year. Current speed is the vector magnitude of eastward (u) and northward (v) velocity components: U = √(u² + v²). Tidal currents flow slower near the seafloor due to friction and faster in the upper water column. Depth-averaging provides a representative value for the entire water column.
-
-Engineering applications include initial site screening, comparing relative site potential across regions, and Stage 1 IEC 62600-201 tidal energy resource characterization.
-
-#### Equation
+**Equation**
 
 $$
-\bar{\bar{U}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, \ldots, U_{N_\sigma,t}) \text{ for } t=1,\ldots,T\right]\right)
+\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)
 $$
 
 **Where:**
 
-- $U_{i,t} = \sqrt{u^2 + v^2}$ — velocity magnitude at sigma layer $i$ at time $t$ (m/s)
-- $u$ = eastward velocity component (m/s), positive toward true east
-- $v$ = northward velocity component (m/s), positive toward true north
-- $N_\sigma = 10$ sigma layers (terrain-following vertical layers)
-- $T$ = 1 year of hindcast data
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude at sigma layer $i$ at time $t$ $[\text{m/s}]$
+- $N_{\sigma} = 10$, sigma layers (terrain-following vertical layers dividing the water column into equal-thickness fractions from surface to seafloor)
+- $T$, 1 year of hindcast data (hourly for Alaska locations, half-hourly for others)
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_water_column_mean_sea_water_speed` |
+| Units | m/s |
 
 ---
 
-### Mean Power Density {#mean-power-density}
+### 95th Percentile Current Speed [m/s] {#95th-percentile-current-speed}
 
-**Internal Name:** `vap_water_column_mean_sea_water_power_density`
-**Units:** W/m²
+*Estimated extreme current speed, outlier-tolerant and comparable across sites for reconnaissance-level assessment*
 
-> Annual average of depth-averaged kinetic energy flux
+**Description**
 
-#### Description
+95th Percentile Current Speed provides a robust, outlier-tolerant estimate of extreme current conditions at each grid location, intended for consistent cross-site comparison during reconnaissance-level resource characterization. Unlike the absolute maximum, this statistic is resistant to isolated numerical artifacts and transient model effects, making it a more reliable and reproducible basis for comparing extreme flow conditions across sites.
 
-Mean Power Density is the annual average of the kinetic energy flux per unit area, representing the theoretical power available for extraction from the undisturbed tidal flow. The cubic relationship with velocity (P = ½ρU³) makes this metric highly sensitive to current speed variations. Used for Stage 1 resource characterization and site ranking to indicate theoretical resource magnitude.
+This value is derived from a numerical hydrodynamic model and represents modeled conditions only. It should not be interpreted as a measured or ground-truth observation. Site-specific validation against in-situ measurements is recommended before use in detailed engineering design.
 
-Power density is computed at each sigma layer using the cube of the current speed, then depth-averaged and temporally averaged over the full hindcast year. The cubic relationship with velocity means small increases in current speed yield large increases in available power—doubling the speed increases power density by a factor of eight.
+Engineering applications include preliminary structural loading assessment, blade and support structure design screening, and initial fatigue analysis.
 
-Engineering applications include comparing relative energy availability between sites and initial economic feasibility screening.
-
-#### Equation
+**Equation**
 
 $$
-\bar{\bar{P}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, \ldots, P_{N_\sigma,t}) \text{ for } t=1,\ldots,T\right]\right)
+U_{95} = \text{percentile}(95, \left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right])
 $$
 
 **Where:**
 
-- $P_{i,t} = \frac{1}{2}\rho U_{i,t}^3$ — power density at sigma layer $i$ at time $t$ (W/m²)
-- $\rho = 1025$ kg/m³ (nominal seawater density)
-- $U_{i,t} = \sqrt{u^2 + v^2}$ — velocity magnitude at sigma layer $i$ at time $t$ (m/s)
-- $N_\sigma = 10$ sigma layers (terrain-following vertical layers)
-- $T$ = 1 year of hindcast data
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude at sigma layer $i$ at time $t$ $[\text{m/s}]$
+- $\max_{\sigma}$, maximum value across all 10 sigma layers at each timestep
+- $P_{95}$, 95th percentile operator over the full time series
+- $N_{\sigma} = 10$, sigma layers
+- $T$, 1 year of hindcast data (hourly for Alaska locations, half-hourly for others)
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_water_column_95th_percentile_sea_water_speed` |
+| Units | m/s |
 
 ---
 
-### 95th Percentile Current Speed {#95th-percentile-current-speed}
+### Mean Power Density [W/m²] {#mean-power-density}
 
-**Internal Name:** `vap_water_column_95th_percentile_sea_water_speed`
-**Units:** m/s
+*Annual average of depth-averaged kinetic energy flux*
 
-> 95th percentile of yearly maximum current speed (all depths)
+**Description**
 
-#### Description
+Mean Power Density is the annual average of the kinetic energy flux per unit area, representing the theoretical power available for extraction from the undisturbed tidal flow. The cubic relationship with velocity makes this metric highly sensitive to current speed variations. Used for Stage 1 resource characterization and site ranking to indicate theoretical resource magnitude. Engineering applications include comparing relative energy availability between sites and initial economic feasibility screening.
 
-95th Percentile Current Speed is the current speed exceeded only 5% of the time, computed from the depth-maximum (highest value across sigma layers) at each timestep. This metric characterizes extreme flow conditions relevant to structural loading and device survivability. Used for preliminary assessment of extreme current conditions in support of Stage 2 feasibility studies per IEC 62600-201. Calculated as P₉₅(max_σ(U)) where U = √(u² + v²).
-
-At each timestep, the maximum speed across all 10 sigma layers is identified (the depth-maximum), then the 95th percentile of this time series is computed. The depth-maximum is used (rather than depth-average) because structural and mechanical systems must withstand peak loads that can occur at any depth in the water column. This metric characterizes expected high-flow conditions for survivability design, while excluding rare extreme events.
-
-Engineering applications include structural loading calculations, blade and support structure design, and fatigue analysis. This metric helps size components to withstand expected high-flow conditions.
-
-#### Equation
+**Equation**
 
 $$
-U_{95} = P_{95}\left(\left[\max(U_{1,t}, \ldots, U_{N_\sigma,t}) \text{ for } t=1,\ldots,T\right]\right)
+\overline{\overline{P}} = P_{\text{average}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)
 $$
 
 **Where:**
 
-- $U_{i,t} = \sqrt{u^2 + v^2}$ — velocity magnitude at sigma layer $i$ at time $t$ (m/s)
-- $\max_\sigma$ = maximum value across all sigma layers at each timestep
-- $P_{95}$ = 95th percentile operator over the time series
-- $N_\sigma = 10$ sigma layers (terrain-following vertical layers)
-- $T$ = 1 year of hindcast data
+- $P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density at sigma layer $i$ at time $t$ $[\text{W/m}^2]$
+- $\rho = 1025$, nominal seawater density (actual varies with temperature and salinity) $[\text{kg/m}^3]$
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude $[\text{m/s}]$
+- $N_{\sigma} = 10$, sigma layers
+- $T$, 1 year of hindcast data (hourly for Alaska locations, half-hourly for others)
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_water_column_mean_sea_water_power_density` |
+| Units | W/m² |
 
 ---
 
-### Minimum Water Depth {#minimum-water-depth}
+### 95th Percentile Power Density [W/m²] {#95th-percentile-power-density}
 
-**Internal Name:** `vap_water_column_height_min`
-**Units:** m
+*Estimated extreme power density, outlier-tolerant and comparable across sites for reconnaissance-level assessment*
 
-> Minimum water depth (during 1 year model run)
+**Description**
 
-#### Description
+95th Percentile Power Density provides a robust, outlier-tolerant estimate of extreme power density conditions at each grid location, intended for consistent cross-site comparison during reconnaissance-level resource characterization. Unlike the absolute maximum, this statistic is resistant to isolated numerical artifacts and transient model effects. Due to the cubic relationship between velocity and power density, extreme values are particularly sensitive to model artifacts, making the 95th percentile a more reliable and reproducible basis for comparing extreme energy flux across sites.
 
-Minimum Water Depth is the lowest water depth (surface to seafloor) observed at each grid location over the hindcast year, typically occurring during extreme low tide conditions. This metric defines the minimum vertical clearance available for device deployment and is critical for assessing depth constraints. Used in Stage 2 feasibility studies for turbine placement and collision avoidance.
+This value is derived from a numerical hydrodynamic model and represents modeled conditions only. It should not be interpreted as a measured or ground-truth observation. Site-specific validation against in-situ measurements is recommended before use in detailed engineering design.
 
-Minimum water depth typically occurs during spring tides when tidal range is maximized. Total water depth is calculated as the sum of bathymetry depth (h) and sea surface elevation (ζ). The difference between maximum and minimum water depth approximates the tidal range at each location.
+Engineering applications include preliminary extreme load assessment, power electronics sizing, and initial design margin estimation.
 
-Engineering applications include assessing turbine clearance requirements and identifying areas where shallow water may limit device deployment.
-
-#### Equation
+**Equation**
 
 $$
-d_{\min} = \min_t(h + \zeta_t)
+P_{95} = \text{percentile}(95, \left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right])
 $$
 
 **Where:**
 
-- $h$ = bathymetry depth below NAVD88 (m)
-- $\zeta_t$ = sea surface elevation above NAVD88 at time $t$ (m)
-- $T$ = 1 year of hindcast data
+- $P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density with $\rho = 1025$ $[\text{kg/m}^3]$
+- $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude at sigma level $i$ at time $t$ $[\text{m/s}]$
+- $N_{\sigma} = 10$, sigma layers
+- $T$, 1 year of hindcast data
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_water_column_95th_percentile_sea_water_power_density` |
+| Units | W/m² |
 
 ---
 
-### Maximum Water Depth {#maximum-water-depth}
+### Minimum Water Depth [m] {#minimum-water-depth}
 
-**Internal Name:** `vap_water_column_height_max`
-**Units:** m
+*Minimum water depth (during 1 year model run)*
 
-> Maximum water depth (during 1 year model run)
+**Description**
 
-#### Description
+Minimum Water Depth is the lowest water depth (surface to seafloor) observed at each grid location over the hindcast year, typically occurring during extreme low tide conditions. This metric defines the minimum vertical clearance available for device deployment and is critical for assessing depth constraints. Used in Stage 2 feasibility studies for turbine placement and collision avoidance. The difference between maximum and minimum water depth approximates the tidal range at each location. Engineering applications include assessing turbine clearance requirements and identifying areas where shallow water may limit device deployment.
 
-Maximum Water Depth is the greatest water depth (surface to seafloor) observed at each grid location over the hindcast year, typically occurring during extreme high tide conditions. This metric represents the upper bound of water depth variability at each location. Used in Stage 2 feasibility studies for mooring system design, cable routing, and understanding the full operating depth envelope.
-
-Maximum water depth typically occurs during spring tides when tidal range is maximized. Water depth is calculated as the sum of bathymetry depth (h) and sea surface elevation (ζ). The difference between maximum and minimum water depth approximates the tidal range at each location.
-
-Engineering applications include mooring system design considerations and understanding the full range of water depths at a site.
-
-#### Equation
+**Equation**
 
 $$
-d_{\max} = \max_t(h + \zeta_t)
+d_{\min} = \min\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)
 $$
 
 **Where:**
 
-- $h$ = bathymetry depth below NAVD88 (m)
-- $\zeta_t$ = sea surface elevation above NAVD88 at time $t$ (m)
-- $T$ = 1 year of hindcast data
+- $h$, bathymetry below NAVD88 $[\text{m}]$
+- $\zeta_t$, sea surface elevation above NAVD88 at time $t$ $[\text{m}]$
+- $T$, 1 year of hindcast data (hourly for Alaska locations, half-hourly for others)
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_water_column_height_min` |
+| Units | m |
 
 ---
 
-### Grid Resolution {#grid-resolution}
+### Maximum Water Depth [m] {#maximum-water-depth}
 
-**Internal Name:** `vap_grid_resolution`
-**Units:** m
+*Maximum water depth (during 1 year model run)*
 
-> Average edge length of triangular model grid cells
+**Description**
 
-#### Description
+Maximum Water Depth is the greatest water depth (surface to seafloor) observed at each grid location over the hindcast year, typically occurring during extreme high tide conditions. This metric represents the upper bound of water depth variability at each location. Used in Stage 2 feasibility studies for mooring system design, cable routing, and understanding the full operating depth envelope. The difference between maximum and minimum water depth approximates the tidal range at each location. Engineering applications include mooring system design considerations and understanding the full range of water depths at a site.
 
-Grid Resolution is the average edge length of the unstructured triangular model grid cells, indicating the spatial scale at which tidal currents are resolved by the FVCOM hydrodynamic model. Essential model metadata for assessing spatial uncertainty and determining appropriate applications. IEC 62600-201 requires <500 m for Stage 1 reconnaissance and <50 m for Stage 2 feasibility assessments.
-
-Grid Resolution is calculated as the average of the three edge lengths for each triangular grid cell, based on the original unstructured mesh defined by the model developers at Pacific Northwest National Laboratory. The unstructured triangular mesh allows variable resolution, with finer grids in areas of interest (channels, straits) and coarser grids in open water.
-
-Per IEC 62600-201 tidal energy resource assessment standards:
-
-- Stage 1 feasibility (reconnaissance-level) assessments require grid resolution < 500 m
-- Stage 2 (layout design) assessments require grid resolution < 50 m
-
-Engineering applications include assessing model fidelity and determining appropriate applications for the data.
-
-#### Equation
+**Equation**
 
 $$
-R = \frac{1}{3}(d_1 + d_2 + d_3)
+d_{\max} = \max\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)
 $$
 
 **Where:**
 
-- $d_1, d_2, d_3$ = geodesic distances between triangle vertices (m)
+- $h$, bathymetry below NAVD88 $[\text{m}]$
+- $\zeta_t$, sea surface elevation above NAVD88 at time $t$ $[\text{m}]$
+- $T$, 1 year of hindcast data (hourly for Alaska locations, half-hourly for others)
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_water_column_height_max` |
+| Units | m |
 
 ---
+
+### Grid Resolution [m] {#grid-resolution}
+
+*Average edge length of triangular model grid cells*
+
+**Description**
+
+Grid Resolution is the average edge length of the unstructured triangular model grid cells, indicating the spatial scale at which tidal currents are resolved by the FVCOM hydrodynamic model. Essential model metadata for assessing spatial uncertainty and determining appropriate applications. IEC 62600-201 requires <500 m for Stage 1 reconnaissance and <50 m for Stage 2 feasibility assessments. The unstructured triangular mesh allows variable resolution, with finer grids in areas of interest (channels, straits) and coarser grids in open water. Per IEC 62600-201 tidal energy resource assessment standards:- Stage 1 feasibility (reconnaissance-level) assessments require grid resolution < 500 m- Stage 2 (layout design) assessments require grid resolution < 50 mEngineering applications include assessing model fidelity and determining appropriate applications for the data.
+
+**Equation**
+
+$$
+\text{Grid Resolution} = \frac{1}{3}(d_1 + d_2 + d_3)
+$$
+
+**Where:**
+
+- $d_1, d_2, d_3$, geodesic distances between triangle vertices $[\text{m}]$
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_grid_resolution` |
+| Units | m |
+
+---
+
+### Tidal Range [m] {#tidal-range}
+
+*Difference between maximum and minimum sea surface elevation over the hindcast year*
+
+**Description**
+
+Tidal Range is the difference between the maximum and minimum sea surface elevation observed at each grid location over the hindcast year. This metric characterizes the tidal regime and vertical water level variability. IEC 62600-201 requires tidal range description as part of Stage 1 site characterization. Tidal range is classified as microtidal (<2m), mesotidal (2-4m), or macrotidal (>4m). Larger tidal ranges indicate stronger tidal forcing, which generally correlates with stronger tidal currents but also creates greater challenges for device deployment due to water level variability. Engineering applications include mooring system design (must accommodate full range of water levels), cable routing, and understanding the relationship between water level and current speed at a site.
+
+**Equation**
+
+$$
+R = \zeta_{\max} - \zeta_{\min} = \max(\zeta_t) - \min(\zeta_t)
+$$
+
+**Where:**
+
+- $\zeta_t$, sea surface elevation at time $t$ $[\text{m}]$
+- $\zeta_{\max}$, maximum sea surface elevation over the year $[\text{m}]$
+- $\zeta_{\min}$, minimum sea surface elevation over the year $[\text{m}]$
+- $T$, 1 year of hindcast data
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_tidal_range` |
+| Units | m |
+
+---
+
+### Distance to Shore [NM] {#distance-to-shore}
+
+*Geodesic distance from grid cell center to nearest shoreline*
+
+**Description**
+
+Distance to Shore is the geodesic distance from each grid cell center to the nearest shoreline point, calculated using the GSHHG (Global Self-consistent Hierarchical High-resolution Geography) shoreline database. Reported in nautical miles (NM). Distance to shore is a practical siting constraint that affects cable cost, grid connection feasibility, and operations and maintenance logistics. NREL site screening methodology uses a threshold of <20 km (~10.8 NM) to nearest transmission infrastructure. Engineering applications include cable routing cost estimation, grid connection planning, and O&M logistics assessment.
+
+**Equation**
+
+$$
+d = \text{haversine}(\text{cell center}, \text{nearest shoreline point})
+$$
+
+**Where:**
+
+- $d$, geodesic distance calculated using GSHHG shoreline database $[\text{NM}]$
+- $1 \text{ NM} = 1.852 \text{ km}$
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_distance_to_shore` |
+| Units | NM |
+
+---
+
+### Maximum Sea Surface Elevation at High Tide [m (relative to model MSL)] {#max-sea-surface-elevation-at-high-tide}
+
+*Highest sea surface elevation observed during high tide over the hindcast year*
+
+**Description**
+
+Maximum Sea Surface Elevation at High Tide is the highest sea surface elevation value observed during high tide conditions over the hindcast year, relative to the model's mean sea level. This typically occurs during spring tides when astronomical tidal forcing is maximized. This metric serves as a sanity check for data quality, allowing coastal engineers and oceanographers to verify that modeled extreme water levels are physically reasonable for the region. Together with the low tide minimum, it provides confidence bounds on the vertical water level envelope.
+
+**Equation**
+
+$$
+\zeta_{\text{HT,max}} = \max(\zeta_t | t \in \text{high tide peaks})
+$$
+
+**Where:**
+
+- $\zeta_t$, sea surface elevation relative to model MSL at time $t$ $[\text{m}]$
+- High tide peaks identified from the sea surface elevation time series
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_sea_surface_elevation_high_tide_max` |
+| Units | m (relative to model MSL) |
+
+---
+
+### Minimum Sea Surface Elevation at Low Tide [m (relative to model MSL)] {#min-sea-surface-elevation-at-low-tide}
+
+*Lowest sea surface elevation observed during low tide over the hindcast year*
+
+**Description**
+
+Minimum Sea Surface Elevation at Low Tide is the lowest sea surface elevation value observed during low tide conditions over the hindcast year, relative to the model's mean sea level. This typically occurs during spring tides when astronomical tidal forcing is maximized. This metric serves as a sanity check for data quality, allowing coastal engineers and oceanographers to verify that modeled extreme low water levels are physically reasonable for the region. Together with the high tide maximum, it provides confidence bounds on the vertical water level envelope.
+
+**Equation**
+
+$$
+\zeta_{\text{LT,min}} = \min(\zeta_t | t \in \text{low tide troughs})
+$$
+
+**Where:**
+
+- $\zeta_t$, sea surface elevation relative to model MSL at time $t$ $[\text{m}]$
+- Low tide troughs identified from the sea surface elevation time series
+
+| Property | Value |
+| --- | --- |
+| Internal Name | `vap_surface_elevation_low_tide_min` |
+| Units | m (relative to model MSL) |
+
+---
+<!-- GENERATED:VARIABLE_DOCS_END -->
 
 ## Data Formats and Levels
 

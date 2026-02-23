@@ -1058,8 +1058,16 @@ def documentation_variable_spec(variable_spec, keyword_spec):
     text_spec = (
         f"<DISPLAY_NAME>{units_part} is the <COMPLETE_DESCRIPTION>. " + dataset_info
     )
+    # Derive anchor from documentation_url fragment (e.g. "#mean-current-speed" -> "mean-current-speed")
+    doc_url = variable_spec.get("documentation_url", "")
+    anchor = doc_url.split("#")[-1] if "#" in doc_url else ""
     result = {
         "display_name": variable_spec["display_name"],
+        "column_name": variable_spec["column_name"],
+        "units": variable_spec.get("units", ""),
+        "one_liner": variable_spec.get("one_liner", ""),
+        "complete_description": variable_spec.get("complete_description", ""),
+        "anchor": anchor,
         **_render_all_formats(text_spec, keyword_spec, variable_spec),
     }
     if "equation" in variable_spec:
