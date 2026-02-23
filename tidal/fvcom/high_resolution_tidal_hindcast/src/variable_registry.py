@@ -4,6 +4,8 @@ Unified variable definitions for all tidal hindcast documentation
 
 import re
 
+from src.gis_colors_registry import GIS_COLORS_REGISTRY
+
 DOCUMENTATION_REGISTRY = {
     "data_availability": {
         "href": "https://mhkdr.openei.org/submissions/632",
@@ -1073,15 +1075,23 @@ documentation_variable_specification = {}
 # Only generate specs for non-polygon columns on the atlas
 _atlas_column_set = set(ATLAS_COLUMNS) - set(POLYGON_COLUMNS)
 
+# Build set of column_names that have color styling
+
+_colored_layer_columns = {
+    VARIABLE_REGISTRY[key]["column_name"]
+    for key in GIS_COLORS_REGISTRY
+    if key in VARIABLE_REGISTRY
+}
+
 for _var_key, _var_entry in VARIABLE_REGISTRY.items():
     _col_name = _var_entry["column_name"]
     if _col_name not in _atlas_column_set:
         continue
     if "documentation_url" not in _var_entry:
         continue
-    atlas_variable_specification[_col_name] = atlas_variable_spec(
-        _var_entry, DOCUMENTATION_REGISTRY
-    )
+    spec = atlas_variable_spec(_var_entry, DOCUMENTATION_REGISTRY)
+    spec["show_as_layer_with_color_spec"] = _col_name in _colored_layer_columns
+    atlas_variable_specification[_col_name] = spec
     if "complete_description" in _var_entry:
         documentation_variable_specification[_col_name] = documentation_variable_spec(
             _var_entry, DOCUMENTATION_REGISTRY
