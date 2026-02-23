@@ -98,17 +98,21 @@ VARIABLE_REGISTRY = {
         "units": "m/s",
         "long_name": "95th Percentile Current Speed",
         # Documentation
-        "one_liner": "95th percentile of yearly maximum current speed (all depths)",
+        "one_liner": "Estimated extreme current speed, outlier-tolerant and comparable across sites for reconnaissance-level assessment",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-current-speed",
         "complete_description": (
-            "95th Percentile Current Speed is the current speed exceeded only 5% of the time, "
-            "computed from the depth-maximum (highest value across sigma layers) at each timestep. "
-            "This metric characterizes extreme flow conditions relevant to structural loading and "
-            "device survivability. Used for preliminary assessment of extreme current conditions in "
-            "support of Stage 2 feasibility studies per IEC 62600-201."
-            "Engineering applications include structural loading calculations, blade and "
-            "support structure design, and fatigue analysis. This metric helps size "
-            "components to withstand expected high-flow conditions."
+            "95th Percentile Current Speed provides a robust, outlier-tolerant estimate of "
+            "extreme current conditions at each grid location, intended for consistent "
+            "cross-site comparison during reconnaissance-level resource characterization. "
+            "Unlike the absolute maximum, this statistic is resistant to isolated numerical "
+            "artifacts and transient model effects, making it a more reliable and reproducible "
+            "basis for comparing extreme flow conditions across sites.\n\n"
+            "This value is derived from a numerical hydrodynamic model and represents "
+            "modeled conditions only. It should not be interpreted as a measured or "
+            "ground-truth observation. Site-specific validation against in-situ measurements "
+            "is recommended before use in detailed engineering design.\n\n"
+            "Engineering applications include preliminary structural loading assessment, "
+            "blade and support structure design screening, and initial fatigue analysis."
         ),
         "references": [],
         # Scientific/engineering context
@@ -236,9 +240,25 @@ VARIABLE_REGISTRY = {
         "display_name": "95th Percentile Power Density",
         "column_name": "vap_water_column_95th_percentile_sea_water_power_density",
         "units": "W/m\u00b2",
-        "one_liner": "",
-        "documentation_url": "",
-        "complete_description": "",
+        "long_name": "95th Percentile Power Density",
+        "one_liner": "Estimated extreme power density, outlier-tolerant and comparable across sites for reconnaissance-level assessment",
+        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-power-density",
+        "complete_description": (
+            "95th Percentile Power Density provides a robust, outlier-tolerant estimate of "
+            "extreme power density conditions at each grid location, intended for consistent "
+            "cross-site comparison during reconnaissance-level resource characterization. "
+            "Unlike the absolute maximum, this statistic is resistant to isolated numerical "
+            "artifacts and transient model effects. Due to the cubic relationship between "
+            "velocity and power density, extreme values are particularly sensitive to model "
+            "artifacts, making the 95th percentile a more reliable and reproducible basis "
+            "for comparing extreme energy flux across sites.\n\n"
+            "This value is derived from a numerical hydrodynamic model and represents "
+            "modeled conditions only. It should not be interpreted as a measured or "
+            "ground-truth observation. Site-specific validation against in-situ measurements "
+            "is recommended before use in detailed engineering design.\n\n"
+            "Engineering applications include preliminary extreme load assessment, "
+            "power electronics sizing, and initial design margin estimation."
+        ),
         "references": [],
         "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
         "intended_usage": "Structural design loads and extreme loading conditions",
