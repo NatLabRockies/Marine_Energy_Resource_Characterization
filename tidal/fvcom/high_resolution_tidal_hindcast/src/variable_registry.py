@@ -69,24 +69,17 @@ VARIABLE_REGISTRY = {
         "one_liner": "Annual average of depth-averaged current speed",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-current-speed",
         "complete_description": (
-            "annual average of the depth-averaged current velocity "
-            "magnitude, representing the characteristic flow speed at each grid location under "
-            "free-stream (undisturbed) conditions. This metric is intended for IEC 62600-201 "
-            "Stage 1 reconnaissance-level analysis to identify areas with tidal current resources."
-            "Engineering applications include initial site screening, comparing relative site "
-            "potential across regions, and Stage 1 IEC 62600-201 tidal energy resource "
-            "characterization."
+            "Annual average of the depth-averaged current velocity magnitude, representing the "
+            "characteristic flow speed at each grid location under free-stream (undisturbed) conditions. "
+            "This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis to identify "
+            "areas with potentially viable tidal current resources. It serves as a primary metric for "
+            "identifying viable tidal energy sites, used to estimate annual energy production (AEP), "
+            "compare site potential across regions, determine expected average viable current speeds "
+            "for commercial deployment, and select appropriate turbine technology."
         ),
-        "references": [],
         # Scientific/engineering context
         "physical_meaning": "Yearly average of depth averaged current speed",
         "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": (
-            "Primary metric for identifying viable tidal energy sites. Used to estimate "
-            "annual energy production (AEP), compare site potential across regions, determine "
-            "expected average viable current speeds for commercial deployment, "
-            "and select appropriate turbine technology",
-        ),
         "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude at sigma layer $i$ at time $t$ $[\text{m/s}]$",
