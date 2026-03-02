@@ -16,7 +16,7 @@ DOCUMENTATION_REGISTRY = {
     "data_access": {
         "href": "https://data.openei.org/s3_viewer?bucket=marine-energy-data&prefix=us-tidal%2F",
         "full_text": "High Resolution Tidal Hindcast Data Access on OpenEI",
-        "short_text": "Dataset Repository",
+        "short_text": "Data Access",
         "keyword": "DATA_ACCESS",
     },
     "dataset_documentation": {
