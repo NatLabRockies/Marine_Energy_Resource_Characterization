@@ -145,30 +145,20 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_water_column_max_sea_water_speed",
         "units": "m/s",
         "long_name": "Maximum Current Speed",
-        "one_liner": "Absolute maximum current speed observed over the hindcast year",
+        "one_liner": "Absolute maximum current speed calculated over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-current-speed",
         "complete_description": (
-            "Maximum Current Speed is the absolute highest current speed observed at any "
-            "depth and any time during the hindcast year. This metric defines the worst-case "
-            "flow condition from the numerical model."
-            "Important caveat: Because this is a single extreme value from a numerical model, "
-            "it may be influenced by model artifacts or transient numerical effects. For "
-            "engineering design loads, the 95th Percentile Current Speed is generally "
-            "preferred as a more robust and statistically representative metric for extreme "
-            "conditions. The maximum value is provided as an upper bound reference but "
-            "should be used with caution for design purposes."
+            "Absolute maximum current speed calculated at any depth and any time during the "
+            "1-year hindcast period, defining the worst-case flow condition from the numerical "
+            "model. This metric serves as an upper bound reference for extreme conditions, useful "
+            "for quick screening of absolute worst-case scenarios and as a sanity check against "
+            "percentile-based statistics. However, as a single extreme value from a numerical "
+            "model, it may be influenced by model artifacts or transient numerical effects. "
+            "For structural design loads and survival analysis, the 95th Percentile Current Speed "
+            "is generally preferred as a more robust and statistically representative metric."
         ),
-        "references": [],
-        "physical_meaning": "Absolute maximum depth-max current speed observed over the year",
+        "physical_meaning": "Absolute maximum depth-max current speed calculated over the year",
         "intended_usage": "Upper bound reference for extreme conditions",
-        "intended_usage_detail": (
-            "Provides an absolute upper bound on current speed from the model. While useful "
-            "as a reference, this single extreme value may reflect model artifacts rather than "
-            "physical reality. For structural design loads and survival analysis, the 95th "
-            "percentile speed is generally preferred as a more robust metric. The maximum "
-            "speed is most useful for quick screening of absolute worst-case conditions and "
-            "as a sanity check against the percentile-based statistics."
-        ),
         "equation": r"$U_{\max} = \max\left(\left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude at sigma level $i$ at time $t$ $[\text{m/s}]$",
