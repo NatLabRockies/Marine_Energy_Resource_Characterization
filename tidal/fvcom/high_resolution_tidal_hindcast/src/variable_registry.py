@@ -120,19 +120,19 @@ VARIABLE_REGISTRY = {
         "display_name": "99th Percentile Current Speed",
         "column_name": "vap_water_column_99th_percentile_sea_water_speed",
         "units": "m/s",
-        "one_liner": "",
+        "one_liner": "Estimated near-maximum current speed for extreme event analysis",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
+        "complete_description": (
+            "99th percentile of the maximum current velocity magnitude across the water column "
+            "calculated over the 1-year hindcast period, representing a robust estimate of "
+            "near-maximum current conditions at any depth under free-stream (undisturbed) conditions. "
+            "This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis to "
+            "characterize rare, high-intensity flow events. It serves as a critical input for "
+            "extreme event planning, safety margin calculations, designing emergency shutdown "
+            "systems, and ensuring equipment survivability during rare but intense current events."
+        ),
         "physical_meaning": "99th percentile of yearly depth maximum current speed",
         "intended_usage": "Extreme event analysis and safety system design",
-        "intended_usage_detail": (
-            "Used for extreme event planning and safety margin calculations. Critical for "
-            "designing emergency shutdown systems, setting absolute operational limits, and "
-            "ensuring equipment can survive rare but intense current events. Important for "
-            "insurance risk assessments, environmental impact studies, and regulatory "
-            "compliance for extreme conditions."
-        ),
         "equation": r"$U_{99} = \text{percentile}(99, \left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude at sigma level $i$ at time $t$ $[\text{m/s}]$",
