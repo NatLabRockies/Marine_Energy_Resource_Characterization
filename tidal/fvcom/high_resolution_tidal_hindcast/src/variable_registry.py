@@ -178,29 +178,17 @@ VARIABLE_REGISTRY = {
         "one_liner": "Annual average of depth-averaged kinetic energy flux",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density",
         "complete_description": (
-            "Mean Power Density is the annual average of the kinetic energy flux per unit area, "
-            "representing the theoretical power available for extraction from the undisturbed "
-            "tidal flow. The cubic relationship with velocity makes this metric highly "
-            "sensitive to current speed variations. Used for Stage 1 resource characterization "
-            "and site ranking to indicate theoretical resource magnitude."
-            "Engineering applications include comparing relative energy availability between "
-            "sites and initial economic feasibility screening."
+            "Annual average of the kinetic energy flux per unit area (depth-averaged) "
+            "calculated over the 1-year hindcast period, representing a mean estimate of energy flux for the entire water column at each grid location under free-stream (undisturbed) conditions.",
+            "This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis to identify "
+            "areas with potentially viable tidal current resources. This metric defines the theoretic average energy potential based on model output and does not account for changes in salinity, temperature, or turbulence that may affect real-world energy extraction.",
         ),
-        "references": ["hass_2011_assessment"],
         # Scientific/engineering context
         "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
         "intended_usage": "Resource quantification and economic feasibility analysis",
-        "intended_usage_detail": (
-            "Direct measure of extractable energy resource for economic analysis. Used to "
-            "calculate theoretical power output, estimate capacity factors for project "
-            "financing, compare energy density between sites, and determine optimal turbine "
-            "spacing in arrays. Essential for LCOE calculations, investor presentations, "
-            "and grid integration planning. Minimum thresholds (typically >300 W/m\u00b2) define "
-            "commercial viability."
-        ),
         "equation": r"$\overline{\overline{P}} = P_{\text{average}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
-            r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density at sigma layer $i$ at time $t$ $[\text{W/m}^2]$",
+            r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density at sigma layer $i$ at time $t$ $[\text{W/m}^2]$ [@hass_2011_assessment]",
             r"$\rho = 1025$, nominal seawater density (actual varies with temperature and salinity) $[\text{kg/m}^3]$",
             r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude $[\text{m/s}]$",
             r"$N_{\sigma} = 10$, sigma layers",
