@@ -255,29 +255,18 @@ VARIABLE_REGISTRY = {
         "units": "m",
         "long_name": "Minimum Water Depth",
         # Documentation
-        "one_liner": "Minimum water depth (during 1 year model run)",
+        "one_liner": "Minimum water depth calculated over the 1-year hindcast period",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#minimum-water-depth",
         "complete_description": (
-            "Minimum Water Depth is the lowest water depth (surface to seafloor) "
-            "observed at each grid location over the hindcast year, typically occurring during "
-            "extreme low tide conditions. This metric defines the minimum vertical clearance "
-            "available for device deployment and is critical for assessing depth constraints. "
-            "Used in Stage 2 feasibility studies for turbine placement and collision avoidance."
-            "The difference between maximum and minimum water depth approximates the "
-            "tidal range at each location."
-            "Engineering applications include assessing turbine clearance requirements and "
-            "identifying areas where shallow water may limit device deployment."
+            "The minimum water depth (surface to seafloor) calculated at each grid location over "
+            "the 1-year hindcast period, typically occurring during extreme low tide conditions. "
+            "This metric represents the model lower bound of water depth variability and is intended for "
+            "assessing deployment feasibility, defining safe navigation limits, "
+            "and planning installation operations."
         ),
-        "references": [],
         # Scientific/engineering context
-        "physical_meaning": "Minimum water depth observed over the year (shallowest, typically at low tide)",
+        "physical_meaning": "Minimum water depth calculated over the year (shallowest, typically at low tide)",
         "intended_usage": "Minimum clearance and grounding risk assessment",
-        "intended_usage_detail": (
-            "Critical for determining minimum water depth available for turbine deployment. "
-            "Used to ensure adequate clearance between turbine blades and seafloor, assess "
-            "grounding risk during extreme low tides, and determine deployment feasibility "
-            "in shallow areas. Essential for safety planning and operational constraints."
-        ),
         "equation": r"$d_{\min} = \min\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$h$, bathymetry below NAVD88 $[\text{m}]$",
