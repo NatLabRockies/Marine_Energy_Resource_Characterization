@@ -226,38 +226,22 @@ VARIABLE_REGISTRY = {
     # Depth variables
     # =========================================================================
     "mean_water_depth": {
-        "display_name": "Sea Floor Depth",
+        "display_name": "Mean Water Depth",
         "column_name": "vap_sea_floor_depth",
-        "units": "m (below NAVD88)",
-        "long_name": "Model Sea Floor Depth from NAVD88",
-        "one_liner": "Model bathymetry depth below NAVD88 vertical datum",
+        "units": "m",
+        "long_name": "Mean Water Depth",
+        "one_liner": "Time-averaged total water depth (bathymetry + mean sea level)",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#sea-floor-depth",
         "complete_description": (
-            "Sea Floor Depth is the model bathymetry representing the distance from the "
-            "NAVD88 vertical datum to the seafloor at each grid cell center. This is a "
-            "fundamental site characterization parameter required by IEC 62600-201 for all "
-            "assessment stages. Bathymetry determines deployment feasibility, foundation "
-            "type, and installation methodology."
-            "The bathymetry values are from the FVCOM model grid, which was developed by "
-            "Pacific Northwest National Laboratory using the best available bathymetric "
-            "survey data for each region. Values are referenced to the NAVD88 vertical "
-            "datum."
-            "Engineering applications include deployment feasibility screening (current "
-            "tidal turbine technology typically requires 20-50m depth), foundation type "
-            "selection, installation vessel requirements, and cost modeling."
+            "Time-averaged water depth calculated over the 1-year hindcast period, representing "
+            "the sum of the static bathymetry (depth below NAVD88) and the mean sea surface "
+            "elevation. This is a fundamental site characterization parameter required by "
+            "IEC 62600-201 for all assessment stages [@iec_62600_201]. The underlying bathymetry "
+            "is from the FVCOM model grid, developed by PNNL using regional survey data. This "
+            "metric supports dermination of deployment feasibility and installation methodology."
         ),
-        "references": ["iec_62600_201"],
-        "physical_meaning": "Model bathymetry depth below NAVD88 vertical datum",
+        "physical_meaning": "Time-averaged total water depth (bathymetry + mean sea level)",
         "intended_usage": "Installation planning and foundation design",
-        "intended_usage_detail": (
-            "Fundamental constraint for deployment strategy and cost estimation. Used to "
-            "determine installation vessel requirements, foundation type selection (gravity, "
-            "pile, suction caisson), and deployment method feasibility. Critical for cost "
-            "modeling (deeper = more expensive), accessibility planning for maintenance "
-            "operations, and environmental impact assessments. Optimal depths typically "
-            "20-50m for current technology, with deeper sites requiring specialized "
-            "equipment and higher costs."
-        ),
         "equation": r"$\overline{d} = d_{\text{average}} = \text{mean}\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$h$, bathymetry below NAVD88 $[\text{m}]$",
