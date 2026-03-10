@@ -200,36 +200,20 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_water_column_95th_percentile_sea_water_power_density",
         "units": "W/m\u00b2",
         "long_name": "95th Percentile Power Density",
-        "one_liner": "Estimated extreme power density, outlier-tolerant and comparable across sites for reconnaissance-level assessment",
+        "one_liner": "Estimated extreme power density, outlier-tolerant and robust to cubic-velocity sensitivity",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-power-density",
         "complete_description": (
-            "95th Percentile Power Density provides a robust, outlier-tolerant estimate of "
-            "extreme power density conditions at each grid location, intended for consistent "
-            "cross-site comparison during reconnaissance-level resource characterization. "
-            "Unlike the absolute maximum, this statistic is resistant to isolated numerical "
-            "artifacts and transient model effects. Due to the cubic relationship between "
-            "velocity and power density, extreme values are particularly sensitive to model "
-            "artifacts, making the 95th percentile a more reliable and reproducible basis "
-            "for comparing extreme energy flux across sites.\n\n"
-            "This value is derived from a numerical hydrodynamic model and represents "
-            "modeled conditions only. It should not be interpreted as a measured or "
-            "ground-truth observation. Site-specific validation against in-situ measurements "
-            "is recommended before use in detailed engineering design.\n\n"
-            "Engineering applications include preliminary extreme load assessment, "
-            "power electronics sizing, and initial design margin estimation."
+            "95th percentile of the maximum power density (kinetic energy flux) across the water "
+            "column calculated over the 1-year hindcast period, representing a robust, "
+            "outlier-tolerant estimate of extreme energy flux at any depth under free-stream "
+            "(undisturbed) conditions. Due to the cubic relationship between velocity and power "
+            "density, extreme values are particularly sensitive to model artifacts, making the 95th percentile a more reliable "
+            "metric than the absolute maximum for comparing extreme energy flux across sites. It is "
+            "intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis and is intended to be "
+            "input for extreme load analysis on tidal turbine components."
         ),
-        "references": [],
         "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
         "intended_usage": "Structural design loads and extreme loading conditions",
-        "intended_usage_detail": (
-            "Essential for structural engineering and extreme load analysis. Used to "
-            "determine maximum design loads for turbine blades, drive trains, support "
-            "structures, and foundation systems. Critical for fatigue analysis, ultimate "
-            "load calculations, and ensuring structural integrity during extreme tidal "
-            "events. Defines design margins for mooring systems, tower structures, and "
-            "emergency braking systems. Required for structural certification and insurance "
-            "assessments."
-        ),
         "equation": r"$P_{95} = \text{percentile}(95, \left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density with $\rho = 1025$ $[\text{kg/m}^3]$",
