@@ -303,18 +303,17 @@ VARIABLE_REGISTRY = {
         "display_name": "Surface Layer Mean Speed",
         "column_name": "vap_surface_layer_mean_sea_water_speed",
         "units": "m/s",
-        "one_liner": "",
+        "one_liner": "Annual average current speed at the surface layer",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
+        "complete_description": (
+            "Annual average current speed at the surface layer (sigma level 1) calculated over "
+            "the 1-year hindcast period. This metric characterizes the typical flow conditions "
+            "at the water surface, which is critical for assessing impacts on floating tidal "
+            "devices, navigation safety, vessel operations, and surface loads on mooring systems. "
+            "It also informs operations planning and environmental flow characterization."
+        ),
         "physical_meaning": "Yearly average current speed at the surface layer (sigma_level_1)",
         "intended_usage": "Surface current assessment for navigation and floating devices",
-        "intended_usage_detail": (
-            "Characterizes current conditions at the water surface for floating tidal devices "
-            "and navigation safety. Used to assess surface current impacts on vessel "
-            "operations, floating platform stability, and cable/mooring system surface loads. "
-            "Important for operations planning and environmental flow characterization."
-        ),
         "equation": r"$\overline{U}_{\text{surface}} = \text{mean}\left(\left[U_{1,t} \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$, velocity magnitude at sigma level 1 (surface) at time $t$ $[\text{m/s}]$",
@@ -325,17 +324,18 @@ VARIABLE_REGISTRY = {
         "display_name": "Surface Layer 95th Percentile Speed",
         "column_name": "vap_surface_layer_95th_percentile_sea_water_speed",
         "units": "m/s",
-        "one_liner": "",
+        "one_liner": "95th percentile current speed at the surface layer",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
+        "complete_description": (
+            "The current speed at the surface layer (sigma level 1) that is exceeded 5% of the "
+            "time over the 1-year hindcast period. This statistical metric characterizes the "
+            "near-extreme surface currents that floating tidal energy systems and surface "
+            "infrastructure must withstand during operational conditions. It is used to size "
+            "mooring systems for floating platforms, design surface buoys and markers, and assess "
+            "surface loads on cables and connectors."
+        ),
         "physical_meaning": "95th percentile of surface layer current speed over the year",
         "intended_usage": "Surface current design loads for floating systems",
-        "intended_usage_detail": (
-            "Design metric for floating tidal energy systems and surface infrastructure. "
-            "Used to size mooring systems for floating platforms, design surface buoys and "
-            "markers, and assess extreme surface current loads on cables and connectors."
-        ),
         "equation": r"$U_{\text{surface},95} = \text{percentile}(95, \left[U_{1,t} \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$, velocity magnitude at sigma level 1 (surface) at time $t$ $[\text{m/s}]$",
@@ -346,18 +346,18 @@ VARIABLE_REGISTRY = {
         "display_name": "Surface Layer 99th Percentile Speed",
         "column_name": "vap_surface_layer_99th_percentile_sea_water_speed",
         "units": "m/s",
-        "one_liner": "",
+        "one_liner": "99th percentile current speed at the surface layer",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
+        "complete_description": (
+            "The current speed at the surface layer (sigma level 1) that is exceeded 1% of the "
+            "time over the 1-year hindcast period. This metric characterizes extreme surface "
+            "current conditions relevant for safety system design and survivability analysis. "
+            "It informs emergency response planning, operational limits for surface vessels and "
+            "floating devices, and safety margins for surface infrastructure exposed to "
+            "high-velocity surface flows."
+        ),
         "physical_meaning": "99th percentile of surface layer current speed over the year",
         "intended_usage": "Extreme surface current events for safety systems",
-        "intended_usage_detail": (
-            "Characterizes extreme surface current conditions for safety system design. "
-            "Used for emergency response planning, setting operational limits for surface "
-            "vessels and floating devices, and designing safety margins for surface "
-            "infrastructure."
-        ),
         "equation": r"$U_{\text{surface},99} = \text{percentile}(99, \left[U_{1,t} \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$, velocity magnitude at sigma level 1 (surface) at time $t$ $[\text{m/s}]$",
@@ -368,18 +368,17 @@ VARIABLE_REGISTRY = {
         "display_name": "Surface Layer Maximum Speed",
         "column_name": "vap_surface_layer_max_sea_water_speed",
         "units": "m/s",
-        "one_liner": "",
+        "one_liner": "Absolute maximum surface current speed calculated over the hindcast year",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
+        "complete_description": (
+            "Absolute maximum current speed calculated at the surface layer (sigma level 1) during "
+            "the 1-year hindcast period. This metric defines the worst-case surface flow condition "
+            "from the numerical model. It is essential for survival design of floating systems, "
+            "determining maximum loads on surface infrastructure, and ensuring regulatory "
+            "compliance for extreme surface conditions."
+        ),
         "physical_meaning": "Absolute maximum surface layer current speed observed over the year",
         "intended_usage": "Ultimate surface current loads for survival analysis",
-        "intended_usage_detail": (
-            "Defines worst-case surface current conditions for ultimate load analysis. "
-            "Essential for survival design of floating systems, determining maximum loads "
-            "on surface infrastructure, and regulatory compliance for extreme surface "
-            "conditions."
-        ),
         "equation": r"$U_{\text{surface},\max} = \max\left(\left[U_{1,t} \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$, velocity magnitude at sigma level 1 (surface) at time $t$ $[\text{m/s}]$",
