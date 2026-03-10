@@ -279,30 +279,16 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_water_column_height_max",
         "units": "m",
         "long_name": "Maximum Water Depth",
-        # Documentation
-        "one_liner": "Maximum water depth (during 1 year model run)",
+        "one_liner": "Maximum water depth calculated over the 1-year hindcast period",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth",
         "complete_description": (
-            "Maximum Water Depth is the greatest water depth (surface to seafloor) "
-            "observed at each grid location over the hindcast year, typically occurring during "
-            "extreme high tide conditions. This metric represents the upper bound of water depth "
-            "variability at each location. Used in Stage 2 feasibility studies for mooring system "
-            "design, cable routing, and understanding the full operating depth envelope."
-            "The difference between maximum and minimum water depth approximates the "
-            "tidal range at each location."
-            "Engineering applications include mooring system design considerations and "
-            "understanding the full range of water depths at a site."
+            "Maximum water depth (surface to seafloor) calculated at each grid location over the "
+            "1-year hindcast period, typically occurring during extreme high tide conditions. "
+            "This metric represents the upper bound of water depth variability at each location "
+            "and defines the maximum expected water column depth."
         ),
-        "references": [],
-        # Scientific/engineering context
-        "physical_meaning": "Maximum water depth observed over the year (deepest, typically at high tide)",
+        "physical_meaning": "Maximum water depth calculated over the year (deepest, typically at high tide)",
         "intended_usage": "Maximum mooring loads and installation planning",
-        "intended_usage_detail": (
-            "Defines maximum water depth for mooring system design and installation vessel "
-            "requirements. Used to determine maximum mooring line lengths, assess tidal "
-            "range impacts on operations, and plan for extreme high tide conditions. "
-            "Important for cable routing and connection system design."
-        ),
         "equation": r"$d_{\max} = \max\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$h$, bathymetry below NAVD88 $[\text{m}]$",
