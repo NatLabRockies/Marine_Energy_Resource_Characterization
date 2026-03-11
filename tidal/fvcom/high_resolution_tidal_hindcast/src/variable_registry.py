@@ -569,26 +569,14 @@ VARIABLE_REGISTRY = {
         "one_liner": "Geodesic distance from grid cell center to nearest shoreline",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore",
         "complete_description": (
-            "Distance to Shore is the geodesic distance from each grid cell center to "
-            "the nearest shoreline point, calculated using the GSHHG (Global Self-consistent "
-            "Hierarchical High-resolution Geography) shoreline database. Reported in "
-            "nautical miles (NM)."
-            "Distance to shore is a practical siting constraint that affects cable cost, "
-            "grid connection feasibility, and operations and maintenance logistics. "
-            "NREL site screening methodology uses a threshold of <20 km (~10.8 NM) to "
-            "nearest transmission infrastructure."
-            "Engineering applications include cable routing cost estimation, grid "
-            "connection planning, and O&M logistics assessment."
+            "Geodesic distance from each grid cell center to the nearest shoreline point, "
+            "calculated using the Global Self-consistent Hierarchical High-resolution Geography "
+            "(GSHHG) shoreline database [@gsshhg_dataset] and reported in nautical miles (NM). "
+            "This metric serves as a practical siting constraint that affects cable cost and grid "
+            "connection feasibility."
         ),
-        "references": [],
         "physical_meaning": "Geodesic distance from grid cell center to nearest shoreline",
         "intended_usage": "Cable cost estimation and O&M logistics",
-        "intended_usage_detail": (
-            "Key practical siting constraint for cost estimation. Longer distances to "
-            "shore increase subsea cable costs, reduce grid connection feasibility, "
-            "and increase transit time for maintenance vessels. Used in LCOE calculations "
-            "and logistics planning."
-        ),
         "equation": r"$d = \text{haversine}(\text{cell center}, \text{nearest shoreline point})$",
         "equation_variables": [
             r"$d$, geodesic distance calculated using GSHHG shoreline database $[\text{NM}]$",
