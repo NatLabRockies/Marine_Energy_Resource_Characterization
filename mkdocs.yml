@@ -58,9 +58,9 @@ nav:
       - Variables:
         - tidal/high_resolution_hindcast/variables/index.md
         - Mean Current Speed: tidal/high_resolution_hindcast/variables/mean-current-speed.md
-        - 95th Pctl Current Speed: tidal/high_resolution_hindcast/variables/95th-percentile-current-speed.md
+        - 95th Percentile Current Speed: tidal/high_resolution_hindcast/variables/95th-percentile-current-speed.md
         - Mean Power Density: tidal/high_resolution_hindcast/variables/mean-power-density.md
-        - 95th Pctl Power Density: tidal/high_resolution_hindcast/variables/95th-percentile-power-density.md
+        - 95th Percentile Power Density: tidal/high_resolution_hindcast/variables/95th-percentile-power-density.md
         - Minimum Water Depth: tidal/high_resolution_hindcast/variables/minimum-water-depth.md
         - Maximum Water Depth: tidal/high_resolution_hindcast/variables/maximum-water-depth.md
         - Grid Resolution: tidal/high_resolution_hindcast/variables/grid-resolution.md
