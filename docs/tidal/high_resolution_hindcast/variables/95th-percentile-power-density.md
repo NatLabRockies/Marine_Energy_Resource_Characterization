@@ -4,15 +4,11 @@
 
 # 95th Percentile Power Density [W/m²]
 
-*Estimated extreme power density, outlier-tolerant and comparable across sites for reconnaissance-level assessment*
+*Estimated extreme power density, outlier-tolerant and robust to cubic-velocity sensitivity*
 
 ## Description
 
-95th Percentile Power Density provides a robust, outlier-tolerant estimate of extreme power density conditions at each grid location, intended for consistent cross-site comparison during reconnaissance-level resource characterization. Unlike the absolute maximum, this statistic is resistant to isolated numerical artifacts and transient model effects. Due to the cubic relationship between velocity and power density, extreme values are particularly sensitive to model artifacts, making the 95th percentile a more reliable and reproducible basis for comparing extreme energy flux across sites.
-
-This value is derived from a numerical hydrodynamic model and represents modeled conditions only. It should not be interpreted as a measured or ground-truth observation. Site-specific validation against in-situ measurements is recommended before use in detailed engineering design.
-
-Engineering applications include preliminary extreme load assessment, power electronics sizing, and initial design margin estimation.
+95th percentile of the maximum power density (kinetic energy flux) across the water column calculated over the 1-year hindcast period, representing a robust, outlier-tolerant estimate of extreme energy flux at any depth under free-stream (undisturbed) conditions. Due to the cubic relationship between velocity and power density, extreme values are particularly sensitive to model artifacts, making the 95th percentile a more reliable metric than the absolute maximum for comparing extreme energy flux across sites. It is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis and is intended to be input for extreme load analysis on tidal turbine components.
 
 ## Equation
 

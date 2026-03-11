@@ -4,11 +4,11 @@
 
 # Minimum Water Depth [m]
 
-*Minimum water depth (during 1 year model run)*
+*Minimum water depth calculated over the 1-year hindcast period*
 
 ## Description
 
-Minimum Water Depth is the lowest water depth (surface to seafloor) observed at each grid location over the hindcast year, typically occurring during extreme low tide conditions. This metric defines the minimum vertical clearance available for device deployment and is critical for assessing depth constraints. Used in Stage 2 feasibility studies for turbine placement and collision avoidance. The difference between maximum and minimum water depth approximates the tidal range at each location. Engineering applications include assessing turbine clearance requirements and identifying areas where shallow water may limit device deployment.
+The minimum water depth (surface to seafloor) calculated at each grid location over the 1-year hindcast period, typically occurring during extreme low tide conditions. This metric represents the model lower bound of water depth variability and is intended for assessing deployment feasibility, defining safe navigation limits, and planning installation operations.
 
 ## Equation
 

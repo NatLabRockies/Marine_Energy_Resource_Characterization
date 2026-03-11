@@ -8,7 +8,7 @@
 
 ## Description
 
-Tidal Range is the difference between the maximum and minimum sea surface elevation observed at each grid location over the hindcast year. This metric characterizes the tidal regime and vertical water level variability. IEC 62600-201 requires tidal range description as part of Stage 1 site characterization. Tidal range is classified as microtidal (<2m), mesotidal (2-4m), or macrotidal (>4m). Larger tidal ranges indicate stronger tidal forcing, which generally correlates with stronger tidal currents but also creates greater challenges for device deployment due to water level variability. Engineering applications include mooring system design (must accommodate full range of water levels), cable routing, and understanding the relationship between water level and current speed at a site.
+Difference between the maximum and minimum sea surface elevation calculated at each grid location over the 1-year hindcast period. This metric quantifies the full vertical extent of water level variability at a site.
 
 ## Equation
 

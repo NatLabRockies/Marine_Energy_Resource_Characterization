@@ -8,11 +8,7 @@
 
 ## Description
 
-95th Percentile Current Speed provides a robust, outlier-tolerant estimate of extreme current conditions at each grid location, intended for consistent cross-site comparison during reconnaissance-level resource characterization. Unlike the absolute maximum, this statistic is resistant to isolated numerical artifacts and transient model effects, making it a more reliable and reproducible basis for comparing extreme flow conditions across sites.
-
-This value is derived from a numerical hydrodynamic model and represents modeled conditions only. It should not be interpreted as a measured or ground-truth observation. Site-specific validation against in-situ measurements is recommended before use in detailed engineering design.
-
-Engineering applications include preliminary structural loading assessment, blade and support structure design screening, and initial fatigue analysis.
+95th percentile of the maximum current velocity magnitude across the water column calculated over the 1-year hindcast period, representing a robust, outlier-tolerant estimate of extreme current conditions at any depth under free-stream (undisturbed) conditions. This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis to provide a consistent basis for comparing extreme flow conditions across sites. It serves as a key input for initial structural loading assessment of turbine blades and towers, as well as for sizing electrical generation components and power electronics.
 
 ## Equation
 

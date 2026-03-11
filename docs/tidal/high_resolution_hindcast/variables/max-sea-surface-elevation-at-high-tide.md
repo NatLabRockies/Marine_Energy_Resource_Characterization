@@ -4,11 +4,11 @@
 
 # Maximum Sea Surface Elevation at High Tide [m (relative to model MSL)]
 
-*Highest sea surface elevation observed during high tide over the hindcast year*
+*Highest sea surface elevation calculated during high tide over the hindcast year*
 
 ## Description
 
-Maximum Sea Surface Elevation at High Tide is the highest sea surface elevation value observed during high tide conditions over the hindcast year, relative to the model's mean sea level. This typically occurs during spring tides when astronomical tidal forcing is maximized. This metric serves as a sanity check for data quality, allowing coastal engineers and oceanographers to verify that modeled extreme water levels are physically reasonable for the region. Together with the low tide minimum, it provides confidence bounds on the vertical water level envelope.
+Highest sea surface elevation calculated during high tide conditions over the 1-year hindcast period, relative to the model's mean sea level. This typically occurs during spring tides when astronomical tidal forcing is maximized. Note that this value represents the maximum within the 1-year hindcast period, not necessarily the absolute maximum possible over the full 18.6-year tidal epoch (e.g., King Tides).
 
 ## Equation
 

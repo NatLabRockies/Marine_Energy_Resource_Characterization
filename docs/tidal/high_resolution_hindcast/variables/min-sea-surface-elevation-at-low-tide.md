@@ -4,11 +4,11 @@
 
 # Minimum Sea Surface Elevation at Low Tide [m (relative to model MSL)]
 
-*Lowest sea surface elevation observed during low tide over the hindcast year*
+*Lowest sea surface elevation calculated during low tide over the hindcast year*
 
 ## Description
 
-Minimum Sea Surface Elevation at Low Tide is the lowest sea surface elevation value observed during low tide conditions over the hindcast year, relative to the model's mean sea level. This typically occurs during spring tides when astronomical tidal forcing is maximized. This metric serves as a sanity check for data quality, allowing coastal engineers and oceanographers to verify that modeled extreme low water levels are physically reasonable for the region. Together with the high tide maximum, it provides confidence bounds on the vertical water level envelope.
+Lowest sea surface elevation calculated during low tide conditions over the 1-year hindcast period, relative to the model's mean sea level. This typically occurs during spring tides when astronomical tidal forcing is maximized. Together with the high tide maximum, it defines the bounds of the vertical water level envelope. Note that this value represents the minimum within the 1-year hindcast period, not necessarily the absolute minimum possible over the full 18.6-year tidal epoch.
 
 ## Equation
 

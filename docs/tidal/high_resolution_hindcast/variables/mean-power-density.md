@@ -8,7 +8,7 @@
 
 ## Description
 
-Mean Power Density is the annual average of the kinetic energy flux per unit area, representing the theoretical power available for extraction from the undisturbed tidal flow. The cubic relationship with velocity makes this metric highly sensitive to current speed variations. Used for Stage 1 resource characterization and site ranking to indicate theoretical resource magnitude. Engineering applications include comparing relative energy availability between sites and initial economic feasibility screening.
+Annual average of the kinetic energy flux per unit area (depth-averaged) calculated over the 1-year hindcast period, representing a mean estimate of energy flux for the entire water column at each grid location under free-stream (undisturbed) conditions. This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis to identify areas with potentially viable tidal current resources. This metric defines the theoretic average energy potential based on model output and does not account for changes in salinity, temperature, or turbulence that may affect real-world energy extraction.
 
 ## Equation
 
@@ -18,7 +18,7 @@ $$
 
 **Where:**
 
-- $P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density at sigma layer $i$ at time $t$ $[\text{W/m}^2]$
+- $P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density at sigma layer $i$ at time $t$ $[\text{W/m}^2]$ [@hass_2011_assessment]
 - $\rho = 1025$, nominal seawater density (actual varies with temperature and salinity) $[\text{kg/m}^3]$
 - $U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude $[\text{m/s}]$
 - $N_{\sigma} = 10$, sigma layers

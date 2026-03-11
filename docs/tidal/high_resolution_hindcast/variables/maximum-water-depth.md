@@ -4,11 +4,11 @@
 
 # Maximum Water Depth [m]
 
-*Maximum water depth (during 1 year model run)*
+*Maximum water depth calculated over the 1-year hindcast period*
 
 ## Description
 
-Maximum Water Depth is the greatest water depth (surface to seafloor) observed at each grid location over the hindcast year, typically occurring during extreme high tide conditions. This metric represents the upper bound of water depth variability at each location. Used in Stage 2 feasibility studies for mooring system design, cable routing, and understanding the full operating depth envelope. The difference between maximum and minimum water depth approximates the tidal range at each location. Engineering applications include mooring system design considerations and understanding the full range of water depths at a site.
+Maximum water depth (surface to seafloor) calculated at each grid location over the 1-year hindcast period, typically occurring during extreme high tide conditions. This metric represents the upper bound of water depth variability at each location and defines the maximum expected water column depth.
 
 ## Equation
 

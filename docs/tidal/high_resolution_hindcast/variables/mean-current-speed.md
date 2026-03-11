@@ -8,7 +8,7 @@
 
 ## Description
 
-Annual average of the depth-averaged current velocity magnitude, representing the characteristic flow speed at each grid location under free-stream (undisturbed) conditions. This metric is intended for IEC 62600-201 Stage 1 reconnaissance-level analysis to identify areas with potentially viable tidal current resources.
+Annual average of the depth-averaged current velocity magnitude, representing the characteristic flow speed at each grid location under free-stream (undisturbed) conditions. This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis to identify areas with potentially viable tidal current resources. It serves as a primary metric for identifying viable tidal energy sites, used to estimate annual energy production (AEP), compare site potential across regions, determine expected average viable current speeds for commercial deployment, and select appropriate turbine technology.
 
 ## Equation
 

@@ -8,7 +8,7 @@
 
 ## Description
 
-Distance to Shore is the geodesic distance from each grid cell center to the nearest shoreline point, calculated using the GSHHG (Global Self-consistent Hierarchical High-resolution Geography) shoreline database. Reported in nautical miles (NM). Distance to shore is a practical siting constraint that affects cable cost, grid connection feasibility, and operations and maintenance logistics. NREL site screening methodology uses a threshold of <20 km (~10.8 NM) to nearest transmission infrastructure. Engineering applications include cable routing cost estimation, grid connection planning, and O&M logistics assessment.
+Geodesic distance from each grid cell center to the nearest shoreline point, calculated using the Global Self-consistent Hierarchical High-resolution Geography (GSHHG) shoreline database [@gsshhg_dataset] and reported in nautical miles (NM). This metric serves as a practical siting constraint that affects cable cost and grid connection feasibility.
 
 ## Equation
 
