@@ -1,0 +1,52 @@
+name: PR Preview Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+# Read-only token is fine here — no repo writes needed
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r docs/requirements.txt
+
+      - name: Build docs
+        run: mkdocs build --site-dir /tmp/site
+
+      - name: Save PR metadata
+        run: echo "${{ github.event.pull_request.number }}" > /tmp/site/pr_number.txt
+
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-preview
+          path: /tmp/site/
+          retention-days: 1
+
+  notify-closed:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    steps:
+      - name: Save PR metadata for cleanup
+        run: |
+          mkdir /tmp/cleanup
+          echo "${{ github.event.pull_request.number }}" > /tmp/cleanup/pr_number.txt
+          touch /tmp/cleanup/closed
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-preview
+          path: /tmp/cleanup/
+          retention-days: 1

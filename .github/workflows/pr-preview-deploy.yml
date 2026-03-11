@@ -1,0 +1,68 @@
+name: PR Preview Deploy
+
+on:
+  workflow_run:
+    workflows: ["PR Preview Build"]
+    types: [completed]
+
+# Runs in base repo context — GITHUB_TOKEN has full write access
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          name: pr-preview
+          path: /tmp/artifact
+
+      - name: Read PR number
+        id: pr
+        run: echo "number=$(cat /tmp/artifact/pr_number.txt)" >> $GITHUB_OUTPUT
+
+      - name: Deploy PR preview
+        if: "!hashFiles('/tmp/artifact/closed')"
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/artifact
+          destination_dir: pr-preview/pr-${{ steps.pr.outputs.number }}
+          keep_files: true
+          exclude_assets: 'pr_number.txt'
+
+      - name: Comment preview URL on PR
+        if: "!hashFiles('/tmp/artifact/closed')"
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-preview
+          number: ${{ steps.pr.outputs.number }}
+          message: |
+            ## 📖 Docs Preview
+
+            Preview available at:
+            **https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-preview/pr-${{ steps.pr.outputs.number }}/**
+
+            *Updated on every push to this PR.*
+
+      - name: Cleanup closed PR preview
+        if: hashFiles('/tmp/artifact/closed')
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Remove preview files
+        if: hashFiles('/tmp/artifact/closed')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git rm -rf pr-preview/pr-${{ steps.pr.outputs.number }} || true
+          git diff --cached --quiet || git commit -m "Remove PR preview for PR #${{ steps.pr.outputs.number }}"
+          git push
