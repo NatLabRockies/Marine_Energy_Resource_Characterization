@@ -421,29 +421,18 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_sea_surface_elevation_mean",
         "units": "m (offset from NAVD88)",
         "long_name": "Mean Sea Surface Elevation (model MSL)",
-        "one_liner": "Average sea surface elevation representing the model mean sea level offset from NAVD88",
+        "one_liner": "Time-averaged sea surface elevation relative to NAVD88",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-sea-surface-elevation",
         "complete_description": (
-            "Mean Sea Surface Elevation is the time-averaged sea surface height at each "
-            "grid location, representing the model's mean sea level (MSL) as an offset "
-            "from the NAVD88 vertical datum. This value provides the datum reference "
-            "context for interpreting all other elevation and depth variables."
-            "The difference between model MSL and NAVD88 varies by location due to "
-            "geoid-ellipsoid separation, ocean dynamic topography, and regional sea level "
-            "variations. This offset is essential for converting between the model's "
-            "internal reference frame and standard geodetic datums."
-            "Included on the atlas as a datum reference for coastal engineers and "
-            "oceanographers to verify data consistency and convert between reference frames."
+            "The time-averaged sea surface height at each grid location relative to the NAVD88 "
+            "vertical datum. This value represents the model's Mean Sea Level (MSL) offset from "
+            "the geodetic datum, which is essential for converting between the model's internal "
+            "reference frame and standard vertical datums. It provides the necessary context for "
+            "interpreting all other elevation and depth variables, ensuring consistency with "
+            "coastal engineering standards and regional sea level observations."
         ),
-        "references": [],
         "physical_meaning": "Time-averaged sea surface elevation (model MSL offset from NAVD88)",
         "intended_usage": "Vertical datum reference and data quality verification",
-        "intended_usage_detail": (
-            "Provides context for interpreting elevation and depth values in the dataset. "
-            "Used by coastal engineers to verify data consistency against known tidal "
-            "datums, convert between reference frames, and check that model results are "
-            "physically reasonable for the region."
-        ),
         "equation": r"$\overline{\zeta} = \text{mean}(\zeta_t)$ for $t = 1, ..., T$",
         "equation_variables": [
             r"$\zeta_t$, sea surface elevation above NAVD88 at time $t$ $[\text{m}]$",
@@ -458,29 +447,12 @@ VARIABLE_REGISTRY = {
         "one_liner": "Difference between maximum and minimum sea surface elevation over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range",
         "complete_description": (
-            "Tidal Range is the difference between the maximum and minimum sea surface "
-            "elevation observed at each grid location over the hindcast year. This metric "
-            "characterizes the tidal regime and vertical water level variability. "
-            "IEC 62600-201 requires tidal range description as part of Stage 1 site "
-            "characterization."
-            "Tidal range is classified as microtidal (<2m), mesotidal (2-4m), or macrotidal "
-            "(>4m). Larger tidal ranges indicate stronger tidal forcing, which generally "
-            "correlates with stronger tidal currents but also creates greater challenges "
-            "for device deployment due to water level variability."
-            "Engineering applications include mooring system design (must accommodate full "
-            "range of water levels), cable routing, and understanding the relationship "
-            "between water level and current speed at a site."
+            "Difference between the maximum and minimum sea surface elevation calculated at each "
+            "grid location over the 1-year hindcast period. This metric quantifies the full "
+            "vertical extent of water level variability at a site."
         ),
-        "references": ["iec_62600_201"],
         "physical_meaning": "Maximum minus minimum sea surface elevation over the hindcast year",
         "intended_usage": "Tidal regime classification and mooring design",
-        "intended_usage_detail": (
-            "Characterizes the vertical tidal variability at each location. Used to classify "
-            "the tidal regime (micro/meso/macrotidal), assess water level impacts on device "
-            "operations, design mooring systems that accommodate full tidal excursion, and "
-            "plan cable routing to handle depth changes. Important context for understanding "
-            "the relationship between tidal forcing and current speed."
-        ),
         "equation": r"$R = \zeta_{\max} - \zeta_{\min} = \max(\zeta_t) - \min(\zeta_t)$",
         "equation_variables": [
             r"$\zeta_t$, sea surface elevation at time $t$ $[\text{m}]$",
