@@ -779,7 +779,10 @@ def _render(
                 else:
                     # Lowercase first char unless the first word is all-caps
                     # (acronym like "HTTPS", "URI") which must stay as-is.
-                    first_word = val_str.split()[0] if val_str else ""
+                    if not val_str:
+                        result += part
+                        continue
+                    first_word = val_str.split()[0]
                     if first_word.isupper() and len(first_word) > 1:
                         result += val_str + part
                     else:
