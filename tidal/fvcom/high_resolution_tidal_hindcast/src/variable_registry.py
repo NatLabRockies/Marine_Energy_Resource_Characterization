@@ -512,29 +512,18 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_water_column_max_sea_water_power_density",
         "units": "W/m\u00b2",
         "long_name": "Maximum Power Density",
-        "one_liner": "Absolute maximum depth-averaged power density observed over the hindcast year",
+        "one_liner": "Absolute maximum depth-averaged power density calculated over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-power-density",
         "complete_description": (
-            "Maximum Power Density is the absolute highest kinetic energy flux per unit "
-            "area observed at any time during the hindcast year. Due to the cubic "
-            "relationship between velocity and power, the maximum power density "
-            "is highly sensitive to extreme current speed events."
-            "Important caveat: Because power density scales with the cube of velocity, "
-            "any model artifacts or numerical transients in the maximum speed are amplified "
-            "in this metric. The mean power density and 95th percentile speed are generally "
-            "more robust metrics for resource characterization. The maximum power density "
-            "is provided as an upper bound reference and sanity check."
+            "The absolute highest kinetic energy flux per unit area calculated at any time during "
+            "the 1-year hindcast period. Due to the cubic relationship between velocity and "
+            "power density, this maximum value is highly sensitive to extreme current speed "
+            "events and numerical transients. While it provides an upper bound for peak "
+            "resource conditions, the mean power density and 95th percentile metrics are "
+            "generally more robust for resource characterization and economic analysis."
         ),
-        "references": [],
-        "physical_meaning": "Absolute maximum depth-averaged power density over the year",
+        "physical_meaning": "Absolute maximum depth-averaged power density calculated over the year",
         "intended_usage": "Upper bound reference for peak resource conditions",
-        "intended_usage_detail": (
-            "Provides the absolute upper bound on power density from the model. Due to "
-            "the cubic velocity-power relationship, this value is sensitive to model "
-            "artifacts. Mean power density is preferred for resource quantification and "
-            "economic analysis. The maximum is useful as a reference for understanding "
-            "peak conditions and as a sanity check."
-        ),
         "equation": r"$P_{\max} = \max\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density with $\rho = 1025$ $[\text{kg/m}^3]$",
@@ -554,26 +543,15 @@ VARIABLE_REGISTRY = {
         "one_liner": "Mean period between successive high tides over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#average-tidal-period",
         "complete_description": (
-            "Average Tidal Period is the mean time between successive high tide peaks "
-            "at each grid location, characterizing the dominant tidal frequency. This "
-            "metric indicates whether the tidal regime is semi-diurnal (~12.4 hours), "
-            "diurnal (~24.8 hours), or mixed."
-            "The tidal period directly determines the power generation cycle length and "
-            "is relevant for grid integration planning, energy storage sizing, and "
-            "understanding resource intermittency patterns. Semi-diurnal sites produce "
-            "four slack-to-peak cycles per day, while diurnal sites produce two."
-            "Engineering applications include energy production scheduling, grid "
-            "integration analysis, and energy storage system sizing."
+            "Mean time between successive high tide peaks at each grid location calculated "
+            "over the 1-year hindcast period, characterizing the dominant tidal frequency. "
+            "This metric indicates whether the tidal regime is semi-diurnal (~12.4 hours), "
+            "diurnal (~24.8 hours), or mixed. The tidal period determines the power generation "
+            "cycle length (slack-to-peak cycles per day) and is relevant for grid integration "
+            "planning, energy storage sizing, and understanding resource intermittency patterns."
         ),
-        "references": [],
         "physical_meaning": "Mean time between successive high tides",
         "intended_usage": "Tidal regime classification and energy scheduling",
-        "intended_usage_detail": (
-            "Classifies the tidal regime (semi-diurnal ~12.4h, diurnal ~24.8h, or mixed) "
-            "to inform energy production scheduling and grid integration planning. "
-            "Semi-diurnal sites provide more frequent generation cycles. Important for "
-            "energy storage sizing and understanding power intermittency patterns."
-        ),
         "equation": r"$\overline{T}_{\text{tide}} = \text{mean}(T_1, T_2, ..., T_N)$",
         "equation_variables": [
             r"$T_i$, time between successive high tide peaks $i$ and $i+1$ $[\text{hours}]$",
