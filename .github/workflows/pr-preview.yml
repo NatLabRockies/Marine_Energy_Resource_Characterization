@@ -22,7 +22,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install "mkdocs-material[recommended]"
+        run: pip install -r docs/requirements.txt
 
       - name: Build docs
         run: mkdocs build --site-dir /tmp/site
