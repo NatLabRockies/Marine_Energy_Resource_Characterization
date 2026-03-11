@@ -1,21 +1,19 @@
-name: PR Preview Documentation
+name: PR Preview Build
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
 
+# Read-only token is fine here — no repo writes needed
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  preview:
+  build:
     runs-on: ubuntu-latest
     if: github.event.action != 'closed'
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -27,39 +25,28 @@ jobs:
       - name: Build docs
         run: mkdocs build --site-dir /tmp/site
 
-      - name: Deploy PR preview
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Save PR metadata
+        run: echo "${{ github.event.pull_request.number }}" > /tmp/site/pr_number.txt
+
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: /tmp/site
-          destination_dir: pr-preview/pr-${{ github.event.pull_request.number }}
-          keep_files: true
+          name: pr-preview
+          path: /tmp/site/
+          retention-days: 1
 
-      - name: Comment preview URL on PR
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: pr-preview
-          message: |
-            ## 📖 Docs Preview
-
-            Preview available at:
-            **https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-preview/pr-${{ github.event.pull_request.number }}/**
-
-            *Updated on every push to this PR.*
-
-  cleanup:
+  notify-closed:
     runs-on: ubuntu-latest
     if: github.event.action == 'closed'
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          fetch-depth: 0
-
-      - name: Remove PR preview
+      - name: Save PR metadata for cleanup
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git rm -rf pr-preview/pr-${{ github.event.pull_request.number }} || true
-          git diff --cached --quiet || git commit -m "Remove PR preview for PR #${{ github.event.pull_request.number }}"
-          git push
+          mkdir /tmp/cleanup
+          echo "${{ github.event.pull_request.number }}" > /tmp/cleanup/pr_number.txt
+          touch /tmp/cleanup/closed
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-preview
+          path: /tmp/cleanup/
+          retention-days: 1
