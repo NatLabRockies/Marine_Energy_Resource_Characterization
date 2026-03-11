@@ -641,6 +641,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Face ID",
         "one_liner": "Location specific unique integer identifier for each triangular grid element",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#face_id",
+        "complete_description": "Location specific unique integer identifier for each triangular grid element",
     },
     "center_latitude": {
         "display_name": "Center Latitude",
@@ -649,6 +650,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Center Latitude",
         "one_liner": "Latitude of the triangular element centroid (WGS84)",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#center_latitude",
+        "complete_description": "Latitude of the triangular element centroid (WGS84)",
     },
     "center_longitude": {
         "display_name": "Center Longitude",
@@ -657,6 +659,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Center Longitude",
         "one_liner": "Longitude of the triangular element centroid (WGS84)",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#center_longitude",
+        "complete_description": "Longitude of the triangular element centroid (WGS84)",
     },
     "full_year_s3_uri": {
         "display_name": "S3 URI for Full Year Time Series Data",
@@ -665,6 +668,7 @@ VARIABLE_REGISTRY = {
         "long_name": "S3 URI for Full Year Time Series Data",
         "one_liner": "direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri",
+        "complete_description": "direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.",
     },
     "full_year_https_url": {
         "display_name": "HTTPS URL for Full Year Time Series Data",
@@ -673,6 +677,7 @@ VARIABLE_REGISTRY = {
         "long_name": "HTTPS URL for Full Year Time Series Data",
         "one_liner": "direct link (HTTPS)  to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_https_url",
+        "complete_description": "direct link (HTTPS)  to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals",
     },
 }
 
