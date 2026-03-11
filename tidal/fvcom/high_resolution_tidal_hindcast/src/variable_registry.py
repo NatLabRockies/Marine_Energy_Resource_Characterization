@@ -179,9 +179,9 @@ VARIABLE_REGISTRY = {
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density",
         "complete_description": (
             "Annual average of the kinetic energy flux per unit area (depth-averaged) "
-            "calculated over the 1-year hindcast period, representing a mean estimate of energy flux for the entire water column at each grid location under free-stream (undisturbed) conditions.",
+            "calculated over the 1-year hindcast period, representing a mean estimate of energy flux for the entire water column at each grid location under free-stream (undisturbed) conditions. "
             "This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis to identify "
-            "areas with potentially viable tidal current resources. This metric defines the theoretic average energy potential based on model output and does not account for changes in salinity, temperature, or turbulence that may affect real-world energy extraction.",
+            "areas with potentially viable tidal current resources. This metric defines the theoretic average energy potential based on model output and does not account for changes in salinity, temperature, or turbulence that may affect real-world energy extraction."
         ),
         # Scientific/engineering context
         "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
