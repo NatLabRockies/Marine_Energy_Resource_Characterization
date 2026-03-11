@@ -468,29 +468,41 @@ VARIABLE_REGISTRY = {
         "display_name": "Shortest Tidal Period",
         "column_name": "vap_min_tidal_period",
         "units": "hours",
-        "one_liner": "",
+        "one_liner": "Minimum time duration between successive high tides",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
-        "physical_meaning": "",
-        "intended_usage": "",
-        "intended_usage_detail": "",
-        "equation": "",
-        "equation_variables": [],
+        "complete_description": (
+            "The minimum time duration between successive high tides calculated during the "
+            "1-year hindcast period. This metric characterizes the fastest tidal cycling at "
+            "the location, which influences operational windows for maintenance and the "
+            "frequency of slack water periods."
+        ),
+        "physical_meaning": "Minimum duration between successive high tides",
+        "intended_usage": "Operational planning and slack water frequency analysis",
+        "equation": r"$T_{\min} = \min(T_1, T_2, ..., T_N)$",
+        "equation_variables": [
+            r"$T_i$, time between successive high tide peaks $i$ and $i+1$ $[\text{hours}]$",
+            r"$N$, number of tidal cycles in the hindcast year",
+        ],
     },
     "max_tidal_period": {
         "display_name": "Longest Tidal Period",
         "column_name": "vap_max_tidal_period",
         "units": "hours",
-        "one_liner": "",
+        "one_liner": "Maximum time duration between successive high tides",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
-        "physical_meaning": "",
-        "intended_usage": "",
-        "intended_usage_detail": "",
-        "equation": "",
-        "equation_variables": [],
+        "complete_description": (
+            "The maximum time duration between successive high tides calculated during the "
+            "1-year hindcast period. This metric characterizes the longest tidal cycling at "
+            "the location, identifying periods with extended ebb or flood durations that may "
+            "offer longer continuous power generation windows."
+        ),
+        "physical_meaning": "Maximum duration between successive high tides",
+        "intended_usage": "Extended generation window analysis",
+        "equation": r"$T_{\max} = \max(T_1, T_2, ..., T_N)$",
+        "equation_variables": [
+            r"$T_i$, time between successive high tide peaks $i$ and $i+1$ $[\text{hours}]$",
+            r"$N$, number of tidal cycles in the hindcast year",
+        ],
     },
     # =========================================================================
     # Maximum power density
