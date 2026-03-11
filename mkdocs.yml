@@ -68,6 +68,11 @@ nav:
         - Distance to Shore: tidal/high_resolution_hindcast/variables/distance-to-shore.md
         - High Tide Max Elevation: tidal/high_resolution_hindcast/variables/max-sea-surface-elevation-at-high-tide.md
         - Low Tide Min Elevation: tidal/high_resolution_hindcast/variables/min-sea-surface-elevation-at-low-tide.md
+        - Center Latitude: tidal/high_resolution_hindcast/variables/center_latitude.md
+        - Center Longitude: tidal/high_resolution_hindcast/variables/center_longitude.md
+        - Face Id: tidal/high_resolution_hindcast/variables/face_id.md
+        - Full Year HTTPS URL: tidal/high_resolution_hindcast/variables/full_year_https_url.md
+        - Full Year S3 URL: tidal/high_resolution_hindcast/variables/full_year_s3_uri.md
       - Methodology: tidal/high_resolution_hindcast/methodology.md
       - Validation: tidal/high_resolution_hindcast/validation.md
       - Coverage Maps: tidal/high_resolution_hindcast/coverage-maps.md
