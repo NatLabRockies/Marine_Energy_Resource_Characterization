@@ -397,69 +397,21 @@ VARIABLE_REGISTRY = {
         "one_liner": "Average edge length of triangular model grid cells",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#grid-resolution",
         "complete_description": (
-            "Grid Resolution is the average edge length of the unstructured triangular model "
-            "grid cells, indicating the spatial scale at which tidal currents are resolved by the "
-            "FVCOM hydrodynamic model. Essential model metadata for assessing spatial uncertainty "
-            "and determining appropriate applications. IEC 62600-201 requires <500 m for Stage 1 "
-            "reconnaissance and <50 m for Stage 2 feasibility assessments."
-            "The unstructured triangular mesh allows variable resolution, with finer grids in "
-            "areas of interest (channels, straits) and coarser grids in open water."
-            "Per IEC 62600-201 tidal energy resource assessment standards:"
-            "- Stage 1 feasibility (reconnaissance-level) assessments require grid resolution < 500 m"
-            "- Stage 2 (layout design) assessments require grid resolution < 50 m"
-            "Engineering applications include assessing model fidelity and determining "
-            "appropriate applications for the data."
+            "Average edge length of the unstructured triangular model grid cells, indicating "
+            "the spatial scale at which tidal currents are resolved by the FVCOM hydrodynamic model. "
+            "This metric is essential model metadata for assessing spatial uncertainty and "
+            "determining appropriate applications. The unstructured triangular mesh allows variable "
+            "resolution, with finer grids in areas of interest (channels, straits) and coarser "
+            "grids in open water. According to IEC 62600-201 standards [@iec_62600_201], Stage 1 "
+            "reconnaissance-level assessments require grid resolution < 500 m, while Stage 2 "
+            "layout design assessments require grid resolution < 50 m."
         ),
-        "references": ["iec_62600_201"],
-        # Scientific/engineering context
         "physical_meaning": "Average edge length of triangular finite volume elements",
         "intended_usage": "Model accuracy assessment and validation",
-        "intended_usage_detail": (
-            "Indicates the spatial scale at which model results are resolved. Finer "
-            "resolution (smaller values) provides more detailed results but requires "
-            "greater computational resources. Used to assess model fidelity, determine "
-            "appropriate applications for the data, and understand spatial limitations of "
-            "the model output. Critical for validating model results against observations "
-            "and determining if resolution is adequate for specific engineering "
-            "applications. Per IEC 62600-201 standards: Stage 1 assessments require "
-            "< 500 m resolution, while Stage 2 detailed studies require < 50 m resolution "
-            "for areas of interest."
-        ),
         "equation": r"$\text{Grid Resolution} = \frac{1}{3}(d_1 + d_2 + d_3)$",
         "equation_variables": [
             r"$d_1, d_2, d_3$, geodesic distances between triangle vertices $[\text{m}]$",
         ],
-    },
-    # =========================================================================
-    # Direction variables
-    # =========================================================================
-    "ebb_direction": {
-        "display_name": "Sea Water Ebb Tide To Direction",
-        "column_name": "vap_sea_water_ebb_to_direction_sigma_level_3",
-        "units": "m/s",
-        "one_liner": "",
-        "documentation_url": "",
-        "complete_description": "",
-        "references": [],
-        "physical_meaning": "",
-        "intended_usage": "",
-        "intended_usage_detail": "",
-        "equation": "",
-        "equation_variables": [],
-    },
-    "flood_direction": {
-        "display_name": "Sea Water Flood Tide To Direction",
-        "column_name": "vap_sea_water_flood_to_direction_sigma_level_1",
-        "units": "m/s",
-        "one_liner": "",
-        "documentation_url": "",
-        "complete_description": "",
-        "references": [],
-        "physical_meaning": "",
-        "intended_usage": "",
-        "intended_usage_detail": "",
-        "equation": "",
-        "equation_variables": [],
     },
     # =========================================================================
     # Sea surface elevation variables
