@@ -603,27 +603,17 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_sea_surface_elevation_high_tide_max",
         "units": "m (relative to model MSL)",
         "long_name": "Max Sea Surface Elevation at High Tide",
-        "one_liner": "Highest sea surface elevation observed during high tide over the hindcast year",
+        "one_liner": "Highest sea surface elevation calculated during high tide over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#max-sea-surface-elevation-at-high-tide",
         "complete_description": (
-            "Maximum Sea Surface Elevation at High Tide is the highest sea surface "
-            "elevation value observed during high tide conditions over the hindcast year, "
-            "relative to the model's mean sea level. This typically occurs during spring "
-            "tides when astronomical tidal forcing is maximized."
-            "This metric serves as a sanity check for data quality, allowing coastal "
-            "engineers and oceanographers to verify that modeled extreme water levels "
-            "are physically reasonable for the region. Together with the low tide minimum, "
-            "it provides confidence bounds on the vertical water level envelope."
+            "Highest sea surface elevation calculated during high tide conditions over the "
+            "1-year hindcast period, relative to the model's mean sea level. This typically "
+            "occurs during spring tides when astronomical tidal forcing is maximized. Note that this value "
+            "represents the maximum within the 1-year hindcast period, not necessarily the "
+            "absolute maximum possible over the full 18.6-year tidal epoch (e.g., King Tides)."
         ),
-        "references": [],
         "physical_meaning": "Highest sea surface elevation at high tide over the year",
         "intended_usage": "Data quality verification and extreme water level reference",
-        "intended_usage_detail": (
-            "Sanity check metric for coastal engineers to verify model output consistency. "
-            "The maximum high tide elevation should be physically reasonable for the "
-            "region and consistent with known tidal characteristics. Also useful for "
-            "understanding the upper bound of water level variability."
-        ),
         "equation": r"$\zeta_{\text{HT,max}} = \max(\zeta_t | t \in \text{high tide peaks})$",
         "equation_variables": [
             r"$\zeta_t$, sea surface elevation relative to model MSL at time $t$ $[\text{m}]$",
@@ -635,28 +625,18 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_surface_elevation_low_tide_min",
         "units": "m (relative to model MSL)",
         "long_name": "Min Sea Surface Elevation at Low Tide",
-        "one_liner": "Lowest sea surface elevation observed during low tide over the hindcast year",
+        "one_liner": "Lowest sea surface elevation calculated during low tide over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#min-sea-surface-elevation-at-low-tide",
         "complete_description": (
-            "Minimum Sea Surface Elevation at Low Tide is the lowest sea surface "
-            "elevation value observed during low tide conditions over the hindcast year, "
-            "relative to the model's mean sea level. This typically occurs during spring "
-            "tides when astronomical tidal forcing is maximized."
-            "This metric serves as a sanity check for data quality, allowing coastal "
-            "engineers and oceanographers to verify that modeled extreme low water levels "
-            "are physically reasonable for the region. Together with the high tide maximum, "
-            "it provides confidence bounds on the vertical water level envelope."
+            "Lowest sea surface elevation calculated during low tide conditions over the "
+            "1-year hindcast period, relative to the model's mean sea level. This typically "
+            "occurs during spring tides when astronomical tidal forcing is maximized. Together with the high tide "
+            "maximum, it defines the bounds of the vertical water level envelope. Note that "
+            "this value represents the minimum within the 1-year hindcast period, not necessarily "
+            "the absolute minimum possible over the full 18.6-year tidal epoch."
         ),
-        "references": [],
         "physical_meaning": "Lowest sea surface elevation at low tide over the year",
         "intended_usage": "Data quality verification and extreme water level reference",
-        "intended_usage_detail": (
-            "Sanity check metric for coastal engineers to verify model output consistency. "
-            "The minimum low tide elevation should be physically reasonable for the "
-            "region and consistent with known tidal characteristics. Also useful for "
-            "understanding the lower bound of water level variability and assessing "
-            "minimum clearance conditions."
-        ),
         "equation": r"$\zeta_{\text{LT,min}} = \min(\zeta_t | t \in \text{low tide troughs})$",
         "equation_variables": [
             r"$\zeta_t$, sea surface elevation relative to model MSL at time $t$ $[\text{m}]$",
