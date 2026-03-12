@@ -51,6 +51,15 @@ jobs:
 
             *Updated on every push to this PR.*
 
+      - name: Add preview URL to Checks summary
+        if: "!hashFiles('/tmp/artifact/closed')"
+        run: |
+          echo "## 📖 Docs Preview" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Preview available at: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-preview/pr-${{ steps.pr.outputs.number }}/" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "*Updated on every push to this PR.*" >> $GITHUB_STEP_SUMMARY
+
       - name: Cleanup closed PR preview
         if: hashFiles('/tmp/artifact/closed')
         uses: actions/checkout@v4
