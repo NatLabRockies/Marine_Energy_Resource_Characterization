@@ -1,0 +1,91 @@
+name: Manual PR Preview Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Workflow run id that produced pr-preview artifact'
+        required: true
+      pr_number:
+        description: 'PR number (optional; will read from artifact if not provided)'
+        required: false
+
+# Runs in base repo context - GITHUB_TOKEN has write access
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  manual-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.inputs.run_id }}
+          name: pr-preview
+          path: /tmp/artifact
+
+      - name: Read PR number
+        id: pr
+        run: |
+          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
+            echo "number=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
+          else
+            if [ -f /tmp/artifact/pr_number.txt ]; then
+              echo "number=$(cat /tmp/artifact/pr_number.txt)" >> $GITHUB_OUTPUT
+            else
+              echo "PR number not found" >&2
+              exit 1
+            fi
+          fi
+
+      - name: Deploy PR preview
+        if: "!hashFiles('/tmp/artifact/closed')"
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/artifact
+          destination_dir: pr-preview/pr-${{ steps.pr.outputs.number }}
+          keep_files: true
+          exclude_assets: 'pr_number.txt'
+
+      - name: Comment preview URL on PR
+        if: "!hashFiles('/tmp/artifact/closed')"
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-preview
+          number: ${{ steps.pr.outputs.number }}
+          message: |
+            ## Docs Preview
+
+            Preview available at:
+            **https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-preview/pr-${{ steps.pr.outputs.number }}/**
+
+            *Deployed via manual workflow*
+
+      - name: Add preview URL to Checks summary
+        if: "!hashFiles('/tmp/artifact/closed')"
+        run: |
+          echo "## Docs Preview" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Preview available at: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-preview/pr-${{ steps.pr.outputs.number }}/" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "*Deployed via manual workflow*" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup closed PR preview
+        if: hashFiles('/tmp/artifact/closed')
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Remove preview files
+        if: hashFiles('/tmp/artifact/closed')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git rm -rf pr-preview/pr-${{ steps.pr.outputs.number }} || true
+          git diff --cached --quiet || git commit -m "Remove PR preview for PR #${{ steps.pr.outputs.number }}"
+          git push

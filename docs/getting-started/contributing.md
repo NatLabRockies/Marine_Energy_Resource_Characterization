@@ -50,15 +50,39 @@ mkdocs build --strict
 
 ```
 docs/
-├── index.md              # Home page
-├── tidal-hindcast.md     # Tidal hindcast documentation
-├── wave-hindcast.md      # Wave hindcast documentation
+├── index.md                          # Home landing page
+├── about/                            # Project background
+│   ├── project.md
+│   ├── team.md
+│   ├── funding.md
+│   └── contact.md
+├── getting-started/                  # Data access guides
+│   ├── index.md
+│   ├── hsds-setup.md
+│   ├── aws-s3.md
+│   ├── marine-energy-atlas.md
+│   ├── data-formats.md
+│   └── contributing.md
+├── tidal/                            # Tidal datasets
+│   ├── index.md
+│   └── high_resolution_hindcast/
+│       ├── index.md
+│       ├── variables/
+│       │   ├── index.md              # Quick reference (auto-generated)
+│       │   ├── mean-current-speed.md # (auto-generated)
+│       │   └── ...
+│       └── ...
+├── wave/                             # Wave datasets
+│   ├── index.md
+│   └── hindcast/
+│       ├── index.md
+│       └── ...
 ├── stylesheets/
-│   └── extra.css         # NLR color overrides
+│   └── extra.css                     # NLR color overrides
 └── javascripts/
-    └── mathjax.js        # LaTeX equation support
+    └── mathjax.js                    # LaTeX equation support
 
-mkdocs.yml                # MkDocs configuration
+mkdocs.yml                            # MkDocs configuration
 ```
 
 ## Writing Guidelines
@@ -85,13 +109,13 @@ Use MkDocs Material admonitions for callouts:
 
 ```markdown
 !!! info "Title"
-Information content here.
+    Information content here.
 
 !!! warning "Title"
-Warning content here.
+    Warning content here.
 
 !!! tip "Title"
-Tip content here.
+    Tip content here.
 ```
 
 ### Anchor Links
@@ -120,18 +144,20 @@ Use standard markdown tables:
 
 ## Generating Variable Documentation
 
-The tidal hindcast variable documentation can be regenerated from source:
+The tidal hindcast variable documentation is auto-generated from `documentation_variable_spec.json`:
 
 ```bash
 cd tidal/fvcom/high_resolution_tidal_hindcast
-python generate_atlas_variable_docs.py --format markdown
+python generate_mkdocs_variable_section.py --mode pages
 ```
 
-Options:
+This writes individual variable pages to `docs/tidal/high_resolution_hindcast/variables/`.
 
-- `--format docx` - Generate Word document (default)
-- `--format markdown` - Generate MkDocs-compatible markdown
-- `--output PATH` - Custom output path
+To preview without writing:
+
+```bash
+python generate_mkdocs_variable_section.py --mode pages --dry-run
+```
 
 ## Deployment
 
