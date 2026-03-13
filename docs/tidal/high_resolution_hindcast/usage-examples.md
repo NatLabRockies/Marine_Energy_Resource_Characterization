@@ -11,9 +11,11 @@ Worked examples showing practical analysis workflows with the tidal hindcast dat
 from rex import ResourceX
 
 locations = {
-    'Cook Inlet': '/nlr/US_tidal/Cook_Inlet/Cook_Inlet_2005.h5',
-    'Puget Sound': '/nlr/US_tidal/Puget_Sound/Puget_Sound_2015.h5',
-    'Western Passage': '/nlr/US_tidal/Western_Passage/Western_Passage_2017.h5',
+    'Aleutian Islands': '/nrel/us-tidal/AK_aleutian_islands/v1.0.0/hsds/AK_aleutian_islands.wpto_high_res_tidal.hsds.v1.0.0.h5',
+    'Cook Inlet': '/nrel/us-tidal/AK_cook_inlet/v1.0.0/hsds/AK_cook_inlet.wpto_high_res_tidal.hsds.v1.0.0.h5',
+    'Piscataqua River': '/nrel/us-tidal/NH_piscataqua_river/v1.0.0/hsds/NH_piscataqua_river.wpto_high_res_tidal.hsds.v1.0.0.h5',
+    'Puget Sound': '/nrel/us-tidal/WA_puget_sound/v1.0.0/hsds/WA_puget_sound.wpto_high_res_tidal.hsds.v1.0.0.h5',
+    'Western Passage': '/nrel/us-tidal/ME_western_passage/v1.0.0/hsds/ME_western_passage.wpto_high_res_tidal.hsds.v1.0.0.h5',
 }
 
 for name, path in locations.items():
@@ -72,8 +74,6 @@ with h5pyd.File('/nlr/US_tidal/Cook_Inlet/Cook_Inlet_2005.h5', mode='r') as f:
 
     for var in ['sea_water_speed', 'sea_water_power_density']:
         ds = f[var]
-        scale_factor = ds.attrs['scale_factor']
-        ts[var] = ds[:, site_idx] / scale_factor
 ```
 
 
