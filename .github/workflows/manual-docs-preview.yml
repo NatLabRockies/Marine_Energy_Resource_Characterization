@@ -1,0 +1,74 @@
+name: Manual Docs Preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull Request number'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  deploy_preview:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Resolve PR head ref and repository
+        id: pr_info
+        run: |
+          PR_DATA=$(gh pr view ${{ github.event.inputs.pr_number }} \
+            --repo ${{ github.repository }} \
+            --json headRefName,headRepository \
+            --jq '{ref: .headRefName, repo: .headRepository.nameWithOwner}')
+          echo "ref=$(echo $PR_DATA | jq -r '.ref')" >> $GITHUB_OUTPUT
+          echo "repo=$(echo $PR_DATA | jq -r '.repo')" >> $GITHUB_OUTPUT
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr_info.outputs.ref }}
+          repository: ${{ steps.pr_info.outputs.repo }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r docs/requirements.txt
+
+      - name: Build docs
+        run: mkdocs build --site-dir /tmp/site
+
+      - name: Deploy PR preview to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/site
+          destination_dir: pr-preview/pr-${{ github.event.inputs.pr_number }}
+          keep_files: true
+
+      - name: Post preview URL as PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-preview
+          number: ${{ github.event.inputs.pr_number }}
+          message: |
+            ## Docs Preview
+
+            Preview available at:
+            **https://natlabrockies.github.io/${{ github.event.repository.name }}/pr-preview/pr-${{ github.event.inputs.pr_number }}/**
+
+            Deployed manually by @${{ github.actor }} from `${{ steps.pr_info.outputs.repo }}@${{ steps.pr_info.outputs.ref }}`
+
+      - name: Add preview URL to job summary
+        run: |
+          echo "## Docs Preview" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "URL: https://natlabrockies.github.io/${{ github.event.repository.name }}/pr-preview/pr-${{ github.event.inputs.pr_number }}/" >> $GITHUB_STEP_SUMMARY
+          echo "Deployed by @${{ github.actor }} from ${{ steps.pr_info.outputs.repo }}@${{ steps.pr_info.outputs.ref }}" >> $GITHUB_STEP_SUMMARY
