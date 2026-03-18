@@ -59,6 +59,24 @@ rather provide a open source, transparent view of the processing workflow.
   - fvcom/ (Coming Soon)
 ```
 
+## Documentation Previews
+
+Maintainers can deploy a live preview of any PR's documentation changes before merging. Only users with write access to the repository can trigger this.
+
+**Steps:**
+
+1. Review the PR code to confirm it is safe to run
+2. Go to Actions > **Manual Docs Preview** > Run workflow
+3. Enter the PR number and click Run workflow
+
+The workflow resolves the PR branch and fork automatically, builds the docs, deploys to `gh-pages`, and posts a comment on the PR with the preview URL:
+
+```
+https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/pr-preview/pr-<N>/
+```
+
+**One-time repo setup:** Settings > Actions > General > Workflow permissions > **Read and write permissions** must be enabled.
+
 # Typical Resource Characterization Data Processing Workflow
 
 ## High Level Overview
