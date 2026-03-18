@@ -5,7 +5,7 @@ Software to standardize wave and tidal energy model outputs for public access, s
 ## Overview
 
 This repository contains software that standardizes marine energy model data for public use. Developed
-collaboratively by [NREL](https://www.nrel.gov), [Sandia National
+collaboratively by [National Laboratory of the Rockies (NLR)](https://www.nlr.gov), [Sandia National
 Laboratories](https://www.sandia.gov), and [Pacific Northwest National
 Laboratory](https://www.pnnl.gov), our software converts complex ocean simulation outputs into
 standardized datasets that follow industry conventions
@@ -17,7 +17,7 @@ The project processes both wave energy ([SWAN](https://swanmodel.sourceforge.io)
 ## Overview
 
 The Marine Energy Resource Characterization project is a collaboration between the [National
-Renewable Energy Laboratory][NREL] (NREL), [Sandia National Laboratories][SNL] (SNL), and [Pacific Northwest
+Laboratory of the Rockies][NLR] (NLR), [Sandia National Laboratories][SNL] (SNL), and [Pacific Northwest
 National Laboratory][PNNL] (PNNL). This multi-laboratory initiative leverages high-performance computing to
 build computational fluid dynamics models of ocean conditions. The resulting simulations, combined
 with field measurements, aim to create a comprehensive understanding of the marine energy resource
@@ -44,7 +44,7 @@ reliable and reproducible.
 
 # Repository Information
 
-This repository contains the software that runs on the [NREL HPC][Kestrel] (currently Kestrel) that
+This repository contains the software that runs on the [NLR HPC][Kestrel] (currently Kestrel) that
 processes the original model outputs and generates the standardized datasets. The software is
 organized into two main directories that contain processing code for the original model output. The
 intent of this repository is to provide transparency into the processing workflow and allow users to
@@ -117,12 +117,12 @@ flowchart LR
             end
         end
         subgraph Visualization
-            subgraph Atlas[NREL Marine Energy Atlas]
+            subgraph Atlas[NLR Marine Energy Atlas]
                 Atlas_Layer["Layer[s]"]
             end
         end
         subgraph Archive
-            subgraph HPC[NREL Kestrel MSS]
+            subgraph HPC[NLR Kestrel MSS]
                 ArchivalStorage["Archival Storage [10 years]"]
             end
         end
@@ -188,7 +188,7 @@ flowchart LR
             DataPage["Data Description"]
             Standardized_Output["Standardized Output"]
         end
-        subgraph Atlas[NREL Marine Energy Atlas]
+        subgraph Atlas[NLR Marine Energy Atlas]
             Atlas_Layer["Layer[s]"]
         end
         subgraph Archive [10 Year Archive]
@@ -233,12 +233,12 @@ The project manages two primary classes of data:
 
 ### Data Locations
 
-- [NREL Kestrel HPC][Kestrel]
+- [NLR Kestrel HPC][Kestrel]
   - Original data: `/projects/hindcastra/`
   - Versioned public data: `/datasets/US_wave`
 - [AWS S3 Open EDI][WPTOHindcast]
   - Standardized datasets are accessible through [AWS S3 Open EDI][WPTOHindcast]
-- [NREL Marine Energy Atlas][Marine Energy Atlas]
+- [NLR Marine Energy Atlas][Marine Energy Atlas]
   - Summarized datasets are visualized as layers in the [Marine Energy Atlas][Marine Energy Atlas]
   - Select datasets can be downloaded by point using the point query tool
 
@@ -256,27 +256,27 @@ public, perform publicly and display publicly, and to permit others to do so.
 
 ## Contact
 
-Please use GitHub issues for bug reports and feature requests. For other inquiries, contact the [NREL Marine Energy Resource Characterization Team][NREL_RC].
+Please use GitHub issues for bug reports and feature requests. For other inquiries, contact the [NLR Marine Energy Resource Characterization Team][NLR_RC].
 
 <!-- National Labs -->
 
-[NREL]: https://www.nrel.gov
-[NREL_RC]: mailto:marineresource@nrel.gov
+[NLR]: https://www.nlr.gov
+[NLR_RC]: mailto:marineresource@nlr.gov
 [SNL]: https://www.sandia.gov
 [PNNL]: https://www.pnnl.gov
 [DOE]: https://www.energy.gov
 
 <!-- Project Resources -->
 
-[Marine Energy Atlas]: https://maps.nrel.gov/marine-energy-atlas
+[Marine Energy Atlas]: https://maps.nlr.gov/marine-energy-atlas
 [OpenEI]: https://openei.org/wiki/Marine_and_Hydrokinetic_Technology_Database
 [WPTO]: https://www.energy.gov/eere/water/water-power-technologies-office
 [WPTOHindcast]: https://registry.opendata.aws/wpto-pds-us-wave/
 
 <!-- High Performance Computing -->
 
-[Kestrel]: https://www.nrel.gov/hpc/kestrel-computing-system.html
-[Eagle]: https://www.nrel.gov/hpc/eagle-system.html
+[Kestrel]: https://www.nlr.gov/hpc/kestrel-computing-system.html
+[Eagle]: https://www.nlr.gov/hpc/eagle-system.html
 
 <!-- Models -->
 
