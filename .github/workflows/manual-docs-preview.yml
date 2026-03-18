@@ -20,12 +20,21 @@ jobs:
       - name: Resolve PR head ref and repository
         id: pr_info
         run: |
-          PR_DATA=$(gh pr view ${{ github.event.inputs.pr_number }} \
+          REF=$(gh pr view ${{ github.event.inputs.pr_number }} \
             --repo ${{ github.repository }} \
-            --json headRefName,headRepository \
-            --jq '{ref: .headRefName, repo: .headRepository.nameWithOwner}')
-          echo "ref=$(echo $PR_DATA | jq -r '.ref')" >> $GITHUB_OUTPUT
-          echo "repo=$(echo $PR_DATA | jq -r '.repo')" >> $GITHUB_OUTPUT
+            --json headRefName \
+            --jq '.headRefName')
+          OWNER=$(gh pr view ${{ github.event.inputs.pr_number }} \
+            --repo ${{ github.repository }} \
+            --json headRepositoryOwner \
+            --jq '.headRepositoryOwner.login')
+          NAME=$(gh pr view ${{ github.event.inputs.pr_number }} \
+            --repo ${{ github.repository }} \
+            --json headRepository \
+            --jq '.headRepository.name')
+          echo "ref=$REF" >> $GITHUB_OUTPUT
+          echo "repo=$OWNER/$NAME" >> $GITHUB_OUTPUT
+          echo "Resolved: $OWNER/$NAME @ $REF"
 
       - name: Checkout PR branch
         uses: actions/checkout@v4
