@@ -47,17 +47,21 @@
 
   // --- Helpers ---
 
-  /** Resolve a path relative to the site root. */
-  function siteRoot () {
-    var segments = window.location.pathname.replace(/\/+$/, '').split('/').filter(Boolean)
-    if (segments.length <= 1) return './'
-    return '../'.repeat(segments.length - 1)
-  }
-
+  /** Resolve a path relative to the site root.
+   *  Uses the script's own location to find the site root reliably,
+   *  which works for both main deployments and PR preview subdirectories.
+   */
   function resolveUrl (path) {
     if (path.startsWith('http://') || path.startsWith('https://')) return path
-    var root = siteRoot()
-    return new URL(path, new URL(root, window.location.href).href).href
+    
+    // Get the directory of this script file (cite.js)
+    // This is typically at: /site-root/javascripts/cite.js
+    var scriptUrl = document.currentScript?.src || import.meta.url
+    var scriptDir = scriptUrl.substring(0, scriptUrl.lastIndexOf('/') + 1)
+    
+    // Go up one level from javascripts/ to site root, then to the asset path
+    var siteRootUrl = scriptDir + '../'
+    return new URL(path, siteRootUrl).href
   }
 
   async function fetchText (path) {
