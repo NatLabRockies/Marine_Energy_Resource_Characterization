@@ -20,21 +20,12 @@ jobs:
       - name: Resolve PR head ref and repository
         id: pr_info
         run: |
-          REF=$(gh pr view ${{ github.event.inputs.pr_number }} \
+          PR_DATA=$(gh pr view ${{ github.event.inputs.pr_number }} \
             --repo ${{ github.repository }} \
-            --json headRefName \
-            --jq '.headRefName')
-          OWNER=$(gh pr view ${{ github.event.inputs.pr_number }} \
-            --repo ${{ github.repository }} \
-            --json headRepositoryOwner \
-            --jq '.headRepositoryOwner.login')
-          NAME=$(gh pr view ${{ github.event.inputs.pr_number }} \
-            --repo ${{ github.repository }} \
-            --json headRepository \
-            --jq '.headRepository.name')
-          echo "ref=$REF" >> $GITHUB_OUTPUT
-          echo "repo=$OWNER/$NAME" >> $GITHUB_OUTPUT
-          echo "Resolved: $OWNER/$NAME @ $REF"
+            --json headRefName,headRepository \
+            --jq '{ref: .headRefName, repo: .headRepository.nameWithOwner}')
+          echo "ref=$(echo $PR_DATA | jq -r '.ref')" >> $GITHUB_OUTPUT
+          echo "repo=$(echo $PR_DATA | jq -r '.repo')" >> $GITHUB_OUTPUT
 
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -51,8 +42,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r docs/requirements.txt
 
-      - name: Build docs
-        run: mkdocs build --site-dir /tmp/site
+      - name: Build docs for PR preview
+        run: python scripts/build_pr_preview.py ${{ github.event.inputs.pr_number }} /tmp/site
 
       - name: Deploy PR preview to gh-pages
         uses: peaceiris/actions-gh-pages@v4
