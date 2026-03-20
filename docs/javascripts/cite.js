@@ -47,21 +47,28 @@
 
   // --- Helpers ---
 
+  // Capture the script's own URL at load time, while document.currentScript is still available.
+  // document.currentScript becomes null once the script finishes executing, so we must
+  // store it now for later use in resolveUrl.
+  var _scriptSrc = (document.currentScript && document.currentScript.src) || ''
+
   /** Resolve a path relative to the site root.
    *  Uses the script's own location to find the site root reliably,
    *  which works for both main deployments and PR preview subdirectories.
    */
   function resolveUrl (path) {
     if (path.startsWith('http://') || path.startsWith('https://')) return path
-    
-    // Get the directory of this script file (cite.js)
-    // This is typically at: /site-root/javascripts/cite.js
-    var scriptUrl = document.currentScript?.src || import.meta.url
-    var scriptDir = scriptUrl.substring(0, scriptUrl.lastIndexOf('/') + 1)
-    
-    // Go up one level from javascripts/ to site root, then to the asset path
-    var siteRootUrl = scriptDir + '../'
-    return new URL(path, siteRootUrl).href
+
+    // Use the captured script src to navigate to the site root.
+    // cite.js lives at: /site-root/javascripts/cite.js
+    // So one level up (../') is the site root, regardless of deployment subdirectory.
+    if (_scriptSrc) {
+      var scriptDir = _scriptSrc.substring(0, _scriptSrc.lastIndexOf('/') + 1)
+      return new URL(path, scriptDir + '../').href
+    }
+
+    // Fallback: resolve relative to the current page
+    return new URL(path, window.location.href).href
   }
 
   async function fetchText (path) {
