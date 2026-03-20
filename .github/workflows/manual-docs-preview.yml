@@ -42,8 +42,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r docs/requirements.txt
 
-      - name: Build docs
-        run: mkdocs build --site-dir /tmp/site
+      - name: Build docs for PR preview
+        run: python scripts/build_pr_preview.py ${{ github.event.inputs.pr_number }} /tmp/site
 
       - name: Deploy PR preview to gh-pages
         uses: peaceiris/actions-gh-pages@v4
