@@ -55,7 +55,7 @@ Technical terms, mathematical symbols, and acronyms used throughout this documen
 | IEC 62600-201  | International standard for tidal energy resource assessment and characterization |
 | CF Conventions | Climate and Forecast Conventions                                                 |
 | PNNL           | Pacific Northwest National Laboratory                                            |
-| WPTO           | Water Power Technologies Office                                                  |
+| H2O            | Hydropower and Hydrokinetic Office                                               |
 | VAP            | Value-Added Product                                                              |
 
 

@@ -4,7 +4,7 @@
 
 ## Overview
 
-The development of this dataset was funded by the U.S. Department of Energy, Office of Energy Efficiency & Renewable Energy, Water Power Technologies Office to improve our understanding of the U.S. wave energy resource and to provide critical information for wave energy project development and wave energy converter design.
+The development of this dataset was funded by the U.S. Department of Energy's [Hydropower and Hydrokinetic Office (H2O)](https://www.energy.gov/cmei/water/hydropower-and-hydrokinetic-office) to improve our understanding of the U.S. wave energy resource and to provide critical information for wave energy project development and wave energy converter design.
 
 This is the highest resolution publicly available long-term wave hindcast dataset covering the entire U.S. Exclusive Economic Zone (EEZ). The data can be used to investigate the historical record of wave statistics at any U.S. site and could be of value to any entity with marine operations inside the U.S. EEZ.
 
@@ -37,4 +37,4 @@ Please cite the most relevant publication when referencing this dataset. See [Re
 
 ## Acknowledgement
 
-This study was funded by the U.S. Department of Energy, Office of Energy Efficiency & Renewable Energy, Water Power Technologies Office under Contract DE-AC05-76RL01830 to Pacific Northwest National Laboratory (PNNL).
+This study was funded by the U.S. Department of Energy's [Hydropower and Hydrokinetic Office (H2O)](https://www.energy.gov/cmei/water/hydropower-and-hydrokinetic-office) under Contract DE-AC05-76RL01830 to Pacific Northwest National Laboratory (PNNL).

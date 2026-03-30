@@ -6,7 +6,7 @@ High-resolution wave hindcast datasets covering the U.S. Exclusive Economic Zone
 
 | Dataset | Coverage | Duration | Resolution |
 | ------- | -------- | -------- | ---------- |
-| [Ocean Surface Wave Hindcast](hindcast/index.md) | U.S. EEZ (West Coast, Atlantic, Hawaii) | 32 years (1979-2010) | 3-hourly |
+| [Ocean Surface Wave Hindcast](hindcast/index.md) | U.S. EEZ (West Coast, Atlantic, Hawaii) | 40 years (1979–2020) | 3-hourly |
 
 ## Ocean Surface Wave Hindcast
 

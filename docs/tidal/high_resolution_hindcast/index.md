@@ -49,7 +49,7 @@ This dataset contains high-resolution tidal hindcast data generated using FVCOM 
 
 ## Acknowledgement
 
-This work was funded by the U.S. Department of Energy, Office of Energy Efficiency & Renewable Energy, Water Power Technologies Office. The authors gratefully acknowledge project support from Heather Spence and Jim McNally (U.S. Department of Energy Water Power Technologies Office) and Mary Serafin (National Laboratory of the Rockies). Technical guidance was provided by Levi Kilcher, Caroline Draxl, and Katie Peterson (National Laboratory of the Rockies).
+This work was funded by the U.S. Department of Energy's [Hydropower and Hydrokinetic Office (H2O)](https://www.energy.gov/cmei/water/hydropower-and-hydrokinetic-office). The authors gratefully acknowledge project support from Heather Spence and Jim McNally (U.S. Department of Energy Hydropower and Hydrokinetic Office (H2O)) and Mary Serafin (National Laboratory of the Rockies). Technical guidance was provided by Levi Kilcher, Caroline Draxl, and Katie Peterson (National Laboratory of the Rockies).
 
 
 --8<-- "docs/tidal/high_resolution_hindcast/_cite-widget.md"

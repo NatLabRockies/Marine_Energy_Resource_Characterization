@@ -7,7 +7,7 @@ The Marine Energy Resource Characterization project provides two categories of p
 | Dataset | Energy Type | Coverage | Duration | Resolution |
 | ------- | ----------- | -------- | -------- | ---------- |
 | [High Resolution Tidal Hindcast](../tidal/high_resolution_hindcast/index.md) | Tidal | 5 U.S. coastal locations | 1 year each | Hourly / Half-hourly |
-| [Ocean Surface Wave Hindcast](../wave/hindcast/index.md) | Wave | U.S. Exclusive Economic Zone | 32 years (1979-2010) | 3-hourly |
+| [Ocean Surface Wave Hindcast](../wave/hindcast/index.md) | Wave | U.S. Exclusive Economic Zone | 40 years (1979–2020) | 3-hourly |
 
 ## Quick Start
 
