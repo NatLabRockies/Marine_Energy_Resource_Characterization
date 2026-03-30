@@ -2445,10 +2445,32 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#about-these-datasets" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        About These Datasets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-marine-energy-atlas-and-these-datasets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Marine Energy Atlas and These Datasets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#who-is-this-for" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who Is This For?
       
     </span>
   </a>
@@ -2468,10 +2490,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#wave-hindcast" class="md-nav__link">
+  <a href="#tidal-hindcast" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Wave Hindcast
+        Tidal Hindcast
       
     </span>
   </a>
@@ -2479,10 +2501,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tidal-hindcast" class="md-nav__link">
+  <a href="#wave-hindcast" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tidal Hindcast
+        Wave Hindcast
       
     </span>
   </a>
@@ -2495,32 +2517,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#applications" class="md-nav__link">
+  <a href="#scientific-standards" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Applications
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#standards-compliance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Standards Compliance
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick Start
+        Scientific Standards
       
     </span>
   </a>
@@ -2556,120 +2556,171 @@
 
 
 <h1 id="marine-energy-resource-characterization">Marine Energy Resource Characterization<a class="headerlink" href="#marine-energy-resource-characterization" title="Permanent link">&para;</a></h1>
-<p>Standardized wave and tidal energy datasets for the United States, supporting marine energy research, design, and deployment.</p>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>This project creates publicly accessible, standardized datasets describing the tidal and wave energy resources of the United States. Developed collaboratively by <a href="https://www.nlr.gov">NLR</a>, <a href="https://www.sandia.gov">Sandia National Laboratories</a>, and <a href="https://www.pnnl.gov">Pacific Northwest National Laboratory</a>, the project converts complex ocean simulation outputs into standardized datasets following <a href="https://www.iec.ch/dyn/www/f?p=103:7:::::FSP_ORG_ID:1316">IEC TC-114</a> and <a href="https://cfconventions.org">CF Conventions</a>.</p>
+<p>Reconnaissance-level, high-resolution wave and tidal energy hindcast datasets for the United States — developed to <a href="https://webstore.iec.ch/en/publication/66062">IEC 62600-101</a> [@iec_62600_101] and <a href="https://webstore.iec.ch/en/publication/22099">IEC 62600-201</a> [@iec_62600_201] standards and publicly available through the <a href="https://mhkdr.openei.org">Marine and Hydrokinetic Data Repository (MHKDR)</a> and the <a href="https://maps.nlr.gov/marine-energy-atlas">Marine Energy Atlas</a>.</p>
+<div class="admonition info">
+<p class="admonition-title">What is a hindcast?</p>
+<p>A <strong>hindcast</strong> is a physics-based ocean simulation run over a historical time period using recorded atmospheric and oceanographic conditions as inputs. Rather than measuring the ocean directly, hindcasts use validated numerical models to reconstruct what conditions <em>would have been</em> at every location across a region — providing spatiotemporal coverage (data across both space and time simultaneously) that no observational network could practically achieve. The result is a consistent, gap-free record of wave heights, tidal currents, power density, and other variables across the U.S. coastline.</p>
+</div>
+<h2 id="about-these-datasets">About These Datasets<a class="headerlink" href="#about-these-datasets" title="Permanent link">&para;</a></h2>
+<p>Developing marine energy requires detailed, reliable data: where is the resource, how strong is it, how does it vary across seasons and depth, and what are the conditions a device would actually experience? Generating that data requires large-scale physics-based ocean simulation — numerical models of tidal currents and ocean surface waves, validated against observations, and processed into standardized formats that engineers and policymakers can use with confidence.</p>
+<p>These datasets are the result of that effort. Developed collaboratively by <a href="https://www.nlr.gov">NLR</a>, <a href="https://www.sandia.gov">Sandia National Laboratories</a>, and <a href="https://www.pnnl.gov">Pacific Northwest National Laboratory</a> with funding from the U.S. Department of Energy's <a href="https://www.energy.gov/cmei/water/hydropower-and-hydrokinetic-office">Hydropower and Hydrokinetic Office (H2O)</a>, they represent a standardized, publicly accessible foundation for U.S. marine energy resource characterization.</p>
+<h2 id="the-marine-energy-atlas-and-these-datasets">The Marine Energy Atlas and These Datasets<a class="headerlink" href="#the-marine-energy-atlas-and-these-datasets" title="Permanent link">&para;</a></h2>
+<p>The <a href="https://maps.nlr.gov/marine-energy-atlas">Marine Energy Atlas</a> is a visual exploration tool. It presents pre-computed summary layers — annual mean current speed, power density, tidal range, wave energy flux, and more — derived from these full hindcast datasets. The Atlas is the right starting point for identifying areas of interest and comparing resource potential across regions.</p>
+<p>This documentation, and the underlying datasets, document and provide links to the data behind the Atlas layers:</p>
+<ul>
+<li><strong>Complete time series</strong> at every model grid point — not just annual summaries</li>
+<li><strong>3D vertical structure</strong> across depth layers (tidal) and spectral parameters (wave, virtual buoy)</li>
+<li><strong>IEC-compliant methodology</strong> documentation for use in formal resource assessments</li>
+<li><strong>Direct data access</strong> via <a href="http://mhkdr.openei.org/632">MHKDR</a>, <a href="getting-started/hsds-setup/">HSDS</a>, and <a href="getting-started/aws-s3/">AWS S3</a></li>
+</ul>
+<h2 id="who-is-this-for">Who Is This For?<a class="headerlink" href="#who-is-this-for" title="Permanent link">&para;</a></h2>
+<div class="grid cards">
+<ul>
+<li><strong>Policy Makers and Project Developers</strong></li>
+</ul>
+<hr />
+<p>If you are exploring where marine energy resources exist in the United States — asking questions like <em>"where are tidal currents strongest?"</em> or <em>"what does the wave energy resource look like off the Atlantic coast?"</em> — start with the <a href="https://maps.nlr.gov/marine-energy-atlas">Marine Energy Atlas</a>. The Atlas presents the summary data from these datasets in an interactive map you can explore without any technical background.</p>
+<p>This documentation explains what those Atlas layers mean and how the underlying data was produced.</p>
+<p><a class="md-button" href="https://maps.nlr.gov/marine-energy-atlas">Explore the Marine Energy Atlas</a></p>
+<p><a href="about/project/">About This Project</a></p>
+<ul>
+<li><strong>Resource Analysts</strong></li>
+</ul>
+<hr />
+<p>If you need to compare resource potential across sites, understand summary statistics, or work with aggregated data for feasibility studies, the variable documentation is the right place to start. Each layer shown on the Atlas is documented here with definitions, equations, units, and known limitations.</p>
+<p><a class="md-button" href="tidal/high_resolution_hindcast/variables/">Tidal Variables</a></p>
+<p><a href="wave/hindcast/variables/">Wave Variables</a></p>
+<p><a href="getting-started/">Getting Started</a></p>
+<ul>
+<li><strong>Engineers and Researchers</strong></li>
+</ul>
+<hr />
+<p>If you need full time-series data for device design, structural loading, IEC Stage 1 resource assessments, or academic research, the complete hindcast datasets are available for download and programmatic access. Datasets follow CF-1.10, ACDD-1.3, IEC 62600-101 [@iec_62600_101], and IEC 62600-201 [@iec_62600_201] conventions and are fully documented including model configuration, validation, and known limitations.</p>
+<p><a class="md-button" href="tidal/high_resolution_hindcast/data-access/">Tidal Data Access</a></p>
+<p><a href="wave/hindcast/data-access/">Wave Data Access</a></p>
+<p><a href="https://mhkdr.openei.org/submissions/632">Download Tidal Dataset on MHKDR</a></p>
+<p><a href="https://mhkdr.openei.org/submissions/326">Download Wave Dataset on MHKDR</a></p>
+</div>
 <h2 id="available-datasets">Available Datasets<a class="headerlink" href="#available-datasets" title="Permanent link">&para;</a></h2>
-<h3 id="wave-hindcast"><a href="wave/hindcast/">Wave Hindcast</a><a class="headerlink" href="#wave-hindcast" title="Permanent link">&para;</a></h3>
-<p>40-year high-resolution wave hindcast covering the U.S. Exclusive Economic Zone:</p>
-<table>
-<thead>
-<tr>
-<th>Region</th>
-<th>Duration</th>
-<th>Resolution</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>West Coast</td>
-<td>1979-2020</td>
-<td>3-hourly</td>
-</tr>
-<tr>
-<td>Atlantic</td>
-<td>1979-2020</td>
-<td>3-hourly</td>
-</tr>
-<tr>
-<td>Hawaii</td>
-<td>1979-2020</td>
-<td>3-hourly</td>
-</tr>
-<tr>
-<td>Puerto Rico and Gulf of Mexico</td>
-<td>1979-2020</td>
-<td>3-hourly</td>
-</tr>
-<tr>
-<td>Guam &amp; Northern Mariana Islands</td>
-<td>1979-2020</td>
-<td>3-hourly</td>
-</tr>
-</tbody>
-</table>
 <h3 id="tidal-hindcast"><a href="tidal/high_resolution_hindcast/">Tidal Hindcast</a><a class="headerlink" href="#tidal-hindcast" title="Permanent link">&para;</a></h3>
-<p>1 year High-resolution 3D tidal current data generated using FVCOM for five strategic U.S. coastal locations:</p>
+<p>High-resolution 3D tidal current data for five U.S. coastal locations with significant tidal energy potential, generated using the Finite Volume Community Ocean Model (FVCOM). Each location covers one complete year at sub-500 m spatial resolution across 10 vertical depth layers — meeting IEC 62600-201 [@iec_62600_201] Stage 1 standards for tidal energy resource assessment.</p>
 <table>
 <thead>
 <tr>
 <th>Location</th>
-<th>Duration</th>
-<th>Resolution</th>
+<th>Simulation Period</th>
+<th>Temporal Resolution</th>
 <th>Grid Points</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Aleutian Islands, Alaska</td>
-<td>1 year</td>
+<td>2010–2011</td>
 <td>Hourly</td>
 <td>797,978</td>
 </tr>
 <tr>
 <td>Cook Inlet, Alaska</td>
-<td>1 year</td>
+<td>2005</td>
 <td>Hourly</td>
 <td>392,002</td>
 </tr>
 <tr>
 <td>Piscataqua River, New Hampshire</td>
-<td>1 year</td>
+<td>2007</td>
 <td>Half-hourly</td>
 <td>292,927</td>
 </tr>
 <tr>
 <td>Puget Sound, Washington</td>
-<td>1 year</td>
+<td>2015</td>
 <td>Half-hourly</td>
 <td>1,734,765</td>
 </tr>
 <tr>
 <td>Western Passage, Maine</td>
-<td>1 year</td>
+<td>2017</td>
 <td>Half-hourly</td>
 <td>231,208</td>
 </tr>
 </tbody>
 </table>
-<h2 id="applications">Applications<a class="headerlink" href="#applications" title="Permanent link">&para;</a></h2>
-<p>The standardized datasets support:</p>
-<ul>
-<li>Analysis of operational and extreme conditions at potential deployment sites</li>
-<li>Integration of modeled site-specific hydrodynamic forces into device design</li>
-<li>Public access to marine energy resource data through <a href="https://openei.org/wiki/Marine_and_Hydrokinetic_Technology_Database">OpenEI</a></li>
-<li>Visualization of summarized data on the <a href="https://maps.nlr.gov/marine-energy-atlas">Marine Energy Atlas</a></li>
-</ul>
-<h2 id="standards-compliance">Standards Compliance<a class="headerlink" href="#standards-compliance" title="Permanent link">&para;</a></h2>
-<p>All datasets follow:</p>
-<ul>
-<li><strong><a href="https://cfconventions.org">CF Conventions</a></strong> — Climate and Forecast metadata standards</li>
-<li><strong><a href="https://www.iec.ch/dyn/www/f?p=103:7:::::FSP_ORG_ID:1316">IEC TS 62600-201</a></strong> — Tidal energy resource assessment</li>
-<li><strong><a href="https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3">ACDD</a></strong> — Attribute Convention for Data Discovery</li>
-</ul>
-<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rex</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResourceX</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Access tidal data</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">with</span> <span class="n">ResourceX</span><span class="p">(</span><span class="s1">&#39;/nlr/US_tidal/Cook_Inlet/Cook_Inlet_2005.h5&#39;</span><span class="p">,</span> <span class="n">hsds</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">speed</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;sea_water_speed&#39;</span><span class="p">]</span>
-</span></code></pre></div>
-<p>See <a href="getting-started/">Getting Started</a> for setup instructions.</p>
+<p><a href="tidal/high_resolution_hindcast/">Full tidal documentation</a> · <a href="https://mhkdr.openei.org/submissions/632">Download on MHKDR</a></p>
+<h3 id="wave-hindcast"><a href="wave/hindcast/">Wave Hindcast</a><a class="headerlink" href="#wave-hindcast" title="Permanent link">&para;</a></h3>
+<p>A 40-year (1979–2020) high-resolution wave hindcast covering the U.S. Exclusive Economic Zone (EEZ), produced using WaveWatch III and SWAN. Provides the long-term statistical record of wave conditions needed for IEC 62600-101 [@iec_62600_101] wave energy resource assessment and device design.</p>
+<table>
+<thead>
+<tr>
+<th>Region</th>
+<th>Simulation Period</th>
+<th>Temporal Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>West Coast</td>
+<td>1979–2020</td>
+<td>3-hourly</td>
+</tr>
+<tr>
+<td>Atlantic</td>
+<td>1979–2020</td>
+<td>3-hourly</td>
+</tr>
+<tr>
+<td>Hawaii</td>
+<td>1979–2020</td>
+<td>3-hourly</td>
+</tr>
+<tr>
+<td>Puerto Rico &amp; Gulf of Mexico</td>
+<td>1979–2020</td>
+<td>3-hourly</td>
+</tr>
+<tr>
+<td>Guam &amp; Northern Mariana Islands</td>
+<td>1979–2020</td>
+<td>3-hourly</td>
+</tr>
+</tbody>
+</table>
+<p><a href="wave/hindcast/">Full wave documentation</a> · <a href="https://mhkdr.openei.org/submissions/326">Download on MHKDR</a></p>
+<h2 id="scientific-standards">Scientific Standards<a class="headerlink" href="#scientific-standards" title="Permanent link">&para;</a></h2>
+<p>All datasets are built to internationally recognized standards to ensure scientific rigor, consistency, and suitability for formal engineering assessments:</p>
+<table>
+<thead>
+<tr>
+<th>Standard</th>
+<th>What It Ensures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://webstore.iec.ch/en/publication/66062">IEC TS 62600-101</a> [@iec_62600_101]</td>
+<td>Wave energy resource assessment methodology, variable definitions, and reporting requirements</td>
+</tr>
+<tr>
+<td><a href="https://webstore.iec.ch/en/publication/22099">IEC TS 62600-201</a> [@iec_62600_201]</td>
+<td>Tidal energy resource assessment methodology, variable definitions, and reporting requirements</td>
+</tr>
+<tr>
+<td><a href="https://cfconventions.org">CF Conventions</a></td>
+<td>Consistent variable names, units, coordinate metadata, and grid conventions for ocean and climate data</td>
+</tr>
+<tr>
+<td><a href="https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3">ACDD</a></td>
+<td>Dataset-level metadata attributes for discoverability in scientific data catalogs</td>
+</tr>
+</tbody>
+</table>
+<p>Adherence to these standards means data can be directly applied in IEC-compliant resource assessments and integrated with other oceanographic and climate datasets without format conversion.</p>
 <h2 id="contact">Contact<a class="headerlink" href="#contact" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>GitHub Issues</strong>: <a href="https://github.com/NatLabRockies/Marine_Energy_Resource_Characterization/issues">Bug reports and feature requests</a></li>
 <li><strong>Email</strong>: <a href="mailto:marineresource@nlr.gov">marineresource@nlr.gov</a></li>
 </ul>
+<div class="bibliography"></div>
 
 
 
