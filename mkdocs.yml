@@ -1,8 +1,8 @@
 site_name: Marine Energy Resource Characterization
 site_url: https://NatLabRockies.github.io/Marine_Energy_Resource_Characterization/
 site_description: Software to standardize wave and tidal energy model outputs for public access
-repo_url: https://github.com/NatLabRockies/Marine_Energy_Resource_Characterization
-repo_name: NatLabRockies/Marine_Energy_Resource_Characterization
+# repo_url: https://github.com/NatLabRockies/Marine_Energy_Resource_Characterization
+# repo_name: NatLabRockies/Marine_Energy_Resource_Characterization
 
 theme:
   name: material
@@ -11,28 +11,90 @@ theme:
       primary: custom
       accent: custom
   font:
-    text: Roboto
+    text: Figtree
     code: Roboto Mono
   features:
     - navigation.tabs
-    - navigation.sections
+    - navigation.indexes
     - navigation.top
     - navigation.tracking
-    - toc.integrate
+    - navigation.expand
     - search.suggest
     - search.highlight
     - content.code.copy
+    - navigation.footer
+  favicon: assets/images/favicon.svg
   icon:
+    logo: material/water
     repo: fontawesome/brands/github
 
 extra_css:
   - stylesheets/extra.css
 
 nav:
-  - Home: index.md
-  - Tidal Hindcast: tidal-hindcast.md
-  - Wave Hindcast: wave-hindcast.md
-  - Contributing: contributing.md
+  - Home:
+    - index.md
+    - About:
+      - Project: about/project.md
+      - Funding: about/funding.md
+      - Contact: about/contact.md
+  - Getting Started:
+    - getting-started/index.md
+    - Accessing Data:
+      - HSDS Setup: getting-started/hsds-setup.md
+      - AWS S3 Downloads: getting-started/aws-s3.md
+      - Marine Energy Atlas: getting-started/marine-energy-atlas.md
+    - Data Formats: getting-started/data-formats.md
+    - Contributing: getting-started/contributing.md
+  - Tidal:
+    - tidal/index.md
+    - High Resolution Hindcast:
+      - tidal/high_resolution_hindcast/index.md
+      - Model:
+        - FVCOM Configuration: tidal/high_resolution_hindcast/model-configuration.md
+        - Sigma Layers: tidal/high_resolution_hindcast/sigma-layers.md
+        - Unstructured Grid: tidal/high_resolution_hindcast/unstructured-grid.md
+        - Limitations: tidal/high_resolution_hindcast/limitations.md
+      - Variables:
+        - tidal/high_resolution_hindcast/variables/index.md
+        - Mean Current Speed: tidal/high_resolution_hindcast/variables/mean-current-speed.md
+        - 95th Percentile Current Speed: tidal/high_resolution_hindcast/variables/95th-percentile-current-speed.md
+        - Mean Power Density: tidal/high_resolution_hindcast/variables/mean-power-density.md
+        - 95th Percentile Power Density: tidal/high_resolution_hindcast/variables/95th-percentile-power-density.md
+        - Minimum Water Depth: tidal/high_resolution_hindcast/variables/minimum-water-depth.md
+        - Maximum Water Depth: tidal/high_resolution_hindcast/variables/maximum-water-depth.md
+        - Grid Resolution: tidal/high_resolution_hindcast/variables/grid-resolution.md
+        - Tidal Range: tidal/high_resolution_hindcast/variables/tidal-range.md
+        - Distance to Shore: tidal/high_resolution_hindcast/variables/distance-to-shore.md
+        - High Tide Max Elevation: tidal/high_resolution_hindcast/variables/max-sea-surface-elevation-at-high-tide.md
+        - Low Tide Min Elevation: tidal/high_resolution_hindcast/variables/min-sea-surface-elevation-at-low-tide.md
+        - Center Latitude: tidal/high_resolution_hindcast/variables/center_latitude.md
+        - Center Longitude: tidal/high_resolution_hindcast/variables/center_longitude.md
+        - Face Id: tidal/high_resolution_hindcast/variables/face_id.md
+        - Full Year HTTPS URL: tidal/high_resolution_hindcast/variables/full_year_https_url.md
+        - Full Year S3 URL: tidal/high_resolution_hindcast/variables/full_year_s3_uri.md
+      - Methodology: tidal/high_resolution_hindcast/methodology.md
+      - Validation: tidal/high_resolution_hindcast/validation.md
+      - Coverage Maps: tidal/high_resolution_hindcast/coverage-maps.md
+      - Data Access: tidal/high_resolution_hindcast/data-access.md
+      - Usage Examples: tidal/high_resolution_hindcast/usage-examples.md
+      - Quality Assurance: tidal/high_resolution_hindcast/quality-assurance.md
+      - Coordinate Systems: tidal/high_resolution_hindcast/coordinate-systems.md
+      - Definitions: tidal/high_resolution_hindcast/definitions.md
+      - FAQ: tidal/high_resolution_hindcast/faq.md
+      - Changelog: tidal/high_resolution_hindcast/changelog.md
+      - References: tidal/high_resolution_hindcast/references.md
+  - Wave:
+    - wave/index.md
+    - Hindcast:
+      - wave/hindcast/index.md
+      - Model Description: wave/hindcast/model-description.md
+      - Variables: wave/hindcast/variables.md
+      - Validation: wave/hindcast/validation.md
+      - Data Access: wave/hindcast/data-access.md
+      - Usage Examples: wave/hindcast/usage-examples.md
+      - FAQ: wave/hindcast/faq.md
+      - References: wave/hindcast/references.md
 
 markdown_extensions:
   - tables
@@ -51,15 +113,22 @@ markdown_extensions:
       permalink: true
   - attr_list
   - md_in_html
+  - def_list
 
 extra_javascript:
+  - javascripts/toc-fix.js
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  - javascripts/citation.min.js
+  - javascripts/cite.js
 
 extra:
   social:
-    - icon: material/waves
+    - icon: material/water
       link: https://github.com/NatLabRockies/Marine_Energy_Resource_Characterization
   generator: false
+
+hooks:
+  - tidal/fvcom/high_resolution_tidal_hindcast/hooks/gen_variable_docs.py
 
 copyright: Copyright &copy; 2026 Alliance for Energy Innovation, LLC

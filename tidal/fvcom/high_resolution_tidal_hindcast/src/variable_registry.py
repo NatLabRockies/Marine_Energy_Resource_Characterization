@@ -16,7 +16,7 @@ DOCUMENTATION_REGISTRY = {
     "data_access": {
         "href": "https://data.openei.org/s3_viewer?bucket=marine-energy-data&prefix=us-tidal%2F",
         "full_text": "High Resolution Tidal Hindcast Data Access on OpenEI",
-        "short_text": "Dataset Repository",
+        "short_text": "Data Access",
         "keyword": "DATA_ACCESS",
     },
     "dataset_documentation": {
@@ -69,24 +69,17 @@ VARIABLE_REGISTRY = {
         "one_liner": "Annual average of depth-averaged current speed",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-current-speed",
         "complete_description": (
-            "annual average of the depth-averaged current velocity "
-            "magnitude, representing the characteristic flow speed at each grid location under "
-            "free-stream (undisturbed) conditions. This metric is intended for IEC 62600-201 "
-            "Stage 1 reconnaissance-level analysis to identify areas with tidal current resources."
-            "Engineering applications include initial site screening, comparing relative site "
-            "potential across regions, and Stage 1 IEC 62600-201 tidal energy resource "
-            "characterization."
+            "Annual average of the depth-averaged current velocity magnitude, representing the "
+            "characteristic flow speed at each grid location under free-stream (undisturbed) conditions. "
+            "This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis to identify "
+            "areas with potentially viable tidal current resources. It serves as a primary metric for "
+            "identifying viable tidal energy sites, used to estimate annual energy production (AEP), "
+            "compare site potential across regions, determine expected average viable current speeds "
+            "for commercial deployment, and select appropriate turbine technology."
         ),
-        "references": [],
         # Scientific/engineering context
         "physical_meaning": "Yearly average of depth averaged current speed",
         "intended_usage": "Site screening and turbine selection for power generation",
-        "intended_usage_detail": (
-            "Primary metric for identifying viable tidal energy sites. Used to estimate "
-            "annual energy production (AEP), compare site potential across regions, determine "
-            "expected average viable current speeds for commercial deployment, "
-            "and select appropriate turbine technology",
-        ),
         "equation": r"$\overline{\overline{U}} = U_{\text{average}} = \text{mean}\left(\left[\text{mean}(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude at sigma layer $i$ at time $t$ $[\text{m/s}]$",
@@ -103,31 +96,17 @@ VARIABLE_REGISTRY = {
         "one_liner": "Estimated extreme current speed, outlier-tolerant and comparable across sites for reconnaissance-level assessment",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-current-speed",
         "complete_description": (
-            "95th Percentile Current Speed provides a robust, outlier-tolerant estimate of "
-            "extreme current conditions at each grid location, intended for consistent "
-            "cross-site comparison during reconnaissance-level resource characterization. "
-            "Unlike the absolute maximum, this statistic is resistant to isolated numerical "
-            "artifacts and transient model effects, making it a more reliable and reproducible "
-            "basis for comparing extreme flow conditions across sites.\n\n"
-            "This value is derived from a numerical hydrodynamic model and represents "
-            "modeled conditions only. It should not be interpreted as a measured or "
-            "ground-truth observation. Site-specific validation against in-situ measurements "
-            "is recommended before use in detailed engineering design.\n\n"
-            "Engineering applications include preliminary structural loading assessment, "
-            "blade and support structure design screening, and initial fatigue analysis."
+            "95th percentile of the maximum current velocity magnitude across the water column "
+            "calculated over the 1-year hindcast period, representing a robust, outlier-tolerant "
+            "estimate of extreme current conditions at any depth under free-stream (undisturbed) "
+            "conditions. This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level "
+            "analysis to provide a consistent basis for comparing extreme flow conditions across "
+            "sites. It serves as a key input for initial structural loading assessment of turbine "
+            "blades and towers, as well as for sizing electrical generation components and power electronics."
         ),
-        "references": [],
         # Scientific/engineering context
         "physical_meaning": "95th percentile of yearly depth maximum current speed",
         "intended_usage": "Generator sizing and power electronics design",
-        "intended_usage_detail": (
-            "Critical for sizing electrical generation components. Used to determine "
-            "maximum generator output capacity, size power electronics and converters for "
-            "peak electrical loads, design control systems for extreme speed conditions, "
-            "and set cut-out speeds for generator protection. Essential for electrical "
-            "system certification, grid connection requirements, and ensuring generators "
-            "can handle maximum rotational speeds without damage."
-        ),
         "equation": r"$U_{95} = \text{percentile}(95, \left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude at sigma layer $i$ at time $t$ $[\text{m/s}]$",
@@ -141,19 +120,19 @@ VARIABLE_REGISTRY = {
         "display_name": "99th Percentile Current Speed",
         "column_name": "vap_water_column_99th_percentile_sea_water_speed",
         "units": "m/s",
-        "one_liner": "",
+        "one_liner": "Estimated near-maximum current speed for extreme event analysis",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
+        "complete_description": (
+            "99th percentile of the maximum current velocity magnitude across the water column "
+            "calculated over the 1-year hindcast period, representing a robust estimate of "
+            "near-maximum current conditions at any depth under free-stream (undisturbed) conditions. "
+            "This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis to "
+            "characterize rare, high-intensity flow events. It serves as a critical input for "
+            "extreme event planning, safety margin calculations, designing emergency shutdown "
+            "systems, and ensuring equipment survivability during rare but intense current events."
+        ),
         "physical_meaning": "99th percentile of yearly depth maximum current speed",
         "intended_usage": "Extreme event analysis and safety system design",
-        "intended_usage_detail": (
-            "Used for extreme event planning and safety margin calculations. Critical for "
-            "designing emergency shutdown systems, setting absolute operational limits, and "
-            "ensuring equipment can survive rare but intense current events. Important for "
-            "insurance risk assessments, environmental impact studies, and regulatory "
-            "compliance for extreme conditions."
-        ),
         "equation": r"$U_{99} = \text{percentile}(99, \left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude at sigma level $i$ at time $t$ $[\text{m/s}]$",
@@ -166,30 +145,20 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_water_column_max_sea_water_speed",
         "units": "m/s",
         "long_name": "Maximum Current Speed",
-        "one_liner": "Absolute maximum current speed observed over the hindcast year",
+        "one_liner": "Absolute maximum current speed calculated over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-current-speed",
         "complete_description": (
-            "Maximum Current Speed is the absolute highest current speed observed at any "
-            "depth and any time during the hindcast year. This metric defines the worst-case "
-            "flow condition from the numerical model."
-            "Important caveat: Because this is a single extreme value from a numerical model, "
-            "it may be influenced by model artifacts or transient numerical effects. For "
-            "engineering design loads, the 95th Percentile Current Speed is generally "
-            "preferred as a more robust and statistically representative metric for extreme "
-            "conditions. The maximum value is provided as an upper bound reference but "
-            "should be used with caution for design purposes."
+            "Absolute maximum current speed calculated at any depth and any time during the "
+            "1-year hindcast period, defining the worst-case flow condition from the numerical "
+            "model. This metric serves as an upper bound reference for extreme conditions, useful "
+            "for quick screening of absolute worst-case scenarios and as a sanity check against "
+            "percentile-based statistics. However, as a single extreme value from a numerical "
+            "model, it may be influenced by model artifacts or transient numerical effects. "
+            "For structural design loads and survival analysis, the 95th Percentile Current Speed "
+            "is generally preferred as a more robust and statistically representative metric."
         ),
-        "references": [],
-        "physical_meaning": "Absolute maximum depth-max current speed observed over the year",
+        "physical_meaning": "Absolute maximum depth-max current speed calculated over the year",
         "intended_usage": "Upper bound reference for extreme conditions",
-        "intended_usage_detail": (
-            "Provides an absolute upper bound on current speed from the model. While useful "
-            "as a reference, this single extreme value may reflect model artifacts rather than "
-            "physical reality. For structural design loads and survival analysis, the 95th "
-            "percentile speed is generally preferred as a more robust metric. The maximum "
-            "speed is most useful for quick screening of absolute worst-case conditions and "
-            "as a sanity check against the percentile-based statistics."
-        ),
         "equation": r"$U_{\max} = \max\left(\left[\max(U_{1,t}, ..., U_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude at sigma level $i$ at time $t$ $[\text{m/s}]$",
@@ -209,29 +178,17 @@ VARIABLE_REGISTRY = {
         "one_liner": "Annual average of depth-averaged kinetic energy flux",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density",
         "complete_description": (
-            "Mean Power Density is the annual average of the kinetic energy flux per unit area, "
-            "representing the theoretical power available for extraction from the undisturbed "
-            "tidal flow. The cubic relationship with velocity makes this metric highly "
-            "sensitive to current speed variations. Used for Stage 1 resource characterization "
-            "and site ranking to indicate theoretical resource magnitude."
-            "Engineering applications include comparing relative energy availability between "
-            "sites and initial economic feasibility screening."
+            "Annual average of the kinetic energy flux per unit area (depth-averaged) "
+            "calculated over the 1-year hindcast period, representing a mean estimate of energy flux for the entire water column at each grid location under free-stream (undisturbed) conditions. "
+            "This metric is intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis to identify "
+            "areas with potentially viable tidal current resources. This metric defines the theoretic average energy potential based on model output and does not account for changes in salinity, temperature, or turbulence that may affect real-world energy extraction."
         ),
-        "references": ["hass_2011_assessment"],
         # Scientific/engineering context
         "physical_meaning": "Yearly average of depth averaged power density (kinetic energy flux)",
         "intended_usage": "Resource quantification and economic feasibility analysis",
-        "intended_usage_detail": (
-            "Direct measure of extractable energy resource for economic analysis. Used to "
-            "calculate theoretical power output, estimate capacity factors for project "
-            "financing, compare energy density between sites, and determine optimal turbine "
-            "spacing in arrays. Essential for LCOE calculations, investor presentations, "
-            "and grid integration planning. Minimum thresholds (typically >300 W/m\u00b2) define "
-            "commercial viability."
-        ),
         "equation": r"$\overline{\overline{P}} = P_{\text{average}} = \text{mean}\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
-            r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density at sigma layer $i$ at time $t$ $[\text{W/m}^2]$",
+            r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density at sigma layer $i$ at time $t$ $[\text{W/m}^2]$ [@hass_2011_assessment]",
             r"$\rho = 1025$, nominal seawater density (actual varies with temperature and salinity) $[\text{kg/m}^3]$",
             r"$U_{i,t} = \sqrt{u_{i,t}^2 + v_{i,t}^2}$, velocity magnitude $[\text{m/s}]$",
             r"$N_{\sigma} = 10$, sigma layers",
@@ -243,36 +200,20 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_water_column_95th_percentile_sea_water_power_density",
         "units": "W/m\u00b2",
         "long_name": "95th Percentile Power Density",
-        "one_liner": "Estimated extreme power density, outlier-tolerant and comparable across sites for reconnaissance-level assessment",
+        "one_liner": "Estimated extreme power density, outlier-tolerant and robust to cubic-velocity sensitivity",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-power-density",
         "complete_description": (
-            "95th Percentile Power Density provides a robust, outlier-tolerant estimate of "
-            "extreme power density conditions at each grid location, intended for consistent "
-            "cross-site comparison during reconnaissance-level resource characterization. "
-            "Unlike the absolute maximum, this statistic is resistant to isolated numerical "
-            "artifacts and transient model effects. Due to the cubic relationship between "
-            "velocity and power density, extreme values are particularly sensitive to model "
-            "artifacts, making the 95th percentile a more reliable and reproducible basis "
-            "for comparing extreme energy flux across sites.\n\n"
-            "This value is derived from a numerical hydrodynamic model and represents "
-            "modeled conditions only. It should not be interpreted as a measured or "
-            "ground-truth observation. Site-specific validation against in-situ measurements "
-            "is recommended before use in detailed engineering design.\n\n"
-            "Engineering applications include preliminary extreme load assessment, "
-            "power electronics sizing, and initial design margin estimation."
+            "95th percentile of the maximum power density (kinetic energy flux) across the water "
+            "column calculated over the 1-year hindcast period, representing a robust, "
+            "outlier-tolerant estimate of extreme energy flux at any depth under free-stream "
+            "(undisturbed) conditions. Due to the cubic relationship between velocity and power "
+            "density, extreme values are particularly sensitive to model artifacts, making the 95th percentile a more reliable "
+            "metric than the absolute maximum for comparing extreme energy flux across sites. It is "
+            "intended for IEC 62600-201 [@iec_62600_201] Stage 1 reconnaissance-level analysis and is intended to be "
+            "input for extreme load analysis on tidal turbine components."
         ),
-        "references": [],
         "physical_meaning": "95th percentile of the yearly maximum of depth averaged power density (kinetic energy flux)",
         "intended_usage": "Structural design loads and extreme loading conditions",
-        "intended_usage_detail": (
-            "Essential for structural engineering and extreme load analysis. Used to "
-            "determine maximum design loads for turbine blades, drive trains, support "
-            "structures, and foundation systems. Critical for fatigue analysis, ultimate "
-            "load calculations, and ensuring structural integrity during extreme tidal "
-            "events. Defines design margins for mooring systems, tower structures, and "
-            "emergency braking systems. Required for structural certification and insurance "
-            "assessments."
-        ),
         "equation": r"$P_{95} = \text{percentile}(95, \left[\max(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density with $\rho = 1025$ $[\text{kg/m}^3]$",
@@ -285,38 +226,22 @@ VARIABLE_REGISTRY = {
     # Depth variables
     # =========================================================================
     "mean_water_depth": {
-        "display_name": "Sea Floor Depth",
+        "display_name": "Mean Water Depth",
         "column_name": "vap_sea_floor_depth",
-        "units": "m (below NAVD88)",
-        "long_name": "Model Sea Floor Depth from NAVD88",
-        "one_liner": "Model bathymetry depth below NAVD88 vertical datum",
+        "units": "m",
+        "long_name": "Mean Water Depth",
+        "one_liner": "Time-averaged total water depth (bathymetry + mean sea level)",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#sea-floor-depth",
         "complete_description": (
-            "Sea Floor Depth is the model bathymetry representing the distance from the "
-            "NAVD88 vertical datum to the seafloor at each grid cell center. This is a "
-            "fundamental site characterization parameter required by IEC 62600-201 for all "
-            "assessment stages. Bathymetry determines deployment feasibility, foundation "
-            "type, and installation methodology."
-            "The bathymetry values are from the FVCOM model grid, which was developed by "
-            "Pacific Northwest National Laboratory using the best available bathymetric "
-            "survey data for each region. Values are referenced to the NAVD88 vertical "
-            "datum."
-            "Engineering applications include deployment feasibility screening (current "
-            "tidal turbine technology typically requires 20-50m depth), foundation type "
-            "selection, installation vessel requirements, and cost modeling."
+            "Time-averaged water depth calculated over the 1-year hindcast period, representing "
+            "the sum of the static bathymetry (depth below NAVD88) and the mean sea surface "
+            "elevation. This is a fundamental site characterization parameter required by "
+            "IEC 62600-201 for all assessment stages [@iec_62600_201]. The underlying bathymetry "
+            "is from the FVCOM model grid, developed by PNNL using regional survey data. This "
+            "metric supports dermination of deployment feasibility and installation methodology."
         ),
-        "references": ["iec_62600_201"],
-        "physical_meaning": "Model bathymetry depth below NAVD88 vertical datum",
+        "physical_meaning": "Time-averaged total water depth (bathymetry + mean sea level)",
         "intended_usage": "Installation planning and foundation design",
-        "intended_usage_detail": (
-            "Fundamental constraint for deployment strategy and cost estimation. Used to "
-            "determine installation vessel requirements, foundation type selection (gravity, "
-            "pile, suction caisson), and deployment method feasibility. Critical for cost "
-            "modeling (deeper = more expensive), accessibility planning for maintenance "
-            "operations, and environmental impact assessments. Optimal depths typically "
-            "20-50m for current technology, with deeper sites requiring specialized "
-            "equipment and higher costs."
-        ),
         "equation": r"$\overline{d} = d_{\text{average}} = \text{mean}\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$h$, bathymetry below NAVD88 $[\text{m}]$",
@@ -330,29 +255,18 @@ VARIABLE_REGISTRY = {
         "units": "m",
         "long_name": "Minimum Water Depth",
         # Documentation
-        "one_liner": "Minimum water depth (during 1 year model run)",
+        "one_liner": "Minimum water depth calculated over the 1-year hindcast period",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#minimum-water-depth",
         "complete_description": (
-            "Minimum Water Depth is the lowest water depth (surface to seafloor) "
-            "observed at each grid location over the hindcast year, typically occurring during "
-            "extreme low tide conditions. This metric defines the minimum vertical clearance "
-            "available for device deployment and is critical for assessing depth constraints. "
-            "Used in Stage 2 feasibility studies for turbine placement and collision avoidance."
-            "The difference between maximum and minimum water depth approximates the "
-            "tidal range at each location."
-            "Engineering applications include assessing turbine clearance requirements and "
-            "identifying areas where shallow water may limit device deployment."
+            "The minimum water depth (surface to seafloor) calculated at each grid location over "
+            "the 1-year hindcast period, typically occurring during extreme low tide conditions. "
+            "This metric represents the model lower bound of water depth variability and is intended for "
+            "assessing deployment feasibility, defining safe navigation limits, "
+            "and planning installation operations."
         ),
-        "references": [],
         # Scientific/engineering context
-        "physical_meaning": "Minimum water depth observed over the year (shallowest, typically at low tide)",
+        "physical_meaning": "Minimum water depth calculated over the year (shallowest, typically at low tide)",
         "intended_usage": "Minimum clearance and grounding risk assessment",
-        "intended_usage_detail": (
-            "Critical for determining minimum water depth available for turbine deployment. "
-            "Used to ensure adequate clearance between turbine blades and seafloor, assess "
-            "grounding risk during extreme low tides, and determine deployment feasibility "
-            "in shallow areas. Essential for safety planning and operational constraints."
-        ),
         "equation": r"$d_{\min} = \min\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$h$, bathymetry below NAVD88 $[\text{m}]$",
@@ -365,30 +279,16 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_water_column_height_max",
         "units": "m",
         "long_name": "Maximum Water Depth",
-        # Documentation
-        "one_liner": "Maximum water depth (during 1 year model run)",
+        "one_liner": "Maximum water depth calculated over the 1-year hindcast period",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth",
         "complete_description": (
-            "Maximum Water Depth is the greatest water depth (surface to seafloor) "
-            "observed at each grid location over the hindcast year, typically occurring during "
-            "extreme high tide conditions. This metric represents the upper bound of water depth "
-            "variability at each location. Used in Stage 2 feasibility studies for mooring system "
-            "design, cable routing, and understanding the full operating depth envelope."
-            "The difference between maximum and minimum water depth approximates the "
-            "tidal range at each location."
-            "Engineering applications include mooring system design considerations and "
-            "understanding the full range of water depths at a site."
+            "Maximum water depth (surface to seafloor) calculated at each grid location over the "
+            "1-year hindcast period, typically occurring during extreme high tide conditions. "
+            "This metric represents the upper bound of water depth variability at each location "
+            "and defines the maximum expected water column depth."
         ),
-        "references": [],
-        # Scientific/engineering context
-        "physical_meaning": "Maximum water depth observed over the year (deepest, typically at high tide)",
+        "physical_meaning": "Maximum water depth calculated over the year (deepest, typically at high tide)",
         "intended_usage": "Maximum mooring loads and installation planning",
-        "intended_usage_detail": (
-            "Defines maximum water depth for mooring system design and installation vessel "
-            "requirements. Used to determine maximum mooring line lengths, assess tidal "
-            "range impacts on operations, and plan for extreme high tide conditions. "
-            "Important for cable routing and connection system design."
-        ),
         "equation": r"$d_{\max} = \max\left(\left[(h + \zeta_t) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$h$, bathymetry below NAVD88 $[\text{m}]$",
@@ -403,18 +303,17 @@ VARIABLE_REGISTRY = {
         "display_name": "Surface Layer Mean Speed",
         "column_name": "vap_surface_layer_mean_sea_water_speed",
         "units": "m/s",
-        "one_liner": "",
+        "one_liner": "Annual average current speed at the surface layer",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
+        "complete_description": (
+            "Annual average current speed at the surface layer (sigma level 1) calculated over "
+            "the 1-year hindcast period. This metric characterizes the typical flow conditions "
+            "at the water surface, which is critical for assessing impacts on floating tidal "
+            "devices, navigation safety, vessel operations, and surface loads on mooring systems. "
+            "It also informs operations planning and environmental flow characterization."
+        ),
         "physical_meaning": "Yearly average current speed at the surface layer (sigma_level_1)",
         "intended_usage": "Surface current assessment for navigation and floating devices",
-        "intended_usage_detail": (
-            "Characterizes current conditions at the water surface for floating tidal devices "
-            "and navigation safety. Used to assess surface current impacts on vessel "
-            "operations, floating platform stability, and cable/mooring system surface loads. "
-            "Important for operations planning and environmental flow characterization."
-        ),
         "equation": r"$\overline{U}_{\text{surface}} = \text{mean}\left(\left[U_{1,t} \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$, velocity magnitude at sigma level 1 (surface) at time $t$ $[\text{m/s}]$",
@@ -425,17 +324,18 @@ VARIABLE_REGISTRY = {
         "display_name": "Surface Layer 95th Percentile Speed",
         "column_name": "vap_surface_layer_95th_percentile_sea_water_speed",
         "units": "m/s",
-        "one_liner": "",
+        "one_liner": "95th percentile current speed at the surface layer",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
+        "complete_description": (
+            "The current speed at the surface layer (sigma level 1) that is exceeded 5% of the "
+            "time over the 1-year hindcast period. This statistical metric characterizes the "
+            "near-extreme surface currents that floating tidal energy systems and surface "
+            "infrastructure must withstand during operational conditions. It is used to size "
+            "mooring systems for floating platforms, design surface buoys and markers, and assess "
+            "surface loads on cables and connectors."
+        ),
         "physical_meaning": "95th percentile of surface layer current speed over the year",
         "intended_usage": "Surface current design loads for floating systems",
-        "intended_usage_detail": (
-            "Design metric for floating tidal energy systems and surface infrastructure. "
-            "Used to size mooring systems for floating platforms, design surface buoys and "
-            "markers, and assess extreme surface current loads on cables and connectors."
-        ),
         "equation": r"$U_{\text{surface},95} = \text{percentile}(95, \left[U_{1,t} \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$, velocity magnitude at sigma level 1 (surface) at time $t$ $[\text{m/s}]$",
@@ -446,18 +346,18 @@ VARIABLE_REGISTRY = {
         "display_name": "Surface Layer 99th Percentile Speed",
         "column_name": "vap_surface_layer_99th_percentile_sea_water_speed",
         "units": "m/s",
-        "one_liner": "",
+        "one_liner": "99th percentile current speed at the surface layer",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
+        "complete_description": (
+            "The current speed at the surface layer (sigma level 1) that is exceeded 1% of the "
+            "time over the 1-year hindcast period. This metric characterizes extreme surface "
+            "current conditions relevant for safety system design and survivability analysis. "
+            "It informs emergency response planning, operational limits for surface vessels and "
+            "floating devices, and safety margins for surface infrastructure exposed to "
+            "high-velocity surface flows."
+        ),
         "physical_meaning": "99th percentile of surface layer current speed over the year",
         "intended_usage": "Extreme surface current events for safety systems",
-        "intended_usage_detail": (
-            "Characterizes extreme surface current conditions for safety system design. "
-            "Used for emergency response planning, setting operational limits for surface "
-            "vessels and floating devices, and designing safety margins for surface "
-            "infrastructure."
-        ),
         "equation": r"$U_{\text{surface},99} = \text{percentile}(99, \left[U_{1,t} \text{ for } t=1,...,T\right])$",
         "equation_variables": [
             r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$, velocity magnitude at sigma level 1 (surface) at time $t$ $[\text{m/s}]$",
@@ -468,18 +368,17 @@ VARIABLE_REGISTRY = {
         "display_name": "Surface Layer Maximum Speed",
         "column_name": "vap_surface_layer_max_sea_water_speed",
         "units": "m/s",
-        "one_liner": "",
+        "one_liner": "Absolute maximum surface current speed calculated over the hindcast year",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
+        "complete_description": (
+            "Absolute maximum current speed calculated at the surface layer (sigma level 1) during "
+            "the 1-year hindcast period. This metric defines the worst-case surface flow condition "
+            "from the numerical model. It is essential for survival design of floating systems, "
+            "determining maximum loads on surface infrastructure, and ensuring regulatory "
+            "compliance for extreme surface conditions."
+        ),
         "physical_meaning": "Absolute maximum surface layer current speed observed over the year",
         "intended_usage": "Ultimate surface current loads for survival analysis",
-        "intended_usage_detail": (
-            "Defines worst-case surface current conditions for ultimate load analysis. "
-            "Essential for survival design of floating systems, determining maximum loads "
-            "on surface infrastructure, and regulatory compliance for extreme surface "
-            "conditions."
-        ),
         "equation": r"$U_{\text{surface},\max} = \max\left(\left[U_{1,t} \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$U_{1,t} = \sqrt{u_{1,t}^2 + v_{1,t}^2}$, velocity magnitude at sigma level 1 (surface) at time $t$ $[\text{m/s}]$",
@@ -498,69 +397,21 @@ VARIABLE_REGISTRY = {
         "one_liner": "Average edge length of triangular model grid cells",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#grid-resolution",
         "complete_description": (
-            "Grid Resolution is the average edge length of the unstructured triangular model "
-            "grid cells, indicating the spatial scale at which tidal currents are resolved by the "
-            "FVCOM hydrodynamic model. Essential model metadata for assessing spatial uncertainty "
-            "and determining appropriate applications. IEC 62600-201 requires <500 m for Stage 1 "
-            "reconnaissance and <50 m for Stage 2 feasibility assessments."
-            "The unstructured triangular mesh allows variable resolution, with finer grids in "
-            "areas of interest (channels, straits) and coarser grids in open water."
-            "Per IEC 62600-201 tidal energy resource assessment standards:"
-            "- Stage 1 feasibility (reconnaissance-level) assessments require grid resolution < 500 m"
-            "- Stage 2 (layout design) assessments require grid resolution < 50 m"
-            "Engineering applications include assessing model fidelity and determining "
-            "appropriate applications for the data."
+            "Average edge length of the unstructured triangular model grid cells, indicating "
+            "the spatial scale at which tidal currents are resolved by the FVCOM hydrodynamic model. "
+            "This metric is essential model metadata for assessing spatial uncertainty and "
+            "determining appropriate applications. The unstructured triangular mesh allows variable "
+            "resolution, with finer grids in areas of interest (channels, straits) and coarser "
+            "grids in open water. According to IEC 62600-201 standards [@iec_62600_201], Stage 1 "
+            "reconnaissance-level assessments require grid resolution < 500 m, while Stage 2 "
+            "layout design assessments require grid resolution < 50 m."
         ),
-        "references": ["iec_62600_201"],
-        # Scientific/engineering context
         "physical_meaning": "Average edge length of triangular finite volume elements",
         "intended_usage": "Model accuracy assessment and validation",
-        "intended_usage_detail": (
-            "Indicates the spatial scale at which model results are resolved. Finer "
-            "resolution (smaller values) provides more detailed results but requires "
-            "greater computational resources. Used to assess model fidelity, determine "
-            "appropriate applications for the data, and understand spatial limitations of "
-            "the model output. Critical for validating model results against observations "
-            "and determining if resolution is adequate for specific engineering "
-            "applications. Per IEC 62600-201 standards: Stage 1 assessments require "
-            "< 500 m resolution, while Stage 2 detailed studies require < 50 m resolution "
-            "for areas of interest."
-        ),
         "equation": r"$\text{Grid Resolution} = \frac{1}{3}(d_1 + d_2 + d_3)$",
         "equation_variables": [
             r"$d_1, d_2, d_3$, geodesic distances between triangle vertices $[\text{m}]$",
         ],
-    },
-    # =========================================================================
-    # Direction variables
-    # =========================================================================
-    "ebb_direction": {
-        "display_name": "Sea Water Ebb Tide To Direction",
-        "column_name": "vap_sea_water_ebb_to_direction_sigma_level_3",
-        "units": "m/s",
-        "one_liner": "",
-        "documentation_url": "",
-        "complete_description": "",
-        "references": [],
-        "physical_meaning": "",
-        "intended_usage": "",
-        "intended_usage_detail": "",
-        "equation": "",
-        "equation_variables": [],
-    },
-    "flood_direction": {
-        "display_name": "Sea Water Flood Tide To Direction",
-        "column_name": "vap_sea_water_flood_to_direction_sigma_level_1",
-        "units": "m/s",
-        "one_liner": "",
-        "documentation_url": "",
-        "complete_description": "",
-        "references": [],
-        "physical_meaning": "",
-        "intended_usage": "",
-        "intended_usage_detail": "",
-        "equation": "",
-        "equation_variables": [],
     },
     # =========================================================================
     # Sea surface elevation variables
@@ -570,29 +421,18 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_sea_surface_elevation_mean",
         "units": "m (offset from NAVD88)",
         "long_name": "Mean Sea Surface Elevation (model MSL)",
-        "one_liner": "Average sea surface elevation representing the model mean sea level offset from NAVD88",
+        "one_liner": "Time-averaged sea surface elevation relative to NAVD88",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-sea-surface-elevation",
         "complete_description": (
-            "Mean Sea Surface Elevation is the time-averaged sea surface height at each "
-            "grid location, representing the model's mean sea level (MSL) as an offset "
-            "from the NAVD88 vertical datum. This value provides the datum reference "
-            "context for interpreting all other elevation and depth variables."
-            "The difference between model MSL and NAVD88 varies by location due to "
-            "geoid-ellipsoid separation, ocean dynamic topography, and regional sea level "
-            "variations. This offset is essential for converting between the model's "
-            "internal reference frame and standard geodetic datums."
-            "Included on the atlas as a datum reference for coastal engineers and "
-            "oceanographers to verify data consistency and convert between reference frames."
+            "The time-averaged sea surface height at each grid location relative to the NAVD88 "
+            "vertical datum. This value represents the model's Mean Sea Level (MSL) offset from "
+            "the geodetic datum, which is essential for converting between the model's internal "
+            "reference frame and standard vertical datums. It provides the necessary context for "
+            "interpreting all other elevation and depth variables, ensuring consistency with "
+            "coastal engineering standards and regional sea level observations."
         ),
-        "references": [],
         "physical_meaning": "Time-averaged sea surface elevation (model MSL offset from NAVD88)",
         "intended_usage": "Vertical datum reference and data quality verification",
-        "intended_usage_detail": (
-            "Provides context for interpreting elevation and depth values in the dataset. "
-            "Used by coastal engineers to verify data consistency against known tidal "
-            "datums, convert between reference frames, and check that model results are "
-            "physically reasonable for the region."
-        ),
         "equation": r"$\overline{\zeta} = \text{mean}(\zeta_t)$ for $t = 1, ..., T$",
         "equation_variables": [
             r"$\zeta_t$, sea surface elevation above NAVD88 at time $t$ $[\text{m}]$",
@@ -607,29 +447,12 @@ VARIABLE_REGISTRY = {
         "one_liner": "Difference between maximum and minimum sea surface elevation over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range",
         "complete_description": (
-            "Tidal Range is the difference between the maximum and minimum sea surface "
-            "elevation observed at each grid location over the hindcast year. This metric "
-            "characterizes the tidal regime and vertical water level variability. "
-            "IEC 62600-201 requires tidal range description as part of Stage 1 site "
-            "characterization."
-            "Tidal range is classified as microtidal (<2m), mesotidal (2-4m), or macrotidal "
-            "(>4m). Larger tidal ranges indicate stronger tidal forcing, which generally "
-            "correlates with stronger tidal currents but also creates greater challenges "
-            "for device deployment due to water level variability."
-            "Engineering applications include mooring system design (must accommodate full "
-            "range of water levels), cable routing, and understanding the relationship "
-            "between water level and current speed at a site."
+            "Difference between the maximum and minimum sea surface elevation calculated at each "
+            "grid location over the 1-year hindcast period. This metric quantifies the full "
+            "vertical extent of water level variability at a site."
         ),
-        "references": ["iec_62600_201"],
         "physical_meaning": "Maximum minus minimum sea surface elevation over the hindcast year",
         "intended_usage": "Tidal regime classification and mooring design",
-        "intended_usage_detail": (
-            "Characterizes the vertical tidal variability at each location. Used to classify "
-            "the tidal regime (micro/meso/macrotidal), assess water level impacts on device "
-            "operations, design mooring systems that accommodate full tidal excursion, and "
-            "plan cable routing to handle depth changes. Important context for understanding "
-            "the relationship between tidal forcing and current speed."
-        ),
         "equation": r"$R = \zeta_{\max} - \zeta_{\min} = \max(\zeta_t) - \min(\zeta_t)$",
         "equation_variables": [
             r"$\zeta_t$, sea surface elevation at time $t$ $[\text{m}]$",
@@ -645,29 +468,41 @@ VARIABLE_REGISTRY = {
         "display_name": "Shortest Tidal Period",
         "column_name": "vap_min_tidal_period",
         "units": "hours",
-        "one_liner": "",
+        "one_liner": "Minimum time duration between successive high tides",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
-        "physical_meaning": "",
-        "intended_usage": "",
-        "intended_usage_detail": "",
-        "equation": "",
-        "equation_variables": [],
+        "complete_description": (
+            "The minimum time duration between successive high tides calculated during the "
+            "1-year hindcast period. This metric characterizes the fastest tidal cycling at "
+            "the location, which influences operational windows for maintenance and the "
+            "frequency of slack water periods."
+        ),
+        "physical_meaning": "Minimum duration between successive high tides",
+        "intended_usage": "Operational planning and slack water frequency analysis",
+        "equation": r"$T_{\min} = \min(T_1, T_2, ..., T_N)$",
+        "equation_variables": [
+            r"$T_i$, time between successive high tide peaks $i$ and $i+1$ $[\text{hours}]$",
+            r"$N$, number of tidal cycles in the hindcast year",
+        ],
     },
     "max_tidal_period": {
         "display_name": "Longest Tidal Period",
         "column_name": "vap_max_tidal_period",
         "units": "hours",
-        "one_liner": "",
+        "one_liner": "Maximum time duration between successive high tides",
         "documentation_url": "",
-        "complete_description": "",
-        "references": [],
-        "physical_meaning": "",
-        "intended_usage": "",
-        "intended_usage_detail": "",
-        "equation": "",
-        "equation_variables": [],
+        "complete_description": (
+            "The maximum time duration between successive high tides calculated during the "
+            "1-year hindcast period. This metric characterizes the longest tidal cycling at "
+            "the location, identifying periods with extended ebb or flood durations that may "
+            "offer longer continuous power generation windows."
+        ),
+        "physical_meaning": "Maximum duration between successive high tides",
+        "intended_usage": "Extended generation window analysis",
+        "equation": r"$T_{\max} = \max(T_1, T_2, ..., T_N)$",
+        "equation_variables": [
+            r"$T_i$, time between successive high tide peaks $i$ and $i+1$ $[\text{hours}]$",
+            r"$N$, number of tidal cycles in the hindcast year",
+        ],
     },
     # =========================================================================
     # Maximum power density
@@ -677,29 +512,18 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_water_column_max_sea_water_power_density",
         "units": "W/m\u00b2",
         "long_name": "Maximum Power Density",
-        "one_liner": "Absolute maximum depth-averaged power density observed over the hindcast year",
+        "one_liner": "Absolute maximum depth-averaged power density calculated over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-power-density",
         "complete_description": (
-            "Maximum Power Density is the absolute highest kinetic energy flux per unit "
-            "area observed at any time during the hindcast year. Due to the cubic "
-            "relationship between velocity and power, the maximum power density "
-            "is highly sensitive to extreme current speed events."
-            "Important caveat: Because power density scales with the cube of velocity, "
-            "any model artifacts or numerical transients in the maximum speed are amplified "
-            "in this metric. The mean power density and 95th percentile speed are generally "
-            "more robust metrics for resource characterization. The maximum power density "
-            "is provided as an upper bound reference and sanity check."
+            "The absolute highest kinetic energy flux per unit area calculated at any time during "
+            "the 1-year hindcast period. Due to the cubic relationship between velocity and "
+            "power density, this maximum value is highly sensitive to extreme current speed "
+            "events and numerical transients. While it provides an upper bound for peak "
+            "resource conditions, the mean power density and 95th percentile metrics are "
+            "generally more robust for resource characterization and economic analysis."
         ),
-        "references": [],
-        "physical_meaning": "Absolute maximum depth-averaged power density over the year",
+        "physical_meaning": "Absolute maximum depth-averaged power density calculated over the year",
         "intended_usage": "Upper bound reference for peak resource conditions",
-        "intended_usage_detail": (
-            "Provides the absolute upper bound on power density from the model. Due to "
-            "the cubic velocity-power relationship, this value is sensitive to model "
-            "artifacts. Mean power density is preferred for resource quantification and "
-            "economic analysis. The maximum is useful as a reference for understanding "
-            "peak conditions and as a sanity check."
-        ),
         "equation": r"$P_{\max} = \max\left(\left[\text{mean}(P_{1,t}, ..., P_{N_{\sigma},t}) \text{ for } t=1,...,T\right]\right)$",
         "equation_variables": [
             r"$P_{i,t} = \frac{1}{2} \rho U_{i,t}^3$, power density with $\rho = 1025$ $[\text{kg/m}^3]$",
@@ -719,26 +543,15 @@ VARIABLE_REGISTRY = {
         "one_liner": "Mean period between successive high tides over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#average-tidal-period",
         "complete_description": (
-            "Average Tidal Period is the mean time between successive high tide peaks "
-            "at each grid location, characterizing the dominant tidal frequency. This "
-            "metric indicates whether the tidal regime is semi-diurnal (~12.4 hours), "
-            "diurnal (~24.8 hours), or mixed."
-            "The tidal period directly determines the power generation cycle length and "
-            "is relevant for grid integration planning, energy storage sizing, and "
-            "understanding resource intermittency patterns. Semi-diurnal sites produce "
-            "four slack-to-peak cycles per day, while diurnal sites produce two."
-            "Engineering applications include energy production scheduling, grid "
-            "integration analysis, and energy storage system sizing."
+            "Mean time between successive high tide peaks at each grid location calculated "
+            "over the 1-year hindcast period, characterizing the dominant tidal frequency. "
+            "This metric indicates whether the tidal regime is semi-diurnal (~12.4 hours), "
+            "diurnal (~24.8 hours), or mixed. The tidal period determines the power generation "
+            "cycle length (slack-to-peak cycles per day) and is relevant for grid integration "
+            "planning, energy storage sizing, and understanding resource intermittency patterns."
         ),
-        "references": [],
         "physical_meaning": "Mean time between successive high tides",
         "intended_usage": "Tidal regime classification and energy scheduling",
-        "intended_usage_detail": (
-            "Classifies the tidal regime (semi-diurnal ~12.4h, diurnal ~24.8h, or mixed) "
-            "to inform energy production scheduling and grid integration planning. "
-            "Semi-diurnal sites provide more frequent generation cycles. Important for "
-            "energy storage sizing and understanding power intermittency patterns."
-        ),
         "equation": r"$\overline{T}_{\text{tide}} = \text{mean}(T_1, T_2, ..., T_N)$",
         "equation_variables": [
             r"$T_i$, time between successive high tide peaks $i$ and $i+1$ $[\text{hours}]$",
@@ -756,26 +569,14 @@ VARIABLE_REGISTRY = {
         "one_liner": "Geodesic distance from grid cell center to nearest shoreline",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore",
         "complete_description": (
-            "Distance to Shore is the geodesic distance from each grid cell center to "
-            "the nearest shoreline point, calculated using the GSHHG (Global Self-consistent "
-            "Hierarchical High-resolution Geography) shoreline database. Reported in "
-            "nautical miles (NM)."
-            "Distance to shore is a practical siting constraint that affects cable cost, "
-            "grid connection feasibility, and operations and maintenance logistics. "
-            "NREL site screening methodology uses a threshold of <20 km (~10.8 NM) to "
-            "nearest transmission infrastructure."
-            "Engineering applications include cable routing cost estimation, grid "
-            "connection planning, and O&M logistics assessment."
+            "Geodesic distance from each grid cell center to the nearest shoreline point, "
+            "calculated using the Global Self-consistent Hierarchical High-resolution Geography "
+            "(GSHHG) shoreline database [@gsshhg_dataset] and reported in nautical miles (NM). "
+            "This metric serves as a practical siting constraint that affects cable cost and grid "
+            "connection feasibility."
         ),
-        "references": [],
         "physical_meaning": "Geodesic distance from grid cell center to nearest shoreline",
         "intended_usage": "Cable cost estimation and O&M logistics",
-        "intended_usage_detail": (
-            "Key practical siting constraint for cost estimation. Longer distances to "
-            "shore increase subsea cable costs, reduce grid connection feasibility, "
-            "and increase transit time for maintenance vessels. Used in LCOE calculations "
-            "and logistics planning."
-        ),
         "equation": r"$d = \text{haversine}(\text{cell center}, \text{nearest shoreline point})$",
         "equation_variables": [
             r"$d$, geodesic distance calculated using GSHHG shoreline database $[\text{NM}]$",
@@ -790,27 +591,17 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_sea_surface_elevation_high_tide_max",
         "units": "m (relative to model MSL)",
         "long_name": "Max Sea Surface Elevation at High Tide",
-        "one_liner": "Highest sea surface elevation observed during high tide over the hindcast year",
+        "one_liner": "Highest sea surface elevation calculated during high tide over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#max-sea-surface-elevation-at-high-tide",
         "complete_description": (
-            "Maximum Sea Surface Elevation at High Tide is the highest sea surface "
-            "elevation value observed during high tide conditions over the hindcast year, "
-            "relative to the model's mean sea level. This typically occurs during spring "
-            "tides when astronomical tidal forcing is maximized."
-            "This metric serves as a sanity check for data quality, allowing coastal "
-            "engineers and oceanographers to verify that modeled extreme water levels "
-            "are physically reasonable for the region. Together with the low tide minimum, "
-            "it provides confidence bounds on the vertical water level envelope."
+            "Highest sea surface elevation calculated during high tide conditions over the "
+            "1-year hindcast period, relative to the model's mean sea level. This typically "
+            "occurs during spring tides when astronomical tidal forcing is maximized. Note that this value "
+            "represents the maximum within the 1-year hindcast period, not necessarily the "
+            "absolute maximum possible over the full 18.6-year tidal epoch (e.g., King Tides)."
         ),
-        "references": [],
         "physical_meaning": "Highest sea surface elevation at high tide over the year",
         "intended_usage": "Data quality verification and extreme water level reference",
-        "intended_usage_detail": (
-            "Sanity check metric for coastal engineers to verify model output consistency. "
-            "The maximum high tide elevation should be physically reasonable for the "
-            "region and consistent with known tidal characteristics. Also useful for "
-            "understanding the upper bound of water level variability."
-        ),
         "equation": r"$\zeta_{\text{HT,max}} = \max(\zeta_t | t \in \text{high tide peaks})$",
         "equation_variables": [
             r"$\zeta_t$, sea surface elevation relative to model MSL at time $t$ $[\text{m}]$",
@@ -822,28 +613,18 @@ VARIABLE_REGISTRY = {
         "column_name": "vap_surface_elevation_low_tide_min",
         "units": "m (relative to model MSL)",
         "long_name": "Min Sea Surface Elevation at Low Tide",
-        "one_liner": "Lowest sea surface elevation observed during low tide over the hindcast year",
+        "one_liner": "Lowest sea surface elevation calculated during low tide over the hindcast year",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#min-sea-surface-elevation-at-low-tide",
         "complete_description": (
-            "Minimum Sea Surface Elevation at Low Tide is the lowest sea surface "
-            "elevation value observed during low tide conditions over the hindcast year, "
-            "relative to the model's mean sea level. This typically occurs during spring "
-            "tides when astronomical tidal forcing is maximized."
-            "This metric serves as a sanity check for data quality, allowing coastal "
-            "engineers and oceanographers to verify that modeled extreme low water levels "
-            "are physically reasonable for the region. Together with the high tide maximum, "
-            "it provides confidence bounds on the vertical water level envelope."
+            "Lowest sea surface elevation calculated during low tide conditions over the "
+            "1-year hindcast period, relative to the model's mean sea level. This typically "
+            "occurs during spring tides when astronomical tidal forcing is maximized. Together with the high tide "
+            "maximum, it defines the bounds of the vertical water level envelope. Note that "
+            "this value represents the minimum within the 1-year hindcast period, not necessarily "
+            "the absolute minimum possible over the full 18.6-year tidal epoch."
         ),
-        "references": [],
         "physical_meaning": "Lowest sea surface elevation at low tide over the year",
         "intended_usage": "Data quality verification and extreme water level reference",
-        "intended_usage_detail": (
-            "Sanity check metric for coastal engineers to verify model output consistency. "
-            "The minimum low tide elevation should be physically reasonable for the "
-            "region and consistent with known tidal characteristics. Also useful for "
-            "understanding the lower bound of water level variability and assessing "
-            "minimum clearance conditions."
-        ),
         "equation": r"$\zeta_{\text{LT,min}} = \min(\zeta_t | t \in \text{low tide troughs})$",
         "equation_variables": [
             r"$\zeta_t$, sea surface elevation relative to model MSL at time $t$ $[\text{m}]$",
@@ -860,6 +641,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Face ID",
         "one_liner": "Location specific unique integer identifier for each triangular grid element",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#face_id",
+        "complete_description": "Location specific unique integer identifier for each triangular grid element",
     },
     "center_latitude": {
         "display_name": "Center Latitude",
@@ -868,6 +650,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Center Latitude",
         "one_liner": "Latitude of the triangular element centroid (WGS84)",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#center_latitude",
+        "complete_description": "Latitude of the triangular element centroid (WGS84)",
     },
     "center_longitude": {
         "display_name": "Center Longitude",
@@ -876,6 +659,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Center Longitude",
         "one_liner": "Longitude of the triangular element centroid (WGS84)",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#center_longitude",
+        "complete_description": "Longitude of the triangular element centroid (WGS84)",
     },
     "full_year_s3_uri": {
         "display_name": "S3 URI for Full Year Time Series Data",
@@ -884,6 +668,7 @@ VARIABLE_REGISTRY = {
         "long_name": "S3 URI for Full Year Time Series Data",
         "one_liner": "direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri",
+        "complete_description": "direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.",
     },
     "full_year_https_url": {
         "display_name": "HTTPS URL for Full Year Time Series Data",
@@ -892,6 +677,7 @@ VARIABLE_REGISTRY = {
         "long_name": "HTTPS URL for Full Year Time Series Data",
         "one_liner": "direct link (HTTPS)  to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals",
         "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_https_url",
+        "complete_description": "direct link (HTTPS)  to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals",
     },
 }
 
@@ -993,7 +779,10 @@ def _render(
                 else:
                     # Lowercase first char unless the first word is all-caps
                     # (acronym like "HTTPS", "URI") which must stay as-is.
-                    first_word = val_str.split()[0] if val_str else ""
+                    if not val_str:
+                        result += part
+                        continue
+                    first_word = val_str.split()[0]
                     if first_word.isupper() and len(first_word) > 1:
                         result += val_str + part
                     else:
@@ -1058,8 +847,16 @@ def documentation_variable_spec(variable_spec, keyword_spec):
     text_spec = (
         f"<DISPLAY_NAME>{units_part} is the <COMPLETE_DESCRIPTION>. " + dataset_info
     )
+    # Derive anchor from documentation_url fragment (e.g. "#mean-current-speed" -> "mean-current-speed")
+    doc_url = variable_spec.get("documentation_url", "")
+    anchor = doc_url.split("#")[-1] if "#" in doc_url else ""
     result = {
         "display_name": variable_spec["display_name"],
+        "column_name": variable_spec["column_name"],
+        "units": variable_spec.get("units", ""),
+        "one_liner": variable_spec.get("one_liner", ""),
+        "complete_description": variable_spec.get("complete_description", ""),
+        "anchor": anchor,
         **_render_all_formats(text_spec, keyword_spec, variable_spec),
     }
     if "equation" in variable_spec:
