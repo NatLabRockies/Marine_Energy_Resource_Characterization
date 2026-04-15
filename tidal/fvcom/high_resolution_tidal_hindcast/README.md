@@ -1212,17 +1212,6 @@ Base Path: `/projects/hindcastra/Tidal/datasets/<location>/`
 | Western Passage, Maine | `/b5_vap_atlas_summary_parquet/ME_western_passage.tidal_hindcast_fvcom-year_average.b5.20170101.000000.parquet` | Parquet | Yearly Average Depth Average |
 | Piscataqua River, New Hampshire | `/b5_vap_atlas_summary_parquet/NH_piscataqua_river.tidal_hindcast_fvcom-year_average.b5.20070101.000000.parquet` | Parquet | Yearly Average Depth Average |
 
-## Output Variables
-
-## Output Variable Color Bar Range
-
-| Atlas Label | Units | Variable | Color Bar Min | Color Bar Max | Discrete Steps |
-|----|----|----|----|----|----|
-| Mean Sea Water Speed | meters per second, \[m s-1\] | `vap_water_column_mean_sea_water_speed` | 0 | 2 | 256 |
-| Max Sea Water Speed | meters per second, \[m s-1\] | `vap_water_column_max_sea_water_speed` | 0 | 2 | 256 |
-| Mean Sea Water Power Density | watts per meter squared, \[W m-2\] | `vap_water_column_mean_sea_water_power_density` | 0 | 8000 | 256 |
-| Max Sea Water Power Density | watts per meter squared, \[W m-2\] | `vap_water_column_max_sea_water_speed` | 0 | 8000 | 256 |
-
 # Marine Energy Atlas Visualization Specification
 
 # ME Atlas High Resolution Tidal Data QOI Visualization Specification
