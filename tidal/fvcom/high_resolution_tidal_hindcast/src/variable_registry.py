@@ -6,6 +6,20 @@ import re
 
 from src.gis_colors_registry import GIS_COLORS_REGISTRY
 
+DOCUMENTATION_LINKS_REGISTRY = {
+    "github_pages_base_url": "https://us-marine-energy-resource.github.io",
+    "tidal_hindcast_docs_path": "tidal/high-resolution-hindcast",
+    "tidal_var": "tidal/high-resolution-hindcast/",
+}
+
+docs = {
+    "base": DOCUMENTATION_LINKS_REGISTRY["github_pages_base_url"],
+    "tidal": DOCUMENTATION_LINKS_REGISTRY["github_pages_base_url"]
+    + DOCUMENTATION_LINKS_REGISTRY["tidal_hindcast_docs_path"],
+    "var": DOCUMENTATION_LINKS_REGISTRY["github_pages_base_url"]
+    + DOCUMENTATION_LINKS_REGISTRY["tidal_var"],
+}
+
 DOCUMENTATION_REGISTRY = {
     "data_availability": {
         "href": "https://mhkdr.openei.org/submissions/632",
@@ -20,7 +34,7 @@ DOCUMENTATION_REGISTRY = {
         "keyword": "DATA_ACCESS",
     },
     "dataset_documentation": {
-        "href": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/",
+        "href": f"{docs['base']}",
         "full_text": "Tidal Hindcast Dataset Documentation",
         "short_text": "Dataset Documentation",
         "keyword": "DOCUMENTATION",
@@ -67,7 +81,7 @@ VARIABLE_REGISTRY = {
         "units": "m/s",
         "long_name": "Mean Current Speed (depth-averaged)",
         "one_liner": "Annual average of depth-averaged current speed",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-current-speed",
+        "documentation_url": f"{docs['var']}mean-current-speed",
         "complete_description": (
             "annual average of the depth-averaged current velocity "
             "magnitude, representing the characteristic flow speed at each grid location under "
@@ -101,7 +115,7 @@ VARIABLE_REGISTRY = {
         "long_name": "95th Percentile Current Speed",
         # Documentation
         "one_liner": "Estimated extreme current speed, outlier-tolerant and comparable across sites for reconnaissance-level assessment",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-current-speed",
+        "documentation_url": f"{docs['var']}95th-percentile-current-speed",
         "complete_description": (
             "95th Percentile Current Speed provides a robust, outlier-tolerant estimate of "
             "extreme current conditions at each grid location, intended for consistent "
@@ -167,7 +181,7 @@ VARIABLE_REGISTRY = {
         "units": "m/s",
         "long_name": "Maximum Current Speed",
         "one_liner": "Absolute maximum current speed observed over the hindcast year",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-current-speed",
+        "documentation_url": f"{docs['var']}maximum-current-speed",
         "complete_description": (
             "Maximum Current Speed is the absolute highest current speed observed at any "
             "depth and any time during the hindcast year. This metric defines the worst-case "
@@ -207,7 +221,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Mean Power Density (depth-averaged)",
         # Documentation
         "one_liner": "Annual average of depth-averaged kinetic energy flux",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-power-density",
+        "documentation_url": f"{docs['var']}mean-power-density",
         "complete_description": (
             "Mean Power Density is the annual average of the kinetic energy flux per unit area, "
             "representing the theoretical power available for extraction from the undisturbed "
@@ -244,7 +258,7 @@ VARIABLE_REGISTRY = {
         "units": "W/m\u00b2",
         "long_name": "95th Percentile Power Density",
         "one_liner": "Estimated extreme power density, outlier-tolerant and comparable across sites for reconnaissance-level assessment",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#95th-percentile-power-density",
+        "documentation_url": f"{docs['var']}95th-percentile-power-density",
         "complete_description": (
             "95th Percentile Power Density provides a robust, outlier-tolerant estimate of "
             "extreme power density conditions at each grid location, intended for consistent "
@@ -290,7 +304,7 @@ VARIABLE_REGISTRY = {
         "units": "m (below NAVD88)",
         "long_name": "Model Sea Floor Depth from NAVD88",
         "one_liner": "Model bathymetry depth below NAVD88 vertical datum",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#sea-floor-depth",
+        "documentation_url": f"{docs['var']}sea-floor-depth",
         "complete_description": (
             "Sea Floor Depth is the model bathymetry representing the distance from the "
             "NAVD88 vertical datum to the seafloor at each grid cell center. This is a "
@@ -331,7 +345,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Minimum Water Depth",
         # Documentation
         "one_liner": "Minimum water depth (during 1 year model run)",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#minimum-water-depth",
+        "documentation_url": f"{docs['var']}minimum-water-depth",
         "complete_description": (
             "Minimum Water Depth is the lowest water depth (surface to seafloor) "
             "observed at each grid location over the hindcast year, typically occurring during "
@@ -367,7 +381,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Maximum Water Depth",
         # Documentation
         "one_liner": "Maximum water depth (during 1 year model run)",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-water-depth",
+        "documentation_url": f"{docs['var']}maximum-water-depth",
         "complete_description": (
             "Maximum Water Depth is the greatest water depth (surface to seafloor) "
             "observed at each grid location over the hindcast year, typically occurring during "
@@ -496,7 +510,7 @@ VARIABLE_REGISTRY = {
         "long_name": "Grid Resolution",
         # Documentation
         "one_liner": "Average edge length of triangular model grid cells",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#grid-resolution",
+        "documentation_url": f"{docs['var']}grid-resolution",
         "complete_description": (
             "Grid Resolution is the average edge length of the unstructured triangular model "
             "grid cells, indicating the spatial scale at which tidal currents are resolved by the "
@@ -571,7 +585,7 @@ VARIABLE_REGISTRY = {
         "units": "m (offset from NAVD88)",
         "long_name": "Mean Sea Surface Elevation (model MSL)",
         "one_liner": "Average sea surface elevation representing the model mean sea level offset from NAVD88",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#mean-sea-surface-elevation",
+        "documentation_url": f"{docs['var']}mean-sea-surface-elevation",
         "complete_description": (
             "Mean Sea Surface Elevation is the time-averaged sea surface height at each "
             "grid location, representing the model's mean sea level (MSL) as an offset "
@@ -605,7 +619,7 @@ VARIABLE_REGISTRY = {
         "units": "m",
         "long_name": "Tidal Range (Max - Min Sea Surface Elevation)",
         "one_liner": "Difference between maximum and minimum sea surface elevation over the hindcast year",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#tidal-range",
+        "documentation_url": f"{docs['var']}tidal-range",
         "complete_description": (
             "Tidal Range is the difference between the maximum and minimum sea surface "
             "elevation observed at each grid location over the hindcast year. This metric "
@@ -678,7 +692,7 @@ VARIABLE_REGISTRY = {
         "units": "W/m\u00b2",
         "long_name": "Maximum Power Density",
         "one_liner": "Absolute maximum depth-averaged power density observed over the hindcast year",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#maximum-power-density",
+        "documentation_url": f"{docs['var']}maximum-power-density",
         "complete_description": (
             "Maximum Power Density is the absolute highest kinetic energy flux per unit "
             "area observed at any time during the hindcast year. Due to the cubic "
@@ -717,7 +731,7 @@ VARIABLE_REGISTRY = {
         "units": "hours",
         "long_name": "Average Tidal Period",
         "one_liner": "Mean period between successive high tides over the hindcast year",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#average-tidal-period",
+        "documentation_url": f"{docs['var']}average-tidal-period",
         "complete_description": (
             "Average Tidal Period is the mean time between successive high tide peaks "
             "at each grid location, characterizing the dominant tidal frequency. This "
@@ -754,7 +768,7 @@ VARIABLE_REGISTRY = {
         "units": "NM",
         "long_name": "Distance to Shore",
         "one_liner": "Geodesic distance from grid cell center to nearest shoreline",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#distance-to-shore",
+        "documentation_url": f"{docs['var']}distance-to-shore",
         "complete_description": (
             "Distance to Shore is the geodesic distance from each grid cell center to "
             "the nearest shoreline point, calculated using the GSHHG (Global Self-consistent "
@@ -791,7 +805,7 @@ VARIABLE_REGISTRY = {
         "units": "m (relative to model MSL)",
         "long_name": "Max Sea Surface Elevation at High Tide",
         "one_liner": "Highest sea surface elevation observed during high tide over the hindcast year",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#max-sea-surface-elevation-at-high-tide",
+        "documentation_url": f"{docs['var']}max-sea-surface-elevation-at-high-tide",
         "complete_description": (
             "Maximum Sea Surface Elevation at High Tide is the highest sea surface "
             "elevation value observed during high tide conditions over the hindcast year, "
@@ -823,7 +837,7 @@ VARIABLE_REGISTRY = {
         "units": "m (relative to model MSL)",
         "long_name": "Min Sea Surface Elevation at Low Tide",
         "one_liner": "Lowest sea surface elevation observed during low tide over the hindcast year",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#min-sea-surface-elevation-at-low-tide",
+        "documentation_url": f"{docs['var']}min-sea-surface-elevation-at-low-tide",
         "complete_description": (
             "Minimum Sea Surface Elevation at Low Tide is the lowest sea surface "
             "elevation value observed during low tide conditions over the hindcast year, "
@@ -859,7 +873,7 @@ VARIABLE_REGISTRY = {
         "units": "",
         "long_name": "Face ID",
         "one_liner": "Location specific unique integer identifier for each triangular grid element",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#face_id",
+        "documentation_url": f"{docs['var']}face_id",
     },
     "center_latitude": {
         "display_name": "Center Latitude",
@@ -867,7 +881,7 @@ VARIABLE_REGISTRY = {
         "units": "degrees_north",
         "long_name": "Center Latitude",
         "one_liner": "Latitude of the triangular element centroid (WGS84)",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#center_latitude",
+        "documentation_url": f"{docs['var']}center_latitude",
     },
     "center_longitude": {
         "display_name": "Center Longitude",
@@ -875,7 +889,7 @@ VARIABLE_REGISTRY = {
         "units": "degrees_east",
         "long_name": "Center Longitude",
         "one_liner": "Longitude of the triangular element centroid (WGS84)",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#center_longitude",
+        "documentation_url": f"{docs['var']}center_longitude",
     },
     "full_year_s3_uri": {
         "display_name": "S3 URI for Full Year Time Series Data",
@@ -883,7 +897,7 @@ VARIABLE_REGISTRY = {
         "units": "",
         "long_name": "S3 URI for Full Year Time Series Data",
         "one_liner": "direct link (S3 URI) to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals.",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_s3_uri",
+        "documentation_url": f"{docs['var']}full_year_s3_uri",
     },
     "full_year_https_url": {
         "display_name": "HTTPS URL for Full Year Time Series Data",
@@ -891,7 +905,7 @@ VARIABLE_REGISTRY = {
         "units": "",
         "long_name": "HTTPS URL for Full Year Time Series Data",
         "one_liner": "direct link (HTTPS)  to download the one-year hindcast time series (parquet) for this location. Includes speed, direction, for 10 uniform sigma levels at half-hourly (lower 48) or hourly (Alaska) intervals",
-        "documentation_url": "https://natlabrockies.github.io/Marine_Energy_Resource_Characterization/tidal-hindcast/#full_year_https_url",
+        "documentation_url": f"{docs['var']}full_year_https_url",
     },
 }
 
