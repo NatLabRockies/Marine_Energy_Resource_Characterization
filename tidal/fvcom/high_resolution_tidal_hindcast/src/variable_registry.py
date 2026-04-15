@@ -43,11 +43,11 @@ DOCUMENTATION_REGISTRY = {
         "short_text": "DOE",
         "keyword": "DOE",
     },
-    "wpto": {
-        "href": "https://www.energy.gov/eere/water/water-power-technologies-office",
-        "full_text": "Water Power Technologies Office",
-        "short_text": "WPTO",
-        "keyword": "WPTO",
+    "h2o": {
+        "href": "https://www.energy.gov/cmei/water/hydropower-and-hydrokinetic-office",
+        "full_text": "Hydropower and Hydrokinetic Office",
+        "short_text": "H2O",
+        "keyword": "H2O",
     },
     "contact_email": {
         "href": "mailto:marineresource@nlr.gov",
@@ -942,7 +942,7 @@ for _var_entry in VARIABLE_REGISTRY.values():
 
 
 dataset_info = (
-    "Source: <DATA_CITATION>, funded by <DOE> <WPTO>. "
+    "Source: <DATA_CITATION>, funded by <DOE> <H2O>. "
     "Modeled by <PNNL>; standardized and released by <NLR>. "
     "See <DOCUMENTATION> for methodology, citations, and full dataset access. "
     "Contact <CONTACT_EMAIL> with questions."
