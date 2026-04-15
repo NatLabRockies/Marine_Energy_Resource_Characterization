@@ -1,6 +1,6 @@
-# WPTO High Resolution Tidal Hindcast
+# H20 High Resolution Tidal Hindcast
 
-2026-02-23
+2026-04-15
 
 - [<span class="toc-section-number">1</span> Overview](#overview)
 - [<span class="toc-section-number">2</span> Versions](#versions)
@@ -40,11 +40,11 @@
 # Overview
 
 This repository contains the code and methodology for processing and
-visualizing the U.S. Department of Energy (DOE) Water Power Technologies
-Office (WPTO) high-resolution tidal hindcast data generated using the
-Finite Volume Community Ocean Model (FVCOM) at five strategically
-selected U.S. coastal locations. The project represents a collaborative
-effort between the [Pacific Northwest National
+visualizing the U.S. Department of Energy (DOE) Hydropower and
+Hydrokinetic Office (H20) high-resolution tidal hindcast data generated
+using the Finite Volume Community Ocean Model (FVCOM) at five
+strategically selected U.S. coastal locations. The project represents a
+collaborative effort between the [Pacific Northwest National
 Laboratory](https://www.pnnl.gov/marine-energy-resource-characterization)
 (PNNL) (data generation) and the [National Laboratory of the
 Rockies](https://www.nrel.gov/water/resource-characterization) (data
