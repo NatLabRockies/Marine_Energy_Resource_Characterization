@@ -1,5 +1,5 @@
 ---
-title: WPTO High Resolution Tidal Hindcast
+title: H20 High Resolution Tidal Hindcast
 subtitle: Marine Energy Resource Characterization
 date: today
 # author:
@@ -56,7 +56,7 @@ model = config['model_specification']
 # Overview
 
 This repository contains the code and methodology for processing and visualizing the U.S. Department
-of Energy (DOE) Water Power Technologies Office (WPTO) high-resolution tidal hindcast data generated
+of Energy (DOE) Hydropower and Hydrokinetic Office (H20) high-resolution tidal hindcast data generated
 using the Finite Volume Community Ocean Model (FVCOM) at five strategically selected U.S. coastal
 locations. The project represents a collaborative effort between the [Pacific Northwest National
 Laboratory][pnnl_resource_char] (PNNL) (data generation) and the [National Laboratory of the Rockies][nlr_resource_char] (data processing and visualization), to generate, standardize, and
@@ -1139,17 +1139,6 @@ Base Path: `/projects/hindcastra/Tidal/datasets/<location>/`
 | Cook Inlet, Alaska              | `/b5_vap_atlas_summary_parquet/AK_cook_inlet.tidal_hindcast_fvcom-year_average.b5.20050101.000000.parquet`       | Parquet | Yearly Average Depth Average |
 | Western Passage, Maine          | `/b5_vap_atlas_summary_parquet/ME_western_passage.tidal_hindcast_fvcom-year_average.b5.20170101.000000.parquet`  | Parquet | Yearly Average Depth Average |
 | Piscataqua River, New Hampshire | `/b5_vap_atlas_summary_parquet/NH_piscataqua_river.tidal_hindcast_fvcom-year_average.b5.20070101.000000.parquet` | Parquet | Yearly Average Depth Average |
-
-## Output Variables
-
-## Output Variable Color Bar Range
-
-| Atlas Label                  | Units                            | Variable                                        | Color Bar Min | Color Bar Max | Discrete Steps |
-| ---                          | ---                              | ---                                             | ---           | ---           | ---            |
-| Mean Sea Water Speed         | meters per second, [m s-1]       | `vap_water_column_mean_sea_water_speed`         | 0             | 2             | 256            |
-| Max Sea Water Speed          | meters per second, [m s-1]       | `vap_water_column_max_sea_water_speed`          | 0             | 2             | 256            |
-| Mean Sea Water Power Density | watts per meter squared, [W m-2] | `vap_water_column_mean_sea_water_power_density` | 0             | 8000          | 256            |
-| Max Sea Water Power Density  | watts per meter squared, [W m-2] | `vap_water_column_max_sea_water_speed`          | 0             | 8000          | 256            |
 
 # Marine Energy Atlas Visualization Specification
 
